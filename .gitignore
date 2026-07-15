@@ -1,0 +1,45 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Env files
+.env
+.env.*
+frontend/.env.local
+backend/.env
+
+# Local databases (inkl. Backups/Journal-Varianten wie *.db.bak, *.db.bak2,
+# *.db-journal, *.db-journal.stale_move_away, *.db-wal, *.db-shm - "*.db"
+# allein schliesst nur die exakte Endung aus, nicht Dateien, die "*.db" nur
+# als Praefix im Namen tragen).
+*.db
+*.db.*
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Echte Kandidaten-/Kanzlei-Dateien (CVs, Verträge, Notizen) - personenbezogene
+# Daten, gehören nicht ins Git-Repo.
+backend/data/documents/
+backend/data/imports/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+tmp/
+temp/
+_cleanup_backup_legacy/

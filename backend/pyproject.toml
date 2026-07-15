@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cc-crm-api"
+version = "0.1.0"
+description = "Backend API for CC CRM"
+requires-python = ">=3.12"
+dependencies = [
+  "alembic>=1.13,<2",
+  "boto3>=1.35,<2",
+  "email-validator>=2.2,<3",
+  "fastapi>=0.115,<1",
+  "httpx>=0.28,<1",
+  "openpyxl>=3.1,<4",
+  "psycopg[binary]>=3.2,<4",
+  "pypdf>=5.1,<6",
+  "python-docx>=1.1,<2",
+  "python-multipart>=0.0.12,<1",
+  "pydantic-settings>=2.6,<3",
+  "sqlalchemy>=2.0,<3",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "boto3-stubs[s3]>=1.35,<2",
+  "mypy>=1.14,<2",
+  "pytest>=8.3,<9",
+  "pytest-cov>=6,<7",
+  "ruff>=0.9,<1",
+  "types-openpyxl>=3.1,<4",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cc_crm"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"alembic/versions/*.py" = ["E501"]
+"tests/test_convert_linkedin_export.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["cc_crm"]

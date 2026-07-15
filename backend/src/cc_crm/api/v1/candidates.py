@@ -1,0 +1,113 @@
+import uuid
+from datetime import datetime
+from typing import Annotated
+
+from fastapi import APIRouter, Query, Response, status
+
+from cc_crm.api.dependencies import DatabaseSession
+from cc_crm.models.enums import CandidateStatus
+from cc_crm.schemas.candidate import (
+    CandidateCreate,
+    CandidateRead,
+    CandidateUpdate,
+    CvExtractionRequest,
+    CvExtractionSuggestion,
+)
+from cc_crm.schemas.pagination import Page
+from cc_crm.schemas.submission import CandidateSubmissionRead
+from cc_crm.services.candidates import CandidateService
+from cc_crm.services.cv_extraction import extract_text_from_bytes
+from cc_crm.services.operational import DocumentService
+from cc_crm.services.storage import read_document_bytes
+from cc_crm.services.submissions import CandidateSubmissionService
+
+router = APIRouter(prefix="/candidates")
+
+
+@router.get("", response_model=Page[CandidateRead])
+def list_candidates(
+    session: DatabaseSession,
+    candidate_status: Annotated[CandidateStatus | None, Query(alias="status")] = None,
+    role: str | None = None,
+    region: str | None = None,
+    search: str | None = None,
+    created_from: datetime | None = None,
+    created_to: datetime | None = None,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+) -> Page[CandidateRead]:
+    entities, total = CandidateService(session).list_filtered(
+        status=candidate_status,
+        role=role,
+        region=region,
+        search=search,
+        created_from=created_from,
+        created_to=created_to,
+        offset=offset,
+        limit=limit,
+    )
+    items = [CandidateRead.model_validate(candidate) for candidate in entities]
+    return Page(items=items, total_count=total, limit=limit, offset=offset)
+
+
+@router.post("", response_model=CandidateRead, status_code=status.HTTP_201_CREATED)
+def create_candidate(payload: CandidateCreate, session: DatabaseSession) -> CandidateRead:
+    return CandidateRead.model_validate(CandidateService(session).create(payload))
+
+
+# Muss vor /{candidate_id} registriert sein, sonst faengt die Path-Param-Route
+# "reactivation-list" als ungueltige candidate_id ab.
+@router.get("/reactivation-list", response_model=list[CandidateRead])
+def list_reactivation_candidates(
+    session: DatabaseSession,
+    threshold_months: Annotated[int | None, Query(ge=1)] = None,
+) -> list[CandidateRead]:
+    candidates = CandidateService(session).reactivation_candidates(threshold_months)
+    return [CandidateRead.model_validate(candidate) for candidate in candidates]
+
+
+@router.get("/{candidate_id}", response_model=CandidateRead)
+def get_candidate(candidate_id: uuid.UUID, session: DatabaseSession) -> CandidateRead:
+    return CandidateRead.model_validate(CandidateService(session).get(candidate_id))
+
+
+@router.patch("/{candidate_id}", response_model=CandidateRead)
+def update_candidate(
+    candidate_id: uuid.UUID,
+    payload: CandidateUpdate,
+    session: DatabaseSession,
+) -> CandidateRead:
+    return CandidateRead.model_validate(CandidateService(session).update(candidate_id, payload))
+
+
+@router.delete("/{candidate_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_candidate(candidate_id: uuid.UUID, session: DatabaseSession) -> Response:
+    CandidateService(session).delete(candidate_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/{candidate_id}/submissions", response_model=list[CandidateSubmissionRead])
+def list_candidate_submissions(
+    candidate_id: uuid.UUID,
+    session: DatabaseSession,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+) -> list[CandidateSubmissionRead]:
+    return [
+        CandidateSubmissionRead.model_validate(submission)
+        for submission in CandidateSubmissionService(session).list_for_candidate(
+            candidate_id, offset=offset, limit=limit
+        )
+    ]
+
+
+@router.post("/{candidate_id}/cv-extraction", response_model=CvExtractionSuggestion)
+def extract_cv_fields(
+    candidate_id: uuid.UUID,
+    payload: CvExtractionRequest,
+    session: DatabaseSession,
+) -> CvExtractionSuggestion:
+    document = DocumentService(session).get(uuid.UUID(payload.document_id))
+    content = read_document_bytes(document.storage_key)
+    cv_text = extract_text_from_bytes(document.filename, content)
+    return CandidateService(session).suggest_cv_fields(candidate_id, cv_text)

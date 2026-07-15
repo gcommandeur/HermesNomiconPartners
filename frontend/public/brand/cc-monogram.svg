@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 78" role="img" aria-labelledby="title">
+  <title id="title">CC Monogramm</title>
+  <defs>
+    <linearGradient id="silver" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset=".48" stop-color="#D8DADF"/>
+      <stop offset="1" stop-color="#747C89"/>
+    </linearGradient>
+  </defs>
+  <path d="M57 15A27 27 0 1 0 57 63" fill="none" stroke="url(#silver)" stroke-width="8" stroke-linecap="square"/>
+  <path d="M104 23A29 29 0 1 0 104 55" fill="none" stroke="url(#silver)" stroke-width="8" stroke-linecap="square"/>
+  <path d="M79 24l8 11" stroke="url(#silver)" stroke-width="8"/>
+</svg>

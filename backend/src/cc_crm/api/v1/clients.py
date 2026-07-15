@@ -1,0 +1,113 @@
+import uuid
+from datetime import datetime
+from typing import Annotated
+
+from fastapi import APIRouter, Query, Response, status
+
+from cc_crm.api.dependencies import DatabaseSession
+from cc_crm.models.enums import ClientStatus
+from cc_crm.schemas.client_company import (
+    ClientCompanyCreate,
+    ClientCompanyRead,
+    ClientCompanyUpdate,
+    ClientDuplicateCandidate,
+)
+from cc_crm.schemas.pagination import Page
+from cc_crm.services.client_grouping import ClientGroupingService
+from cc_crm.services.clients import ClientCompanyService
+
+router = APIRouter(prefix="/clients")
+
+
+@router.get("", response_model=Page[ClientCompanyRead])
+def list_clients(
+    session: DatabaseSession,
+    client_status: Annotated[ClientStatus | None, Query(alias="status")] = None,
+    region: str | None = None,
+    search: str | None = None,
+    created_from: datetime | None = None,
+    created_to: datetime | None = None,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+) -> Page[ClientCompanyRead]:
+    entities, total = ClientCompanyService(session).clients.filtered(
+        status=client_status,
+        region=region,
+        search=search,
+        created_from=created_from,
+        created_to=created_to,
+        offset=offset,
+        limit=limit,
+    )
+    items = [ClientCompanyRead.model_validate(client) for client in entities]
+    return Page(items=items, total_count=total, limit=limit, offset=offset)
+
+
+@router.get("/check-duplicate", response_model=list[ClientDuplicateCandidate])
+def check_duplicate_client(
+    session: DatabaseSession,
+    name: str,
+    postal_code: str | None = None,
+    exclude_id: uuid.UUID | None = None,
+) -> list[ClientDuplicateCandidate]:
+    """Warnt vor wahrscheinlich schon vorhandenen Kanzleien mit ähnlichem
+    Namen - blockiert nichts, da mehrere Standorte derselben Marke (z.B.
+    Ecovis, Afileon, PWC) ausdrücklich erwünscht sind."""
+    matches = ClientCompanyService(session).find_potential_duplicates(
+        name=name, postal_code=postal_code, exclude_id=exclude_id
+    )
+    return [
+        ClientDuplicateCandidate(
+            id=str(client.id),
+            name=client.name,
+            kanzleigruppe=client.kanzleigruppe,
+            city=client.city,
+            postal_code=client.postal_code,
+            similarity=round(score, 2),
+            same_location=same_location,
+        )
+        for client, score, same_location in matches
+    ]
+
+
+@router.post("", response_model=ClientCompanyRead, status_code=status.HTTP_201_CREATED)
+def create_client(
+    payload: ClientCompanyCreate,
+    session: DatabaseSession,
+) -> ClientCompanyRead:
+    return ClientCompanyRead.model_validate(ClientCompanyService(session).create(payload))
+
+
+@router.get("/{client_id}", response_model=ClientCompanyRead)
+def get_client(client_id: uuid.UUID, session: DatabaseSession) -> ClientCompanyRead:
+    return ClientCompanyRead.model_validate(ClientCompanyService(session).get(client_id))
+
+
+@router.get("/{client_id}/group-locations", response_model=list[ClientCompanyRead])
+def list_group_locations(client_id: uuid.UUID, session: DatabaseSession) -> list[ClientCompanyRead]:
+    """Andere Standorte derselben Kanzleigruppe (leer, falls keine
+    Kanzleigruppe gesetzt ist oder es der einzige Standort ist)."""
+    client = ClientCompanyService(session).get(client_id)
+    if not client.kanzleigruppe:
+        return []
+    locations = ClientGroupingService(session).group_locations(
+        client.kanzleigruppe, exclude_id=client_id
+    )
+    return [ClientCompanyRead.model_validate(item) for item in locations]
+
+
+@router.patch("/{client_id}", response_model=ClientCompanyRead)
+def update_client(
+    client_id: uuid.UUID,
+    payload: ClientCompanyUpdate,
+    session: DatabaseSession,
+) -> ClientCompanyRead:
+    return ClientCompanyRead.model_validate(
+        ClientCompanyService(session).update(client_id, payload)
+    )
+
+
+@router.delete("/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_client(client_id: uuid.UUID, session: DatabaseSession) -> Response:
+    ClientCompanyService(session).delete(client_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
