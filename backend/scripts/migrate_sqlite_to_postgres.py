@@ -46,6 +46,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from sqlalchemy import Table, create_engine, func, select  # noqa: E402
+from sqlalchemy.dialects.postgresql import insert as pg_insert  # noqa: E402
 from sqlalchemy.engine import Engine  # noqa: E402
 
 from cc_crm.core.config import get_settings  # noqa: E402
@@ -68,6 +69,41 @@ def row_count(engine: Engine, table: Table) -> int:
         return int(conn.execute(select(func.count()).select_from(table)).scalar_one())
 
 
+def sanitize_dangling_fks(target: Engine, table: Table, rows: list[dict]) -> None:
+    """Setzt Fremdschluessel-Werte auf NULL, die im Ziel (noch) nicht existieren.
+
+    Die lokale Dev-Datenbank enthaelt bereits verwaiste Referenzen (z.B.
+    `activities.candidate_submission_id`, die auf laengst geloeschte
+    `candidate_submissions`-Zeilen zeigen - ein vorbestehendes Datenqualitaets-
+    problem, siehe Cockpit-Task "Daten-Hygiene"). Ein striktes INSERT wuerde an
+    diesen einzelnen Werten scheitern und die GESAMTE Zeile (und damit echte
+    Historie) verlieren. Stattdessen wird nur der ungueltige FK-Wert genullt -
+    nur fuer nullable Spalten; bei NOT NULL bleibt der Wert unveraendert und
+    das INSERT scheitert wie bisher sichtbar, statt still falsche Daten zu
+    erzeugen."""
+    for col in table.columns:
+        for fk in col.foreign_keys:
+            if not col.nullable:
+                continue
+            parent_table = fk.column.table
+            parent_col = fk.column.name
+            with target.connect() as conn:
+                valid_ids = {
+                    row[0] for row in conn.execute(select(parent_table.c[parent_col]))
+                }
+            dangling = 0
+            for row in rows:
+                value = row.get(col.name)
+                if value is not None and value not in valid_ids:
+                    row[col.name] = None
+                    dangling += 1
+            if dangling:
+                print(
+                    f"    HINWEIS: {dangling}x {table.name}.{col.name} auf NULL gesetzt "
+                    f"(verwaiste Referenz auf {parent_table.name} in der Quelle)."
+                )
+
+
 def copy_table(source: Engine, target: Engine, table: Table) -> tuple[int, int]:
     """Liest alle Zeilen aus `table` an der Quelle und schreibt sie in Chunks
     an das Ziel. Gibt (gelesene Zeilen, geschriebene Zeilen) zurueck."""
@@ -77,15 +113,26 @@ def copy_table(source: Engine, target: Engine, table: Table) -> tuple[int, int]:
     if not rows:
         return 0, 0
 
+    sanitize_dangling_fks(target, table, rows)
+
     with target.begin() as target_conn:
         for start in range(0, len(rows), CHUNK_SIZE):
             chunk = rows[start : start + CHUNK_SIZE]
-            target_conn.execute(table.insert(), chunk)
+            # ON CONFLICT DO NOTHING statt striktem INSERT: macht den Lauf
+            # sicher wiederholbar (bereits erfolgreich kopierte Tabellen aus
+            # einem vorherigen Teil-Lauf werden nicht doppelt eingefuegt) und
+            # ueberspringt einzelne Zeilen, die schon unabhaengig im Ziel
+            # existieren (z.B. ein Admin-User, der direkt in Prod angelegt
+            # wurde), ohne die restlichen Zeilen der Tabelle zu blockieren.
+            stmt = pg_insert(table).values(chunk).on_conflict_do_nothing()
+            target_conn.execute(stmt)
 
     return len(rows), len(rows)
 
 
-def run_migration(source_url: str, target_url: str, *, force: bool) -> dict[str, tuple[int, int]]:
+def run_migration(
+    source_url: str, target_url: str, *, force: bool, skip_tables: set[str] | None = None
+) -> dict[str, tuple[int, int]]:
     if not source_url.startswith("sqlite"):
         raise MigrationError(
             f"Quelle ist keine SQLite-URL ({source_url!r}) - dieses Skript ist fuer den "
@@ -101,6 +148,9 @@ def run_migration(source_url: str, target_url: str, *, force: bool) -> dict[str,
     target_engine = create_engine(target_url)
 
     tables = ordered_tables()
+    skip_tables = skip_tables or set()
+    if skip_tables:
+        tables = [t for t in tables if t.name not in skip_tables]
 
     if not force:
         already_populated = [t.name for t in tables if row_count(target_engine, t) > 0]
@@ -140,6 +190,15 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Auch schreiben, wenn Zieltabellen bereits Zeilen enthalten.",
     )
+    parser.add_argument(
+        "--skip-tables",
+        default="",
+        help=(
+            "Kommagetrennte Liste von Tabellennamen, die komplett uebersprungen werden "
+            "(z.B. auth_sessions - reine Login-Token-Historie ohne Produktionswert, die "
+            "verwaiste Fremdschluessel auf laengst geloeschte lokale Dev-User enthalten kann)."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -151,8 +210,10 @@ def main(argv: list[str] | None = None) -> None:
     print(f"Ziel:   {args.target_url}")
     print("Kopiere Tabellen (Fremdschluessel-sichere Reihenfolge)...")
 
+    skip_tables = {name.strip() for name in args.skip_tables.split(",") if name.strip()}
+
     try:
-        results = run_migration(source_url, args.target_url, force=args.force)
+        results = run_migration(source_url, args.target_url, force=args.force, skip_tables=skip_tables)
     except MigrationError as exception:
         print(f"FEHLER: {exception}")
         raise SystemExit(1) from exception

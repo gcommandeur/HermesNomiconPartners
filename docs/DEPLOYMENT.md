@@ -1,205 +1,248 @@
 # Hermes CRM – Deployment-Anleitung
 
-Diese Anleitung beschreibt den empfohlenen, einfachen Weg, Hermes CRM produktiv
-zu hosten. Alle Schritte, die ein Konto, eine Zahlung oder Zugangsdaten
-betreffen, musst du selbst ausführen (Claude/Cowork legt aus Sicherheitsgründen
-keine Accounts an und gibt keine Zahlungsdaten ein).
+Diese Anleitung beschreibt das tatsächliche Produktiv-Setup von Hermes CRM.
+Stand: 2026-07-20. Alles läuft in einem einzigen DigitalOcean-Konto/Team
+("My Team"), Region Frankfurt (FRA1).
 
-## Empfohlener Stack (einfach, günstig, passend zur aktuellen Größe)
+## Übersicht
 
-| Komponente | Empfehlung | Warum |
+| Komponente | Dienst | Name / Ort |
 |---|---|---|
-| Backend (FastAPI) | [Railway](https://railway.app) oder [Render](https://render.com) | Docker-Image direkt deploybar, einfaches Setup |
-| Frontend (Next.js) | [Vercel](https://vercel.com) | Von den Next.js-Machern, null Konfiguration, automatisches HTTPS/CDN |
-| Dokumente (CVs, Verträge) | [Cloudflare R2](https://developers.cloudflare.com/r2/) | S3-kompatibel, kein Ausgangsdatenverkehr-Aufpreis (egress-frei), günstig |
-| Datenbank | **Managed PostgreSQL** (Railway-Addon oder Supabase) | Produktionsempfehlung - echte Nebenläufigkeit (mehrere Backend-Instanzen, spätere Mobile-App mit gleichzeitigen Verbindungen), kein Volume-Management nötig, automatische Backups beim Anbieter. Siehe Schritt 1a unten für die Einrichtung. |
+| Backend (FastAPI) | App Platform Web Service | App `hermescrm`, Komponente `hermescrm` |
+| Frontend (Next.js) | App Platform Web Service | App `hermescrm`, Komponente `hermescrm-frontend` |
+| Datenbank | Managed PostgreSQL | Cluster `db-pgsql-fra1-22616` |
+| Dokumentenspeicher (CVs, Verträge) | Spaces Object Storage | Bucket `hermescrm` |
 
-**SQLite ist nur noch für rein lokale Entwicklung gedacht**, nicht mehr als
-Produktionsempfehlung: SQLite verträgt sich nur mit GENAU EINEM
-Backend-Prozess gleichzeitig (kein horizontales Skalieren, kein Zugriff durch
-mehrere Instanzen). Der Code unterstützt SQLite weiterhin unverändert für
-`docker compose`/lokales Entwickeln (`CC_CRM_DATABASE_URL=sqlite:///...`),
-für den produktiven Cloud-Betrieb aber bitte Postgres verwenden (Schritt 1a).
-Das Projekt ist bereits vollständig auf Postgres vorbereitet (Treiber,
-Alembic-Migrationen, Umzugsskript) - Details siehe unten.
+Backend und Frontend sind **zwei Komponenten derselben App Platform App**
+(nicht zwei getrennte Apps) – dadurch teilen sie sich eine Domain und einen
+SSL-Endpunkt, unterschieden nur über den Pfad. Live-Domain:
+`https://hermescrm-v9sle.ondigitalocean.app`
 
-## Schritt 1 – Cloudflare R2 einrichten (Dokumentenspeicher)
+**SQLite ist nur noch für rein lokale Entwicklung gedacht** (`docker
+compose`/lokales Entwickeln mit `CC_CRM_DATABASE_URL=sqlite:///...`) – SQLite
+verträgt nur genau einen Backend-Prozess gleichzeitig. Produktiv läuft
+ausschließlich Managed PostgreSQL.
 
-1. Cloudflare-Account erstellen/einloggen: https://dash.cloudflare.com
-2. R2 aktivieren, einen Bucket anlegen (z.B. `hermes-crm-documents`)
-3. Unter "Manage R2 API Tokens" einen API-Token mit Schreibrechten für diesen
-   Bucket erstellen
-4. Diese Werte notieren (werden in Schritt 3 als Umgebungsvariablen gebraucht):
-   - Account-ID
-   - Access Key ID
-   - Secret Access Key
-   - Endpoint-URL (Format: `https://<account-id>.r2.cloudflarestorage.com`)
+## App Platform
 
-## Schritt 1a – PostgreSQL-Instanz anlegen (Datenbank)
+- App-Name: `hermescrm`
+- Projekt: `first-project`
+- Region: Frankfurt (FRA1)
+- Quelle: GitHub-Repo `gcommandeur/hermescrm`, Branch `main` (Auto-Deploy bei
+  jedem Push)
+- Die GitHub-App-Autorisierung für DigitalOcean ist bewusst auf genau dieses
+  eine Repo beschränkt (kein kontoweiter Zugriff)
 
-Zwei gängige, einfache Optionen - beide reichen für den Start:
+### Routing
+- `/api` → Backend-Komponente `hermescrm` (Full Path Preserved, d.h.
+  `/api/v1/...` kommt unverändert beim Backend an)
+- `/` → Frontend-Komponente `hermescrm-frontend`
 
-**Option A: Railway-Postgres-Addon** (praktisch, wenn das Backend ohnehin auf
-Railway läuft - eine Rechnung, ein Dashboard):
-1. Im Railway-Projekt "New" → "Database" → "Add PostgreSQL" wählen
-2. Railway legt automatisch eine `DATABASE_URL`-Variable im Projekt an
-   (Format `postgresql://user:pass@host:port/railway`) - für
-   `CC_CRM_DATABASE_URL` das Präfix auf `postgresql+psycopg://` ändern
-   (SQLAlchemy braucht den Treiber-Namen im Schema), Rest unverändert
-   übernehmen.
+### Backend-Komponente (`hermescrm`)
+- Quellverzeichnis: `/` (Root-`Dockerfile`)
+- Container-Port: 8000
+- Größe: 1 GB RAM / 1 shared vCPU, 2 Container (~$24/Monat)
+- Health-Check: `/api/v1/health`
+- Migrationen (`alembic upgrade head`) laufen automatisch als Teil des
+  Start-Kommandos beim Deploy
 
-**Option B: Supabase** (kostenloser Tier reicht für den Start, praktisch bei
-Bedarf für spätere Zusatzfeatures wie Auth/Storage):
-1. Auf https://supabase.com Projekt anlegen
-2. Unter Project Settings → Database → Connection string den "URI"-String
-   kopieren (Format `postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres`)
-3. Für `CC_CRM_DATABASE_URL` ebenfalls das Präfix auf
-   `postgresql+psycopg://` ändern.
+### Frontend-Komponente (`hermescrm-frontend`)
+- Quellverzeichnis: `/frontend` (eigenes `Dockerfile` dort)
+- Container-Port: 3000
+- Größe: 1 GB RAM / 1 shared vCPU, 2 Container (~$24/Monat)
+- Wichtig: der `dockerfile_path` in der App Spec muss explizit auf
+  `/frontend/Dockerfile` gesetzt sein – der App-Platform-Standard hätte sonst
+  fälschlich das Root-Dockerfile des Backends verwendet
+- `frontend/Dockerfile` kopiert `pnpm-workspace.yaml` in die deps-Stage,
+  damit pnpm die dort erlaubten Build-Skripte (`sharp`, `unrs-resolver`)
+  ausführt (sonst schlägt `pnpm install` mit `ERR_PNPM_IGNORED_BUILDS` fehl)
 
-In beiden Fällen: die fertige URL wird in Schritt 2 als
-`CC_CRM_DATABASE_URL` gesetzt. Danach einmalig `alembic upgrade head` gegen
-diese URL laufen lassen (legt alle Tabellen an), und falls bereits lokale
-SQLite-Daten existieren, `backend/scripts/migrate_sqlite_to_postgres.py`
-(siehe Skript-Docstring) für den einmaligen Datenumzug verwenden.
+### Wo man die Einstellungen findet
+DigitalOcean-Dashboard → App Platform → `hermescrm` → Tab **Settings** →
+Komponente links auswählen (`hermescrm` oder `hermescrm-frontend`) → dort
+Environment Variables, Routing, Ports etc.
 
-## Schritt 2 – Backend hosten (Railway, Beispiel)
+## Datenbank (Managed PostgreSQL)
 
-1. Auf https://railway.app einloggen, neues Projekt erstellen
-2. "Deploy from GitHub repo" wählen und das Hermes-CRM-Repo verbinden
-   (Railway erkennt automatisch das `Dockerfile` im Repo-Root)
-3. **Kein Volume nötig** für die Datenbank selbst (Postgres läuft managed,
-   siehe Schritt 1a) - nur falls weiterhin lokale Dokumente statt R2
-   verwendet würden, wäre ein Volume relevant (bei R2-Konfiguration wie
-   unten nicht der Fall).
-4. Umgebungsvariablen setzen (Railway-Projekt -> Variables):
-   ```
-   CC_CRM_ENVIRONMENT=production
-   CC_CRM_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/dbname
-   CC_CRM_CORS_ORIGINS=["https://DEINE-FRONTEND-DOMAIN.vercel.app"]
-   CC_CRM_ANTHROPIC_API_KEY=<dein Anthropic API Key>
-   CC_CRM_ANTHROPIC_MODEL=claude-sonnet-5
-   CC_CRM_S3_BUCKET=hermes-crm-documents
-   CC_CRM_S3_ENDPOINT_URL=https://<account-id>.r2.cloudflarestorage.com
-   CC_CRM_S3_REGION=auto
-   CC_CRM_S3_ACCESS_KEY_ID=<aus Schritt 1>
-   CC_CRM_S3_SECRET_ACCESS_KEY=<aus Schritt 1>
-   ```
-5. Deployen. Railway baut das Dockerfile, startet den Container; Migrationen
-   laufen automatisch beim Start (`alembic upgrade head` ist Teil des
-   Start-Kommandos).
-6. Die vergebene Railway-Domain (oder eine eigene Domain) notieren - das ist
-   die Backend-URL, die das Frontend braucht.
+- Cluster-Name: `db-pgsql-fra1-22616`
+- Region: Frankfurt (FRA1)
+- Version: PostgreSQL 18
+- Tier: Basic (Shared CPU), 1 vCPU / 1 GB RAM, 10 GB Storage, Autoscaling an
+- Kosten: ca. $15.15/Monat
+- Automatische tägliche Backups sind bei Managed PostgreSQL standardmäßig
+  aktiv (kein eigenes Backup-Skript nötig)
+- Netzwerkzugriff läuft über **Trusted Sources**: standardmäßig ist nur die
+  App selbst eingetragen (nicht öffentlich erreichbar). Für einmalige
+  Wartungsaufgaben (z.B. einen Datenumzug von einer lokalen Maschine) muss
+  die eigene IPv4-Adresse temporär als Trusted Source hinzugefügt und danach
+  wieder entfernt werden (Dashboard → Datenbank-Cluster → Tab **Network
+  Access**→ Add Trusted Sources). Dabei zwei bekannte Stolpersteine:
+  - Nur IPv4-`/32`-Einträge funktionieren zuverlässig – eine automatisch
+    erkannte IPv6-Adresse oder `0.0.0.0/0` werden von DigitalOcean
+    zurückgewiesen (teils nur als leicht zu übersehener Toast-Fehler). Die
+    eigene IPv4 z.B. über `https://api.ipify.org?format=json` ermitteln.
+  - Beim Ablesen des Passworts aus den Connection-Details: die angezeigte
+    Schriftart macht Großbuchstabe `O` und Ziffer `0` optisch fast
+    ununterscheidbar – im Zweifel den Text exakt kopieren statt abzutippen.
+- Verbindung in der App läuft über App-Platform-interne Variablen-Referenzen
+  (`${db-pgsql-fra1-22616.USERNAME}` etc.), nicht über einen fest
+  eingetragenen Connection-String – Zugangsdaten liegen daher nirgends im
+  Klartext in den App-Settings
 
-*Falls du lieber Render nutzt: gleiches Prinzip (Dockerfile erkennen lassen,
-dieselben Umgebungsvariablen setzen - kein Persistent Disk nötig, da weder
-Datenbank noch Dokumente lokal gespeichert werden).*
+### Einmaliger Datenumzug (lokale SQLite → Postgres)
 
-## Schritt 3 – Frontend hosten (Vercel)
+Bereits erledigt für den initialen Go-Live (2026-07-20, 7.096 Zeilen über 22
+Tabellen migriert), hier dokumentiert für einen eventuellen künftigen Umzug
+auf einen neuen Datenbank-Cluster:
 
-1. Auf https://vercel.com einloggen, "Add New Project", das Repo verbinden
-2. Root Directory auf `frontend/` setzen
-3. Vercel erkennt Next.js automatisch (kein Dockerfile nötig - Vercel baut
-   nativ). Das `frontend/Dockerfile` ist als Alternative vorhanden, falls du
-   stattdessen auf einer Docker-basierten Plattform hosten willst.
-4. Umgebungsvariable setzen:
-   ```
-   NEXT_PUBLIC_CC_CRM_API_URL=https://DEINE-BACKEND-DOMAIN.up.railway.app/api/v1
-   ```
-5. Deployen. Vercel vergibt automatisch eine `*.vercel.app`-Domain (eigene
-   Domain später unter Projekteinstellungen -> Domains ergänzbar).
-6. Zurück zu Railway/Render: `CC_CRM_CORS_ORIGINS` mit der finalen
-   Vercel-Domain aktualisieren (Schritt 2.4), damit das Backend Anfragen vom
-   Frontend akzeptiert.
+1. Ziel-Postgres-URL besorgen (Connection-Details im DO-Dashboard, siehe
+   oben), Format: `postgresql+psycopg://doadmin:<passwort>@<host>:25060/defaultdb?sslmode=require`
+2. Einmalig `alembic upgrade head` gegen diese URL laufen lassen (legt alle
+   Tabellen an)
+3. `backend/scripts/migrate_sqlite_to_postgres.py --target-url <obige URL>`
+   ausführen (aus dem `backend`-Verzeichnis, mit `.venv\Scripts\python.exe`
+   unter Windows – PowerShells Execution Policy blockiert oft
+   `Activate.ps1`, daher die venv-`python.exe` direkt aufrufen statt zu
+   aktivieren)
+4. Das Skript ist idempotent (`ON CONFLICT DO NOTHING`) und unterstützt
+   `--force` (falls Zieltabellen schon Zeilen enthalten, z.B. ein manuell
+   angelegter Admin-User) sowie `--skip-tables <namen>` (z.B. für
+   `auth_sessions` – reine Login-Token-Historie ohne Produktionswert). Bei
+   verwaisten Fremdschlüsseln in nullable Spalten (z.B. eine gelöschte
+   `candidate_submission`, auf die eine `activity` noch verweist) werden nur
+   die einzelnen ungültigen Werte auf NULL gesetzt, nicht die ganze Zeile
+   verworfen – Details siehe Skript-Docstring.
+5. Nach erfolgreichem Umzug: temporäre Trusted-Source-IP wieder aus dem
+   Datenbank-Cluster entfernen.
 
-## Schritt 4 – Erste Anmeldung / Nutzer anlegen
+## Spaces Object Storage (Dokumente: CVs, Verträge etc.)
 
-Es gibt keinen öffentlichen Registrierungs-Endpunkt (bewusst - das CRM ist
-nicht für Selbstregistrierung gedacht). Der erste Login wird über
-`backend/scripts/create_test_user.py` angelegt (Name ist historisch - das
+- Bucket-Name: `hermescrm`
+- Region: Frankfurt (fra1)
+- Endpoint: `https://hermescrm.fra1.digitaloceanspaces.com`
+- CDN: **bewusst deaktiviert** (Kandidaten-/Kundendokumente sind vertraulich,
+  sollen nicht über ein öffentliches CDN cachebar sein)
+- Zugriffsschlüssel-Name: `hermes-crm-backend` (Scope: Limited Access, nur
+  dieser Bucket, Read/Write/Delete)
+- Wo einsehbar: DigitalOcean-Dashboard → Spaces Object Storage → Tab "Access
+  Keys"
+- Der Secret Access Key wird von DigitalOcean nur einmalig beim
+  Erstellen/Regenerieren angezeigt und ist danach nicht mehr abrufbar. Er ist
+  nur verschlüsselt als Umgebungsvariable `CC_CRM_S3_SECRET_ACCESS_KEY` in
+  der Backend-Komponente hinterlegt. Falls er verloren geht: Access Key auf
+  der Spaces-Seite "regenerieren" und den neuen Wert in der
+  Backend-Komponente unter Environment Variables aktualisieren.
+
+## Umgebungsvariablen (Backend-Komponente `hermescrm`)
+
+Alle Werte außer `CC_CRM_ENVIRONMENT`, `CC_CRM_S3_BUCKET`,
+`CC_CRM_S3_ENDPOINT_URL`, `CC_CRM_S3_REGION`, `CC_CRM_ANTHROPIC_MODEL` und
+`CC_CRM_CORS_ORIGINS` sind als "Encrypt" markiert (im Dashboard nur maskiert
+sichtbar):
+
+- `CC_CRM_DATABASE_URL` – über Variablen-Referenzen auf den DB-Cluster
+  zusammengesetzt
+- `CC_CRM_ENVIRONMENT=production`
+- `CC_CRM_S3_BUCKET=hermescrm`
+- `CC_CRM_S3_ENDPOINT_URL=https://hermescrm.fra1.digitaloceanspaces.com`
+- `CC_CRM_S3_REGION=fra1`
+- `CC_CRM_S3_ACCESS_KEY_ID` (verschlüsselt)
+- `CC_CRM_S3_SECRET_ACCESS_KEY` (verschlüsselt)
+- `CC_CRM_ANTHROPIC_API_KEY` (verschlüsselt)
+- `CC_CRM_ANTHROPIC_MODEL=claude-sonnet-5`
+- `CC_CRM_CORS_ORIGINS=["https://hermescrm-v9sle.ondigitalocean.app"]`
+
+## Umgebungsvariablen (Frontend-Komponente `hermescrm-frontend`)
+
+- `NEXT_PUBLIC_CC_CRM_API_URL=https://hermescrm-v9sle.ondigitalocean.app/api/v1`
+  (Build- und Run-Time, da Next.js diesen Wert zur Build-Zeit ins
+  Client-Bundle einbackt)
+
+## Erste Anmeldung / weitere Nutzer anlegen
+
+Es gibt keinen öffentlichen Registrierungs-Endpunkt (bewusst – das CRM ist
+nicht für Selbstregistrierung gedacht). Logins werden über
+`backend/scripts/create_test_user.py` angelegt (Name ist historisch – das
 Skript legt jeden Login mit E-Mail + Passwort an oder aktualisiert dessen
-Passwort, nicht nur "Testnutzer"):
+Passwort):
 
 ```
 python scripts/create_test_user.py deine-email@commandeurconsulting.de <dein-passwort>
 ```
 
-Optional kann als dritter Parameter ein Anzeigename mitgegeben werden (ohne
-Angabe bleibt es beim Default "Test User") - so lässt sich derselbe Befehl
-für jeden weiteren Kollegen mit eigenem Namen wiederholen:
+Optional als dritter Parameter ein Anzeigename (ohne Angabe bleibt es beim
+Default "Test User") – so lässt sich derselbe Befehl für jeden weiteren
+Kollegen wiederholen:
 
 ```
 python scripts/create_test_user.py kollege@commandeurconsulting.de <passwort> "Anzeigename"
 ```
 
-Auf einer gehosteten Plattform wie Railway kannst du diesen Befehl einmalig
-über die dortige Shell/Console des Deployments ausführen (z.B. Railway's
-"Run a command" in der Service-Ansicht), da das Skript direkt gegen die
-laufende Datenbank arbeitet.
+Admin-Rechte und Aktiv-Status lassen sich danach im laufenden Betrieb unter
+**Einstellungen → Nutzerverwaltung** in der CRM-Oberfläche selbst verwalten
+(kein erneuter Skript-Aufruf nötig).
+
+## Kalender-Sync (Outlook)
+
+Jeder Nutzer findet unter **Einstellungen** eine persönliche,
+schreibgeschützte ICS-Feed-URL (`/api/v1/calendar/feed/<token>.ics`), die nur
+die eigenen Termine enthält (Interviews, Quali-Calls, sonstige Termine).
+Diese URL ist geheim wie ein Passwort und lässt sich bei Bedarf über "Feed-URL
+neu generieren" invalidieren. Einbindung in Outlook (Desktop oder Web) über
+"Kalender hinzufügen → Aus dem Internet/Web abonnieren".
 
 ## Was NICHT automatisch passiert
 
-- **Backups**: `scripts/backup_to_s3.py` sichert nur eine lokale SQLite-Datei
-  (Pfad aus `CC_CRM_DATABASE_URL`) - das ist also nur für rein lokale
-  Entwicklung relevant, **nicht** für den produktiven Postgres-Betrieb (das
-  Skript lehnt eine Postgres-URL bewusst ab, siehe Skript-Docstring: für eine
-  laufende Server-Datenbank ist `pg_dump`/der Backup-Mechanismus des
-  Postgres-Anbieters der richtige Weg, kein Datei-Upload). Railway- und
-  Supabase-Postgres bringen beide automatische, tägliche Backups bereits im
-  Dashboard mit - dort aktivieren/prüfen statt eines eigenen Skripts.
 - **Monitoring/Alerting**: Für den Anfang reicht der eingebaute Healthcheck
   (`/api/v1/health`); für echten Betrieb später ggf. Uptime-Monitoring (z.B.
   UptimeRobot, kostenlos) ergänzen.
-- **E-Mail-Versand** (Outlook-Integration): laut Projektstand für eine
-  spätere Phase vorgesehen, nicht Teil dieses Deployments.
+- **E-Mail-Versand** (Outlook-Integration über den Kalender-Sync hinaus):
+  laut Projektstand für eine spätere Phase vorgesehen, nicht Teil dieses
+  Deployments.
+- **Datenbereinigung**: Die lokale Entwicklungs-Historie enthielt einzelne
+  Dateninkonsistenzen (z.B. verwaiste Fremdschlüssel-Verweise), die beim
+  Produktiv-Umzug sanitisiert statt blockierend behandelt wurden – siehe
+  offene Aufgabe "Daten-Hygiene" im Projekt-Cockpit für eine systematische
+  Bereinigung.
 
-## Sicherheits-Check (bereits geprüft)
+## Sicherheits-Check
 
 - Alle Kandidaten-/Kanzlei-/Dokument-Endpunkte verlangen einen gültigen Login
-  (Bearer-Token) oder API-Key - global über `protected_router` in
-  `api/v1/router.py` erzwungen, nicht pro Endpunkt einzeln (also auch für die
-  neuen Dokument-Upload/Download-Endpunkte automatisch mit abgesichert).
+  (Bearer-Token) oder API-Key – global über `protected_router` in
+  `api/v1/router.py` erzwungen, nicht pro Endpunkt einzeln.
 - Passwörter werden mit PBKDF2-SHA256 (260.000 Iterationen, zufälliges Salt
   pro Passwort) gehasht, nie im Klartext gespeichert.
 - Login-Sessions: der Token wird nur als SHA-256-Hash in der Datenbank
-  gespeichert, nicht im Klartext - ein Datenbank-Leak allein würde keine
+  gespeichert, nicht im Klartext – ein Datenbank-Leak allein würde keine
   aktiven Sessions kompromittieren.
 - Fehlermeldungen an die Öffentlichkeit sind auf definierte, harmlose
   Meldungen begrenzt (kein Roh-Traceback, keine internen Pfade/Variablen).
 - `.env`-Dateien sowie `backend/data/documents/` und `backend/data/imports/`
-  (echte Kandidaten-/Kanzleidaten) sind in `.gitignore` - werden nicht ins
+  (echte Kandidaten-/Kanzleidaten) sind in `.gitignore` – werden nicht ins
   Repo committet.
-
-## Vor Go-Live umgesetzt (Stand 2026-07-16)
-
-- **API-Dokumentation nur außerhalb Produktion**: `/docs`, `/redoc` und
-  `/openapi.json` sind nur erreichbar, wenn `CC_CRM_ENVIRONMENT` `local`
-  oder `development` ist - bei `production` liefern alle drei 404
+- API-Dokumentation nur außerhalb Produktion: `/docs`, `/redoc` und
+  `/openapi.json` liefern bei `CC_CRM_ENVIRONMENT=production` 404
   (`main.py::create_app`).
-- **Rate-Limiting auf dem Login-Endpunkt**: einfacher, prozessinterner
-  In-Memory-Zähler (`core/rate_limit.py`) - nach 5 fehlgeschlagenen
+- Rate-Limiting auf dem Login-Endpunkt: nach 5 fehlgeschlagenen
   Login-Versuchen derselben Client-IP innerhalb von 5 Minuten liefert
-  `/api/v1/auth/login` 429, bevor überhaupt ein Passwort-Vergleich
-  stattfindet. Ein erfolgreicher Login setzt den Zähler für diese IP sofort
-  zurück. Kein Redis nötig - reicht für einen einzelnen uvicorn-Prozess und
-  einen kleinen internen Nutzerkreis.
-- **Automatisiertes Datenbank-Backup**: siehe `scripts/backup_to_s3.py`
-  oben - das Skript selbst ist fertig, nur der Zeitplan (Cron) muss beim
-  gewählten Hosting-Anbieter eingerichtet werden.
-- **PostgreSQL-Vorbereitung**: Treiber (`psycopg[binary]`), Alembic-Migrationen
-  und Session-Setup sind bereits dialektübergreifend (SQLite lokal, Postgres
-  produktiv) getestet; `backend/scripts/migrate_sqlite_to_postgres.py` kopiert
-  den bestehenden lokalen Datenbestand einmalig in eine neue Postgres-Instanz,
-  sobald diese angelegt ist (Schritt 1a).
+  `/api/v1/auth/login` 429 (`core/rate_limit.py`).
+- Datenbank nicht öffentlich erreichbar, nur über Trusted-Source-Bindung zur
+  App selbst.
+- GitHub-Zugriff für DigitalOcean auf genau ein Repo beschränkt statt
+  kontoweitem Zugriff.
+- Kein CDN vor dem Dokumentenspeicher (Vertraulichkeit vor Ladegeschwindigkeit
+  für CV-/Vertragsdaten).
+- Secrets (API-Keys, DB-Zugangsdaten, Access Keys) ausschließlich als
+  verschlüsselte App-Platform-Umgebungsvariablen, nirgends im Klartext in
+  Doku oder Repo.
 
-## Kosten-Richtwert (Stand heute, kann sich ändern)
+## Kosten (grobe Richtwerte, Stand Einrichtung)
 
-- Railway: kleine Backend-Instanz + Postgres-Addon, ca. 5-20 $/Monat je nach
-  Nutzung (Postgres-Addon selbst hat einen kleinen kostenlosen Anteil)
-- Supabase: kostenloser Tier reicht für den Start (Postgres-Datenbank
-  inklusive), danach nutzungsabhängig
-- Vercel: kostenloser "Hobby"-Plan reicht für den Anfang
-- Cloudflare R2: erste 10 GB Speicher kostenlos, danach sehr günstig (kein
-  Ausgangsdatenverkehr-Aufpreis)
+- App Platform Backend: ~$24/Monat
+- App Platform Frontend: ~$24/Monat
+- Managed PostgreSQL: ~$15.15/Monat
+- Spaces Object Storage: nach Verbrauch (Basistarif meist wenige Dollar/Monat
+  bei diesem Datenvolumen)
 
-Bitte aktuelle Preise auf den jeweiligen Anbieter-Websites prüfen, bevor du
-dich endgültig entscheidest.
+Bitte aktuelle Preise im DigitalOcean-Dashboard prüfen, da sich Tarife ändern
+können.
