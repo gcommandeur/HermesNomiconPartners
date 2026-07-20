@@ -16,6 +16,7 @@ RUN pip install --no-cache-dir ./backend
 
 COPY backend/alembic.ini ./backend/
 COPY backend/alembic ./backend/alembic
+COPY backend/scripts ./backend/scripts
 
 WORKDIR /app/backend
 
