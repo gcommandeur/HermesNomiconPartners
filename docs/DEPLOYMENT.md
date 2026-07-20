@@ -41,7 +41,13 @@ ausschließlich Managed PostgreSQL.
 ### Backend-Komponente (`hermescrm`)
 - Quellverzeichnis: `/` (Root-`Dockerfile`)
 - Container-Port: 8000
-- Größe: 1 GB RAM / 1 shared vCPU, 2 Container (~$24/Monat)
+- Größe: 1 GB RAM / 1 shared vCPU, 1 Container (~$12/Monat) - am 2026-07-20 von
+  2 auf 1 Container reduziert (CPU-Auslastung lag bei 2-4%, 2 Instanzen waren
+  reine Redundanz ohne echten Bedarf bei diesem internen Nutzerkreis). Nachteil:
+  kein nahtloses Rolling-Update mehr bei Deploys (kurzer Sekundenbruchteil-
+  Unterbruch statt Zero-Downtime) - bei fehlendem gleichzeitigem Live-Traffic
+  vernachlässigbar. Bei Bedarf jederzeit im Dashboard unter Settings →
+  Resource Size wieder auf 2 Container hochsetzen.
 - Health-Check: `/api/v1/health`
 - Migrationen (`alembic upgrade head`) laufen automatisch als Teil des
   Start-Kommandos beim Deploy
@@ -49,7 +55,9 @@ ausschließlich Managed PostgreSQL.
 ### Frontend-Komponente (`hermescrm-frontend`)
 - Quellverzeichnis: `/frontend` (eigenes `Dockerfile` dort)
 - Container-Port: 3000
-- Größe: 1 GB RAM / 1 shared vCPU, 2 Container (~$24/Monat)
+- Größe: 1 GB RAM / 1 shared vCPU, 1 Container (~$12/Monat) - ebenfalls am
+  2026-07-20 von 2 auf 1 Container reduziert, siehe Begründung beim Backend
+  oben.
 - Wichtig: der `dockerfile_path` in der App Spec muss explizit auf
   `/frontend/Dockerfile` gesetzt sein – der App-Platform-Standard hätte sonst
   fälschlich das Root-Dockerfile des Backends verwendet
@@ -236,13 +244,18 @@ neu generieren" invalidieren. Einbindung in Outlook (Desktop oder Web) über
   verschlüsselte App-Platform-Umgebungsvariablen, nirgends im Klartext in
   Doku oder Repo.
 
-## Kosten (grobe Richtwerte, Stand Einrichtung)
+## Kosten (Stand 2026-07-20, nach Reduzierung auf je 1 Container)
 
-- App Platform Backend: ~$24/Monat
-- App Platform Frontend: ~$24/Monat
+- App Platform Backend: ~$12/Monat (1 Container)
+- App Platform Frontend: ~$12/Monat (1 Container)
 - Managed PostgreSQL: ~$15.15/Monat
 - Spaces Object Storage: nach Verbrauch (Basistarif meist wenige Dollar/Monat
   bei diesem Datenvolumen)
+
+Gesamt: ca. $39-40/Monat laufend. Ursprünglich liefen beide App-Platform-
+Komponenten mit je 2 Containern (~$63-65/Monat gesamt) für Redundanz bei
+Deployments - bei der tatsächlichen Auslastung (2-4% CPU) unnötig, siehe
+Begründung bei den jeweiligen Komponenten oben.
 
 Bitte aktuelle Preise im DigitalOcean-Dashboard prüfen, da sich Tarife ändern
 können.
