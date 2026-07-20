@@ -32,6 +32,13 @@ backend/.env
 backend/data/documents/
 backend/data/imports/
 
+# Arbeitsdateien mit echten Kandidaten-/Kanzlei-Daten aus Backfill-/Review-
+# Skripten (z.B. job_title_backfill_review.csv, aus der Historie entfernt am
+# 2026-07-20) - jede *_review.csv im scripts-Ordner ist personenbezogen und
+# gehört nicht ins Repo.
+backend/scripts/*_review.csv
+backend/scripts/*.csv
+
 # Logs
 *.log
 
