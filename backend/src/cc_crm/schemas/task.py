@@ -16,6 +16,9 @@ class TaskBase(BaseModel):
     due_at: datetime | None = None
     status: TaskStatus = TaskStatus.OPEN
     priority: TaskPriority = TaskPriority.NORMAL
+    # Zustaendiger Mitarbeiter (Komfort-Filter, keine Sichtbarkeitsgrenze -
+    # siehe models/candidate.py::owner_user_id).
+    owner_user_id: uuid.UUID | None = None
 
 
 class TaskCreate(TaskBase):
@@ -28,6 +31,7 @@ class TaskUpdate(BaseModel):
     due_at: datetime | None = None
     status: TaskStatus | None = None
     priority: TaskPriority | None = None
+    owner_user_id: uuid.UUID | None = None
 
 
 class TaskRead(TaskBase, EntityRead):

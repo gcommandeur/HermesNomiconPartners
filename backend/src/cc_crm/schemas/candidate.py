@@ -1,3 +1,4 @@
+import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, EmailStr, Field
@@ -49,6 +50,9 @@ class CandidateBase(BaseModel):
     # INTERN — niemals in anonyme Profile / ausgehende Dokumente übernehmen.
     no_gos: list[str] = Field(default_factory=list)
     freitext_notizen: str | None = None
+    # Zustaendiger Mitarbeiter (Komfort-Filter, keine Sichtbarkeitsgrenze -
+    # siehe models/candidate.py::owner_user_id).
+    owner_user_id: uuid.UUID | None = None
 
 
 class CandidateCreate(CandidateBase):
@@ -89,6 +93,7 @@ class CandidateUpdate(BaseModel):
     passender_kanzleityp: str | None = Field(default=None, max_length=160)
     no_gos: list[str] | None = None
     freitext_notizen: str | None = None
+    owner_user_id: uuid.UUID | None = None
 
 
 class CandidateRead(CandidateBase, EntityRead):

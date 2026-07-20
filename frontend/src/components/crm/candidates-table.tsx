@@ -10,6 +10,7 @@ import { StatusPill } from "@/components/crm/status-pill";
 import { ExportActions } from "@/components/crm/export-actions";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { ErrorState } from "@/components/crm/error-state";
+import { ErrorBanner } from "@/components/crm/error-banner";
 import { PaginationControls } from "@/components/crm/pagination-controls";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,9 @@ import { compareValues, type SortDir } from "@/lib/sort";
 import { formatDate } from "@/lib/utils";
 import { usePagination } from "@/lib/use-pagination";
 import { apiPost } from "@/lib/api/client";
-import { useCandidatesCache, useReactivationCandidatesCache } from "@/lib/api/hooks";
+import { useCurrentUser, useReactivationCandidatesCache } from "@/lib/api/hooks";
+import { useServerSearchList } from "@/lib/api/use-server-search";
+import { getCandidatesPage } from "@/lib/api/queries";
 import type { Candidate } from "@/lib/api/types";
 
 interface NlSearchResponse {
@@ -51,19 +54,49 @@ export function CandidatesTable() {
   const [reactivationOnly, setReactivationOnly] = useState(
     () => searchParams.get("reaktivierung") === "1",
   );
-  const { data, isLoading, error, mutate: retryCandidates } = useCandidatesCache();
+  const [status, setStatus] = useState("");
+  // "Meine Kandidaten" - reiner Komfort-Filter nach owner_user_id, KEINE
+  // Sichtbarkeitsgrenze (Default "Alle" bleibt unveraendert). Siehe
+  // Backend models/candidate.py::owner_user_id fuer die Begruendung.
+  const [mineOnly, setMineOnly] = useState(false);
+  const { data: currentUserData } = useCurrentUser();
+  const currentUserId = currentUserData?.data.id;
+
+  // Serverseitige Suche + Pagination (siehe lib/api/use-server-search.ts) -
+  // laedt nur die aktuell sichtbare Seite + Suchtreffer statt (wie vorher
+  // via fetchAllPages) immer den kompletten Kandidatenbestand. Die
+  // Reaktivierungsliste bleibt bewusst ein separater, vollstaendig
+  // geladener kleiner Datensatz (eigener, bereits bestehender Endpoint ohne
+  // Skalierungsproblem) - beim Umschalten auf "Erneut kontaktieren" wird sie
+  // clientseitig gefiltert/sortiert wie bisher.
+  const {
+    search,
+    setSearch: setServerSearch,
+    page,
+    setPage,
+    pageCount,
+    items: serverCandidates,
+    totalCount,
+    isLoading,
+    error,
+    source,
+    demoError,
+    retry: retryCandidates,
+  } = useServerSearchList<Candidate>("/candidates", getCandidatesPage, {
+    status,
+    ownerUserId: mineOnly ? currentUserId : undefined,
+  });
+
   const {
     data: reactivationData,
     isLoading: reactivationLoading,
     error: reactivationError,
     mutate: retryReactivation,
   } = useReactivationCandidatesCache(reactivationOnly);
-  const candidates = useMemo(() => {
-    if (reactivationOnly) return reactivationData?.data ?? [];
-    return data?.data ?? [];
-  }, [reactivationOnly, reactivationData, data]);
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const reactivationCandidates = useMemo(
+    () => reactivationData?.data ?? [],
+    [reactivationData],
+  );
   const [aiResults, setAiResults] = useState<Candidate[] | null>(null);
   const [aiHint, setAiHint] = useState<string | null>(null);
   const [aiSearching, setAiSearching] = useState(false);
@@ -81,7 +114,7 @@ export function CandidatesTable() {
   }
 
   function handleSearchChange(value: string) {
-    setSearch(value);
+    setServerSearch(value);
     // Any manual edit after an AI search leaves KI-Suche results stale -
     // fall back to the fast local filter until the user re-triggers KI-Suche.
     setAiResults(null);
@@ -103,9 +136,13 @@ export function CandidatesTable() {
     }
   }
 
-  const filtered = useMemo(() => {
-    const base = aiResults ?? candidates.filter((candidate) => {
+  // Reaktivierungsliste ist ein kleiner, vollstaendig geladener Datensatz -
+  // Suche/Status/Sortierung bleiben dort clientseitig ueber den gesamten
+  // (kleinen) Bestand, wie vor dieser Umstellung.
+  const reactivationFiltered = useMemo(() => {
+    const base = reactivationCandidates.filter((candidate) => {
       if (status && candidate.status !== status) return false;
+      if (mineOnly && candidate.owner_user_id !== currentUserId) return false;
       const term = search.trim().toLowerCase();
       if (!term) return true;
       const haystack = [
@@ -118,24 +155,40 @@ export function CandidatesTable() {
     if (!sortKey || !SORT_ACCESSORS[sortKey]) return base;
     const accessor = SORT_ACCESSORS[sortKey];
     return [...base].sort((a, b) => compareValues(accessor(a), accessor(b), sortDir));
-  }, [candidates, search, status, aiResults, sortKey, sortDir]);
+  }, [reactivationCandidates, search, status, mineOnly, currentUserId, sortKey, sortDir]);
 
-  const { pageItems, page, pageCount, setPage } = usePagination(filtered);
+  const { pageItems: reactivationPageItems, page: reactivationPage, pageCount: reactivationPageCount, setPage: setReactivationPage } = usePagination(reactivationFiltered);
 
-  const exportRows = useMemo(() => filtered.map((candidate) => ({
+  // Server-Ergebnisseite ist bereits die anzuzeigende Seite - Sortierung
+  // wirkt hier bewusst nur INNERHALB der aktuell geladenen Seite (nicht mehr
+  // ueber den gesamten Bestand), da nicht mehr alle Datensaetze geladen sind.
+  const sortedServerCandidates = useMemo(() => {
+    const base = aiResults ?? serverCandidates;
+    if (!sortKey || !SORT_ACCESSORS[sortKey]) return base;
+    const accessor = SORT_ACCESSORS[sortKey];
+    return [...base].sort((a, b) => compareValues(accessor(a), accessor(b), sortDir));
+  }, [serverCandidates, aiResults, sortKey, sortDir]);
+
+  const displayedCandidates = reactivationOnly ? reactivationPageItems : sortedServerCandidates;
+  const displayedTotal = reactivationOnly ? reactivationFiltered.length : (aiResults?.length ?? totalCount);
+  const displayedPage = reactivationOnly ? reactivationPage : page;
+  const displayedPageCount = reactivationOnly ? reactivationPageCount : (aiResults ? 1 : pageCount);
+  const displayedSetPage = reactivationOnly ? setReactivationPage : setPage;
+
+  const exportRows = useMemo(() => displayedCandidates.map((candidate) => ({
     Name: `${candidate.first_name} ${candidate.last_name}`,
     Rolle: candidate.job_title,
     Region: candidate.city ?? candidate.postal_code,
     Gehalt: candidate.salary_expectation,
     Status: candidate.status,
     Kurzprofil: candidate.short_profile ? "Ja" : "Nein",
-  })), [filtered]);
+  })), [displayedCandidates]);
 
-  if (error || (reactivationOnly && reactivationError)) {
+  if ((!reactivationOnly && error) || (reactivationOnly && reactivationError)) {
     return <ErrorState onRetry={() => { void retryCandidates(); void retryReactivation(); }} />;
   }
 
-  if (isLoading || (reactivationOnly && reactivationLoading)) {
+  if ((!reactivationOnly && isLoading) || (reactivationOnly && reactivationLoading)) {
     return (
       <div className="space-y-2">
         {Array.from({ length: 8 }).map((_, index) => (
@@ -167,7 +220,7 @@ export function CandidatesTable() {
           </Badge>
         </div>
       )}
-      <DemoNotice source={data?.source ?? "api"} error={data?.error} />
+      <DemoNotice source={reactivationOnly ? "api" : (source ?? "api")} error={reactivationOnly ? undefined : demoError} />
       <FilterBar
         placeholder='Nach Name/Rolle/Region suchen, oder z.B. "aktive Steuerberater in Köln mit Umsatzsteuer-Erfahrung" für KI-Suche'
         value={search}
@@ -177,10 +230,9 @@ export function CandidatesTable() {
         onStatusChange={setStatus}
         onSubmit={handleAiSearch}
         aiSearch={{ loading: aiSearching, onClick: handleAiSearch }}
+        ownerFilter={{ mineOnly, onChange: setMineOnly }}
       />
-      {aiError && (
-        <div className="mb-3 rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{aiError}</div>
-      )}
+      <ErrorBanner message={aiError} className="mb-3" />
       {aiResults && (
         <div className="mb-3 flex items-center justify-between rounded-lg border border-[#1F5FA8]/30 bg-[#1F5FA8]/10 p-3 text-xs text-[#CBD5E1]">
           <span>KI-Suche aktiv: {aiResults.length} Treffer für &quot;{search}&quot;</span>
@@ -211,7 +263,7 @@ export function CandidatesTable() {
         sortDir={sortDir}
         onSort={handleSort}
       >
-        {pageItems.map((candidate) => (
+        {displayedCandidates.map((candidate) => (
           <tr key={candidate.id} className="hover:bg-[#203A5A]/35">
             <td className="px-4 py-3.5 text-xs text-[#94A3B8]">{candidate.candidate_number ?? "—"}</td>
             <td className="px-4 py-3.5"><Link href={`/kandidaten/${candidate.id}`} className="font-semibold text-[#D8DADF] hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</Link>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-[#e4aeb4]" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[11px] text-[#94A3B8]">Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</p></td>
@@ -225,8 +277,8 @@ export function CandidatesTable() {
           </tr>
         ))}
       </DataTable>
-      <PaginationControls page={page} pageCount={pageCount} onChange={setPage} />
-      <p className="mt-3 text-xs text-[#8a9095]">{filtered.length} von {candidates.length} Kandidaten</p>
+      <PaginationControls page={displayedPage} pageCount={displayedPageCount} onChange={displayedSetPage} />
+      <p className="mt-3 text-xs text-[#8a9095]">{displayedCandidates.length} von {displayedTotal} Kandidaten</p>
     </>
   );
 }

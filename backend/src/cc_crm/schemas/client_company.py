@@ -1,3 +1,4 @@
+import uuid
 from datetime import date
 from decimal import Decimal
 
@@ -45,6 +46,9 @@ class ClientCompanyBase(BaseModel):
     special_terms: str | None = None
     commercial_notes: str | None = None
     notes: str | None = None
+    # Zustaendiger Mitarbeiter (Komfort-Filter, keine Sichtbarkeitsgrenze -
+    # siehe models/candidate.py::owner_user_id).
+    owner_user_id: uuid.UUID | None = None
 
 
 class ClientCompanyCreate(ClientCompanyBase):
@@ -82,6 +86,7 @@ class ClientCompanyUpdate(BaseModel):
     special_terms: str | None = None
     commercial_notes: str | None = None
     notes: str | None = None
+    owner_user_id: uuid.UUID | None = None
 
 
 class ClientCompanyRead(ClientCompanyBase, EntityRead):

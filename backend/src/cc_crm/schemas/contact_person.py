@@ -51,4 +51,8 @@ class ContactPersonUpdate(BaseModel):
 
 
 class ContactPersonRead(ContactPersonBase, EntityRead):
-    pass
+    # Denormalisiert vom Service angehaengt (Join gegen client_companies),
+    # damit die Kontakte-Liste den Kanzleinamen anzeigen kann, ohne dass das
+    # Frontend dafuer den kompletten Kanzlei-Bestand laden muss - gleiches
+    # Muster wie Candidate.has_ghosting_history.
+    client_company_name: str | None = None

@@ -8,10 +8,31 @@ from sqlalchemy.orm import Session
 from cc_crm.core.config import get_settings
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.enums import CandidateStatus
+from cc_crm.models.user import User
 from cc_crm.repositories.candidates import CandidateRepository
+from cc_crm.repositories.operational import DocumentRepository
+from cc_crm.repositories.recruiting import AuditLogRepository
 from cc_crm.schemas.candidate import CandidateCreate, CandidateUpdate, CvExtractionSuggestion
 from cc_crm.services.base import CrudService
 from cc_crm.services.cv_extraction import extract_candidate_fields, is_agency_letterhead
+from cc_crm.services.storage import delete_document_bytes
+
+# Freitextfelder mit Personenbezug, die bei der Anonymisierung (siehe
+# CandidateService.anonymize) auf None/leer gesetzt werden - bewusst NICHT
+# die strukturierten/statistischen Felder (job_title, qualification, PLZ/
+# Ort, status, fachliche_schwerpunkte, ...), die fuer Auswertungen erhalten
+# bleiben sollen (Nutzer-Vorgabe: "Statistiken bleiben auswertbar").
+_ANONYMIZE_TEXT_FIELDS = [
+    "email",
+    "phone",
+    "linkedin_url",
+    "referred_by",
+    "summary",
+    "short_profile",
+    "freitext_notizen",
+    "wechselgrund",
+    "next_step",
+]
 
 # Letzte reale Kandidatennummer aus der bisherigen (nicht-CRM-) Nummerierung.
 # Neue, automatisch vergebene Nummern schließen daran an (ab 4053), damit CRM-
@@ -24,6 +45,29 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         repository = CandidateRepository(session)
         super().__init__(session, repository, "Candidate")
         self.candidates = repository
+        self.audit_logs = AuditLogRepository(session)
+        self.documents = DocumentRepository(session)
+
+    def delete(self, entity_id: uuid.UUID, current_user: User | None = None) -> None:
+        # Loeschung ist sicherheits-/nachvollziehbarkeitsrelevant (Punkt 2 des
+        # Auftrags) - deshalb vor dem eigentlichen Delete geloggt, unabhaengig
+        # vom Erfolg des Deletes selbst waere die Reihenfolge sonst unklar.
+        candidate = self.get(entity_id)
+        self.audit_logs.create(
+            {
+                "entity_type": "candidate",
+                "entity_id": candidate.id,
+                "action": "deleted",
+                "changed_by": current_user.email if current_user else None,
+                "old_values": {
+                    "candidate_number": candidate.candidate_number,
+                    "first_name": candidate.first_name,
+                    "last_name": candidate.last_name,
+                },
+            }
+        )
+        self.session.commit()
+        super().delete(entity_id)
 
     def get(self, entity_id: uuid.UUID) -> Candidate:
         candidate = super().get(entity_id)
@@ -43,6 +87,45 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             updated.cv_in_recorded_at = datetime.now(UTC)
             self.session.commit()
         return updated
+
+    def anonymize(self, entity_id: uuid.UUID, admin_user: User) -> Candidate:
+        """DSGVO-Vorbereitung (rein technische Grundlage, siehe Punkt 4 des
+        Auftrags - keine Rechtsberatung): ersetzt/loescht die
+        personenbezogenen Freitextfelder eines Kandidaten sowie seine
+        CV-Dokumente, behaelt den Datensatz selbst aber (referenzielle
+        Integritaet zu Prozessen/Placements bleibt bestehen, strukturierte
+        Felder fuer Statistiken bleiben erhalten). Admin-only (siehe
+        API-Layer)."""
+        candidate = self.get(entity_id)
+
+        for document in self.documents.filtered(owner_type="candidate", owner_id=candidate.id):
+            delete_document_bytes(document.storage_key)
+            self.documents.delete(document)
+
+        candidate.first_name = "Anonymisiert"
+        candidate.last_name = "Anonymisiert"
+        candidate.anrede = None
+        candidate.consent_received = False
+        candidate.cv_available = False
+        candidate.no_gos = []
+        for field in _ANONYMIZE_TEXT_FIELDS:
+            setattr(candidate, field, None)
+
+        # Bewusst KEINE personenbezogenen Werte (Name, E-Mail, ...) ins
+        # Audit-Log schreiben - alter_values wuerde sonst genau die Daten
+        # reproduzieren, die diese Aktion gerade entfernt.
+        self.audit_logs.create(
+            {
+                "entity_type": "candidate",
+                "entity_id": candidate.id,
+                "action": "anonymized",
+                "changed_by": admin_user.email,
+                "new_values": {"fields_cleared": [*_ANONYMIZE_TEXT_FIELDS, "no_gos"]},
+            }
+        )
+        self.session.commit()
+        self.session.refresh(candidate)
+        return candidate
 
     def suggest_cv_fields(self, candidate_id: uuid.UUID, cv_text: str) -> CvExtractionSuggestion:
         """Phase M, Punkt 2: schlaegt aus einem hochgeladenen CV nur Felder
@@ -73,6 +156,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         role: str | None = None,
         region: str | None = None,
         search: str | None = None,
+        owner_user_id: uuid.UUID | None = None,
         created_from: datetime | None = None,
         created_to: datetime | None = None,
         offset: int = 0,
@@ -83,6 +167,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             role=role,
             region=region,
             search=search,
+            owner_user_id=owner_user_id,
             created_from=created_from,
             created_to=created_to,
             offset=offset,

@@ -70,3 +70,11 @@ class FeeRepository(SQLAlchemyRepository[Fee]):
 class AuditLogRepository(SQLAlchemyRepository[AuditLog]):
     def __init__(self, session: Session) -> None:
         super().__init__(session, AuditLog)
+
+    def list_recent(self, *, offset: int = 0, limit: int = 200) -> Sequence[AuditLog]:
+        """Neueste Eintraege zuerst - Grundlage der einfachen, chronologischen
+        Admin-Log-Ansicht (siehe api/v1/audit_logs.py), keine Filterung noetig."""
+        statement = (
+            select(AuditLog).order_by(AuditLog.changed_at.desc()).offset(offset).limit(limit)
+        )
+        return self.session.scalars(statement).all()

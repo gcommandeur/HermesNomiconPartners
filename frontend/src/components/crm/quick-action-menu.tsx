@@ -8,8 +8,6 @@ import { Modal } from "@/components/ui/modal";
 import { CandidateCreateForm } from "@/components/crm/candidate-create-modal";
 import { ClientCreateForm } from "@/components/crm/client-create-modal";
 import { SubmissionCreateForm } from "@/components/crm/submission-create-modal";
-import { getCandidates, getClients } from "@/lib/api/queries";
-import type { Candidate, ClientCompany } from "@/lib/api/types";
 
 type Action = "candidate" | "client" | "submission" | null;
 
@@ -17,9 +15,6 @@ export function QuickActionMenu() {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [active, setActive] = useState<Action>(null);
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [clients, setClients] = useState<ClientCompany[]>([]);
-  const [loadingLists, setLoadingLists] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,19 +24,6 @@ export function QuickActionMenu() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  async function openSubmissionForm() {
-    setActive("submission");
-    setMenuOpen(false);
-    setLoadingLists(true);
-    try {
-      const [candidatesResult, clientsResult] = await Promise.all([getCandidates(), getClients()]);
-      setCandidates(candidatesResult.data);
-      setClients(clientsResult.data);
-    } finally {
-      setLoadingLists(false);
-    }
-  }
 
   return (
     <div className="relative" ref={menuRef}>
@@ -56,7 +38,7 @@ export function QuickActionMenu() {
           <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#D8DADF] hover:bg-white/8" onClick={() => { setActive("client"); setMenuOpen(false); }}>
             <Building2 size={15} />Kanzlei anlegen
           </button>
-          <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#D8DADF] hover:bg-white/8" onClick={openSubmissionForm}>
+          <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#D8DADF] hover:bg-white/8" onClick={() => { setActive("submission"); setMenuOpen(false); }}>
             <Briefcase size={15} />Prozess erstellen
           </button>
         </div>
@@ -79,11 +61,7 @@ export function QuickActionMenu() {
           description="Ein Prozess beginnt bei Quali Call. Die Kanzlei kann optional sofort verknüpft oder erst ab Interview ergänzt werden."
           onClose={() => setActive(null)}
         >
-          {loadingLists ? (
-            <p className="py-6 text-center text-xs text-[#94A3B8]">Kandidaten und Kanzleien werden geladen…</p>
-          ) : (
-            <SubmissionCreateForm candidates={candidates} clients={clients} onDone={() => { setActive(null); router.refresh(); }} />
-          )}
+          <SubmissionCreateForm onDone={() => { setActive(null); router.refresh(); }} />
         </Modal>
       )}
     </div>

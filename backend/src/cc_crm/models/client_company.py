@@ -1,7 +1,8 @@
+import uuid
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Date, Enum, Integer, Numeric, String, Text
+from sqlalchemy import Date, Enum, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cc_crm.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -59,3 +60,10 @@ class ClientCompany(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     special_terms: Mapped[str | None] = mapped_column(Text)
     commercial_notes: Mapped[str | None] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)
+
+    # Zustaendiger Mitarbeiter (Komfort-Filter "Meine Kanzleien", KEINE
+    # Sichtbarkeitsgrenze) - siehe models/candidate.py::owner_user_id fuer
+    # die vollstaendige Begruendung.
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )

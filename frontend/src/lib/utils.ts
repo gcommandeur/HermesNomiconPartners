@@ -20,6 +20,17 @@ export function formatDate(value?: string | null) {
   }).format(new Date(value));
 }
 
+export function formatDateTime(value?: string | null) {
+  if (!value) return "–";
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 export function formatCurrency(value: number) {
   return new Intl.NumberFormat("de-DE", {
     style: "currency",

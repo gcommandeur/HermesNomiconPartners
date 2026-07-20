@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiPost } from "@/lib/api/client";
+import { ErrorBanner } from "@/components/crm/error-banner";
 import { invalidateContactsCache, useClientsCache } from "@/lib/api/hooks";
 import type { Contact } from "@/lib/api/types";
 
@@ -88,7 +89,7 @@ export function ContactCreateModal({ onCreated }: { onCreated?: (contact: Contac
               <input type="checkbox" checked={form.is_primary} onChange={(e) => set("is_primary", e.target.checked)} />
               Hauptkontakt dieser Kanzlei
             </label>
-            {error && <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>}
+            <ErrorBanner message={error} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Abbrechen</Button>
               <Button type="submit" disabled={busy}>{busy ? "Speichern…" : "Kontakt anlegen"}</Button>

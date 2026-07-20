@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { apiPatch } from "@/lib/api/client";
+import { ErrorBanner } from "@/components/crm/error-banner";
 import type { ClosingScoreResult } from "@/lib/api/types";
 
 const PAIN_OPTIONS = [
@@ -144,7 +145,7 @@ export function ClosingScoreForm({ submissionId, onScored }: {
               <div className="border-t border-white/10 pt-4">
                 <StatementPicker title="Momentum (optional, separates Formular)" options={MOMENTUM_OPTIONS} value={momentum} onChange={setMomentum} />
               </div>
-              {error && <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>}
+              <ErrorBanner message={error} />
               <div className="flex justify-end">
                 <Button
                   disabled={busy || pain === null || decision === null || market === null}

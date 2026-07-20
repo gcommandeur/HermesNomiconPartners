@@ -19,6 +19,7 @@ export function FilterBar({
   onStatusChange,
   onSubmit,
   aiSearch,
+  ownerFilter,
 }: {
   placeholder?: string;
   value: string;
@@ -31,6 +32,10 @@ export function FilterBar({
   /** Optional "KI-Suche" button for natural-language queries (e.g. "aktive
    * Kandidat:innen mit Umsatzsteuer-Erfahrung im Raum Köln"). */
   aiSearch?: { loading: boolean; onClick: () => void; label?: string };
+  /** Optionaler "Alle"/"Meine" Umschalter (reiner Komfort-Filter nach
+   * owner_user_id, KEINE Sichtbarkeitsgrenze - jeder Nutzer sieht ohne
+   * diesen Filter weiterhin alle Datensaetze). Default ist immer "Alle". */
+  ownerFilter?: { mineOnly: boolean; onChange: (mineOnly: boolean) => void };
 }) {
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -51,6 +56,24 @@ export function FilterBar({
           <Sparkles size={15} />
           {aiSearch.loading ? "Sucht…" : (aiSearch.label ?? "KI-Suche")}
         </Button>
+      )}
+      {ownerFilter && (
+        <div className="flex overflow-hidden rounded-lg border border-white/10">
+          <button
+            type="button"
+            className={`px-3 py-2 text-xs font-medium transition ${!ownerFilter.mineOnly ? "bg-white/10 text-white" : "text-[#94A3B8] hover:bg-white/5"}`}
+            onClick={() => ownerFilter.onChange(false)}
+          >
+            Alle
+          </button>
+          <button
+            type="button"
+            className={`px-3 py-2 text-xs font-medium transition ${ownerFilter.mineOnly ? "bg-white/10 text-white" : "text-[#94A3B8] hover:bg-white/5"}`}
+            onClick={() => ownerFilter.onChange(true)}
+          >
+            Meine
+          </button>
+        </div>
       )}
       {statusOptions && statusOptions.length > 0 && (
         <div className="relative">

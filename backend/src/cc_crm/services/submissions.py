@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from cc_crm.core.errors import BusinessRuleError, ConflictError
 from cc_crm.models.enums import SubmissionStatus, TaskPriority, TaskStatus
 from cc_crm.models.submission import CandidateSubmission
+from cc_crm.models.user import User
 from cc_crm.repositories.activities import ActivityRepository
 from cc_crm.repositories.contacts import ContactPersonRepository
 from cc_crm.repositories.jobs import JobMandateRepository
@@ -91,6 +92,27 @@ class CandidateSubmissionService(
         self.jobs = JobMandateRepository(session)
         self.contacts = ContactPersonRepository(session)
         self.tasks = TaskRepository(session)
+
+    def delete(self, entity_id: uuid.UUID, current_user: User | None = None) -> None:
+        # Loeschung ist sicherheits-/nachvollziehbarkeitsrelevant (Punkt 2 des
+        # Auftrags) - siehe services/candidates.py::delete fuer dasselbe Muster.
+        # Getrennt vom bereits bestehenden "status_changed"-Audit-Log in
+        # transition() oben, das eine andere Aktion protokolliert.
+        submission = self.get(entity_id)
+        self.audit_logs.create(
+            {
+                "entity_type": "candidate_submission",
+                "entity_id": submission.id,
+                "action": "deleted",
+                "changed_by": current_user.email if current_user else None,
+                "old_values": {
+                    "candidate_id": str(submission.candidate_id),
+                    "status": submission.status.value,
+                },
+            }
+        )
+        self.session.commit()
+        super().delete(entity_id)
 
     def list_for_candidate(
         self,

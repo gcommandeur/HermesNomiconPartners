@@ -87,3 +87,13 @@ class CandidateSubmission(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     closing_status: Mapped[ClosingStatus | None] = mapped_column(
         Enum(ClosingStatus, native_enum=False, length=16)
     )
+
+    # Zustaendiger Mitarbeiter (Komfort-Filter "Meine Prozesse", KEINE
+    # Sichtbarkeitsgrenze) - siehe models/candidate.py::owner_user_id fuer
+    # die vollstaendige Begruendung. Bewusst eine eigene, strukturierte Spalte
+    # statt das bestehende `owner`-Freitextfeld (String) umzuwidmen - dieses
+    # bleibt unveraendert bestehen (z.B. fuer Altdaten/externe Zuordnungen),
+    # `owner_user_id` ist die neue, mit `users` verknuepfte Variante.
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )

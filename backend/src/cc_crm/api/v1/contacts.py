@@ -9,21 +9,24 @@ from cc_crm.schemas.contact_person import (
     ContactPersonRead,
     ContactPersonUpdate,
 )
+from cc_crm.schemas.pagination import Page
 from cc_crm.services.contacts import ContactPersonService
 
 router = APIRouter(prefix="/contacts")
 
 
-@router.get("", response_model=list[ContactPersonRead])
+@router.get("", response_model=Page[ContactPersonRead])
 def list_contacts(
     session: DatabaseSession,
+    search: str | None = None,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
-) -> list[ContactPersonRead]:
-    return [
-        ContactPersonRead.model_validate(contact)
-        for contact in ContactPersonService(session).list(offset=offset, limit=limit)
-    ]
+) -> Page[ContactPersonRead]:
+    entities, total = ContactPersonService(session).list_filtered(
+        search=search, offset=offset, limit=limit
+    )
+    items = [ContactPersonRead.model_validate(contact) for contact in entities]
+    return Page(items=items, total_count=total, limit=limit, offset=offset)
 
 
 @router.post("", response_model=ContactPersonRead, status_code=status.HTTP_201_CREATED)

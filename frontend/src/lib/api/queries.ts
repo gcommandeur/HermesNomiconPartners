@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiGet } from "./client";
-import type { Activity, Candidate, CandidateSubmission, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, DocumentMeta, EmailTemplate, GeoMappingResult, MailingGroup, Paginated, Placement, Task, Vacancy } from "./types";
+import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, GeoMappingResult, MailingGroup, PageQuery, Paginated, Placement, Task, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -38,6 +38,30 @@ export async function getCandidates() {
   return fetchAllPages<Candidate>("/candidates", demoCandidates);
 }
 
+/** Fragt genau eine Seite (statt des kompletten Bestands) ab - fuer die
+ * serverseitig gesuchte/paginierte Kandidatenliste (siehe
+ * lib/api/use-server-search.ts). Anders als getCandidates() hier bewusst
+ * KEIN Demo-Fallback: eine leere Seite ist ein legitimes Suchergebnis
+ * ("keine Treffer"), kein Fehlerzustand. */
+export async function getCandidatesPage(query: PageQuery) {
+  return apiGet<Paginated<Candidate>>(`/candidates?${pageQueryString(query)}`, {
+    items: [],
+    total_count: 0,
+    limit: query.limit,
+    offset: query.offset,
+  });
+}
+
+function pageQueryString(query: PageQuery): string {
+  const params = new URLSearchParams();
+  if (query.search?.trim()) params.set("search", query.search.trim());
+  if (query.status) params.set("status", query.status);
+  if (query.ownerUserId) params.set("owner_user_id", query.ownerUserId);
+  params.set("limit", String(query.limit));
+  params.set("offset", String(query.offset));
+  return params.toString();
+}
+
 export async function getCandidate(id: string) {
   const fallback = demoCandidates.find((candidate) => candidate.id === id) ?? demoCandidates[0];
   return apiGet<Candidate>(`/candidates/${id}`, fallback);
@@ -50,6 +74,16 @@ export async function getReactivationCandidates(thresholdMonths?: number) {
 
 export async function getClients() {
   return fetchAllPages<ClientCompany>("/clients", demoClients);
+}
+
+/** Seitenweise Kanzlei-Suche, s. getCandidatesPage(). */
+export async function getClientsPage(query: PageQuery) {
+  return apiGet<Paginated<ClientCompany>>(`/clients?${pageQueryString(query)}`, {
+    items: [],
+    total_count: 0,
+    limit: query.limit,
+    offset: query.offset,
+  });
 }
 
 /** Warnt vor wahrscheinlich schon vorhandenen Kanzleien mit ähnlichem Namen
@@ -87,6 +121,19 @@ export async function getContacts() {
   return fetchAllPages<Contact>("/contacts", demoContacts);
 }
 
+/** Seitenweise Kontakte-Suche, s. getCandidatesPage(). Der Endpoint gibt seit
+ * der Server-Side-Suche eine Page (mit total_count) statt einer flachen
+ * Liste zurueck und liefert client_company_name bereits denormalisiert mit -
+ * das Frontend muss dafuer nicht mehr den kompletten Kanzlei-Bestand laden. */
+export async function getContactsPage(query: PageQuery) {
+  return apiGet<Paginated<Contact>>(`/contacts?${pageQueryString(query)}`, {
+    items: [],
+    total_count: 0,
+    limit: query.limit,
+    offset: query.offset,
+  });
+}
+
 export async function getVacancies() {
   return fetchAllPages<Vacancy>("/vacancies", demoVacancies);
 }
@@ -117,4 +164,47 @@ export async function getDocumentsForOwner(ownerType: string, ownerId: string) {
 
 export async function getCandidateMatches(candidateId: string) {
   return apiGet<ClientMatch[]>(`/candidates/${candidateId}/matches`, []);
+}
+
+export interface CalendarEventQuery {
+  startFrom?: string;
+  startTo?: string;
+  eventType?: CalendarEventType;
+  ownerUserId?: string;
+}
+
+/** Kalender-Termine im Zeitraum [startFrom, startTo] - kein Pagination noetig
+ * (ein Monat/eine Woche an Terminen ist eine ueberschaubare Anzahl, anders
+ * als der Kandidaten-/Kanzlei-Bestand). Serverseitige Sichtbarkeitsregeln
+ * (eigene vs. alle Termine) greifen unabhaengig von diesen Query-Parametern
+ * (siehe Backend services/calendar_events.py::list_visible). */
+export async function getCalendarEvents(query: CalendarEventQuery = {}) {
+  const params = new URLSearchParams();
+  if (query.startFrom) params.set("start_from", query.startFrom);
+  if (query.startTo) params.set("start_to", query.startTo);
+  if (query.eventType) params.set("event_type", query.eventType);
+  if (query.ownerUserId) params.set("owner_user_id", query.ownerUserId);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiGet<CalendarEvent[]>(`/calendar-events${suffix}`, []);
+}
+
+export async function getCurrentUser() {
+  return apiGet<CurrentUserInfo>("/auth/me", {
+    id: "", email: "", display_name: null, is_admin: false, calendar_feed_token: null,
+  });
+}
+
+export async function getAdminUsers() {
+  return apiGet<AdminUser[]>("/users", []);
+}
+
+/** Fuer JEDEN eingeloggten Nutzer zugaenglich (anders als getAdminUsers/
+ * GET /users, admin-only) - Grundlage der Owner-Auswahl beim Anlegen von
+ * Kandidat/Kanzlei/Prozess/Aufgabe. */
+export async function getAssignableUsers() {
+  return apiGet<UserBrief[]>("/users/assignable", []);
+}
+
+export async function getAuditLogs() {
+  return apiGet<AuditLogEntry[]>("/audit-logs", []);
 }

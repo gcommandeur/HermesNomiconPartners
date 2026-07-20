@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { apiDownload, apiFetchBlob, apiPatch, apiPost, apiUpload } from "@/lib/api/client";
+import { ErrorBanner } from "@/components/crm/error-banner";
 import { formatDate } from "@/lib/utils";
 import type { CvExtractionSuggestion, DocumentMeta } from "@/lib/api/types";
 
@@ -155,9 +156,7 @@ function DocumentPreviewModal({ document, onClose, onDownload }: {
             Keine Vorschau verfügbar für diesen Dateityp.
           </div>
         )}
-        {kind !== "none" && error && (
-          <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>
-        )}
+        {kind !== "none" && <ErrorBanner message={error} />}
         {kind !== "none" && !error && !blobUrl && (
           <div className="flex items-center justify-center rounded-lg border border-white/10 bg-[#0D1B2E]/60 py-16 text-sm text-[#94A3B8]">
             Lädt…
@@ -256,9 +255,7 @@ export function DocumentPanel({ ownerType, ownerId, documentType, documents }: D
           {uploading ? "Wird hochgeladen…" : "Datei hochladen"}
         </Button>
       </div>
-      {error && (
-        <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>
-      )}
+      <ErrorBanner message={error} />
       {cvSuggestion && ownerType === "candidate" && (
         <CvExtractionPanel
           candidateId={ownerId}

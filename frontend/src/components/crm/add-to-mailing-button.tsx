@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { apiPatch, apiPost } from "@/lib/api/client";
+import { ErrorBanner } from "@/components/crm/error-banner";
 import { invalidateMailingGroupsCache, useMailingGroupsCache } from "@/lib/api/hooks";
 import type { MailingGroup, MailingRecipient } from "@/lib/api/types";
 
@@ -75,9 +76,7 @@ export function AddToMailingButton({ recipient }: { recipient: MailingRecipient 
             {done && (
               <div className="rounded-lg border border-[#4f8a68]/35 bg-[#244d38]/45 p-3 text-xs text-[#a9d6b8]">{done}</div>
             )}
-            {error && (
-              <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>
-            )}
+            <ErrorBanner message={error} />
             {groups.length > 0 && (
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#92979c]">

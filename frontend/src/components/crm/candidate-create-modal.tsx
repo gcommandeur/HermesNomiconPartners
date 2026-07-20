@@ -7,7 +7,8 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiPatch, apiPost } from "@/lib/api/client";
-import { invalidateCandidatesCache } from "@/lib/api/hooks";
+import { ErrorBanner } from "@/components/crm/error-banner";
+import { invalidateCandidatesCache, useAssignableUsersCache, useCurrentUser } from "@/lib/api/hooks";
 import type { BeruflicheStation, Candidate } from "@/lib/api/types";
 
 const labelClass = "mb-1 block text-xs text-[#94A3B8]";
@@ -23,6 +24,7 @@ const emptyForm = {
   aktuelles_umfeld_kanzleityp: "", aktuelles_umfeld_kanzleigroesse: "",
   remote_teilzeit_wuensche: "", passender_kanzleityp: "",
   wechselgrund: "", no_gos: "", freitext_notizen: "", referred_by: "",
+  owner_user_id: "",
 };
 
 function formFromCandidate(candidate: Candidate): typeof emptyForm {
@@ -50,6 +52,7 @@ function formFromCandidate(candidate: Candidate): typeof emptyForm {
     no_gos: (candidate.no_gos ?? []).join(", "),
     freitext_notizen: candidate.freitext_notizen ?? "",
     referred_by: candidate.referred_by ?? "",
+    owner_user_id: candidate.owner_user_id ?? "",
   };
 }
 
@@ -68,6 +71,12 @@ export function CandidateCreateForm({
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(candidate ? formFromCandidate(candidate) : emptyForm);
   const [stations, setStations] = useState<BeruflicheStation[]>(candidate?.berufliche_stationen ?? []);
+  const { data: currentUserData } = useCurrentUser();
+  const { data: assignableUsersData } = useAssignableUsersCache();
+  const assignableUsers = assignableUsersData?.data ?? [];
+  // Default = aktuell eingeloggter Nutzer (aber im Dropdown aenderbar) - nur
+  // beim Neuanlegen, im Bearbeiten-Modus bleibt der bestehende Owner stehen.
+  const ownerUserId = form.owner_user_id || (isEdit ? "" : currentUserData?.data.id ?? "");
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -169,6 +178,15 @@ export function CandidateCreateForm({
         <div><label className={labelClass}>Kündigungsfrist</label><Input value={form.notice_period} onChange={(e) => set("notice_period", e.target.value)} /></div>
       </div>
       <div><label className={labelClass}>Empfohlen von</label><Input placeholder="Name der empfehlenden Person" value={form.referred_by} onChange={(e) => set("referred_by", e.target.value)} /></div>
+      <div>
+        <label className={labelClass}>Zuständiger Mitarbeiter</label>
+        <select className={selectClass} value={ownerUserId} onChange={(e) => set("owner_user_id", e.target.value)}>
+          <option value="">Nicht zugewiesen</option>
+          {assignableUsers.map((user) => (
+            <option key={user.id} value={user.id}>{user.display_name ?? user.email}</option>
+          ))}
+        </select>
+      </div>
 
       <div className="border-t border-white/10 pt-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#92979c]">Quali-Call-Details</p>
@@ -215,7 +233,7 @@ export function CandidateCreateForm({
         </div>
       </div>
 
-      {error && <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>}
+      <ErrorBanner message={error} />
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={busy}>
           {busy ? "Speichern…" : isEdit ? "Änderungen speichern" : "Kandidat anlegen"}

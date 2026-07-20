@@ -5,7 +5,6 @@ from fastapi import APIRouter, Query, status
 
 from cc_crm.api.dependencies import DatabaseSession
 from cc_crm.schemas.recruiting import (
-    AuditLogRead,
     FeeCreate,
     FeedbackRead,
     FeeRead,
@@ -79,9 +78,3 @@ def create_fee(
     return FeeRead.model_validate(
         RecruitingProcessService(session).create_fee(placement_id, payload)
     )
-
-
-@router.get("/audit-logs", response_model=list[AuditLogRead])
-def list_audit_logs(session: DatabaseSession) -> list[AuditLogRead]:
-    service = RecruitingProcessService(session)
-    return [AuditLogRead.model_validate(item) for item in service.audit.list()]

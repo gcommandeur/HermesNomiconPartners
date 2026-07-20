@@ -139,6 +139,16 @@ class ClosingStatus(StrEnum):
     STOP = "stop"
 
 
+class CalendarEventType(StrEnum):
+    """Typ eines Kalender-Termins (siehe models/calendar_event.py) - bewusst
+    knapp gehalten (kein generisches Tagging-System), da die drei Werte den
+    tatsaechlichen Terminarten im Recruiting-Alltag entsprechen."""
+
+    INTERVIEW = "interview"
+    QUALI_CALL = "quali_call"
+    OTHER = "other"
+
+
 class WarrantyStatus(StrEnum):
     """Gewährleistungsstatus eines Placements, berechnet aus
     start_date + guarantee_period_months (siehe services/warranty.py)."""

@@ -7,7 +7,8 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiPatch, apiPost } from "@/lib/api/client";
-import { invalidateClientsCache } from "@/lib/api/hooks";
+import { ErrorBanner } from "@/components/crm/error-banner";
+import { invalidateClientsCache, useAssignableUsersCache, useCurrentUser } from "@/lib/api/hooks";
 import { checkClientDuplicate } from "@/lib/api/queries";
 import type { ClientCompany, ClientDuplicateCandidate } from "@/lib/api/types";
 
@@ -17,6 +18,7 @@ const emptyForm = {
   name: "", kanzleigruppe: "", status: "prospect", website: "", email: "", phone: "",
   street: "", city: "", postal_code: "", region: "", focus: "", company_size: "",
   fee_percentage: "27.00", honorar_stufe: "standard", nachlass_begruendung: "", agb_version: "",
+  owner_user_id: "",
 };
 
 function formFromClient(client: ClientCompany): typeof emptyForm {
@@ -37,6 +39,7 @@ function formFromClient(client: ClientCompany): typeof emptyForm {
     honorar_stufe: client.honorar_stufe ?? "standard",
     nachlass_begruendung: client.nachlass_begruendung ?? "",
     agb_version: client.agb_version ?? "",
+    owner_user_id: client.owner_user_id ?? "",
   };
 }
 
@@ -60,6 +63,10 @@ export function ClientCreateForm({
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(client ? formFromClient(client) : emptyForm);
   const [duplicates, setDuplicates] = useState<ClientDuplicateCandidate[]>([]);
+  const { data: currentUserData } = useCurrentUser();
+  const { data: assignableUsersData } = useAssignableUsersCache();
+  const assignableUsers = assignableUsersData?.data ?? [];
+  const ownerUserId = form.owner_user_id || (isEdit ? "" : currentUserData?.data.id ?? "");
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -192,7 +199,16 @@ export function ClientCreateForm({
           <div><label className={labelClass}>AGB-Version</label><Input value={form.agb_version} onChange={(e) => set("agb_version", e.target.value)} /></div>
         </div>
       </div>
-      {error && <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>}
+      <div>
+        <label className={labelClass}>Zuständiger Mitarbeiter</label>
+        <select className={selectClass} value={ownerUserId} onChange={(e) => set("owner_user_id", e.target.value)}>
+          <option value="">Nicht zugewiesen</option>
+          {assignableUsers.map((user) => (
+            <option key={user.id} value={user.id}>{user.display_name ?? user.email}</option>
+          ))}
+        </select>
+      </div>
+      <ErrorBanner message={error} />
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={busy}>
           {busy ? "Speichern…" : isEdit ? "Änderungen speichern" : "Kanzlei anlegen"}

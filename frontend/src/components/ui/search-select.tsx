@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 export interface SearchSelectOption {
   value: string;
@@ -11,9 +12,17 @@ export interface SearchSelectOption {
 
 /** Durchsuchbares Auswahlfeld für lange Listen (z.B. 2675 Kandidaten), bei
  * denen ein normales <select> mit tausenden <option>-Zeilen unbenutzbar wird.
- * Tippen filtert clientseitig über label/sublabel, Klick außerhalb schließt. */
+ *
+ * Zwei Modi:
+ * - `options` (Standard): eine bereits geladene, kurze Liste wird clientseitig
+ *   über label/sublabel gefiltert (z.B. Status-Auswahl, kleine Listen).
+ * - `onSearch`: für grosse Listen (Kandidaten/Kanzleien) wird NICHT mehr der
+ *   komplette Bestand vorgeladen - stattdessen ruft die Eingabe (entprellt um
+ *   300ms) `onSearch(query)` auf und zeigt dessen Ergebnis. Vermeidet, dass
+ *   allein zum Oeffnen eines Auswahlfelds Tausende Datensaetze geladen werden. */
 export function SearchSelect({
   options,
+  onSearch,
   value,
   onChange,
   placeholder = "Suchen…",
@@ -22,7 +31,9 @@ export function SearchSelect({
   required,
   className,
 }: {
-  options: SearchSelectOption[];
+  options?: SearchSelectOption[];
+  /** Server-Suche statt vorgeladener `options` - siehe Doku oben. */
+  onSearch?: (query: string) => Promise<SearchSelectOption[]>;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -36,12 +47,18 @@ export function SearchSelect({
   const containerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [selectedLabel, setSelectedLabel] = useState("");
+  const [asyncOptions, setAsyncOptions] = useState<SearchSelectOption[]>([]);
+  const [asyncLoading, setAsyncLoading] = useState(false);
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const requestIdRef = useRef(0);
 
-  const selected = options.find((option) => option.value === value) ?? null;
+  const selected = options?.find((option) => option.value === value) ?? null;
+  const selectedDisplayLabel = onSearch ? selectedLabel : (selected?.label ?? "");
 
   useEffect(() => {
-    if (!open) setQuery(selected ? selected.label : "");
-  }, [selected, open]);
+    if (!open) setQuery(selectedDisplayLabel);
+  }, [selectedDisplayLabel, open]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -53,20 +70,40 @@ export function SearchSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!onSearch || !open) return;
+    // Eine Auswahl wurde bereits getroffen und die Eingabe entspricht genau
+    // deren Label (kein neuer Suchbegriff) - keinen Request ausloesen.
+    if (selectedLabel && debouncedQuery === selectedLabel) return;
+    const requestId = ++requestIdRef.current;
+    setAsyncLoading(true);
+    onSearch(debouncedQuery.trim())
+      .then((results) => {
+        if (requestIdRef.current === requestId) setAsyncOptions(results);
+      })
+      .finally(() => {
+        if (requestIdRef.current === requestId) setAsyncLoading(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onSearch, open, debouncedQuery]);
+
   const filtered = useMemo(() => {
+    if (onSearch) return asyncOptions;
+    const source = options ?? [];
     const term = query.trim().toLowerCase();
-    if (!term || (selected && term === selected.label.toLowerCase())) return options.slice(0, 50);
-    return options
+    if (!term || (selected && term === selected.label.toLowerCase())) return source.slice(0, 50);
+    return source
       .filter(
         (option) =>
           option.label.toLowerCase().includes(term) || option.sublabel?.toLowerCase().includes(term),
       )
       .slice(0, 50);
-  }, [options, query, selected]);
+  }, [onSearch, asyncOptions, options, query, selected]);
 
   function selectOption(option: SearchSelectOption | null) {
     onChange(option?.value ?? "");
     setQuery(option?.label ?? "");
+    if (onSearch) setSelectedLabel(option?.label ?? "");
     setOpen(false);
   }
 
@@ -100,7 +137,12 @@ export function SearchSelect({
               {clearLabel}
             </button>
           )}
-          {filtered.length === 0 && <p className="px-3 py-2 text-sm text-[#747C89]">{emptyLabel}</p>}
+          {onSearch && asyncLoading && (
+            <p className="px-3 py-2 text-sm text-[#747C89]">Sucht…</p>
+          )}
+          {!(onSearch && asyncLoading) && filtered.length === 0 && (
+            <p className="px-3 py-2 text-sm text-[#747C89]">{emptyLabel}</p>
+          )}
           {filtered.map((option) => (
             <button
               key={option.value}

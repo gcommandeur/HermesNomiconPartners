@@ -22,6 +22,7 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
         role: str | None = None,
         region: str | None = None,
         search: str | None = None,
+        owner_user_id: uuid.UUID | None = None,
         created_from: datetime | None = None,
         created_to: datetime | None = None,
         offset: int = 0,
@@ -30,6 +31,8 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
         filters = []
         if status is not None:
             filters.append(Candidate.status == status)
+        if owner_user_id is not None:
+            filters.append(Candidate.owner_user_id == owner_user_id)
         if role:
             filters.append(Candidate.job_title.ilike(f"%{role}%"))
         if region:
@@ -44,6 +47,7 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
                     Candidate.last_name.ilike(term),
                     Candidate.email.ilike(term),
                     Candidate.job_title.ilike(term),
+                    Candidate.candidate_number.ilike(term),
                 )
             )
         if created_from:

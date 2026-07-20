@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response, status
 
-from cc_crm.api.dependencies import DatabaseSession
+from cc_crm.api.dependencies import CurrentUser, DatabaseSession
 from cc_crm.models.enums import ClientStatus
 from cc_crm.schemas.client_company import (
     ClientCompanyCreate,
@@ -25,15 +25,19 @@ def list_clients(
     client_status: Annotated[ClientStatus | None, Query(alias="status")] = None,
     region: str | None = None,
     search: str | None = None,
+    owner_user_id: uuid.UUID | None = None,
     created_from: datetime | None = None,
     created_to: datetime | None = None,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> Page[ClientCompanyRead]:
+    # owner_user_id ist ein reiner Komfort-Filter ("Meine Kanzleien") - ohne
+    # ihn sehen weiterhin alle Nutzer alle Kanzleien, keine Sichtbarkeitsgrenze.
     entities, total = ClientCompanyService(session).clients.filtered(
         status=client_status,
         region=region,
         search=search,
+        owner_user_id=owner_user_id,
         created_from=created_from,
         created_to=created_to,
         offset=offset,
@@ -74,7 +78,10 @@ def check_duplicate_client(
 def create_client(
     payload: ClientCompanyCreate,
     session: DatabaseSession,
+    current_user: CurrentUser,
 ) -> ClientCompanyRead:
+    if payload.owner_user_id is None:
+        payload = payload.model_copy(update={"owner_user_id": current_user.id})
     return ClientCompanyRead.model_validate(ClientCompanyService(session).create(payload))
 
 
@@ -108,6 +115,8 @@ def update_client(
 
 
 @router.delete("/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_client(client_id: uuid.UUID, session: DatabaseSession) -> Response:
-    ClientCompanyService(session).delete(client_id)
+def delete_client(
+    client_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> Response:
+    ClientCompanyService(session).delete(client_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -9,11 +10,16 @@ from sqlalchemy.orm import Session
 from cc_crm.core.config import get_settings
 from cc_crm.core.errors import BusinessRuleError, ConflictError, EntityNotFoundError
 from cc_crm.models.base import Base
-from cc_crm.models.enums import SubmissionStatus
+from cc_crm.models.calendar_event import CalendarEvent
+from cc_crm.models.candidate import Candidate
+from cc_crm.models.client_company import ClientCompany
+from cc_crm.models.enums import CalendarEventType, SubmissionStatus
 from cc_crm.models.recruiting import Fee, Interview, Offer, Placement, SubmissionFeedback
 from cc_crm.models.submission import CandidateSubmission
+from cc_crm.models.user import User
 from cc_crm.repositories.activities import ActivityRepository
 from cc_crm.repositories.base import SQLAlchemyRepository
+from cc_crm.repositories.calendar_events import CalendarEventRepository
 from cc_crm.repositories.clients import ClientCompanyRepository
 from cc_crm.repositories.recruiting import (
     AuditLogRepository,
@@ -28,14 +34,22 @@ from cc_crm.schemas.recruiting import (
     FeeCreate,
     FeedbackCreate,
     InterviewCreate,
+    InterviewUpdate,
     OfferCreate,
     PlacementCreate,
 )
 from cc_crm.services.submissions import CandidateSubmissionService
 from cc_crm.services.warranty import WarrantyService
 
+logger = logging.getLogger(__name__)
+
 MONEY = Decimal("0.01")
 INTERVIEW_FOLLOW_UP_TITLE = "Interviewfeedback nachfassen"
+# Interviews brauchen in der Regel mehr Vorlauf als ein allgemeiner Termin
+# (Unterlagen/Notizen des Kandidaten nochmal durchgehen, Fragen vorbereiten)
+# - deshalb 60 statt der sonst ueblichen 30 Minuten Standard-Erinnerung
+# (siehe models/calendar_event.py::reminder_minutes_before).
+INTERVIEW_CALENDAR_REMINDER_MINUTES = 60
 ChildT = TypeVar("ChildT", bound=Base)
 
 
@@ -53,6 +67,7 @@ class RecruitingProcessService:
         self.tasks = TaskRepository(session)
         self.clients = ClientCompanyRepository(session)
         self.warranty = WarrantyService(session)
+        self.calendar_events = CalendarEventRepository(session)
 
     def list_feedback(self, submission_id: uuid.UUID) -> list[SubmissionFeedback]:
         self.submissions.get(submission_id)
@@ -74,7 +89,9 @@ class RecruitingProcessService:
         self.submissions.get(submission_id)
         return list(self.interviews.list_for_submission(submission_id))
 
-    def create_interview(self, submission_id: uuid.UUID, payload: InterviewCreate) -> Interview:
+    def create_interview(
+        self, submission_id: uuid.UUID, payload: InterviewCreate, current_user: User
+    ) -> Interview:
         submission = self.submissions.get(submission_id)
         if submission.status != SubmissionStatus.INTERVIEW:
             raise BusinessRuleError("Interview requires the process to be in interview status")
@@ -86,7 +103,117 @@ class RecruitingProcessService:
             "Interview scheduled",
         )
         self._align_interview_follow_up(submission, payload.scheduled_at)
+        # Das Interview ist die primaere, wichtige Aktion und ist an dieser
+        # Stelle bereits committet - ein Fehler beim (rein begleitenden)
+        # Kalendereintrag darf die Interview-Erstellung nicht nachtraeglich
+        # scheitern lassen (Nutzer-Vorgabe), deshalb bewusst breit gefangen
+        # und nur geloggt statt weitergereicht.
+        try:
+            self._create_calendar_event_for_interview(interview, submission, current_user)
+        except Exception:
+            logger.exception(
+                "Automatische Kalender-Erstellung fuer Interview %s fehlgeschlagen", interview.id
+            )
+            self.session.rollback()
         return interview
+
+    def _get_interview(self, submission_id: uuid.UUID, interview_id: uuid.UUID) -> Interview:
+        self.submissions.get(submission_id)
+        interview = self.interviews.get(interview_id)
+        if interview is None or interview.submission_id != submission_id:
+            raise EntityNotFoundError("Interview not found")
+        return interview
+
+    def update_interview(
+        self,
+        submission_id: uuid.UUID,
+        interview_id: uuid.UUID,
+        payload: InterviewUpdate,
+    ) -> Interview:
+        interview = self._get_interview(submission_id, interview_id)
+        values = payload.model_dump(exclude_unset=True)
+        updated = self.interviews.update(interview, values)
+        self.session.commit()
+        # Kalender-Sync-Fehler duerfen die eigentliche Interview-Aktion nicht
+        # verhindern (Nutzer-Vorgabe, gleiches Prinzip wie bei create_interview
+        # oben) - das Interview-Update selbst ist an dieser Stelle bereits
+        # committet.
+        if {"scheduled_at", "location_or_link", "notes"} & values.keys():
+            try:
+                self._sync_calendar_event_for_interview(updated)
+            except Exception:
+                logger.exception(
+                    "Kalender-Sync fuer Interview %s (Update) fehlgeschlagen", updated.id
+                )
+                self.session.rollback()
+        return updated
+
+    def _sync_calendar_event_for_interview(self, interview: Interview) -> None:
+        event = self.calendar_events.for_source_interview(interview.id)
+        if event is None:
+            return
+        self.calendar_events.update(
+            event,
+            {
+                "start_at": interview.scheduled_at,
+                "location": interview.location_or_link,
+                "notes": interview.notes,
+            },
+        )
+        self.session.commit()
+
+    def delete_interview(self, submission_id: uuid.UUID, interview_id: uuid.UUID) -> None:
+        interview = self._get_interview(submission_id, interview_id)
+        # Verknuepften Kalendereintrag explizit mitloeschen, statt mich allein
+        # auf die DB-seitige ON DELETE CASCADE-FK zu verlassen: SQLite (lokale
+        # Entwicklung) erzwingt Foreign-Key-Constraints nur bei aktivierter
+        # PRAGMA foreign_keys, die hier nicht gesetzt ist (siehe
+        # infrastructure/database/session.py) - auf Postgres (Produktion)
+        # greift zusaetzlich die FK-Cascade als zweite Absicherung. Gleicher
+        # Fehler-Isolations-Grundsatz wie beim Erstellen/Aktualisieren.
+        try:
+            linked_event = self.calendar_events.for_source_interview(interview.id)
+            if linked_event is not None:
+                self.calendar_events.delete(linked_event)
+                self.session.commit()
+        except Exception:
+            logger.exception(
+                "Loeschen des verknuepften Kalendereintrags fuer Interview %s fehlgeschlagen",
+                interview.id,
+            )
+            self.session.rollback()
+        self.interviews.delete(interview)
+        self.session.commit()
+
+    def _create_calendar_event_for_interview(
+        self, interview: Interview, submission: CandidateSubmission, current_user: User
+    ) -> None:
+        candidate = self.session.get(Candidate, submission.candidate_id)
+        candidate_name = (
+            f"{candidate.first_name} {candidate.last_name}" if candidate else "Unbekannt"
+        )
+        client_name = None
+        if submission.client_company_id is not None:
+            client = self.session.get(ClientCompany, submission.client_company_id)
+            client_name = client.name if client else None
+        title = f"Interview: {candidate_name}" + (f" – {client_name}" if client_name else "")
+
+        calendar_event = CalendarEvent(
+            title=title,
+            event_type=CalendarEventType.INTERVIEW,
+            start_at=interview.scheduled_at,
+            location=interview.location_or_link,
+            notes=interview.notes,
+            owner_user_id=current_user.id,
+            created_by_user_id=current_user.id,
+            candidate_id=submission.candidate_id,
+            client_company_id=submission.client_company_id,
+            candidate_submission_id=submission.id,
+            source_interview_id=interview.id,
+            reminder_minutes_before=INTERVIEW_CALENDAR_REMINDER_MINUTES,
+        )
+        self.session.add(calendar_event)
+        self.session.commit()
 
     def _align_interview_follow_up(
         self, submission: CandidateSubmission, scheduled_at: datetime

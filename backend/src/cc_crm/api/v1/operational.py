@@ -1,9 +1,11 @@
 import uuid
+from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile, status
 
 from cc_crm.api.dependencies import DatabaseSession
+from cc_crm.core.config import get_settings
 from cc_crm.schemas.operational import (
     CockpitRead,
     DocumentCreate,
@@ -24,6 +26,60 @@ from cc_crm.services.operational import (
 from cc_crm.services.storage import read_document_bytes, save_document_bytes
 
 router = APIRouter()
+
+# Whitelist fuer Dokumenten-Uploads (siehe upload_document unten) - orientiert
+# an den tatsaechlich im Projekt genutzten Dokumenttypen (CV, Vertrag: PDF/
+# Word/gescannte Bilder). Endung UND Content-Type werden geprueft - beides
+# kann vom Client gefaelscht werden, aber ohne echtes Content-Sniffing ist das
+# ein sinnvoller Kompromiss, der zumindest versehentliche/grob falsche
+# Uploads (falscher Dateityp, keine Absicht zu taeuschen) zuverlaessig faengt.
+_ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".docx", ".doc", ".jpg", ".jpeg", ".png"}
+_ALLOWED_UPLOAD_CONTENT_TYPES = {
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+    "image/jpeg",
+    "image/png",
+}
+_UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MB pro Lese-Schritt
+
+
+def _validate_upload_type(file: UploadFile) -> None:
+    extension = Path(file.filename or "").suffix.lower()
+    if extension not in _ALLOWED_UPLOAD_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Dateityp nicht erlaubt. Erlaubt sind: PDF, DOCX, DOC, JPG, PNG.",
+        )
+    if file.content_type not in _ALLOWED_UPLOAD_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=(
+                "Dateityp nicht erlaubt (Content-Type passt nicht zur Dateiendung). "
+                "Erlaubt sind: PDF, DOCX, DOC, JPG, PNG."
+            ),
+        )
+
+
+async def _read_upload_with_size_limit(file: UploadFile, max_bytes: int) -> bytes:
+    """Liest die Datei in 1-MB-Schritten statt sie mit einem einzigen
+    `await file.read()` komplett unbegrenzt in den RAM zu laden - bricht
+    sofort mit 413 ab, sobald das Limit ueberschritten wird, statt erst die
+    komplette (evtl. riesige) Datei einzulesen und danach zu pruefen."""
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(_UPLOAD_CHUNK_SIZE)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail=f"Datei ist zu groß (Limit: {max_bytes // (1024 * 1024)} MB).",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 @router.get("/cockpit", response_model=CockpitRead)
@@ -68,7 +124,9 @@ async def upload_document(
     file: Annotated[UploadFile, File()],
     uploaded_by: Annotated[str | None, Form()] = None,
 ) -> DocumentRead:
-    content = await file.read()
+    _validate_upload_type(file)
+    max_bytes = get_settings().max_upload_size_mb * 1024 * 1024
+    content = await _read_upload_with_size_limit(file, max_bytes)
     storage_key = save_document_bytes(
         owner_type=owner_type,
         owner_id=owner_id,

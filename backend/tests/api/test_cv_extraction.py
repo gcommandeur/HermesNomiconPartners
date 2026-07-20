@@ -22,7 +22,7 @@ def _upload_document(client: TestClient, candidate_id: str, content: bytes, file
     response = client.post(
         "/api/v1/documents/upload",
         data={"owner_type": "candidate", "owner_id": candidate_id, "document_type": "cv"},
-        files={"file": (filename, content, "text/plain")},
+        files={"file": (filename, content, "application/msword")},
     )
     assert response.status_code == 201
     return str(response.json()["id"])
@@ -47,7 +47,7 @@ def _mock_generate_text(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_cv_extraction_fills_only_empty_fields(client: TestClient) -> None:
     candidate_id = _create_candidate(client, city="Bereits gesetzt")
-    document_id = _upload_document(client, candidate_id, b"Lebenslauf Test Kandidat...", "cv.txt")
+    document_id = _upload_document(client, candidate_id, b"Lebenslauf Test Kandidat...", "cv.doc")
 
     response = client.post(
         f"/api/v1/candidates/{candidate_id}/cv-extraction",
@@ -66,7 +66,7 @@ def test_cv_extraction_suppresses_address_for_agency_letterhead(client: TestClie
     candidate_id = _create_candidate(client)
     letterhead = "Commandeur Consulting GmbH, Talstraße 112, 41199 Mönchengladbach"
     document_id = _upload_document(
-        client, candidate_id, f"{letterhead}\n\nKandidatenprofil...".encode(), "profil.txt"
+        client, candidate_id, f"{letterhead}\n\nKandidatenprofil...".encode(), "profil.doc"
     )
 
     response = client.post(

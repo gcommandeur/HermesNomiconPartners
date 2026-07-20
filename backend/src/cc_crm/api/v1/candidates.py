@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response, status
 
-from cc_crm.api.dependencies import DatabaseSession
+from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
 from cc_crm.models.enums import CandidateStatus
 from cc_crm.schemas.candidate import (
     CandidateCreate,
@@ -31,16 +31,20 @@ def list_candidates(
     role: str | None = None,
     region: str | None = None,
     search: str | None = None,
+    owner_user_id: uuid.UUID | None = None,
     created_from: datetime | None = None,
     created_to: datetime | None = None,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> Page[CandidateRead]:
+    # owner_user_id ist ein reiner Komfort-Filter ("Meine Kandidaten") - ohne
+    # ihn sehen weiterhin alle Nutzer alle Kandidaten, keine Sichtbarkeitsgrenze.
     entities, total = CandidateService(session).list_filtered(
         status=candidate_status,
         role=role,
         region=region,
         search=search,
+        owner_user_id=owner_user_id,
         created_from=created_from,
         created_to=created_to,
         offset=offset,
@@ -51,7 +55,13 @@ def list_candidates(
 
 
 @router.post("", response_model=CandidateRead, status_code=status.HTTP_201_CREATED)
-def create_candidate(payload: CandidateCreate, session: DatabaseSession) -> CandidateRead:
+def create_candidate(
+    payload: CandidateCreate,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> CandidateRead:
+    if payload.owner_user_id is None:
+        payload = payload.model_copy(update={"owner_user_id": current_user.id})
     return CandidateRead.model_validate(CandidateService(session).create(payload))
 
 
@@ -81,9 +91,20 @@ def update_candidate(
 
 
 @router.delete("/{candidate_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_candidate(candidate_id: uuid.UUID, session: DatabaseSession) -> Response:
-    CandidateService(session).delete(candidate_id)
+def delete_candidate(
+    candidate_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> Response:
+    CandidateService(session).delete(candidate_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{candidate_id}/anonymize", response_model=CandidateRead)
+def anonymize_candidate(
+    candidate_id: uuid.UUID, session: DatabaseSession, admin: AdminUser
+) -> CandidateRead:
+    """Admin-only, technische DSGVO-Vorbereitung (Punkt 4 des Auftrags,
+    keine Rechtsberatung) - siehe CandidateService.anonymize."""
+    return CandidateRead.model_validate(CandidateService(session).anonymize(candidate_id, admin))
 
 
 @router.get("/{candidate_id}/submissions", response_model=list[CandidateSubmissionRead])

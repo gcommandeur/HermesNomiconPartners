@@ -21,7 +21,7 @@ export default async function ProcessesPage() {
           <div className="flex flex-wrap gap-2">
             <Link href="/prioritaet"><Button size="sm" variant="outline"><Target size={14} />Prioritätsansicht</Button></Link>
             <Link href="/gewaehrleistung"><Button size="sm" variant="outline"><ShieldCheck size={14} />Gewährleistungen</Button></Link>
-            <SubmissionCreateModal candidates={candidates.data} clients={clients.data} />
+            <SubmissionCreateModal />
           </div>
         }
       />

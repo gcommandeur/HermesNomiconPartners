@@ -2,6 +2,7 @@ from cc_crm.models.activity import Activity
 from cc_crm.models.api_key import ApiKey
 from cc_crm.models.auth import AuthSession
 from cc_crm.models.base import Base
+from cc_crm.models.calendar_event import CalendarEvent
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.contact_person import ContactPerson
@@ -28,6 +29,7 @@ __all__ = [
     "AuditLog",
     "AuthSession",
     "Base",
+    "CalendarEvent",
     "Candidate",
     "CandidateSubmission",
     "ClientCompany",

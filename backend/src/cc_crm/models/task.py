@@ -38,3 +38,10 @@ class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         index=True,
     )
+
+    # Zustaendiger Mitarbeiter (Komfort-Filter "Meine Aufgaben", KEINE
+    # Sichtbarkeitsgrenze) - siehe models/candidate.py::owner_user_id fuer
+    # die vollstaendige Begruendung.
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )

@@ -4,7 +4,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from cc_crm.models.client_company import ClientCompany
+from cc_crm.models.user import User
 from cc_crm.repositories.clients import ClientCompanyRepository
+from cc_crm.repositories.recruiting import AuditLogRepository
 from cc_crm.schemas.client_company import ClientCompanyCreate, ClientCompanyUpdate
 from cc_crm.services.base import CrudService
 from cc_crm.services.name_matching import (
@@ -19,6 +21,23 @@ class ClientCompanyService(CrudService[ClientCompany, ClientCompanyCreate, Clien
         repository = ClientCompanyRepository(session)
         super().__init__(session, repository, "ClientCompany")
         self.clients = repository
+        self.audit_logs = AuditLogRepository(session)
+
+    def delete(self, entity_id: uuid.UUID, current_user: User | None = None) -> None:
+        # Loeschung ist sicherheits-/nachvollziehbarkeitsrelevant (Punkt 2 des
+        # Auftrags) - siehe services/candidates.py::delete fuer dasselbe Muster.
+        client = self.get(entity_id)
+        self.audit_logs.create(
+            {
+                "entity_type": "client_company",
+                "entity_id": client.id,
+                "action": "deleted",
+                "changed_by": current_user.email if current_user else None,
+                "old_values": {"name": client.name, "kanzleigruppe": client.kanzleigruppe},
+            }
+        )
+        self.session.commit()
+        super().delete(entity_id)
 
     def find_potential_duplicates(
         self,

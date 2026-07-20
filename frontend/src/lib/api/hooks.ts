@@ -3,13 +3,27 @@
 import useSWR, { type SWRConfiguration } from "swr";
 import { mutate } from "swr";
 import {
-  getCandidates,
+  getAdminUsers,
+  getAssignableUsers,
+  getAuditLogs,
+  getCalendarEvents,
   getClients,
-  getContacts,
+  getCurrentUser,
   getMailingGroups,
   getReactivationCandidates,
+  type CalendarEventQuery,
 } from "./queries";
-import type { Candidate, ClientCompany, Contact, DataResult, MailingGroup } from "./types";
+import type {
+  AdminUser,
+  AuditLogEntry,
+  Candidate,
+  CalendarEvent,
+  ClientCompany,
+  CurrentUserInfo,
+  DataResult,
+  MailingGroup,
+  UserBrief,
+} from "./types";
 
 /** Genuine client-side Caching fuer wiederholt besuchte Listen-Seiten: SWRs
  * Cache lebt im Client-Bundle und ueberlebt Next.js App-Router-Navigation
@@ -26,23 +40,14 @@ const swrConfig: SWRConfiguration = {
   dedupingInterval: 30_000,
 };
 
-/** Ohne fallbackData: der erste Besuch in der Session zeigt ein Skeleton
- * waehrend des Client-Fetches, jeder weitere Besuch (Client-Navigation via
- * next/link) liest aus SWRs Cache - echt sofort, ohne erneuten Server-
- * Roundtrip. Ein serverseitiger Server-Component-Fetch in page.tsx wuerde
- * hier NICHT helfen: Next.js fuehrt Server Components bei jeder Navigation
- * neu aus, das haette also weiterhin bei jedem Seitenbesuch alle ~2900
- * Kandidaten neu vom Backend geholt - genau das Problem, das dieser Hook
- * loest, indem der Datenzugriff komplett auf den Client verlagert wird. */
-export function useCandidatesCache() {
-  return useSWR<DataResult<Candidate[]>>("/candidates", getCandidates, swrConfig);
-}
-
 /** Nach Anlegen/Bearbeiten/Loeschen eines Kandidaten aufrufen, damit die
  * SWR-gecachte Kandidatenliste die Aenderung sofort zeigt, statt bis zu
- * dedupingInterval (30s) veraltete Daten zu behalten. */
+ * dedupingInterval (30s) veraltete Daten zu behalten. Invalidiert per
+ * Praefix-Match sowohl den alten statischen "/candidates"-Key als auch die
+ * neuen serverseitigen Such-/Pagination-Keys aus useServerSearchList (z.B.
+ * "/candidates?search=...&status=...&limit=...&offset=..."). */
 export function invalidateCandidatesCache() {
-  return mutate("/candidates");
+  return mutate((key) => typeof key === "string" && key.startsWith("/candidates"));
 }
 
 /** Reaktivierungsliste (bereits bestehender Endpoint aus Phase A) fuer den
@@ -56,25 +61,23 @@ export function useReactivationCandidatesCache(enabled: boolean) {
   );
 }
 
-/** Gleiches Client-Cache-Muster wie useCandidatesCache, fuer /kanzleien. */
+/** Client-seitiges SWR-Caching des kompletten Kanzlei-Bestands - genutzt fuer
+ * kleinere Auswahl-Dropdowns (z.B. contact-create-modal.tsx), NICHT mehr fuer
+ * die Kanzleien-Liste selbst (die nutzt seit der Server-Side-Suche
+ * useServerSearchList, siehe lib/api/use-server-search.ts). */
 export function useClientsCache() {
   return useSWR<DataResult<ClientCompany[]>>("/clients", getClients, swrConfig);
 }
 
 export function invalidateClientsCache() {
-  return mutate("/clients");
-}
-
-/** Gleiches Client-Cache-Muster wie useCandidatesCache, fuer /kontakte. */
-export function useContactsCache() {
-  return useSWR<DataResult<Contact[]>>("/contacts", getContacts, swrConfig);
+  return mutate((key) => typeof key === "string" && key.startsWith("/clients"));
 }
 
 export function invalidateContactsCache() {
-  return mutate("/contacts");
+  return mutate((key) => typeof key === "string" && key.startsWith("/contacts"));
 }
 
-/** Gleiches Client-Cache-Muster wie useCandidatesCache, fuer Mailing-Gruppen
+/** Gleiches Client-Cache-Muster wie useClientsCache, fuer Mailing-Gruppen
  * (Punkt 6/7: Geo-Mapping-Auswahl, "Fuer Mailing nutzen", Mailing-Seite). */
 export function useMailingGroupsCache() {
   return useSWR<DataResult<MailingGroup[]>>(
@@ -86,4 +89,53 @@ export function useMailingGroupsCache() {
 
 export function invalidateMailingGroupsCache() {
   return mutate("/mailing-groups");
+}
+
+/** Der eingeloggte Nutzer (fuer is_admin-Weichen im Kalender/in der
+ * Nutzerverwaltung sowie den persoenlichen ICS-Feed-Token in den
+ * Einstellungen). `revalidateOnFocus`/`revalidateIfStale` bewusst wie beim
+ * Standard-swrConfig aus - aendert sich waehrend einer Session praktisch nie. */
+export function useCurrentUser() {
+  return useSWR<DataResult<CurrentUserInfo>>("/auth/me", getCurrentUser, swrConfig);
+}
+
+/** Kalender-Termine fuer einen Zeitraum (Monats-/Wochenansicht) - der
+ * Cache-Key enthaelt den kompletten Query-Range, damit Monats-/Wochenwechsel
+ * und Admin-Filter (owner_user_id) jeweils eigene Cache-Eintraege bekommen,
+ * statt sich gegenseitig zu ueberschreiben. */
+export function useCalendarEventsCache(query: CalendarEventQuery) {
+  const key = `/calendar-events?${JSON.stringify(query)}`;
+  return useSWR<DataResult<CalendarEvent[]>>(key, () => getCalendarEvents(query), swrConfig);
+}
+
+export function invalidateCalendarEventsCache() {
+  return mutate((key) => typeof key === "string" && key.startsWith("/calendar-events"));
+}
+
+/** Nur fuer Admins (siehe /einstellungen/nutzer) - vollstaendige Nutzerliste
+ * fuer die Admin-Nutzerverwaltung. */
+export function useAdminUsersCache(enabled: boolean) {
+  return useSWR<DataResult<AdminUser[]>>(enabled ? "/users" : null, getAdminUsers, swrConfig);
+}
+
+export function invalidateAdminUsersCache() {
+  return mutate("/users");
+}
+
+/** Fuer JEDEN eingeloggten Nutzer zugaenglich (anders als useAdminUsersCache/
+ * GET /users, admin-only) - kleine, selten wechselnde Liste fuer die
+ * Owner-Auswahl (owner_user_id) beim Anlegen von Kandidat/Kanzlei/Prozess/
+ * Aufgabe (siehe candidate-/client-/submission-create-modal.tsx). */
+export function useAssignableUsersCache() {
+  return useSWR<DataResult<UserBrief[]>>("/users/assignable", getAssignableUsers, swrConfig);
+}
+
+/** Nur fuer Admins (siehe /einstellungen/audit-log) - chronologisches
+ * Audit-Log (Punkt 2 des Auftrags). */
+export function useAuditLogsCache(enabled: boolean) {
+  return useSWR<DataResult<AuditLogEntry[]>>(
+    enabled ? "/audit-logs" : null,
+    getAuditLogs,
+    swrConfig,
+  );
 }

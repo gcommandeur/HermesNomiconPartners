@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { apiPost } from "@/lib/api/client";
+import { ErrorBanner } from "@/components/crm/error-banner";
 import { invalidateMailingGroupsCache } from "@/lib/api/hooks";
 import { usePagination } from "@/lib/use-pagination";
 import type { GeoMappingResult, MailingGroup, MailingRecipient } from "@/lib/api/types";
@@ -137,7 +138,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
         <Modal title="Auswahl ins Mailing übernehmen" eyebrow={`${selectedIds.size} Empfänger:innen`} onClose={() => setModalOpen(false)}>
           <div className="space-y-4">
             {done && <div className="rounded-lg border border-[#4f8a68]/35 bg-[#244d38]/45 p-3 text-xs text-[#a9d6b8]">{done}</div>}
-            {error && <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>}
+            <ErrorBanner message={error} />
             <div>
               <label className="mb-1 block text-xs text-[#94A3B8]">Name der neuen Gruppe</label>
               <Input placeholder="z.B. Umkreis Stuttgart Juli" value={groupName} onChange={(e) => setGroupName(e.target.value)} />

@@ -28,6 +28,10 @@ class CandidateSubmissionBase(BaseModel):
     outlook_draft_created: bool = False
     email_sent: bool = False
     cancellation_reason: SubmissionCancellationReason | None = None
+    # Zustaendiger Mitarbeiter (Komfort-Filter, keine Sichtbarkeitsgrenze -
+    # siehe models/candidate.py::owner_user_id). Nicht zu verwechseln mit dem
+    # bestehenden `owner`-Freitextfeld oben.
+    owner_user_id: uuid.UUID | None = None
 
 
 class CandidateSubmissionCreate(CandidateSubmissionBase):
@@ -51,6 +55,7 @@ class CandidateSubmissionUpdate(BaseModel):
     owner: str | None = None
     outlook_draft_created: bool | None = None
     email_sent: bool | None = None
+    owner_user_id: uuid.UUID | None = None
 
 
 class CandidateSubmissionTransition(BaseModel):

@@ -20,6 +20,57 @@ export interface Entity {
   updated_at: string;
 }
 
+export type CalendarEventType = "interview" | "quali_call" | "other";
+
+export interface CalendarEvent extends Entity {
+  title: string;
+  event_type: CalendarEventType;
+  start_at: string;
+  end_at: string | null;
+  location: string | null;
+  notes: string | null;
+  owner_user_id: string;
+  created_by_user_id: string;
+  candidate_id: string | null;
+  client_company_id: string | null;
+  candidate_submission_id: string | null;
+  /** Nur gesetzt, wenn dieser Termin automatisch aus einem Interview
+   * entstanden ist (siehe Backend services/recruiting.py::create_interview) -
+   * rein informativ, nie ueber das Formular setzbar. */
+  source_interview_id?: string | null;
+  reminder_minutes_before: number;
+}
+
+/** Antwort von /auth/login und /auth/me - NUR fuer den eingeloggten Nutzer
+ * selbst befuellt, `calendar_feed_token` ist ein Geheimnis (siehe Backend
+ * schemas/auth.py::UserRead). Fuer die Admin-Nutzerliste andere Nutzer siehe
+ * AdminUser weiter unten, die dieses Feld bewusst nicht enthaelt. */
+export interface CurrentUserInfo {
+  id: string;
+  email: string;
+  display_name: string | null;
+  is_admin: boolean;
+  calendar_feed_token?: string | null;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  display_name: string | null;
+  is_admin: boolean;
+  is_active: boolean;
+}
+
+/** Minimale Nutzerliste (GET /users/assignable) fuer Owner-Dropdowns beim
+ * Anlegen von Kandidat/Kanzlei/Prozess/Aufgabe - anders als AdminUser fuer
+ * JEDEN eingeloggten Nutzer zugaenglich, siehe Backend schemas/user.py::
+ * UserBriefRead. */
+export interface UserBrief {
+  id: string;
+  email: string;
+  display_name: string | null;
+}
+
 export interface Candidate extends Entity {
   candidate_number?: string | null;
   first_name: string;
@@ -59,6 +110,9 @@ export interface Candidate extends Entity {
   /** INTERN — niemals in anonyme Profile / ausgehende Dokumente übernehmen. */
   no_gos?: string[];
   freitext_notizen?: string | null;
+  /** Zustaendiger Mitarbeiter (Komfort-Filter "Meine Kandidaten", KEINE
+   * Sichtbarkeitsgrenze - siehe Backend models/candidate.py::owner_user_id). */
+  owner_user_id?: string | null;
 }
 
 export interface ClientCompany extends Entity {
@@ -92,6 +146,9 @@ export interface ClientCompany extends Entity {
   contact_name?: string;
   active_mandates?: number;
   last_contact?: string;
+  /** Zustaendiger Mitarbeiter (Komfort-Filter "Meine Kanzleien", KEINE
+   * Sichtbarkeitsgrenze - siehe Backend models/client_company.py::owner_user_id). */
+  owner_user_id?: string | null;
 }
 
 export interface ClientDuplicateCandidate {
@@ -112,6 +169,10 @@ export interface Contact extends Entity {
   email: string | null;
   phone: string | null;
   is_primary: boolean;
+  /** Vom Backend denormalisiert mitgeliefert (Join gegen client_companies),
+   * damit die Kontakte-Liste den Kanzleinamen zeigen kann, ohne selbst den
+   * kompletten Kanzlei-Bestand laden zu muessen. */
+  client_company_name?: string | null;
 }
 
 export interface Vacancy extends Entity {
@@ -188,6 +249,10 @@ export interface CandidateSubmission extends Entity {
   momentum?: number | null;
   closing_probability?: number | null;
   closing_status?: ClosingStatus | null;
+  /** Zustaendiger Mitarbeiter (Komfort-Filter "Meine Prozesse", KEINE
+   * Sichtbarkeitsgrenze - nicht zu verwechseln mit dem Freitextfeld `owner`
+   * oben, siehe Backend models/submission.py::owner_user_id). */
+  owner_user_id?: string | null;
 }
 
 export interface ClosingScoreResult {
@@ -299,6 +364,9 @@ export interface Task extends Entity {
   due_at: string | null;
   status: "open" | "in_progress" | "done" | "cancelled";
   priority: "low" | "normal" | "high" | "urgent";
+  /** Zustaendiger Mitarbeiter (Komfort-Filter "Meine Aufgaben", KEINE
+   * Sichtbarkeitsgrenze - siehe Backend models/task.py::owner_user_id). */
+  owner_user_id?: string | null;
 }
 
 export interface DocumentMeta extends Entity {
@@ -349,6 +417,33 @@ export interface Paginated<T> {
   total_count: number;
   limit: number;
   offset: number;
+}
+
+/** Serverseitige Such-/Pagination-Anfrage fuer Kandidaten/Kanzleien/Kontakte
+ * (siehe lib/api/use-server-search.ts) - loest fetchAllPages() ab, das
+ * bislang immer den kompletten Bestand lud. */
+export interface PageQuery {
+  search?: string;
+  status?: string;
+  /** Komfort-Filter "Meine..." - siehe owner_user_id auf Candidate/
+   * ClientCompany/CandidateSubmission/Task oben. */
+  ownerUserId?: string;
+  limit: number;
+  offset: number;
+}
+
+/** Chronologischer Eintrag im Audit-Log (nur sicherheits-/admin-relevante
+ * Aktionen, siehe Backend models/recruiting.py::AuditLog) - admin-only, siehe
+ * app/einstellungen/audit-log/page.tsx. */
+export interface AuditLogEntry {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  changed_at: string;
+  changed_by: string | null;
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
 }
 
 export interface DataResult<T> {

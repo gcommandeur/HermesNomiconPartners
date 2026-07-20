@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Star } from "lucide-react";
 import { FilterBar } from "@/components/crm/filter-bar";
 import { DataTable } from "@/components/crm/data-table";
@@ -8,55 +8,47 @@ import { StatusPill } from "@/components/crm/status-pill";
 import { ExportActions } from "@/components/crm/export-actions";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { ErrorState } from "@/components/crm/error-state";
-import { useClientsCache, useContactsCache } from "@/lib/api/hooks";
+import { PaginationControls } from "@/components/crm/pagination-controls";
 import { AddToMailingButton } from "@/components/crm/add-to-mailing-button";
 import { contactName } from "@/lib/utils";
+import { useServerSearchList } from "@/lib/api/use-server-search";
+import { getContactsPage } from "@/lib/api/queries";
+import type { Contact } from "@/lib/api/types";
 
 export function ContactsTable() {
+  // Serverseitige Suche + Pagination (siehe lib/api/use-server-search.ts) -
+  // der Kanzleiname kommt bereits vom Backend denormalisiert mit
+  // (client_company_name, Join gegen client_companies) - das Frontend muss
+  // dafuer nicht mehr den kompletten Kanzlei-Bestand separat laden.
   const {
-    data: contactsData,
-    isLoading: contactsLoading,
-    error: contactsError,
-    mutate: retryContacts,
-  } = useContactsCache();
-  const {
-    data: clientsData,
-    isLoading: clientsLoading,
-    error: clientsError,
-    mutate: retryClients,
-  } = useClientsCache();
-  const contacts = useMemo(() => contactsData?.data ?? [], [contactsData]);
-  const clients = useMemo(() => clientsData?.data ?? [], [clientsData]);
-  const [search, setSearch] = useState("");
-  const clientName = (id: string) => clients.find((client) => client.id === id)?.name ?? "Kanzlei";
+    search,
+    setSearch,
+    page,
+    setPage,
+    pageCount,
+    items: contacts,
+    totalCount,
+    isLoading,
+    error,
+    source,
+    demoError,
+    retry,
+  } = useServerSearchList<Contact>("/contacts", getContactsPage);
 
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return contacts;
-    return contacts.filter((contact) => {
-      const haystack = [
-        contactName(contact), clientName(contact.client_company_id), contact.role_title, contact.email,
-      ].filter(Boolean).join(" ").toLowerCase();
-      return haystack.includes(term);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contacts, search, clients]);
-
-  const exportRows = useMemo(() => filtered.map((contact) => ({
+  const exportRows = useMemo(() => contacts.map((contact) => ({
     Name: contactName(contact),
-    Kanzlei: clientName(contact.client_company_id),
+    Kanzlei: contact.client_company_name ?? "Kanzlei",
     Rolle: contact.role_title,
     Email: contact.email,
     Telefon: contact.phone,
     Hauptkontakt: contact.is_primary ? "Ja" : "Nein",
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  })), [filtered]);
+  })), [contacts]);
 
-  if (contactsError || clientsError) {
-    return <ErrorState onRetry={() => { void retryContacts(); void retryClients(); }} />;
+  if (error) {
+    return <ErrorState onRetry={() => void retry()} />;
   }
 
-  if (contactsLoading || clientsLoading) {
+  if (isLoading) {
     return (
       <div className="space-y-2">
         {Array.from({ length: 8 }).map((_, index) => (
@@ -69,13 +61,13 @@ export function ContactsTable() {
   return (
     <>
       <div className="mb-4 flex justify-end"><ExportActions filename="kontakte" rows={exportRows} /></div>
-      <DemoNotice source={contactsData?.source ?? "api"} error={contactsData?.error} />
+      <DemoNotice source={source ?? "api"} error={demoError} />
       <FilterBar placeholder="Nach Name, Kanzlei oder Rolle suchen" value={search} onChange={setSearch} />
       <DataTable headers={["Kontakt", "Kanzlei", "Rolle", "E-Mail", "Telefon", "Hauptkontakt", "Mailing"]}>
-        {filtered.map((contact) => (
+        {contacts.map((contact) => (
           <tr key={contact.id} className="hover:bg-[#203A5A]/35">
             <td className="px-4 py-3.5 font-semibold text-[#D8DADF]">{contactName(contact)}</td>
-            <td className="px-4 py-3.5">{clientName(contact.client_company_id)}</td>
+            <td className="px-4 py-3.5">{contact.client_company_name ?? "Kanzlei"}</td>
             <td className="px-4 py-3.5">{contact.role_title ?? "—"}</td>
             <td className="px-4 py-3.5">{contact.email ?? "—"}</td>
             <td className="px-4 py-3.5">{contact.phone ?? "—"}</td>
@@ -88,7 +80,8 @@ export function ContactsTable() {
           </tr>
         ))}
       </DataTable>
-      <p className="mt-3 text-xs text-[#8a9095]">{filtered.length} von {contacts.length} Kontakten</p>
+      <PaginationControls page={page} pageCount={pageCount} onChange={setPage} />
+      <p className="mt-3 text-xs text-[#8a9095]">{contacts.length} von {totalCount} Kontakten</p>
     </>
   );
 }

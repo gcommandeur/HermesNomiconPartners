@@ -1,4 +1,25 @@
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session, sessionmaker
+
+from cc_crm.core.security import hash_password
+from cc_crm.models.user import User
+from cc_crm.services.auth import AuthService
+
+
+@pytest.fixture
+def admin_token(session_factory: sessionmaker[Session]) -> str:
+    with session_factory() as session:
+        session.add(
+            User(
+                email="admin@commandeurconsulting.de",
+                hashed_password=hash_password("x"),
+                role="admin",
+            )
+        )
+        session.commit()
+        _, token = AuthService(session).login("admin@commandeurconsulting.de", "x")
+        return token
 
 
 def _create_submission(client: TestClient, company_name: str = "Kanzlei Alpha") -> dict:
@@ -99,7 +120,7 @@ def test_client_not_required_before_interview_but_required_from_interview_on(
 
 
 def test_complete_recruiting_flow_with_fee_activity_and_audit(
-    client: TestClient,
+    client: TestClient, admin_token: str
 ) -> None:
     submission = _create_submission(client)
     submission_id = submission["id"]
@@ -176,7 +197,12 @@ def test_complete_recruiting_flow_with_fee_activity_and_audit(
         "submission_status_changed",
     }.issubset(activity_types)
 
-    audit_actions = {item["action"] for item in client.get("/api/v1/audit-logs").json()}
+    audit_actions = {
+        item["action"]
+        for item in client.get(
+            "/api/v1/audit-logs", headers={"Authorization": f"Bearer {admin_token}"}
+        ).json()
+    }
     assert "status_changed" in audit_actions
     assert "placement_created" in audit_actions
     assert "fee_calculated" in audit_actions

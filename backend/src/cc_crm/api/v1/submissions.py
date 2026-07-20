@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response, status
 
-from cc_crm.api.dependencies import DatabaseSession
+from cc_crm.api.dependencies import CurrentUser, DatabaseSession
 from cc_crm.models.enums import SubmissionStatus
 from cc_crm.schemas.pagination import Page
 from cc_crm.schemas.recruiting import (
@@ -12,6 +12,7 @@ from cc_crm.schemas.recruiting import (
     FeedbackRead,
     InterviewCreate,
     InterviewRead,
+    InterviewUpdate,
     OfferCreate,
     OfferRead,
     PlacementCreate,
@@ -39,17 +40,21 @@ def list_submissions(
     candidate_id: uuid.UUID | None = None,
     client_id: uuid.UUID | None = None,
     job_id: uuid.UUID | None = None,
+    owner_user_id: uuid.UUID | None = None,
     created_from: datetime | None = None,
     created_to: datetime | None = None,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> Page[CandidateSubmissionRead]:
+    # owner_user_id ist ein reiner Komfort-Filter ("Meine Prozesse") - ohne
+    # ihn sehen weiterhin alle Nutzer alle Prozesse, keine Sichtbarkeitsgrenze.
     service = CandidateSubmissionService(session)
     entities, total = service.submissions.filtered(
         status=submission_status,
         candidate_id=candidate_id,
         client_id=client_id,
         job_id=job_id,
+        owner_user_id=owner_user_id,
         created_from=created_from,
         created_to=created_to,
         offset=offset,
@@ -67,7 +72,10 @@ def list_submissions(
 def create_submission(
     payload: CandidateSubmissionCreate,
     session: DatabaseSession,
+    current_user: CurrentUser,
 ) -> CandidateSubmissionRead:
+    if payload.owner_user_id is None:
+        payload = payload.model_copy(update={"owner_user_id": current_user.id})
     return CandidateSubmissionRead.model_validate(
         CandidateSubmissionService(session).create(payload)
     )
@@ -168,10 +176,33 @@ def create_interview(
     submission_id: uuid.UUID,
     payload: InterviewCreate,
     session: DatabaseSession,
+    current_user: CurrentUser,
 ) -> InterviewRead:
     return InterviewRead.model_validate(
-        RecruitingProcessService(session).create_interview(submission_id, payload)
+        RecruitingProcessService(session).create_interview(submission_id, payload, current_user)
     )
+
+
+@router.patch("/{submission_id}/interviews/{interview_id}", response_model=InterviewRead)
+def update_interview(
+    submission_id: uuid.UUID,
+    interview_id: uuid.UUID,
+    payload: InterviewUpdate,
+    session: DatabaseSession,
+) -> InterviewRead:
+    return InterviewRead.model_validate(
+        RecruitingProcessService(session).update_interview(submission_id, interview_id, payload)
+    )
+
+
+@router.delete("/{submission_id}/interviews/{interview_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_interview(
+    submission_id: uuid.UUID,
+    interview_id: uuid.UUID,
+    session: DatabaseSession,
+) -> Response:
+    RecruitingProcessService(session).delete_interview(submission_id, interview_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{submission_id}/offers", response_model=list[OfferRead])
@@ -220,6 +251,8 @@ def create_placement(
 
 
 @router.delete("/{submission_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_submission(submission_id: uuid.UUID, session: DatabaseSession) -> Response:
-    CandidateSubmissionService(session).delete(submission_id)
+def delete_submission(
+    submission_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> Response:
+    CandidateSubmissionService(session).delete(submission_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -30,6 +30,7 @@ class TaskRepository(SQLAlchemyRepository[Task]):
         client_company_id: uuid.UUID | None = None,
         submission_id: uuid.UUID | None = None,
         task_status: TaskStatus | None = None,
+        owner_user_id: uuid.UUID | None = None,
         offset: int = 0,
         limit: int = 100,
     ) -> Sequence[Task]:
@@ -42,6 +43,8 @@ class TaskRepository(SQLAlchemyRepository[Task]):
             filters.append(Task.candidate_submission_id == submission_id)
         if task_status is not None:
             filters.append(Task.status == task_status)
+        if owner_user_id is not None:
+            filters.append(Task.owner_user_id == owner_user_id)
         statement = (
             select(Task)
             .where(*filters)

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from cc_crm.core.security import hash_password
-from cc_crm.infrastructure.database.session import get_db_session
+from cc_crm.infrastructure.database.session import get_db_session, register_sqlite_unicode_lower
 from cc_crm.main import create_app
 from cc_crm.models import Base
 from cc_crm.models.user import User
@@ -34,6 +34,8 @@ def session_factory() -> Generator[sessionmaker[Session], None, None]:
         cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
+
+    register_sqlite_unicode_lower(engine)
 
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)

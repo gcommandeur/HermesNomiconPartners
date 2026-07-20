@@ -18,6 +18,12 @@ class AuthenticationError(CcCrmError):
     pass
 
 
+class PermissionDeniedError(CcCrmError):
+    """Raised when an authenticated user is recognized but not allowed to
+    perform the requested action (HTTP 403) - distinct from
+    AuthenticationError (401, no/invalid credentials at all)."""
+
+
 class RateLimitExceededError(CcCrmError):
     pass
 

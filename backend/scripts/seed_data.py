@@ -23,6 +23,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from sqlalchemy import select  # noqa: E402
+
+from cc_crm.core.security import hash_password  # noqa: E402
 from cc_crm.infrastructure.database.session import SessionLocal  # noqa: E402
 from cc_crm.models import Base  # noqa: E402
 from cc_crm.models.enums import (  # noqa: E402
@@ -32,6 +35,7 @@ from cc_crm.models.enums import (  # noqa: E402
     SubmissionStatus,
     TaskPriority,
 )
+from cc_crm.models.user import User  # noqa: E402
 from cc_crm.schemas.candidate import CandidateCreate  # noqa: E402
 from cc_crm.schemas.client_company import ClientCompanyCreate  # noqa: E402
 from cc_crm.schemas.contact_person import ContactPersonCreate  # noqa: E402
@@ -407,9 +411,26 @@ def seed_candidates(session, count: int) -> list:
     return candidates
 
 
+def _seed_user(session) -> User:
+    """Interviews werden ueber die API immer von einem eingeloggten Nutzer
+    angelegt (der auch der Owner des automatisch erzeugten Kalendertermins
+    wird, siehe services/recruiting.py::create_interview) - dieses Skript
+    laeuft ausserhalb eines HTTP-Requests und hat daher keinen echten Nutzer.
+    Ersten vorhandenen Nutzer wiederverwenden, sonst einen Platzhalter
+    anlegen (nur fuer Seed-Zwecke, kein echter Login gedacht)."""
+    user = session.scalar(select(User))
+    if user is not None:
+        return user
+    user = User(email="seed-script@cc-crm.local", hashed_password=hash_password("not-a-real-login"))
+    session.add(user)
+    session.flush()
+    return user
+
+
 def seed_submissions(session, clients: list, candidates: list, count: int) -> None:
     service = CandidateSubmissionService(session)
     recruiting = RecruitingProcessService(session)
+    seed_user = _seed_user(session)
     now = datetime.now(UTC)
     used_pairs: set[tuple] = set()
     created = 0
@@ -503,6 +524,7 @@ def seed_submissions(session, clients: list, candidates: list, count: int) -> No
                     location_or_link=random.choice(["vor Ort", "MS Teams", "Zoom"]),
                     participants=[f"{candidate.first_name} {candidate.last_name}"],
                 ),
+                seed_user,
             )
             if target == SubmissionStatus.INTERVIEW:
                 continue

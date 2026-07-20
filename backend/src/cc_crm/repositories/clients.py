@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import Sequence
 from datetime import datetime
 
@@ -19,6 +20,7 @@ class ClientCompanyRepository(SQLAlchemyRepository[ClientCompany]):
         status: ClientStatus | None = None,
         region: str | None = None,
         search: str | None = None,
+        owner_user_id: uuid.UUID | None = None,
         created_from: datetime | None = None,
         created_to: datetime | None = None,
         offset: int = 0,
@@ -27,6 +29,8 @@ class ClientCompanyRepository(SQLAlchemyRepository[ClientCompany]):
         filters = []
         if status is not None:
             filters.append(ClientCompany.status == status)
+        if owner_user_id is not None:
+            filters.append(ClientCompany.owner_user_id == owner_user_id)
         if region:
             filters.append(
                 or_(
@@ -39,7 +43,7 @@ class ClientCompanyRepository(SQLAlchemyRepository[ClientCompany]):
             filters.append(
                 or_(
                     ClientCompany.name.ilike(term),
-                    ClientCompany.email.ilike(term),
+                    ClientCompany.website.ilike(term),
                     ClientCompany.city.ilike(term),
                 )
             )

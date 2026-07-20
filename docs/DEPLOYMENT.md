@@ -9,17 +9,19 @@ keine Accounts an und gibt keine Zahlungsdaten ein).
 
 | Komponente | Empfehlung | Warum |
 |---|---|---|
-| Backend (FastAPI) | [Railway](https://railway.app) oder [Render](https://render.com) | Docker-Image direkt deploybar, persistentes Volume für die SQLite-Datei möglich, einfaches Setup |
+| Backend (FastAPI) | [Railway](https://railway.app) oder [Render](https://render.com) | Docker-Image direkt deploybar, einfaches Setup |
 | Frontend (Next.js) | [Vercel](https://vercel.com) | Von den Next.js-Machern, null Konfiguration, automatisches HTTPS/CDN |
 | Dokumente (CVs, Verträge) | [Cloudflare R2](https://developers.cloudflare.com/r2/) | S3-kompatibel, kein Ausgangsdatenverkehr-Aufpreis (egress-frei), günstig |
-| Datenbank | SQLite (bestehende Datei) auf einem persistenten Volume | Aktuelle Entscheidung - reicht für kleinen/mittleren Betrieb mit einem Server-Prozess. Bei Bedarf später auf PostgreSQL migrierbar (Projekt ist dafür vorbereitet). |
+| Datenbank | **Managed PostgreSQL** (Railway-Addon oder Supabase) | Produktionsempfehlung - echte Nebenläufigkeit (mehrere Backend-Instanzen, spätere Mobile-App mit gleichzeitigen Verbindungen), kein Volume-Management nötig, automatische Backups beim Anbieter. Siehe Schritt 1a unten für die Einrichtung. |
 
-**Wichtige Einschränkung bei SQLite im Hosting:** SQLite verträgt sich nur mit
-GENAU EINEM Backend-Prozess/Server gleichzeitig (kein horizontales Skalieren
-auf mehrere Instanzen). Für Hermes CRM in der aktuellen Größe (eine
-Personalberatung, wenige gleichzeitige Nutzer) ist das unproblematisch -
-sollte das Team/die Nutzerzahl deutlich wachsen, ist der Wechsel auf
-PostgreSQL der nächste sinnvolle Schritt.
+**SQLite ist nur noch für rein lokale Entwicklung gedacht**, nicht mehr als
+Produktionsempfehlung: SQLite verträgt sich nur mit GENAU EINEM
+Backend-Prozess gleichzeitig (kein horizontales Skalieren, kein Zugriff durch
+mehrere Instanzen). Der Code unterstützt SQLite weiterhin unverändert für
+`docker compose`/lokales Entwickeln (`CC_CRM_DATABASE_URL=sqlite:///...`),
+für den produktiven Cloud-Betrieb aber bitte Postgres verwenden (Schritt 1a).
+Das Projekt ist bereits vollständig auf Postgres vorbereitet (Treiber,
+Alembic-Migrationen, Umzugsskript) - Details siehe unten.
 
 ## Schritt 1 – Cloudflare R2 einrichten (Dokumentenspeicher)
 
@@ -33,17 +35,46 @@ PostgreSQL der nächste sinnvolle Schritt.
    - Secret Access Key
    - Endpoint-URL (Format: `https://<account-id>.r2.cloudflarestorage.com`)
 
+## Schritt 1a – PostgreSQL-Instanz anlegen (Datenbank)
+
+Zwei gängige, einfache Optionen - beide reichen für den Start:
+
+**Option A: Railway-Postgres-Addon** (praktisch, wenn das Backend ohnehin auf
+Railway läuft - eine Rechnung, ein Dashboard):
+1. Im Railway-Projekt "New" → "Database" → "Add PostgreSQL" wählen
+2. Railway legt automatisch eine `DATABASE_URL`-Variable im Projekt an
+   (Format `postgresql://user:pass@host:port/railway`) - für
+   `CC_CRM_DATABASE_URL` das Präfix auf `postgresql+psycopg://` ändern
+   (SQLAlchemy braucht den Treiber-Namen im Schema), Rest unverändert
+   übernehmen.
+
+**Option B: Supabase** (kostenloser Tier reicht für den Start, praktisch bei
+Bedarf für spätere Zusatzfeatures wie Auth/Storage):
+1. Auf https://supabase.com Projekt anlegen
+2. Unter Project Settings → Database → Connection string den "URI"-String
+   kopieren (Format `postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres`)
+3. Für `CC_CRM_DATABASE_URL` ebenfalls das Präfix auf
+   `postgresql+psycopg://` ändern.
+
+In beiden Fällen: die fertige URL wird in Schritt 2 als
+`CC_CRM_DATABASE_URL` gesetzt. Danach einmalig `alembic upgrade head` gegen
+diese URL laufen lassen (legt alle Tabellen an), und falls bereits lokale
+SQLite-Daten existieren, `backend/scripts/migrate_sqlite_to_postgres.py`
+(siehe Skript-Docstring) für den einmaligen Datenumzug verwenden.
+
 ## Schritt 2 – Backend hosten (Railway, Beispiel)
 
 1. Auf https://railway.app einloggen, neues Projekt erstellen
 2. "Deploy from GitHub repo" wählen und das Hermes-CRM-Repo verbinden
    (Railway erkennt automatisch das `Dockerfile` im Repo-Root)
-3. Ein **Volume** anlegen und unter `/app/backend` mounten (damit die
-   SQLite-Datei `cc_crm_local.db` Neustarts/Deploys übersteht)
+3. **Kein Volume nötig** für die Datenbank selbst (Postgres läuft managed,
+   siehe Schritt 1a) - nur falls weiterhin lokale Dokumente statt R2
+   verwendet würden, wäre ein Volume relevant (bei R2-Konfiguration wie
+   unten nicht der Fall).
 4. Umgebungsvariablen setzen (Railway-Projekt -> Variables):
    ```
    CC_CRM_ENVIRONMENT=production
-   CC_CRM_DATABASE_URL=sqlite:////app/backend/cc_crm_local.db
+   CC_CRM_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/dbname
    CC_CRM_CORS_ORIGINS=["https://DEINE-FRONTEND-DOMAIN.vercel.app"]
    CC_CRM_ANTHROPIC_API_KEY=<dein Anthropic API Key>
    CC_CRM_ANTHROPIC_MODEL=claude-sonnet-5
@@ -60,8 +91,8 @@ PostgreSQL der nächste sinnvolle Schritt.
    die Backend-URL, die das Frontend braucht.
 
 *Falls du lieber Render nutzt: gleiches Prinzip (Dockerfile erkennen lassen,
-Persistent Disk unter `/app/backend` mounten, dieselben Umgebungsvariablen
-setzen).*
+dieselben Umgebungsvariablen setzen - kein Persistent Disk nötig, da weder
+Datenbank noch Dokumente lokal gespeichert werden).*
 
 ## Schritt 3 – Frontend hosten (Vercel)
 
@@ -107,15 +138,14 @@ laufende Datenbank arbeitet.
 
 ## Was NICHT automatisch passiert
 
-- **Backups**: `scripts/backup_to_s3.py` lädt die aktuelle SQLite-Datei
-  (Pfad aus `CC_CRM_DATABASE_URL`) mit Zeitstempel im Dateinamen unter dem
-  Prefix `backups/` in denselben R2/S3-Bucket hoch, der schon für Dokumente
-  verwendet wird (dieselben `CC_CRM_S3_*`-Variablen, kein zweiter Bucket
-  nötig). Das Skript selbst richtet **keinen** Zeitplan ein - dafür z.B. bei
-  Railway einen Cron-Job anlegen (Dashboard → Service → "Cron Jobs"),
-  täglich, Befehl: `python scripts/backup_to_s3.py`. Ohne S3-Konfiguration
-  (`CC_CRM_S3_BUCKET` nicht gesetzt) bricht das Skript mit einer klaren
-  Fehlermeldung ab, statt lokale Dateien stillschweigend zu ignorieren.
+- **Backups**: `scripts/backup_to_s3.py` sichert nur eine lokale SQLite-Datei
+  (Pfad aus `CC_CRM_DATABASE_URL`) - das ist also nur für rein lokale
+  Entwicklung relevant, **nicht** für den produktiven Postgres-Betrieb (das
+  Skript lehnt eine Postgres-URL bewusst ab, siehe Skript-Docstring: für eine
+  laufende Server-Datenbank ist `pg_dump`/der Backup-Mechanismus des
+  Postgres-Anbieters der richtige Weg, kein Datei-Upload). Railway- und
+  Supabase-Postgres bringen beide automatische, tägliche Backups bereits im
+  Dashboard mit - dort aktivieren/prüfen statt eines eigenen Skripts.
 - **Monitoring/Alerting**: Für den Anfang reicht der eingebaute Healthcheck
   (`/api/v1/health`); für echten Betrieb später ggf. Uptime-Monitoring (z.B.
   UptimeRobot, kostenlos) ergänzen.
@@ -155,10 +185,18 @@ laufende Datenbank arbeitet.
 - **Automatisiertes Datenbank-Backup**: siehe `scripts/backup_to_s3.py`
   oben - das Skript selbst ist fertig, nur der Zeitplan (Cron) muss beim
   gewählten Hosting-Anbieter eingerichtet werden.
+- **PostgreSQL-Vorbereitung**: Treiber (`psycopg[binary]`), Alembic-Migrationen
+  und Session-Setup sind bereits dialektübergreifend (SQLite lokal, Postgres
+  produktiv) getestet; `backend/scripts/migrate_sqlite_to_postgres.py` kopiert
+  den bestehenden lokalen Datenbestand einmalig in eine neue Postgres-Instanz,
+  sobald diese angelegt ist (Schritt 1a).
 
 ## Kosten-Richtwert (Stand heute, kann sich ändern)
 
-- Railway: kleine Instanz + Volume, ca. 5-15 $/Monat je nach Nutzung
+- Railway: kleine Backend-Instanz + Postgres-Addon, ca. 5-20 $/Monat je nach
+  Nutzung (Postgres-Addon selbst hat einen kleinen kostenlosen Anteil)
+- Supabase: kostenloser Tier reicht für den Start (Postgres-Datenbank
+  inklusive), danach nutzungsabhängig
 - Vercel: kostenloser "Hobby"-Plan reicht für den Anfang
 - Cloudflare R2: erste 10 GB Speicher kostenlos, danach sehr günstig (kein
   Ausgangsdatenverkehr-Aufpreis)

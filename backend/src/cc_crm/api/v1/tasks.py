@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response, status
 
-from cc_crm.api.dependencies import DatabaseSession
+from cc_crm.api.dependencies import CurrentUser, DatabaseSession
 from cc_crm.models.enums import TaskStatus
 from cc_crm.schemas.task import TaskCreate, TaskRead, TaskUpdate
 from cc_crm.services.tasks import TaskService
@@ -18,14 +18,18 @@ def list_tasks(
     client_company_id: uuid.UUID | None = None,
     submission_id: uuid.UUID | None = None,
     task_status: Annotated[TaskStatus | None, Query(alias="status")] = None,
+    owner_user_id: uuid.UUID | None = None,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> list[TaskRead]:
+    # owner_user_id ist ein reiner Komfort-Filter ("Meine Aufgaben") - ohne
+    # ihn sehen weiterhin alle Nutzer alle Aufgaben, keine Sichtbarkeitsgrenze.
     tasks = TaskService(session).tasks.filtered(
         candidate_id=candidate_id,
         client_company_id=client_company_id,
         submission_id=submission_id,
         task_status=task_status,
+        owner_user_id=owner_user_id,
         offset=offset,
         limit=limit,
     )
@@ -33,7 +37,13 @@ def list_tasks(
 
 
 @router.post("", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
-def create_task(payload: TaskCreate, session: DatabaseSession) -> TaskRead:
+def create_task(
+    payload: TaskCreate,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> TaskRead:
+    if payload.owner_user_id is None:
+        payload = payload.model_copy(update={"owner_user_id": current_user.id})
     return TaskRead.model_validate(TaskService(session).create(payload))
 
 

@@ -1,0 +1,72 @@
+import uuid
+
+from fastapi import APIRouter
+
+from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
+from cc_crm.schemas.user import (
+    CalendarFeedTokenRead,
+    UserAdminRead,
+    UserAdminUpdate,
+    UserBriefRead,
+)
+from cc_crm.services.users import UserService
+
+router = APIRouter(prefix="/users")
+
+
+@router.get("", response_model=list[UserAdminRead])
+def list_users(session: DatabaseSession, _admin: AdminUser) -> list[UserAdminRead]:
+    users = UserService(session).list_all()
+    return [
+        UserAdminRead(
+            id=user.id,
+            email=user.email,
+            display_name=user.display_name,
+            is_admin=user.is_admin,
+            is_active=user.is_active,
+        )
+        for user in users
+    ]
+
+
+@router.get("/assignable", response_model=list[UserBriefRead])
+def list_assignable_users(
+    session: DatabaseSession, _current_user: CurrentUser
+) -> list[UserBriefRead]:
+    """Fuer JEDEN eingeloggten Nutzer zugaenglich (anders als GET /users,
+    admin-only) - Grundlage fuer die Owner-Auswahl (owner_user_id) beim
+    Anlegen von Kandidat/Kanzlei/Prozess/Aufgabe, siehe schemas/user.py::
+    UserBriefRead."""
+    users = UserService(session).list_all()
+    return [
+        UserBriefRead(id=user.id, email=user.email, display_name=user.display_name)
+        for user in users
+    ]
+
+
+@router.patch("/{user_id}", response_model=UserAdminRead)
+def update_user(
+    user_id: uuid.UUID,
+    payload: UserAdminUpdate,
+    session: DatabaseSession,
+    admin: AdminUser,
+) -> UserAdminRead:
+    user = UserService(session).update_admin_fields(user_id, payload, admin)
+    return UserAdminRead(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        is_admin=user.is_admin,
+        is_active=user.is_active,
+    )
+
+
+@router.post("/{user_id}/rotate-calendar-feed-token", response_model=CalendarFeedTokenRead)
+def rotate_calendar_feed_token(
+    user_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> CalendarFeedTokenRead:
+    # Owner ODER Admin - anders als die reinen Admin-Endpunkte oben deshalb
+    # kein require_admin; die Berechtigungspruefung (Owner oder Admin) sitzt
+    # im Service (UserService.rotate_calendar_feed_token).
+    user = UserService(session).rotate_calendar_feed_token(user_id, current_user)
+    return CalendarFeedTokenRead(calendar_feed_token=user.calendar_feed_token)

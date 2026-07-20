@@ -30,7 +30,13 @@ def login(payload: LoginRequest, session: DatabaseSession, request: Request) -> 
     login_rate_limiter.record_success(ip)
     return LoginResponse(
         token=token,
-        user=UserRead(id=user.id, email=user.email, display_name=user.display_name),
+        user=UserRead(
+            id=user.id,
+            email=user.email,
+            display_name=user.display_name,
+            is_admin=user.is_admin,
+            calendar_feed_token=user.calendar_feed_token,
+        ),
     )
 
 
@@ -50,4 +56,6 @@ def me(current_user: CurrentUser) -> UserRead:
         id=current_user.id,
         email=current_user.email,
         display_name=current_user.display_name,
+        is_admin=current_user.is_admin,
+        calendar_feed_token=current_user.calendar_feed_token,
     )

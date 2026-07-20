@@ -82,6 +82,7 @@ class CandidateSubmissionRepository(SQLAlchemyRepository[CandidateSubmission]):
         candidate_id: uuid.UUID | None = None,
         client_id: uuid.UUID | None = None,
         job_id: uuid.UUID | None = None,
+        owner_user_id: uuid.UUID | None = None,
         created_from: datetime | None = None,
         created_to: datetime | None = None,
         offset: int = 0,
@@ -96,6 +97,8 @@ class CandidateSubmissionRepository(SQLAlchemyRepository[CandidateSubmission]):
             filters.append(CandidateSubmission.client_company_id == client_id)
         if job_id is not None:
             filters.append(CandidateSubmission.job_mandate_id == job_id)
+        if owner_user_id is not None:
+            filters.append(CandidateSubmission.owner_user_id == owner_user_id)
         if created_from is not None:
             filters.append(CandidateSubmission.created_at >= created_from)
         if created_to is not None:

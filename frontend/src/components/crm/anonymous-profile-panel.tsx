@@ -6,6 +6,7 @@ import { Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiDownload, apiPatch, apiPost } from "@/lib/api/client";
+import { ErrorBanner } from "@/components/crm/error-banner";
 
 interface AnonymousProfilePanelProps {
   candidateId: string;
@@ -101,11 +102,7 @@ export function AnonymousProfilePanel({ candidateId, initialText }: AnonymousPro
             </Button>
           </div>
         </div>
-        {error && (
-          <div className="mt-4 rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">
-            {error}
-          </div>
-        )}
+        <ErrorBanner message={error} className="mt-4" />
         <textarea
           value={text}
           onChange={(event) => setText(event.target.value)}

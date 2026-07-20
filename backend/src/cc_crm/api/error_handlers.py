@@ -7,6 +7,7 @@ from cc_crm.core.errors import (
     BusinessRuleError,
     ConflictError,
     EntityNotFoundError,
+    PermissionDeniedError,
     RateLimitExceededError,
 )
 
@@ -51,6 +52,16 @@ def register_error_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": str(exception)},
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    @app.exception_handler(PermissionDeniedError)
+    async def permission_denied_handler(
+        _request: Request,
+        exception: PermissionDeniedError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": str(exception)},
         )
 
     @app.exception_handler(RateLimitExceededError)

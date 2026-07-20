@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     # Fallback, wenn kein S3-kompatibler Speicher konfiguriert ist (siehe unten).
     # Relativ zum Backend-Arbeitsverzeichnis, falls kein absoluter Pfad gesetzt ist.
     documents_storage_dir: Path = Path("data/documents")
+    # Maximale Dateigröße für Dokumenten-Uploads (siehe api/v1/operational.py) -
+    # als Setting statt hartkodierter Konstante, damit sie ohne Code-Änderung
+    # anpassbar ist (z.B. per Umgebungsvariable CC_CRM_MAX_UPLOAD_SIZE_MB).
+    max_upload_size_mb: int = 25
 
     # S3-kompatibler Objektspeicher (z.B. Cloudflare R2, AWS S3, Backblaze B2) für
     # Dokumente - empfohlen für produktiven Betrieb/Hosting, da lokale Dateien bei

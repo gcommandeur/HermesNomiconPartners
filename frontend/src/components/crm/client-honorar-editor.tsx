@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiPatch } from "@/lib/api/client";
+import { ErrorBanner } from "@/components/crm/error-banner";
 import type { ClientCompany, HonorarStufe } from "@/lib/api/types";
 
 const labelClass = "mb-1 block text-xs text-[#777d83]";
@@ -102,7 +103,7 @@ export function ClientHonorarEditor({ client }: { client: ClientCompany }) {
           <div><label className={labelClass}>Nachlass-Begründung</label><Input placeholder="z.B. kleine Kanzlei, begrenztes Budget" value={form.nachlass_begruendung} onChange={(e) => setForm((current) => ({ ...current, nachlass_begruendung: e.target.value }))} /></div>
           <div><label className={labelClass}>AGB-Version</label><Input value={form.agb_version} onChange={(e) => setForm((current) => ({ ...current, agb_version: e.target.value }))} /></div>
         </div>
-        {error && <div className="mt-3 rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>}
+        <ErrorBanner message={error} className="mt-3" />
         <div className="mt-4 flex justify-end gap-2">
           <Button size="sm" variant="outline" onClick={() => { reset(); setEditing(false); }}><X size={13} />Abbrechen</Button>
           <Button size="sm" disabled={busy} onClick={handleSave}><Save size={13} />{busy ? "Speichern…" : "Speichern"}</Button>

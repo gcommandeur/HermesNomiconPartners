@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { apiPatch, apiPost } from "@/lib/api/client";
+import { ErrorBanner } from "@/components/crm/error-banner";
 import { invalidateMailingGroupsCache, useMailingGroupsCache } from "@/lib/api/hooks";
 import type { EmailTemplate, MailingGroup } from "@/lib/api/types";
 
@@ -104,7 +105,7 @@ export function MailingGroupsPanel({ templates }: { templates: EmailTemplate[] }
   return (
     <div className="space-y-5">
       {message && <div className="rounded-lg border border-[#4f8a68]/35 bg-[#244d38]/45 p-3 text-xs text-[#a9d6b8]">{message}</div>}
-      {error && <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>}
+      <ErrorBanner message={error} />
 
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 font-semibold"><Users size={16} />Gespeicherte Mailing-Gruppen</h2>
@@ -217,7 +218,7 @@ export function MailingGroupsPanel({ templates }: { templates: EmailTemplate[] }
                 {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
               </select>
             </div>
-            {error && <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>}
+            <ErrorBanner message={error} />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setMergeOpen(false)}>Abbrechen</Button>
               <Button disabled={busy || !mergeName.trim()} onClick={handleMerge}>

@@ -6,6 +6,7 @@ import { RefreshCw, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { apiPost } from "@/lib/api/client";
+import { ErrorBanner } from "@/components/crm/error-banner";
 import { getCandidateMatches } from "@/lib/api/queries";
 import type { BulkSubmitResponse, ClientMatch } from "@/lib/api/types";
 
@@ -87,7 +88,7 @@ export function CandidateMatchingPanel({ candidateId }: { candidateId: string })
         </div>
       </div>
 
-      {error && <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>}
+      <ErrorBanner message={error} />
 
       {result && (
         <Card>

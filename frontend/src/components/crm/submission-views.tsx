@@ -18,6 +18,7 @@ import { ExportActions } from "@/components/crm/export-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { apiDelete, apiPatch } from "@/lib/api/client";
+import { useCurrentUser } from "@/lib/api/hooks";
 import { contactName as formatContactName, formatDate } from "@/lib/utils";
 import { CandidateQuickViewDrawer } from "./candidate-quickview-drawer";
 import { ClosingScoreForm } from "./closing-score-form";
@@ -69,6 +70,13 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
   const [view, setView] = useState<"kanban" | "table">("kanban");
   const [items, setItems] = useState(submissions);
   const [search, setSearch] = useState("");
+  // "Meine Prozesse" - reiner Komfort-Filter nach owner_user_id, KEINE
+  // Sichtbarkeitsgrenze (Default "Alle" bleibt unveraendert). Clientseitig
+  // gefiltert, da Prozesse hier bereits vollstaendig geladen sind (siehe
+  // getSubmissions() in lib/api/queries.ts, keine Server-Pagination).
+  const [mineOnly, setMineOnly] = useState(false);
+  const { data: currentUserData } = useCurrentUser();
+  const currentUserId = currentUserData?.data.id;
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   // `target` gesetzt: Kanzlei-Auswahl ist Teil eines Statuswechsels (Drag&Drop
@@ -90,8 +98,9 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
 
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return items;
     return items.filter((item) => {
+      if (mineOnly && item.owner_user_id !== currentUserId) return false;
+      if (!term) return true;
       const haystack = [
         candidateName(item.candidate_id), clientName(item.client_company_id),
         contactPersonName(item.contact_person_id), item.status,
@@ -99,7 +108,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
       return haystack.includes(term);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, search, candidates, clients, contacts]);
+  }, [items, search, mineOnly, currentUserId, candidates, clients, contacts]);
 
   const exportRows = filteredItems.map((item) => ({
     Kandidat: candidateName(item.candidate_id),
@@ -211,7 +220,12 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
           <Button size="sm" variant={view === "table" ? "dark" : "outline"} onClick={() => setView("table")}><List size={14} />Tabelle</Button>
         </div>
       </div>
-      <FilterBar placeholder="Nach Kandidat, Kanzlei, Ansprechpartner oder Status suchen" value={search} onChange={setSearch} />
+      <FilterBar
+        placeholder="Nach Kandidat, Kanzlei, Ansprechpartner oder Status suchen"
+        value={search}
+        onChange={setSearch}
+        ownerFilter={{ mineOnly, onChange: setMineOnly }}
+      />
       {message && <div className="mb-4 flex items-center gap-2 rounded-lg border border-[#D8DADF]/20 bg-[#102A4C]/65 p-3 text-xs text-[#CBD5E1]"><ShieldAlert size={15} />{message}</div>}
 
       {clientPrompt && (

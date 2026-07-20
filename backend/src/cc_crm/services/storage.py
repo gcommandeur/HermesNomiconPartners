@@ -106,6 +106,22 @@ def read_document_bytes(storage_key: str) -> bytes:
     return (_local_storage_root() / storage_key).read_bytes()
 
 
+def delete_document_bytes(storage_key: str) -> None:
+    """Loescht die Datei unwiderruflich aus dem aktiven Backend - u.a. Basis
+    fuer die Kandidaten-Anonymisierung (services/candidates.py::anonymize),
+    wo CV-Dokumente tatsaechlich aus dem Speicher entfernt werden muessen,
+    nicht nur ihre Metadaten aus der DB. Ein bereits fehlendes Objekt ist
+    kein Fehler (idempotent - z.B. bei wiederholtem Aufruf)."""
+    if _s3_configured():
+        settings = get_settings()
+        assert settings.s3_bucket is not None
+        _s3_client().delete_object(Bucket=settings.s3_bucket, Key=storage_key)
+        return
+
+    path = _local_storage_root() / storage_key
+    path.unlink(missing_ok=True)
+
+
 def document_exists(storage_key: str) -> bool:
     if _s3_configured():
         settings = get_settings()

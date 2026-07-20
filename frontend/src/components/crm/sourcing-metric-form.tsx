@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { apiPost } from "@/lib/api/client";
+import { ErrorBanner } from "@/components/crm/error-banner";
 import type { SourcingMetric } from "@/lib/api/types";
 
 const labelClass = "mb-1 block text-xs text-[#94A3B8]";
@@ -85,7 +86,7 @@ export function SourcingMetricForm() {
             </div>
             <div><label className={labelClass}>Vereinbarte Quali-Calls</label><Input type="number" min={0} value={form.qualification_calls} onChange={(e) => set("qualification_calls", e.target.value)} /></div>
             <div><label className={labelClass}>Notizen</label><Input value={form.notes} onChange={(e) => set("notes", e.target.value)} /></div>
-            {error && <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>}
+            <ErrorBanner message={error} />
             <div className="flex justify-end">
               <Button type="submit" disabled={busy}>{busy ? "Speichern…" : "Erfassen"}</Button>
             </div>

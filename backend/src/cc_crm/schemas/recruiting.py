@@ -41,6 +41,15 @@ class InterviewRead(InterviewCreate, EntityRead):
     submission_id: uuid.UUID
 
 
+class InterviewUpdate(BaseModel):
+    scheduled_at: datetime | None = None
+    interview_type: str | None = Field(default=None, min_length=1, max_length=120)
+    location_or_link: str | None = None
+    participants: list[str] | None = None
+    status: InterviewStatus | None = None
+    notes: str | None = None
+
+
 class OfferCreate(BaseModel):
     offered_salary: Decimal = Field(gt=0)
     variable_compensation: Decimal | None = Field(default=None, ge=0)

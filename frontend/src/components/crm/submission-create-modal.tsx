@@ -7,17 +7,17 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { SearchSelect } from "@/components/ui/search-select";
 import { apiPost } from "@/lib/api/client";
-import type { Candidate, CandidateSubmission, ClientCompany } from "@/lib/api/types";
+import { ErrorBanner } from "@/components/crm/error-banner";
+import { searchCandidates, searchClients } from "@/lib/api/search-select-helpers";
+import { useAssignableUsersCache, useCurrentUser } from "@/lib/api/hooks";
+import type { CandidateSubmission } from "@/lib/api/types";
 
 const labelClass = "mb-1 block text-xs text-[#94A3B8]";
+const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
 
 export function SubmissionCreateForm({
-  candidates,
-  clients,
   onDone,
 }: {
-  candidates: Candidate[];
-  clients: ClientCompany[];
   onDone: (submission: CandidateSubmission) => void;
 }) {
   const router = useRouter();
@@ -25,6 +25,12 @@ export function SubmissionCreateForm({
   const [error, setError] = useState<string | null>(null);
   const [candidateId, setCandidateId] = useState("");
   const [clientId, setClientId] = useState("");
+  const [ownerUserIdSelection, setOwnerUserIdSelection] = useState("");
+  const { data: currentUserData } = useCurrentUser();
+  const { data: assignableUsersData } = useAssignableUsersCache();
+  const assignableUsers = assignableUsersData?.data ?? [];
+  // Default = aktuell eingeloggter Nutzer (aber im Dropdown aenderbar).
+  const ownerUserId = ownerUserIdSelection || currentUserData?.data.id || "";
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -35,9 +41,11 @@ export function SubmissionCreateForm({
       const submission = await apiPost<CandidateSubmission>("/submissions", {
         candidate_id: candidateId,
         client_company_id: clientId || undefined,
+        owner_user_id: ownerUserId || undefined,
       });
       setCandidateId("");
       setClientId("");
+      setOwnerUserIdSelection("");
       router.refresh();
       onDone(submission);
     } catch (exception) {
@@ -47,22 +55,13 @@ export function SubmissionCreateForm({
     }
   }
 
-  const candidateOptions = candidates.map((candidate) => ({
-    value: candidate.id,
-    label: `${candidate.first_name} ${candidate.last_name}`,
-    sublabel: candidate.candidate_number ? `Nr. ${candidate.candidate_number}` : undefined,
-  }));
-  const clientOptions = clients
-    .filter((client) => client.status !== "blocked")
-    .map((client) => ({ value: client.id, label: client.name, sublabel: client.kanzleigruppe ?? client.city ?? undefined }));
-
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div>
         <label className={labelClass}>Kandidat *</label>
         <SearchSelect
           required
-          options={candidateOptions}
+          onSearch={searchCandidates}
           value={candidateId}
           onChange={setCandidateId}
           placeholder="Name oder Kandidatennummer suchen…"
@@ -72,7 +71,7 @@ export function SubmissionCreateForm({
       <div>
         <label className={labelClass}>Kanzlei (optional)</label>
         <SearchSelect
-          options={clientOptions}
+          onSearch={searchClients}
           value={clientId}
           onChange={setClientId}
           placeholder="Kanzlei suchen…"
@@ -80,7 +79,16 @@ export function SubmissionCreateForm({
           clearLabel="Noch offen"
         />
       </div>
-      {error && <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>}
+      <div>
+        <label className={labelClass}>Zuständiger Mitarbeiter</label>
+        <select className={selectClass} value={ownerUserId} onChange={(e) => setOwnerUserIdSelection(e.target.value)}>
+          <option value="">Nicht zugewiesen</option>
+          {assignableUsers.map((user) => (
+            <option key={user.id} value={user.id}>{user.display_name ?? user.email}</option>
+          ))}
+        </select>
+      </div>
+      <ErrorBanner message={error} />
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={busy}>{busy ? "Speichern…" : "Prozess erstellen"}</Button>
       </div>
@@ -89,12 +97,8 @@ export function SubmissionCreateForm({
 }
 
 export function SubmissionCreateModal({
-  candidates,
-  clients,
   onCreated,
 }: {
-  candidates: Candidate[];
-  clients: ClientCompany[];
   onCreated?: (submission: CandidateSubmission) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -108,7 +112,7 @@ export function SubmissionCreateModal({
           description="Ein Prozess beginnt bei Quali Call. Die Kanzlei kann optional sofort verknüpft oder erst ab Interview ergänzt werden."
           onClose={() => setOpen(false)}
         >
-          <SubmissionCreateForm candidates={candidates} clients={clients} onDone={(submission) => { setOpen(false); onCreated?.(submission); }} />
+          <SubmissionCreateForm onDone={(submission) => { setOpen(false); onCreated?.(submission); }} />
         </Modal>
       )}
     </>
