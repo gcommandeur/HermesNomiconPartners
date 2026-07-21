@@ -214,7 +214,7 @@ export function CalendarEventModal({
           <label className={labelClass}>Titel *</label>
           <Input required value={form.title} onChange={(e) => set("title", e.target.value)} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={labelClass}>Typ</label>
             <select
@@ -237,7 +237,7 @@ export function CalendarEventModal({
             />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={labelClass}>Start *</label>
             <Input
@@ -278,7 +278,7 @@ export function CalendarEventModal({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={labelClass}>Kandidat (optional)</label>
             <SearchSelect

@@ -62,6 +62,64 @@ function EventChip({ event, onClick, compact }: { event: CalendarEvent; onClick:
   );
 }
 
+/** Mobile-Fallback fuer Wochen-/Monatsansicht: ein starres 7-Spalten-Grid
+ * (siehe unten) ist auf einem 360-420px-Handy praktisch unbedienbar - jede
+ * Spalte waere unter 50px breit. Stattdessen darunter (unter sm) eine
+ * einspaltige Agenda: Tag fuer Tag mit den Terminen direkt darunter, gleiche
+ * bereits geladenen Events, keine Datenmodell-Aenderung. */
+function AgendaList({
+  days,
+  eventsByDay,
+  currentDate,
+  onDayClick,
+  onEventClick,
+}: {
+  days: Date[];
+  eventsByDay: Map<string, CalendarEvent[]>;
+  currentDate: Date;
+  onDayClick: (date: Date) => void;
+  onEventClick: (event: CalendarEvent) => void;
+}) {
+  const today = new Date();
+  return (
+    <div className="space-y-2 sm:hidden">
+      {days.map((day) => {
+        const dayEvents = eventsByDay.get(dateKey(day)) ?? [];
+        const inMonth = day.getMonth() === currentDate.getMonth();
+        const isToday = day.toDateString() === today.toDateString();
+        return (
+          <div
+            key={dateKey(day)}
+            className={cn(
+              "rounded-lg border p-2.5",
+              isToday ? "border-[#1F5FA8]/50 bg-[#102A4C]/40" : "border-white/10 bg-[#0D1B2E]/60",
+              !inMonth && "opacity-50",
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => onDayClick(day)}
+              className="flex w-full items-center justify-between text-xs text-[#94A3B8] hover:text-white"
+            >
+              <span>{formatWeekdayLabel(day)} {formatDayLabel(day)}</span>
+              <Plus size={13} />
+            </button>
+            {dayEvents.length > 0 ? (
+              <div className="mt-1.5 space-y-1">
+                {dayEvents.map((event) => (
+                  <EventChip key={event.id} event={event} onClick={() => onEventClick(event)} />
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1.5 text-[11px] text-[#5b6167]">Keine Termine</p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function CalendarView({
   view,
   currentDate,
@@ -92,7 +150,9 @@ export function CalendarView({
 
   if (view === "week") {
     return (
-      <div className="grid grid-cols-7 gap-2">
+      <>
+        <AgendaList days={days} eventsByDay={eventsByDay} currentDate={currentDate} onDayClick={onDayClick} onEventClick={onEventClick} />
+        <div className="hidden sm:grid sm:grid-cols-7 sm:gap-2">
         {days.map((day) => {
           const dayEvents = eventsByDay.get(dateKey(day)) ?? [];
           const isToday = day.toDateString() === today.toDateString();
@@ -120,12 +180,15 @@ export function CalendarView({
             </div>
           );
         })}
-      </div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="grid grid-cols-7 gap-2">
+    <>
+      <AgendaList days={days} eventsByDay={eventsByDay} currentDate={currentDate} onDayClick={onDayClick} onEventClick={onEventClick} />
+      <div className="hidden sm:grid sm:grid-cols-7 sm:gap-2">
       {WEEKDAY_LABELS.map((label) => (
         <div key={label} className="pb-1 text-center text-[10px] uppercase tracking-wider text-[#8a9095]">
           {label}
@@ -158,6 +221,7 @@ export function CalendarView({
           </button>
         );
       })}
-    </div>
+      </div>
+    </>
   );
 }

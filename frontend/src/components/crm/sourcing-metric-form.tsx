@@ -71,15 +71,15 @@ export function SourcingMetricForm() {
       {open && (
         <Modal title="Sourcing-Daten erfassen" eyebrow="Täglich / wöchentlich" onClose={() => setOpen(false)}>
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div><label className={labelClass}>Zeitraum von</label><Input type="date" required value={form.period_start} onChange={(e) => set("period_start", e.target.value)} /></div>
               <div><label className={labelClass}>Zeitraum bis</label><Input type="date" required value={form.period_end} onChange={(e) => set("period_end", e.target.value)} /></div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div><label className={labelClass}>Quelle</label><Input value={form.source} onChange={(e) => set("source", e.target.value)} /></div>
               <div><label className={labelClass}>Kampagne (optional)</label><Input value={form.campaign} onChange={(e) => set("campaign", e.target.value)} /></div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div><label className={labelClass}>Versendete Nachrichten</label><Input type="number" min={0} value={form.pitches} onChange={(e) => set("pitches", e.target.value)} /></div>
               <div><label className={labelClass}>Antworten</label><Input type="number" min={0} value={form.responses} onChange={(e) => set("responses", e.target.value)} /></div>
               <div><label className={labelClass}>Positive Antworten</label><Input type="number" min={0} value={form.positive_responses} onChange={(e) => set("positive_responses", e.target.value)} /></div>

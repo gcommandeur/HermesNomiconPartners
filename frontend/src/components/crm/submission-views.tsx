@@ -15,7 +15,7 @@ import type {
 import { StatusPill } from "./status-pill";
 import { DataTable } from "./data-table";
 import { FilterBar } from "@/components/crm/filter-bar";
-import { ExportActions } from "@/components/crm/export-actions";
+import { ExportActions, downloadCsv } from "@/components/crm/export-actions";
 import { InterviewModal } from "@/components/crm/interview-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -389,7 +389,13 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                     <h2 className="truncate text-xs font-semibold text-[#F8FAFC]">{column.title}</h2>
                     <span className="grid size-5 shrink-0 place-items-center rounded-full border border-white/10 bg-[#12243A] text-[10px] text-[#CBD5E1]">{columnItems.length}</span>
                   </header>
-                  <div className="scrollbar-subtle max-h-[calc(100vh-360px)] space-y-2 overflow-y-auto">
+                  {/* Unterhalb lg blendet die fixierte BottomNav (siehe
+                   * layout/bottom-nav.tsx) zusaetzlich ~5rem am unteren
+                   * Bildschirmrand aus (plus das dazugehoerige pb-20 auf
+                   * <main> in app-shell.tsx) - ohne den Abzug wuerden die
+                   * letzten Kanban-Karten dahinter verschwinden. Ab lg gibt
+                   * es keine BottomNav, dort bleibt der urspruengliche Wert. */}
+                  <div className="scrollbar-subtle max-h-[calc(100vh-360px-5rem)] space-y-2 overflow-y-auto lg:max-h-[calc(100vh-360px)]">
                     {columnItems.map((item) => (
                       <article
                         key={item.id}
@@ -524,7 +530,28 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                   >
                     <Eye size={13} />
                   </button>
-                  <Download size={14} className="text-[#94A3B8]" />
+                  <button
+                    type="button"
+                    title="Diese Zeile als CSV exportieren"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      downloadCsv(`prozess-${candidateName(item.candidate_id).replaceAll(" ", "_")}`, [
+                        {
+                          Kandidat: candidateName(item.candidate_id),
+                          Kanzlei: clientName(item.client_company_id),
+                          Ansprechpartner: contactPersonName(item.contact_person_id),
+                          Status: item.status,
+                          Versendet: formatDate(item.submitted_at),
+                          FollowUp: formatDate(item.follow_up_at),
+                          NächsterSchritt: item.next_step ?? "—",
+                          ErwarteteFee: expectedFee(item),
+                        },
+                      ]);
+                    }}
+                    className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
+                  >
+                    <Download size={14} />
+                  </button>
                 </div>
               </td>
             </tr>

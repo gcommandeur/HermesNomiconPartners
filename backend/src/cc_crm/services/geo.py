@@ -1,10 +1,15 @@
 import hashlib
+import uuid
+from collections import Counter
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
+from cc_crm.models.contact_person import ContactPerson
+from cc_crm.models.enums import JobStatus
+from cc_crm.models.job_mandate import JobMandate
 from cc_crm.schemas.geo import GeoMappingResult
 
 # Centroids for German cities used in seed data / typical client input. This is a
@@ -98,8 +103,32 @@ class GeoMappingService:
                     tags=tags,
                     mailing_ready=candidate.status.value not in {"blocked", "archived"},
                     email=candidate.email,
+                    role=candidate.job_title,
+                    qualification=candidate.qualification,
+                    salary_expectation=candidate.salary_expectation,
+                    notice_period=candidate.notice_period,
+                    available_from=candidate.available_from,
+                    remote_preference=candidate.remote_teilzeit_wuensche,
                 )
             )
+
+        # Primaerer Ansprechpartner je Kanzlei (is_primary, sonst der erste
+        # gefundene) und Anzahl offener Vakanzen (JobStatus.OPEN) - einmalig
+        # ueber alle Kanzleien gebuendelt statt einer Einzel-Query pro Zeile.
+        primary_contact_by_client: dict[uuid.UUID, str] = {}
+        fallback_contact_by_client: dict[uuid.UUID, str] = {}
+        for contact in self.session.scalars(select(ContactPerson)).all():
+            name = f"{contact.first_name} {contact.last_name}"
+            if contact.is_primary:
+                primary_contact_by_client.setdefault(contact.client_company_id, name)
+            else:
+                fallback_contact_by_client.setdefault(contact.client_company_id, name)
+
+        open_vacancy_counts = Counter(
+            mandate.client_company_id
+            for mandate in self.session.scalars(select(JobMandate)).all()
+            if mandate.status == JobStatus.OPEN and mandate.client_company_id is not None
+        )
 
         clients = self.session.scalars(select(ClientCompany)).all()
         for client in clients:
@@ -121,6 +150,13 @@ class GeoMappingService:
                     tags=tags,
                     mailing_ready=client.status.value != "blocked",
                     email=client.email,
+                    terms_status=client.terms_status,
+                    fee_tier=client.honorar_stufe.value,
+                    primary_contact_name=(
+                        primary_contact_by_client.get(client.id)
+                        or fallback_contact_by_client.get(client.id)
+                    ),
+                    active_vacancy_count=open_vacancy_counts.get(client.id, 0),
                 )
             )
         return items

@@ -140,7 +140,7 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
       <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Placement</p>
       <ErrorBanner message={message} className="mb-3" />
       <form className="space-y-3" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={labelClass}>Startdatum *</label>
             <Input type="date" required value={form.start_date} onChange={(e) => set("start_date", e.target.value)} />
@@ -157,7 +157,7 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
             />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={labelClass}>Honorarsatz % (leer = Kanzlei-Standard)</label>
             <Input

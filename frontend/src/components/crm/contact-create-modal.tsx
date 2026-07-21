@@ -76,12 +76,12 @@ export function ContactCreateModal({ onCreated }: { onCreated?: (contact: Contac
                 {clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
               </select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div><label className={labelClass}>Vorname *</label><Input required value={form.first_name} onChange={(e) => set("first_name", e.target.value)} /></div>
               <div><label className={labelClass}>Nachname *</label><Input required value={form.last_name} onChange={(e) => set("last_name", e.target.value)} /></div>
             </div>
             <div><label className={labelClass}>Rolle</label><Input value={form.role_title} onChange={(e) => set("role_title", e.target.value)} /></div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div><label className={labelClass}>E-Mail</label><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /></div>
               <div><label className={labelClass}>Telefon</label><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} /></div>
             </div>

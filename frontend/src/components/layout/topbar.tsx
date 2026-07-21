@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { QuickActionMenu } from "@/components/crm/quick-action-menu";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { getCandidatesPage, getClientsPage, getContactsPage } from "@/lib/api/queries";
+import { useCurrentUser } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
 import type { Candidate, ClientCompany, Contact } from "@/lib/api/types";
 
@@ -28,6 +29,11 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const accountRef = useRef<HTMLDivElement>(null);
+  const { data: currentUserData } = useCurrentUser();
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<GlobalSearchResults>(emptyResults);
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
@@ -77,6 +83,12 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
+      if (accountRef.current && !accountRef.current.contains(event.target as Node)) {
+        setAccountOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -217,14 +229,47 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
       </div>
       <div className="ml-auto flex items-center gap-2">
         <QuickActionMenu />
-        <Button variant="ghost" size="icon" aria-label="Benachrichtigungen"><Bell size={17} /></Button>
-        <button className="ml-1 flex items-center gap-2 rounded-md p-1.5 hover:bg-white/6">
-          <span className="grid size-8 place-items-center rounded-full bg-[#202327] text-[11px] font-semibold text-white">CC</span>
-          <span className="hidden text-left md:block">
-            <span className="block text-xs font-medium text-white">Commandeur</span>
-            <span className="block text-[10px] text-[#858b91]">Consulting</span>
-          </span>
-        </button>
+        <div ref={notificationsRef} className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Benachrichtigungen"
+            onClick={() => setNotificationsOpen((current) => !current)}
+          >
+            <Bell size={17} />
+          </Button>
+          {notificationsOpen && (
+            <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-xs text-[#94A3B8] shadow-xl">
+              Keine neuen Benachrichtigungen.
+            </div>
+          )}
+        </div>
+        <div ref={accountRef} className="relative">
+          <button
+            className="ml-1 flex items-center gap-2 rounded-md p-1.5 hover:bg-white/6"
+            onClick={() => setAccountOpen((current) => !current)}
+          >
+            <span className="grid size-8 place-items-center rounded-full bg-[#202327] text-[11px] font-semibold text-white">CC</span>
+            <span className="hidden text-left md:block">
+              <span className="block text-xs font-medium text-white">Commandeur</span>
+              <span className="block text-[10px] text-[#858b91]">Consulting</span>
+            </span>
+          </button>
+          {accountOpen && (
+            <div className="absolute right-0 z-20 mt-1 w-56 rounded-md border border-white/10 bg-[#0D1B2E] p-1.5 text-xs shadow-xl">
+              <div className="px-2.5 py-2 text-[#CBD5E1]">
+                <p className="font-medium text-white">{currentUserData?.data.display_name ?? "Angemeldet"}</p>
+                <p className="mt-0.5 text-[11px] text-[#8a9095]">{currentUserData?.data.email ?? ""}</p>
+              </div>
+              <button
+                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[#D8DADF] hover:bg-white/8"
+                onClick={() => { setAccountOpen(false); void handleLogout(); }}
+              >
+                <LogOut size={13} />Abmelden
+              </button>
+            </div>
+          )}
+        </div>
         <Button variant="ghost" size="icon" aria-label="Abmelden" onClick={handleLogout}><LogOut size={17} /></Button>
       </div>
     </header>

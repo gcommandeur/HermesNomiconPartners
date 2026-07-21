@@ -204,6 +204,18 @@ export interface GeoMappingResult {
   tags: string[];
   mailing_ready: boolean;
   email?: string | null;
+  // Kandidaten-spezifisch (bei kind="client" immer null)
+  role?: string | null;
+  qualification?: string | null;
+  salary_expectation?: string | null;
+  notice_period?: string | null;
+  available_from?: string | null;
+  remote_preference?: string | null;
+  // Kanzlei-spezifisch (bei kind="candidate" immer null)
+  terms_status?: string | null;
+  fee_tier?: string | null;
+  primary_contact_name?: string | null;
+  active_vacancy_count?: number | null;
 }
 
 export type MailingRecipientKind = "candidate" | "client" | "contact";

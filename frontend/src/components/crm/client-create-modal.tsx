@@ -126,7 +126,7 @@ export function ClientCreateForm({
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label className={labelClass}>Name *</label><Input required value={form.name} onChange={(e) => set("name", e.target.value)} /></div>
         <div>
           <label className={labelClass}>Kanzleigruppe / Marke</label>
@@ -156,7 +156,7 @@ export function ClientCreateForm({
           )}
         </div>
       )}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className={labelClass}>Status</label>
           <select className={selectClass} value={form.status} onChange={(e) => set("status", e.target.value)}>
@@ -169,23 +169,23 @@ export function ClientCreateForm({
         </div>
         <div><label className={labelClass}>Fokus</label><Input value={form.focus} onChange={(e) => set("focus", e.target.value)} /></div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label className={labelClass}>E-Mail</label><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /></div>
         <div><label className={labelClass}>Telefon</label><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} /></div>
       </div>
       <div><label className={labelClass}>Website</label><Input value={form.website} onChange={(e) => set("website", e.target.value)} /></div>
       <div><label className={labelClass}>Straße</label><Input value={form.street} onChange={(e) => set("street", e.target.value)} /></div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label className={labelClass}>PLZ</label><Input value={form.postal_code} onChange={(e) => set("postal_code", e.target.value)} /></div>
         <div><label className={labelClass}>Ort</label><Input value={form.city} onChange={(e) => set("city", e.target.value)} /></div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label className={labelClass}>Region</label><Input value={form.region} onChange={(e) => set("region", e.target.value)} /></div>
         <div><label className={labelClass}>Kanzleigröße</label><Input value={form.company_size} onChange={(e) => set("company_size", e.target.value)} /></div>
       </div>
       <div className="border-t border-white/10 pt-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#92979c]">Honorar</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelClass}>Honorarsatz (%)</label><Input type="number" step="0.01" value={form.fee_percentage} onChange={(e) => set("fee_percentage", e.target.value)} /></div>
           <div>
             <label className={labelClass}>Honorar-Stufe</label>
@@ -194,7 +194,7 @@ export function ClientCreateForm({
             </select>
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelClass}>Nachlass-Begründung</label><Input placeholder="z.B. kleine Kanzlei, begrenztes Budget" value={form.nachlass_begruendung} onChange={(e) => set("nachlass_begruendung", e.target.value)} /></div>
           <div><label className={labelClass}>AGB-Version</label><Input value={form.agb_version} onChange={(e) => set("agb_version", e.target.value)} /></div>
         </div>

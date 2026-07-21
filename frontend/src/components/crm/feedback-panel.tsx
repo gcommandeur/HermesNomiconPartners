@@ -160,7 +160,7 @@ export function FeedbackPanel({ submissionId }: { submissionId: string }) {
 
       {form && (
         <form className="mb-4 space-y-3 rounded-lg border border-white/10 bg-[#0D1B2E] p-3" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelClass}>Datum *</label>
               <Input

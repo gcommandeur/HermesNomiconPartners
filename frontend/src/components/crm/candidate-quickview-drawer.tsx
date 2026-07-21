@@ -51,7 +51,7 @@ export function CandidateQuickViewDrawer({
           )}
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-white/10 pt-4 text-xs">
+        <div className="mt-4 grid grid-cols-1 gap-3 border-t border-white/10 pt-4 text-xs sm:grid-cols-2">
           <div>
             <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Gehaltsrahmen</p>
             <p className="mt-1 text-[#F8FAFC]">{candidate.salary_expectation ?? "offen"}</p>

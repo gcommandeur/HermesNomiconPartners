@@ -134,7 +134,7 @@ export function CandidateCreateForm({
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       {isEdit && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelClass}>Kandidatennummer</label><Input value={form.candidate_number} onChange={(e) => set("candidate_number", e.target.value)} /></div>
           <div>
             <label className={labelClass}>Status</label>
@@ -148,11 +148,11 @@ export function CandidateCreateForm({
           </div>
         </div>
       )}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label className={labelClass}>Vorname *</label><Input required value={form.first_name} onChange={(e) => set("first_name", e.target.value)} /></div>
         <div><label className={labelClass}>Nachname *</label><Input required value={form.last_name} onChange={(e) => set("last_name", e.target.value)} /></div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label className={labelClass}>E-Mail</label><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /></div>
         <div><label className={labelClass}>Telefon</label><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} /></div>
       </div>
@@ -165,15 +165,15 @@ export function CandidateCreateForm({
           <option value="divers">Divers</option>
         </select>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label className={labelClass}>Rolle</label><Input value={form.job_title} onChange={(e) => set("job_title", e.target.value)} /></div>
         <div><label className={labelClass}>Qualifikation</label><Input value={form.qualification} onChange={(e) => set("qualification", e.target.value)} /></div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label className={labelClass}>PLZ</label><Input value={form.postal_code} onChange={(e) => set("postal_code", e.target.value)} /></div>
         <div><label className={labelClass}>Ort</label><Input value={form.city} onChange={(e) => set("city", e.target.value)} /></div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label className={labelClass}>Gehaltswunsch</label><Input value={form.salary_expectation} onChange={(e) => set("salary_expectation", e.target.value)} /></div>
         <div><label className={labelClass}>Kündigungsfrist</label><Input value={form.notice_period} onChange={(e) => set("notice_period", e.target.value)} /></div>
       </div>
@@ -190,15 +190,15 @@ export function CandidateCreateForm({
 
       <div className="border-t border-white/10 pt-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#92979c]">Quali-Call-Details</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelClass}>Fachliche Schwerpunkte (Komma-getrennt)</label><Input placeholder="z.B. Jahresabschluss, Umsatzsteuer, M&A" value={form.fachliche_schwerpunkte} onChange={(e) => set("fachliche_schwerpunkte", e.target.value)} /></div>
           <div><label className={labelClass}>Ausbildung / Weiterbildung</label><Input value={form.ausbildung_titel} onChange={(e) => set("ausbildung_titel", e.target.value)} /></div>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelClass}>Aktuelles Umfeld: Kanzleityp</label><Input value={form.aktuelles_umfeld_kanzleityp} onChange={(e) => set("aktuelles_umfeld_kanzleityp", e.target.value)} /></div>
           <div><label className={labelClass}>Aktuelles Umfeld: Kanzleigröße</label><Input placeholder="z.B. 20-50 Mitarbeitende" value={form.aktuelles_umfeld_kanzleigroesse} onChange={(e) => set("aktuelles_umfeld_kanzleigroesse", e.target.value)} /></div>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelClass}>Remote-/Teilzeit-Wünsche</label><Input value={form.remote_teilzeit_wuensche} onChange={(e) => set("remote_teilzeit_wuensche", e.target.value)} /></div>
           <div><label className={labelClass}>Passender Kanzleityp</label><Input value={form.passender_kanzleityp} onChange={(e) => set("passender_kanzleityp", e.target.value)} /></div>
         </div>
@@ -208,8 +208,13 @@ export function CandidateCreateForm({
             <label className={labelClass}>Berufliche Stationen</label>
             <Button type="button" size="sm" variant="outline" onClick={() => setStations((current) => [...current, { ...emptyStation }])}><Plus size={13} />Station hinzufügen</Button>
           </div>
+          {/* minmax(0, ...) statt bloss fr-Werte: sonst bekommen die Tracks
+           * min-width:auto und werden vom Input-Inhalt ueber den Viewport
+           * hinaus aufgezogen (gleicher Grid-Overflow-Bug wie bei den
+           * Seiten-Grids) - hier bewusst NICHT auf 1 Spalte gestapelt, da
+           * das die Loeschen-Zeile pro Station unnoetig hoch machen wuerde. */}
           {stations.map((station, index) => (
-            <div key={index} className="mb-2 grid grid-cols-[1fr_1fr_.6fr_auto] items-end gap-2">
+            <div key={index} className="mb-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,.6fr)_auto] items-end gap-2">
               <div><Input placeholder="Kanzleityp" value={station.kanzleityp} onChange={(e) => setStation(index, "kanzleityp", e.target.value)} /></div>
               <div><Input placeholder="Kanzleigröße" value={station.kanzleigroesse} onChange={(e) => setStation(index, "kanzleigroesse", e.target.value)} /></div>
               <div><Input type="number" placeholder="Jahre" value={station.dauer_jahre || ""} onChange={(e) => setStation(index, "dauer_jahre", Number(e.target.value))} /></div>

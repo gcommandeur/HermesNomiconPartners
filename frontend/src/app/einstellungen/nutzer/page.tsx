@@ -5,6 +5,7 @@ import { ShieldOff } from "lucide-react";
 import { PageHeader } from "@/components/crm/page-header";
 import { ErrorState } from "@/components/crm/error-state";
 import { ErrorBanner } from "@/components/crm/error-banner";
+import { DataTable } from "@/components/crm/data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiPatch } from "@/lib/api/client";
 import { useAdminUsersCache, useCurrentUser, invalidateAdminUsersCache } from "@/lib/api/hooks";
@@ -74,46 +75,34 @@ export default function NutzerverwaltungPage() {
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-white/10">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[#102A4C] text-[11px] uppercase tracking-wider text-[#94A3B8]">
-              <tr>
-                <th className="p-3">Name</th>
-                <th className="p-3">E-Mail</th>
-                <th className="p-3">Admin</th>
-                <th className="p-3">Aktiv</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/10">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-[#203A5A]/25">
-                  <td className="p-3 font-medium text-[#F8FAFC]">{user.display_name ?? "—"}</td>
-                  <td className="p-3 text-[#CBD5E1]">{user.email}</td>
-                  <td className="p-3">
-                    <label className="inline-flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={user.is_admin}
-                        disabled={busyUserId === user.id}
-                        onChange={() => toggleField(user, "is_admin")}
-                      />
-                    </label>
-                  </td>
-                  <td className="p-3">
-                    <label className="inline-flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={user.is_active}
-                        disabled={busyUserId === user.id}
-                        onChange={() => toggleField(user, "is_active")}
-                      />
-                    </label>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable headers={["Name", "E-Mail", "Admin", "Aktiv"]}>
+          {users.map((user) => (
+            <tr key={user.id} className="hover:bg-[#203A5A]/25">
+              <td className="px-4 py-3.5 font-medium text-[#F8FAFC]">{user.display_name ?? "—"}</td>
+              <td className="px-4 py-3.5 text-[#CBD5E1]">{user.email}</td>
+              <td className="px-4 py-3.5">
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={user.is_admin}
+                    disabled={busyUserId === user.id}
+                    onChange={() => toggleField(user, "is_admin")}
+                  />
+                </label>
+              </td>
+              <td className="px-4 py-3.5">
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={user.is_active}
+                    disabled={busyUserId === user.id}
+                    onChange={() => toggleField(user, "is_active")}
+                  />
+                </label>
+              </td>
+            </tr>
+          ))}
+        </DataTable>
       )}
     </>
   );
