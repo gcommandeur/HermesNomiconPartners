@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { apiDelete, apiPatch } from "@/lib/api/client";
 import { createInterview, deleteInterview, updateInterview } from "@/lib/api/queries";
 import { useCurrentUser } from "@/lib/api/hooks";
+import { formatTimeFromIso, toLocalIsoString } from "@/lib/calendar-utils";
 import { contactName as formatContactName, formatDate } from "@/lib/utils";
 import { CandidateQuickViewDrawer } from "./candidate-quickview-drawer";
 import { ClosingScoreForm } from "./closing-score-form";
@@ -65,25 +66,39 @@ function isHot(status: SubmissionStatus) {
   return ["interview", "offer", "placement"].includes(status);
 }
 
+/** scheduled_at ist eine naive Europe/Berlin-Wanduhrzeit ohne verlaessliches
+ * Zeitzonen-Suffix (auf SQLite ganz ohne Suffix, auf Postgres theoretisch mit
+ * einem - siehe services/ics_feed.py-Kommentar: "kein Umrechnen noetig/
+ * gewollt"). `new Date(iso).getHours()` wuerde das je nach Suffix/Browser-
+ * Zeitzone als echten Zeitpunkt umrechnen (das genau war der Bug: 14:00
+ * eingegeben, Chip zeigte 16:00) - stattdessen wird hier wie bei
+ * calendar-event-modal.tsx::toDatetimeLocalValue nur der naive Text
+ * verwendet, nie new Date().getHours()/.getMinutes(). */
+function naiveScheduledAt(iso: string): string {
+  return iso.slice(0, 19);
+}
+
 /** Kompaktes "dd.MM. HH:MM"-Format fuer die Runden-Chips auf der Kanban-Karte
  * - formatDate/formatDateTime aus lib/utils sind fuer diesen engen Platz zu
- * lang (Monatsname + Jahr). */
+ * lang (Monatsname + Jahr). Nutzt dieselben ISO-String-Hilfsfunktionen wie
+ * die Kalender-Ansicht (lib/calendar-utils.ts), statt ueber new Date() zu
+ * gehen - siehe naiveScheduledAt oben fuer die Begruendung. */
 function formatChipDateTime(iso: string): string {
-  const date = new Date(iso);
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${dd}.${mm}. ${hh}:${min}`;
+  const dd = iso.slice(8, 10);
+  const mm = iso.slice(5, 7);
+  return `${dd}.${mm}. ${formatTimeFromIso(iso)}`;
 }
 
 /** Grün = durchgeführt, Rot = abgesagt/nicht erschienen, Blau = geplant und
  * noch in der Zukunft, Grau = geplant, aber der Termin liegt bereits in der
- * Vergangenheit ohne Status-Update ("überfällig"). */
+ * Vergangenheit ohne Status-Update ("überfällig"). Vergleich als reiner
+ * String (nicht als new Date(...).getTime()), damit "jetzt" (toLocalIsoString)
+ * und scheduled_at im selben naiven Berlin-Wanduhrzeit-Format verglichen
+ * werden - siehe naiveScheduledAt oben. */
 function interviewDotClass(interview: Interview): string {
   if (interview.status === "completed") return "bg-emerald-400";
   if (interview.status === "cancelled" || interview.status === "no_show") return "bg-red-400";
-  const isOverdue = new Date(interview.scheduled_at).getTime() < Date.now();
+  const isOverdue = naiveScheduledAt(interview.scheduled_at) < toLocalIsoString(new Date());
   return isOverdue ? "bg-[#94A3B8]" : "bg-[#1F5FA8]";
 }
 
@@ -137,16 +152,22 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
       else map.set(interview.submission_id, [interview]);
     }
     for (const list of map.values()) {
-      list.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+      // String- statt new Date(...).getTime()-Vergleich: bei identisch
+      // formatierten naiven ISO-Strings ergibt der lexikografische Vergleich
+      // dieselbe chronologische Reihenfolge, ist aber robust gegen eine
+      // moegliche Zeitzonen-Fehlinterpretation durch new Date() (siehe
+      // naiveScheduledAt oben) - z.B. bei zwei Terminen ueber einen DST-
+      // Wechsel hinweg.
+      list.sort((a, b) => naiveScheduledAt(a.scheduled_at).localeCompare(naiveScheduledAt(b.scheduled_at)));
     }
     return map;
   }, [interviews]);
 
   function nextUpcomingInterview(submissionId: string): Interview | null {
     const list = interviewsBySubmission.get(submissionId) ?? [];
-    const now = Date.now();
+    const now = toLocalIsoString(new Date());
     return (
-      list.find((interview) => interview.status === "scheduled" && new Date(interview.scheduled_at).getTime() >= now) ??
+      list.find((interview) => interview.status === "scheduled" && naiveScheduledAt(interview.scheduled_at) >= now) ??
       null
     );
   }
