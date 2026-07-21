@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, LogOut, Menu, Search } from "lucide-react";
+import { Bell, LogOut, Menu, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QuickActionMenu } from "@/components/crm/quick-action-menu";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { getCandidatesPage, getClientsPage, getContactsPage } from "@/lib/api/queries";
+import { cn } from "@/lib/utils";
 import type { Candidate, ClientCompany, Contact } from "@/lib/api/types";
 
 const MIN_QUERY_LENGTH = 2;
@@ -26,6 +27,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
 
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<GlobalSearchResults>(emptyResults);
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
@@ -83,7 +85,10 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        setMobileSearchOpen(false);
+      }
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
@@ -100,12 +105,49 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
     results.candidates.length > 0 || results.clients.length > 0 || results.contacts.length > 0;
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center border-b border-white/10 bg-[#0D1B2E]/90 px-5 shadow-[0_10px_35px_rgba(0,0,0,.15)] backdrop-blur-xl lg:px-8">
-      <button onClick={onMenu} className="mr-3 text-[#A7ADB7] lg:hidden" aria-label="Navigation öffnen"><Menu size={20} /></button>
-      <div ref={containerRef} className="relative hidden w-full max-w-md sm:block">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#90969b]" size={16} />
+    <header className="sticky top-0 z-30 flex h-16 items-center border-b border-white/10 bg-[#0D1B2E]/90 px-4 shadow-[0_10px_35px_rgba(0,0,0,.15)] backdrop-blur-xl sm:px-5 lg:px-8">
+      {!mobileSearchOpen && (
+        <button onClick={onMenu} className="mr-2 shrink-0 text-[#A7ADB7] lg:hidden" aria-label="Navigation öffnen"><Menu size={20} /></button>
+      )}
+      {/* Auf Mobile (<sm) ist die Suche standardmaessig ausgeblendet (kein
+       * Platz neben Hamburger/Aktionen) - stattdessen oeffnet ein Icon-Button
+       * sie als Vollbreite-Overlay ueber der restlichen Kopfzeile. */}
+      <button
+        onClick={() => setMobileSearchOpen(true)}
+        className={cn("mr-2 shrink-0 text-[#A7ADB7] sm:hidden", mobileSearchOpen && "hidden")}
+        aria-label="Suche öffnen"
+      >
+        <Search size={19} />
+      </button>
+      <div
+        ref={containerRef}
+        className={cn(
+          "relative w-full max-w-md sm:block",
+          mobileSearchOpen ? "absolute inset-x-0 top-0 z-40 flex h-16 items-center bg-[#0D1B2E] px-4 sm:static sm:z-auto sm:flex-none sm:bg-transparent sm:px-0" : "hidden sm:block",
+        )}
+      >
+        {mobileSearchOpen && (
+          <button
+            onClick={() => { setMobileSearchOpen(false); setQuery(""); setOpen(false); }}
+            className="mr-2 shrink-0 text-[#A7ADB7] sm:hidden"
+            aria-label="Suche schließen"
+          >
+            <X size={19} />
+          </button>
+        )}
+        <Search
+          className={cn(
+            "absolute top-1/2 -translate-y-1/2 text-[#90969b]",
+            mobileSearchOpen ? "left-12 sm:left-3" : "left-3",
+          )}
+          size={16}
+        />
         <input
-          className="h-9 w-full rounded-md border border-white/10 bg-[#08111F]/70 pl-9 pr-3 text-sm text-white outline-none placeholder:text-[#747C89] focus:border-[#1F5FA8] focus:ring-2 focus:ring-[#1F5FA8]/20"
+          autoFocus={mobileSearchOpen}
+          className={cn(
+            "h-9 w-full rounded-md border border-white/10 bg-[#08111F]/70 pr-3 text-sm text-white outline-none placeholder:text-[#747C89] focus:border-[#1F5FA8] focus:ring-2 focus:ring-[#1F5FA8]/20",
+            mobileSearchOpen ? "pl-12 sm:pl-9" : "pl-9",
+          )}
           placeholder="Kandidaten, Kanzleien oder Kontakte suchen"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

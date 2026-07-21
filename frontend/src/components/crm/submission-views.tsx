@@ -375,7 +375,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
 
       {view === "kanban" ? (
         <div className="pb-4">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {columns.map((column) => {
               const columnItems = filteredItems.filter((submission) => submission.status === column.status);
               return (
@@ -446,8 +446,6 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                         <div className="mt-2" onClick={(event) => event.stopPropagation()}>
                           <ClosingScoreForm submissionId={item.id} />
                         </div>
-                        <p className="mt-3 text-[10px] uppercase tracking-wider text-[#94A3B8]">Ansprechpartner</p>
-                        <p className="mt-1 text-xs">{contactPersonName(item.contact_person_id)}</p>
                         <p className="mt-3 text-[10px] uppercase tracking-wider text-[#94A3B8]">Nächster Schritt</p>
                         <p className="mt-1 text-xs">{item.next_step ?? item.summary ?? "Follow-up festlegen"}</p>
                         {(interviewsBySubmission.get(item.id)?.length ?? 0) > 0 && (
@@ -493,32 +491,6 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                 </section>
               );
             })}
-            <section className="min-w-0 rounded-xl border border-white/10 bg-[#0D1B2E]/60 p-2">
-              <header className="flex items-center justify-between px-2 py-2">
-                <h2 className="truncate text-xs font-semibold text-[#F8FAFC]">Abgebrochen</h2>
-                <span className="grid size-5 shrink-0 place-items-center rounded-full border border-white/10 bg-[#12243A] text-[10px] text-[#CBD5E1]">
-                  {filteredItems.filter((item) => item.status === "cancelled").length}
-                </span>
-              </header>
-              <div className="scrollbar-subtle max-h-[calc(100vh-360px)] space-y-2 overflow-y-auto">
-                {filteredItems.filter((item) => item.status === "cancelled").map((item) => (
-                  <article
-                    key={item.id}
-                    onClick={() => openCandidate(item.candidate_id)}
-                    className="cursor-pointer rounded-lg border border-white/10 bg-[#12243A]/70 p-3 opacity-80 hover:border-[#1F5FA8]/50"
-                  >
-                    <p className="text-sm font-semibold">{candidateName(item.candidate_id)}</p>
-                    <p className="mt-1 text-xs text-[#CBD5E1]">{clientName(item.client_company_id)}</p>
-                    <p className="mt-2 text-[10px] uppercase tracking-wider text-[#94A3B8]">Grund</p>
-                    <p className="mt-1 text-xs">
-                      {item.cancellation_reason
-                        ? CANCELLATION_REASONS.find((reason) => reason.value === item.cancellation_reason)?.label
-                        : "—"}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </section>
           </div>
         </div>
       ) : (

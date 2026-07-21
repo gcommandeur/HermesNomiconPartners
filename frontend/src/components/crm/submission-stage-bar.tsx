@@ -58,12 +58,17 @@ export function SubmissionStageBar({
   return (
     <div data-submission-id={submissionId}>
       {label && <p className="mb-2 text-xs font-semibold text-[#D8DADF]">{label}</p>}
-      <div className="flex items-center">
+      {/* Auf schmalen Viewports quetschen sich 6 Stufen + Verbindungslinien
+       * sonst zusammen bis zur Unlesbarkeit - overflow-x-auto + min-w-max
+       * lassen die Leiste stattdessen horizontal scrollen, statt zu
+       * schrumpfen. */}
+      <div className="scrollbar-subtle -mx-1 overflow-x-auto px-1">
+        <div className="flex min-w-max items-center sm:min-w-0">
         {STAGE_ORDER.map((stage, index) => {
           const reached = !isCancelled && index <= reachedIndex;
           const isCurrent = !isCancelled && index === reachedIndex;
           return (
-            <div key={stage.status} className="flex flex-1 items-center last:flex-none">
+            <div key={stage.status} className="flex items-center last:flex-none sm:flex-1">
               <button
                 type="button"
                 onClick={() => onStageClick(stage.status)}
@@ -92,10 +97,11 @@ export function SubmissionStageBar({
           );
         })}
         {isCancelled && (
-          <div className="ml-3 flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-950/30 px-2.5 py-1 text-[10px] text-red-200">
+          <div className="ml-3 flex shrink-0 items-center gap-1.5 rounded-full border border-red-400/30 bg-red-950/30 px-2.5 py-1 text-[10px] text-red-200">
             <X size={11} />Abgebrochen
           </div>
         )}
+        </div>
       </div>
     </div>
   );
