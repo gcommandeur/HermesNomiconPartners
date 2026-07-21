@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
+import { BottomNav } from "./bottom-nav";
 import { cn } from "@/lib/utils";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -13,8 +14,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar collapsed={collapsed} mobileOpen={mobileOpen} onToggle={() => setCollapsed((v) => !v)} onMobileClose={() => setMobileOpen(false)} />
       <div className={cn("min-h-screen transition-[margin] duration-200", collapsed ? "lg:ml-[76px]" : "lg:ml-[248px]")}>
         <Topbar onMenu={() => setMobileOpen(true)} />
-        <main className="mx-auto max-w-[1600px] p-5 lg:p-8">{children}</main>
+        {/* pb-20 auf Mobile, damit Inhalte nicht hinter der neuen BottomNav
+         * verschwinden - ab lg (wo die BottomNav per lg:hidden ausgeblendet
+         * ist) wieder das urspruengliche p-8. */}
+        <main className="mx-auto max-w-[1600px] p-5 pb-20 lg:p-8">{children}</main>
       </div>
+      <BottomNav onMenu={() => setMobileOpen(true)} />
     </div>
   );
 }

@@ -51,7 +51,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       <Tabs defaultValue="Übersicht">
         <TabsList className="mb-5"><TabsTrigger value="Übersicht">Übersicht</TabsTrigger><TabsTrigger value="Kontakte">Kontakte</TabsTrigger><TabsTrigger value="Kandidaten">Vorgestellte Kandidaten</TabsTrigger><TabsTrigger value="Konditionen">Konditionen / AGB</TabsTrigger><TabsTrigger value="Dokumente">Dokumente</TabsTrigger></TabsList>
         <TabsContent value="Übersicht">
-          <section className="grid gap-4 md:grid-cols-4">{[["Hauptkontakt", primaryContact ? contactName(primaryContact) : (client.contact_name ?? "Offen")], ["Aktive Prozesse", clientSubmissions.length], ["Aktive Mandate", client.active_mandates ?? 0], ["Erwartete Fees", formatCurrency(expectedFees)]].map(([label, value]) => <Card key={String(label)}><CardContent><p className="text-xs text-[#777d83]">{label}</p><p className="mt-3 text-xl font-semibold">{value}</p></CardContent></Card>)}</section>
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-4">{[["Hauptkontakt", primaryContact ? contactName(primaryContact) : (client.contact_name ?? "Offen")], ["Aktive Prozesse", clientSubmissions.length], ["Aktive Mandate", client.active_mandates ?? 0], ["Erwartete Fees", formatCurrency(expectedFees)]].map(([label, value]) => <Card key={String(label)}><CardContent><p className="text-xs text-[#777d83]">{label}</p><p className="mt-3 text-xl font-semibold">{value}</p></CardContent></Card>)}</section>
           {groupLocations.length > 0 && (
             <Card className="mt-4">
               <CardContent>
@@ -73,7 +73,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         <TabsContent value="Konditionen">
           <div className="space-y-4">
             <ClientHonorarEditor client={client} />
-            <Card><CardContent className="grid gap-5 md:grid-cols-2"><div><p className="text-xs text-[#777d83]">AGB-Status</p><p className="mt-2 font-medium">{termsStatusLabel(client.terms_status)}</p></div><div><p className="text-xs text-[#777d83]">Rückzahlung</p><p className="mt-2 text-sm">{client.refund_terms ?? "50 % vor Antritt; 50 % im ersten Monat; 25 % im zweiten Monat"}</p></div><div><p className="text-xs text-[#777d83]">Zahlungsziel / Garantie</p><p className="mt-2 text-sm">{client.payment_terms_days ?? 14} Tage · {client.guarantee_period_months ?? 6} Monate</p></div></CardContent></Card>
+            <Card><CardContent className="grid grid-cols-1 gap-5 md:grid-cols-2"><div><p className="text-xs text-[#777d83]">AGB-Status</p><p className="mt-2 font-medium">{termsStatusLabel(client.terms_status)}</p></div><div><p className="text-xs text-[#777d83]">Rückzahlung</p><p className="mt-2 text-sm">{client.refund_terms ?? "50 % vor Antritt; 50 % im ersten Monat; 25 % im zweiten Monat"}</p></div><div><p className="text-xs text-[#777d83]">Zahlungsziel / Garantie</p><p className="mt-2 text-sm">{client.payment_terms_days ?? 14} Tage · {client.guarantee_period_months ?? 6} Monate</p></div></CardContent></Card>
           </div>
         </TabsContent>
         <TabsContent value="Dokumente">

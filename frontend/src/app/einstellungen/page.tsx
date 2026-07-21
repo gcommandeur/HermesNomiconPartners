@@ -103,7 +103,7 @@ export default function EinstellungenPage() {
 
             <div className="rounded-lg border border-white/10 bg-[#071426] p-4">
               <p className="mb-2 text-xs font-semibold text-[#D8DADF]">So abonnierst du diesen Kalender</p>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[#69A7EA]">
                     Outlook (Desktop)

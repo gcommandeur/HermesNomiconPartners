@@ -57,7 +57,7 @@ export function VacanciesView({ vacancies, clients, candidates }: {
         statusValue={status}
         onStatusChange={setStatus}
       />
-      <section className="mb-5 grid gap-3 lg:grid-cols-3">
+      <section className="mb-5 grid grid-cols-1 gap-3 lg:grid-cols-3">
         {filtered.map((vacancy) => (
           <Card key={vacancy.id}>
             <CardHeader><div><div className="flex items-center gap-2"><BriefcaseBusiness size={16} className="text-[#D8DADF]" /><h2 className="font-semibold">{vacancy.title}</h2></div><p className="mt-1 text-xs text-[#94A3B8]">{clientName(vacancy.client_company_id)} · {vacancy.location}</p></div><StatusPill status={vacancy.status} /></CardHeader>

@@ -21,7 +21,7 @@ export default async function GeoMappingPage() {
         action={<ExportActions filename="geo-mapping-ergebnisse" rows={rows} />}
       />
       <DemoNotice source={result.source} />
-      <section className="mb-5 grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
+      <section className="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_.9fr]">
         <Card className="min-h-[360px] overflow-hidden p-0">
           <GeoMapLoader results={result.data} />
         </Card>

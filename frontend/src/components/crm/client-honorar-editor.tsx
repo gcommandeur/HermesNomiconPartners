@@ -75,7 +75,7 @@ export function ClientHonorarEditor({ client }: { client: ClientCompany }) {
             </div>
             <Button size="sm" variant="outline" onClick={() => { reset(); setEditing(true); }}><Pencil size={13} />Bearbeiten</Button>
           </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div><p className="text-xs text-[#777d83]">Honorar-Stufe</p><p className="mt-2 text-sm">{honorarStufeLabel(client.honorar_stufe)}</p></div>
             <div><p className="text-xs text-[#777d83]">AGB-Version</p><p className="mt-2 text-sm">{client.agb_version ?? "—"}</p></div>
           </div>
@@ -90,7 +90,7 @@ export function ClientHonorarEditor({ client }: { client: ClientCompany }) {
   return (
     <Card>
       <CardContent>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div><label className={labelClass}>Honorarsatz (%)</label><Input type="number" step="0.01" value={form.fee_percentage} onChange={(e) => setForm((current) => ({ ...current, fee_percentage: e.target.value }))} /></div>
           <div>
             <label className={labelClass}>Honorar-Stufe</label>
@@ -99,7 +99,7 @@ export function ClientHonorarEditor({ client }: { client: ClientCompany }) {
             </select>
           </div>
         </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div><label className={labelClass}>Nachlass-Begründung</label><Input placeholder="z.B. kleine Kanzlei, begrenztes Budget" value={form.nachlass_begruendung} onChange={(e) => setForm((current) => ({ ...current, nachlass_begruendung: e.target.value }))} /></div>
           <div><label className={labelClass}>AGB-Version</label><Input value={form.agb_version} onChange={(e) => setForm((current) => ({ ...current, agb_version: e.target.value }))} /></div>
         </div>

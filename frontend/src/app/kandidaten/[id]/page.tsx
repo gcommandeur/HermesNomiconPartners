@@ -102,12 +102,12 @@ export default async function CandidateDetailPage({
           {tabs.map((tab) => <TabsTrigger key={tab} value={tab}>{tab}</TabsTrigger>)}
         </TabsList>
         <TabsContent value="Übersicht">
-          <div className="grid gap-5 lg:grid-cols-[1.3fr_.7fr]">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_.7fr]">
             <Card><CardContent><h2 className="font-semibold">Profil</h2><p className="mt-4 text-sm leading-7 text-[#CBD5E1]">{candidate.summary ?? "Noch keine Zusammenfassung hinterlegt."}</p>
-              <div className="mt-6 grid gap-5 border-t border-white/10 pt-5 sm:grid-cols-2">
+              <div className="mt-6 grid grid-cols-1 gap-5 border-t border-white/10 pt-5 sm:grid-cols-2">
                 {[["Rolle", candidate.job_title], ["Gehaltswunsch", candidate.salary_expectation], ["Kündigungsfrist", candidate.notice_period], ["Region", `${candidate.postal_code ?? ""} ${candidate.city ?? ""}`.trim()], ["Anrede", candidate.anrede === "frau" ? "Frau" : candidate.anrede === "herr" ? "Herr" : candidate.anrede === "divers" ? "Divers" : null], ["Empfohlen von", candidate.referred_by]].map(([label, value]) => <div key={label}><p className="text-[10px] font-semibold uppercase tracking-wider text-[#92979c]">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
               </div>
-              <div className="mt-6 grid gap-5 border-t border-white/10 pt-5 sm:grid-cols-2">
+              <div className="mt-6 grid grid-cols-1 gap-5 border-t border-white/10 pt-5 sm:grid-cols-2">
                 {[["Ausbildung / Weiterbildung", candidate.ausbildung_titel], ["Aktuelles Umfeld", [candidate.aktuelles_umfeld_kanzleityp, candidate.aktuelles_umfeld_kanzleigroesse].filter(Boolean).join(" · ")], ["Remote-/Teilzeit-Wünsche", candidate.remote_teilzeit_wuensche], ["Passender Kanzleityp", candidate.passender_kanzleityp]].map(([label, value]) => <div key={label}><p className="text-[10px] font-semibold uppercase tracking-wider text-[#92979c]">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
               </div>
               {candidate.fachliche_schwerpunkte && candidate.fachliche_schwerpunkte.length > 0 && (

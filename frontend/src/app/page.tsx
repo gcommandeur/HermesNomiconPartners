@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/crm/page-header";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { WeeklyChartLoader } from "@/components/crm/weekly-chart-loader";
 import { getCockpit } from "@/lib/api/queries";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatCurrency, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -37,20 +37,33 @@ export default async function DashboardPage() {
       <PageHeader
         eyebrow="Operative Schaltzentrale"
         title="Übersicht"
-        action={<div className="flex rounded-lg border bg-[#0D1B2E] p-1 text-xs"><button className="rounded-md bg-[#153A66] px-3 py-2 text-white">Heute</button><button className="px-3 py-2 text-[#94A3B8]">Diese Woche</button><button className="px-3 py-2 text-[#94A3B8]">Monat</button></div>}
+        action={<div className="flex rounded-lg border bg-[#0D1B2E] p-1 text-[11px] sm:text-xs"><button className="rounded-md bg-[#153A66] px-2 py-1.5 text-white sm:px-3 sm:py-2">Heute</button><button className="px-2 py-1.5 text-[#94A3B8] sm:px-3 sm:py-2">Diese Woche</button><button className="px-2 py-1.5 text-[#94A3B8] sm:px-3 sm:py-2">Monat</button></div>}
       />
       <DemoNotice source={result.source} error={result.error} />
 
-      <section className="mb-5 grid gap-3 lg:grid-cols-3">
-        {warnings.map((warning) => (
-          <div key={warning} className="flex items-center gap-3 rounded-xl border border-[#D8DADF]/20 bg-[#102A4C]/55 p-3 text-xs text-[#CBD5E1]">
-            <AlertTriangle size={15} className="text-[#D8DADF]" />
-            {warning}
+      {/* Auf Mobile ein horizontal scrollbarer Streifen aus kompakten Chips
+       * (erster hervorgehoben, volle Meldung nur als title-Tooltip) statt
+       * drei volle Kaesten uebereinander - ab lg wieder das bekannte Grid mit
+       * vollem Fliesstext. */}
+      <section className="mb-5 flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-3 lg:overflow-visible lg:pb-0">
+        {warnings.map((warning, index) => (
+          <div
+            key={warning}
+            title={warning}
+            className={cn(
+              "flex max-w-[240px] shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-[11px] lg:w-full lg:max-w-none lg:shrink lg:rounded-xl lg:text-xs",
+              index === 0
+                ? "border-[#1F5FA8]/40 bg-[#153A66]/60 text-white"
+                : "border-[#D8DADF]/20 bg-[#102A4C]/55 text-[#CBD5E1]",
+            )}
+          >
+            <AlertTriangle size={14} className="shrink-0 text-[#D8DADF]" />
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap lg:overflow-visible lg:whitespace-normal">{warning}</span>
           </div>
         ))}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
             <div><div className="flex items-center gap-2"><TimerReset size={17} className="text-[#D8DADF]" /><h2 className="font-semibold">Fällig und überfällig</h2></div><p className="mt-1 text-xs text-[#94A3B8]">Konkrete nächste Schritte mit Prozessbezug</p></div>
@@ -72,7 +85,7 @@ export default async function DashboardPage() {
       </section>
 
       <div className="mb-3 mt-7 flex items-center gap-2"><Gauge size={16} className="text-[#69A7EA]" /><h2 className="text-sm font-semibold">Kurzüberblick</h2></div>
-      <section className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {quickMetrics.map(({ label, value, Icon }) => <Card key={label}><CardContent className="p-4"><Icon size={16} className="text-[#D8DADF]" /><p className="mt-3 text-[11px] text-[#94A3B8]">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></CardContent></Card>)}
       </section>
       <Card>

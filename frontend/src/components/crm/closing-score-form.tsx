@@ -137,7 +137,7 @@ export function ClosingScoreForm({ submissionId, onScored }: {
             </div>
           ) : (
             <div className="space-y-5">
-              <div className="grid gap-5 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
                 <StatementPicker title="Pain-Stärke" options={PAIN_OPTIONS} value={pain} onChange={setPain} />
                 <StatementPicker title="Entscheidungsklarheit" options={DECISION_OPTIONS} value={decision} onChange={setDecision} />
                 <StatementPicker title="Markt-Fit" options={MARKET_OPTIONS} value={market} onChange={setMarket} />
