@@ -2,12 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Ban, Building2, Columns3, Download, Eye, List, ShieldAlert } from "lucide-react";
+import { Ban, Building2, CalendarPlus, Columns3, Download, Eye, List, ShieldAlert } from "lucide-react";
 import type {
   Candidate,
   CandidateSubmission,
   ClientCompany,
   Contact,
+  Interview,
+  InterviewCreate,
+  InterviewUpdate,
   SubmissionCancellationReason,
   SubmissionStatus,
 } from "@/lib/api/types";
@@ -15,9 +18,11 @@ import { StatusPill } from "./status-pill";
 import { DataTable } from "./data-table";
 import { FilterBar } from "@/components/crm/filter-bar";
 import { ExportActions } from "@/components/crm/export-actions";
+import { InterviewModal } from "@/components/crm/interview-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { apiDelete, apiPatch } from "@/lib/api/client";
+import { createInterview, deleteInterview, updateInterview } from "@/lib/api/queries";
 import { useCurrentUser } from "@/lib/api/hooks";
 import { contactName as formatContactName, formatDate } from "@/lib/utils";
 import { CandidateQuickViewDrawer } from "./candidate-quickview-drawer";
@@ -60,15 +65,40 @@ function isHot(status: SubmissionStatus) {
   return ["interview", "offer", "placement"].includes(status);
 }
 
-export function SubmissionViews({ submissions, candidates, clients, contacts = [] }: {
+/** Kompaktes "dd.MM. HH:MM"-Format fuer die Runden-Chips auf der Kanban-Karte
+ * - formatDate/formatDateTime aus lib/utils sind fuer diesen engen Platz zu
+ * lang (Monatsname + Jahr). */
+function formatChipDateTime(iso: string): string {
+  const date = new Date(iso);
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${dd}.${mm}. ${hh}:${min}`;
+}
+
+/** Grün = durchgeführt, Rot = abgesagt/nicht erschienen, Blau = geplant und
+ * noch in der Zukunft, Grau = geplant, aber der Termin liegt bereits in der
+ * Vergangenheit ohne Status-Update ("überfällig"). */
+function interviewDotClass(interview: Interview): string {
+  if (interview.status === "completed") return "bg-emerald-400";
+  if (interview.status === "cancelled" || interview.status === "no_show") return "bg-red-400";
+  const isOverdue = new Date(interview.scheduled_at).getTime() < Date.now();
+  return isOverdue ? "bg-[#94A3B8]" : "bg-[#1F5FA8]";
+}
+
+export function SubmissionViews({ submissions, candidates, clients, contacts = [], interviews: initialInterviews = [] }: {
   submissions: CandidateSubmission[];
   candidates: Candidate[];
   clients: ClientCompany[];
   contacts?: Contact[];
+  interviews?: Interview[];
 }) {
   const router = useRouter();
   const [view, setView] = useState<"kanban" | "table">("kanban");
   const [items, setItems] = useState(submissions);
+  const [interviews, setInterviews] = useState(initialInterviews);
+  const [interviewModal, setInterviewModal] = useState<{ submissionId: string; interview: Interview | null } | null>(null);
   const [search, setSearch] = useState("");
   // "Meine Prozesse" - reiner Komfort-Filter nach owner_user_id, KEINE
   // Sichtbarkeitsgrenze (Default "Alle" bleibt unveraendert). Clientseitig
@@ -95,6 +125,31 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
   const clientName = (id: string | null) => clients.find((client) => client.id === id)?.name ?? "Kanzlei offen";
   const contactPersonName = (id: string | null) => formatContactName(contacts.find((contact) => contact.id === id));
   const expectedFee = (item: CandidateSubmission) => item.expected_fee ?? Math.round(Number(candidates.find((candidate) => candidate.id === item.candidate_id)?.salary_expectation?.replace(/\D/g, "") ?? 80000) * 0.27);
+
+  // Nach submission_id gruppiert (aufsteigend nach scheduled_at sortiert,
+  // "R1"/"R2"/... entspricht dieser Reihenfolge) - einmalig ueber die
+  // vollstaendig geladene Interview-Liste, keine Einzel-Requests pro Karte.
+  const interviewsBySubmission = useMemo(() => {
+    const map = new Map<string, Interview[]>();
+    for (const interview of interviews) {
+      const list = map.get(interview.submission_id);
+      if (list) list.push(interview);
+      else map.set(interview.submission_id, [interview]);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+    }
+    return map;
+  }, [interviews]);
+
+  function nextUpcomingInterview(submissionId: string): Interview | null {
+    const list = interviewsBySubmission.get(submissionId) ?? [];
+    const now = Date.now();
+    return (
+      list.find((interview) => interview.status === "scheduled" && new Date(interview.scheduled_at).getTime() >= now) ??
+      null
+    );
+  }
 
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -183,6 +238,64 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
       setMessage(null);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Löschen fehlgeschlagen.");
+    }
+  }
+
+  /** Optimistic UI fuer Interview-Runden - gleiches Muster wie applyTransition/
+   * updateClient oben: sofort im lokalen State aendern, bei Fehler exakt den
+   * vorherigen Zustand wiederherstellen und ueber die bestehende
+   * `message`-Zeile informieren (kein separater Fehlerzustand im Modal). Der
+   * automatische Kalender-Sync passiert serverseitig, hier nichts zu tun. */
+  async function createInterviewOptimistic(submissionId: string, payload: InterviewCreate) {
+    const tempId = `temp-${Date.now()}`;
+    const now = new Date().toISOString();
+    const optimistic: Interview = {
+      id: tempId,
+      created_at: now,
+      updated_at: now,
+      submission_id: submissionId,
+      scheduled_at: payload.scheduled_at,
+      interview_type: payload.interview_type,
+      location_or_link: payload.location_or_link ?? null,
+      participants: payload.participants ?? [],
+      status: payload.status ?? "scheduled",
+      notes: payload.notes ?? null,
+    };
+    setInterviews((current) => [...current, optimistic]);
+    setMessage(null);
+    try {
+      const created = await createInterview(submissionId, payload);
+      setInterviews((current) => current.map((item) => (item.id === tempId ? created : item)));
+    } catch (error) {
+      setInterviews((current) => current.filter((item) => item.id !== tempId));
+      setMessage(error instanceof Error ? error.message : "Interview konnte nicht angelegt werden.");
+    }
+  }
+
+  async function updateInterviewOptimistic(interview: Interview, payload: InterviewUpdate) {
+    const previous = interviews;
+    setInterviews((current) =>
+      current.map((item) => (item.id === interview.id ? { ...item, ...payload } : item)),
+    );
+    setMessage(null);
+    try {
+      const updated = await updateInterview(interview.submission_id, interview.id, payload);
+      setInterviews((current) => current.map((item) => (item.id === interview.id ? updated : item)));
+    } catch (error) {
+      setInterviews(previous);
+      setMessage(error instanceof Error ? error.message : "Interview konnte nicht aktualisiert werden.");
+    }
+  }
+
+  async function deleteInterviewOptimistic(interview: Interview) {
+    const previous = interviews;
+    setInterviews((current) => current.filter((item) => item.id !== interview.id));
+    setMessage(null);
+    try {
+      await deleteInterview(interview.submission_id, interview.id);
+    } catch (error) {
+      setInterviews(previous);
+      setMessage(error instanceof Error ? error.message : "Interview konnte nicht gelöscht werden.");
     }
   }
 
@@ -357,6 +470,16 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                             >
                               <Ban size={13} />
                             </button>
+                            {item.status === "interview" && (
+                              <button
+                                type="button"
+                                title="Interview planen"
+                                onClick={(event) => { event.stopPropagation(); setInterviewModal({ submissionId: item.id, interview: null }); }}
+                                className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
+                              >
+                                <CalendarPlus size={13} />
+                              </button>
+                            )}
                           </div>
                         </div>
                         <div className="mt-2" onClick={(event) => event.stopPropagation()}>
@@ -366,8 +489,31 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                         <p className="mt-1 text-xs">{contactPersonName(item.contact_person_id)}</p>
                         <p className="mt-3 text-[10px] uppercase tracking-wider text-[#94A3B8]">Nächster Schritt</p>
                         <p className="mt-1 text-xs">{item.next_step ?? item.summary ?? "Follow-up festlegen"}</p>
+                        {(interviewsBySubmission.get(item.id)?.length ?? 0) > 0 && (
+                          <div className="mt-3" onClick={(event) => event.stopPropagation()}>
+                            <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Interview-Runden</p>
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {(interviewsBySubmission.get(item.id) ?? []).map((interview, index) => (
+                                <button
+                                  key={interview.id}
+                                  type="button"
+                                  title={`${interview.interview_type} — ${formatChipDateTime(interview.scheduled_at)}`}
+                                  onClick={() => setInterviewModal({ submissionId: item.id, interview })}
+                                  className="flex items-center gap-1 rounded-full border border-white/10 bg-[#0D1B2E] px-2 py-1 text-[10px] text-[#CBD5E1] hover:border-[#1F5FA8]/50 hover:text-white"
+                                >
+                                  <span className={`size-1.5 rounded-full ${interviewDotClass(interview)}`} />
+                                  R{index + 1} · {formatChipDateTime(interview.scheduled_at)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-[10px] text-[#A7ADB7]">
-                          <span>Follow-up {formatDate(item.follow_up_at)}</span>
+                          {nextUpcomingInterview(item.id) ? (
+                            <span>Nächstes Interview: {formatChipDateTime(nextUpcomingInterview(item.id)!.scheduled_at)}</span>
+                          ) : (
+                            <span>Follow-up {formatDate(item.follow_up_at)}</span>
+                          )}
                           <span>{expectedFee(item).toLocaleString("de-DE")} €</span>
                         </div>
                         {item.client_company_id ? null : (
@@ -457,6 +603,16 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
         candidate={quickViewCandidateId ? candidateOf(quickViewCandidateId) ?? null : null}
         onClose={() => setQuickViewCandidateId(null)}
       />
+
+      {interviewModal && (
+        <InterviewModal
+          interview={interviewModal.interview}
+          onClose={() => setInterviewModal(null)}
+          onCreate={(payload) => void createInterviewOptimistic(interviewModal.submissionId, payload)}
+          onUpdate={(interview, payload) => void updateInterviewOptimistic(interview, payload)}
+          onDelete={(interview) => void deleteInterviewOptimistic(interview)}
+        />
+      )}
     </>
   );
 }

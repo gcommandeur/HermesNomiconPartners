@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
-import { apiGet } from "./client";
-import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, GeoMappingResult, MailingGroup, PageQuery, Paginated, Placement, Task, UserBrief, Vacancy } from "./types";
+import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
+import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailingGroup, PageQuery, Paginated, Placement, Task, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -107,6 +107,29 @@ export async function getSubmissions() {
 
 export async function getPriorityView() {
   return apiGet<CandidateSubmission[]>("/submissions/priority-view", []);
+}
+
+/** Alle Interview-Runden ueber alle Prozesse hinweg (ungefiltert) - Basis fuer
+ * die Kanban-Karten-Anzeige in submission-views.tsx, die clientseitig nach
+ * submission_id gruppiert statt pro Karte einzeln nachzuladen. */
+export async function getAllInterviews() {
+  return apiGet<Interview[]>("/interviews", []);
+}
+
+export async function createInterview(submissionId: string, payload: InterviewCreate) {
+  return apiPost<Interview>(`/submissions/${submissionId}/interviews`, payload);
+}
+
+export async function updateInterview(
+  submissionId: string,
+  interviewId: string,
+  payload: InterviewUpdate,
+) {
+  return apiPatch<Interview>(`/submissions/${submissionId}/interviews/${interviewId}`, payload);
+}
+
+export async function deleteInterview(submissionId: string, interviewId: string) {
+  return apiDelete(`/submissions/${submissionId}/interviews/${interviewId}`);
 }
 
 export async function getMailingGroups() {

@@ -255,6 +255,42 @@ export interface CandidateSubmission extends Entity {
   owner_user_id?: string | null;
 }
 
+/** Interview-Runde zu einem Prozess (siehe Backend models/recruiting.py::
+ * Interview) - unabhaengig vom SubmissionStatus "interview": ein Prozess kann
+ * mehrere Interview-Runden haben (Erstgespraech, 2. Runde, Finale, ...). Das
+ * Backend legt beim Anlegen/Aendern automatisch einen verknuepften
+ * CalendarEvent an (source_interview_id) - das passiert serverseitig, das
+ * Frontend muss sich darum nicht kuemmern. */
+export type InterviewStatus = "scheduled" | "completed" | "cancelled" | "no_show";
+
+export interface Interview extends Entity {
+  submission_id: string;
+  scheduled_at: string;
+  interview_type: string;
+  location_or_link: string | null;
+  participants: string[];
+  status: InterviewStatus;
+  notes: string | null;
+}
+
+export interface InterviewCreate {
+  scheduled_at: string;
+  interview_type: string;
+  location_or_link?: string | null;
+  participants?: string[];
+  status?: InterviewStatus;
+  notes?: string | null;
+}
+
+export interface InterviewUpdate {
+  scheduled_at?: string;
+  interview_type?: string;
+  location_or_link?: string | null;
+  participants?: string[];
+  status?: InterviewStatus;
+  notes?: string | null;
+}
+
 export interface ClosingScoreResult {
   closing_probability: number;
   closing_status: ClosingStatus;
