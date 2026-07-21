@@ -9,8 +9,6 @@ import type {
   ClientCompany,
   Contact,
   Interview,
-  InterviewCreate,
-  InterviewUpdate,
   SubmissionCancellationReason,
   SubmissionStatus,
 } from "@/lib/api/types";
@@ -22,9 +20,10 @@ import { InterviewModal } from "@/components/crm/interview-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { apiDelete, apiPatch } from "@/lib/api/client";
-import { createInterview, deleteInterview, updateInterview } from "@/lib/api/queries";
 import { useCurrentUser } from "@/lib/api/hooks";
+import { useInterviewMutations } from "@/lib/use-interview-mutations";
 import { formatTimeFromIso, toLocalIsoString } from "@/lib/calendar-utils";
+import { allowedTransitions } from "@/lib/submission-transitions";
 import { contactName as formatContactName, formatDate } from "@/lib/utils";
 import { CandidateQuickViewDrawer } from "./candidate-quickview-drawer";
 import { ClosingScoreForm } from "./closing-score-form";
@@ -45,16 +44,6 @@ const columns: { status: SubmissionStatus; title: string }[] = [
   { status: "offer", title: "Offer" },
   { status: "placement", title: "Placement" },
 ];
-
-const allowedTransitions: Partial<Record<SubmissionStatus, SubmissionStatus[]>> = {
-  qualification_call: ["cv_in", "cancelled"],
-  cv_in: ["cv_out", "cancelled"],
-  cv_out: ["interview", "cancelled"],
-  interview: ["offer", "cancelled"],
-  offer: ["placement", "cancelled"],
-  placement: [],
-  cancelled: [],
-};
 
 const CANCELLATION_REASONS: { value: SubmissionCancellationReason; label: string }[] = [
   { value: "candidate_rejected", label: "Absage Kandidat" },
@@ -262,63 +251,14 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
     }
   }
 
-  /** Optimistic UI fuer Interview-Runden - gleiches Muster wie applyTransition/
-   * updateClient oben: sofort im lokalen State aendern, bei Fehler exakt den
-   * vorherigen Zustand wiederherstellen und ueber die bestehende
-   * `message`-Zeile informieren (kein separater Fehlerzustand im Modal). Der
-   * automatische Kalender-Sync passiert serverseitig, hier nichts zu tun. */
-  async function createInterviewOptimistic(submissionId: string, payload: InterviewCreate) {
-    const tempId = `temp-${Date.now()}`;
-    const now = new Date().toISOString();
-    const optimistic: Interview = {
-      id: tempId,
-      created_at: now,
-      updated_at: now,
-      submission_id: submissionId,
-      scheduled_at: payload.scheduled_at,
-      interview_type: payload.interview_type,
-      location_or_link: payload.location_or_link ?? null,
-      participants: payload.participants ?? [],
-      status: payload.status ?? "scheduled",
-      notes: payload.notes ?? null,
-    };
-    setInterviews((current) => [...current, optimistic]);
-    setMessage(null);
-    try {
-      const created = await createInterview(submissionId, payload);
-      setInterviews((current) => current.map((item) => (item.id === tempId ? created : item)));
-    } catch (error) {
-      setInterviews((current) => current.filter((item) => item.id !== tempId));
-      setMessage(error instanceof Error ? error.message : "Interview konnte nicht angelegt werden.");
-    }
-  }
-
-  async function updateInterviewOptimistic(interview: Interview, payload: InterviewUpdate) {
-    const previous = interviews;
-    setInterviews((current) =>
-      current.map((item) => (item.id === interview.id ? { ...item, ...payload } : item)),
-    );
-    setMessage(null);
-    try {
-      const updated = await updateInterview(interview.submission_id, interview.id, payload);
-      setInterviews((current) => current.map((item) => (item.id === interview.id ? updated : item)));
-    } catch (error) {
-      setInterviews(previous);
-      setMessage(error instanceof Error ? error.message : "Interview konnte nicht aktualisiert werden.");
-    }
-  }
-
-  async function deleteInterviewOptimistic(interview: Interview) {
-    const previous = interviews;
-    setInterviews((current) => current.filter((item) => item.id !== interview.id));
-    setMessage(null);
-    try {
-      await deleteInterview(interview.submission_id, interview.id);
-    } catch (error) {
-      setInterviews(previous);
-      setMessage(error instanceof Error ? error.message : "Interview konnte nicht gelöscht werden.");
-    }
-  }
+  // Optimistic-UI-Mutationen fuer Interview-Runden - ausgelagert in
+  // lib/use-interview-mutations.ts, damit dieselbe Logik hier UND im
+  // Interview-Panel der Stufen-Bearbeitung (stage-edit-modal.tsx) genutzt
+  // wird, statt sie zu duplizieren. Gleiches Muster wie applyTransition/
+  // updateClient oben: sofort im lokalen State aendern, bei Fehler
+  // zurueckrollen und ueber die bestehende `message`-Zeile informieren.
+  const { createInterviewOptimistic, updateInterviewOptimistic, deleteInterviewOptimistic } =
+    useInterviewMutations(interviews, setInterviews, setMessage);
 
   function moveToStatus(targetStatus: SubmissionStatus) {
     if (!draggedId) return;

@@ -28,6 +28,14 @@ class FeedbackRead(FeedbackCreate, EntityRead):
     submission_id: uuid.UUID
 
 
+class FeedbackUpdate(BaseModel):
+    feedback_type: FeedbackType | None = None
+    feedback_text: str | None = Field(default=None, min_length=1)
+    received_at: datetime | None = None
+    next_step: str | None = None
+    created_by: str | None = None
+
+
 class InterviewCreate(BaseModel):
     scheduled_at: datetime
     interview_type: str = Field(min_length=1, max_length=120)
@@ -62,6 +70,14 @@ class OfferRead(OfferCreate, EntityRead):
     submission_id: uuid.UUID
 
 
+class OfferUpdate(BaseModel):
+    offered_salary: Decimal | None = Field(default=None, gt=0)
+    variable_compensation: Decimal | None = Field(default=None, ge=0)
+    start_date: date | None = None
+    offer_status: OfferStatus | None = None
+    notes: str | None = None
+
+
 class PlacementCreate(BaseModel):
     start_date: date
     final_salary: Decimal = Field(gt=0)
@@ -83,6 +99,14 @@ class PlacementRead(PlacementCreate, EntityRead):
     @property
     def warranty_status(self) -> WarrantyStatus:
         return warranty_status(self.warranty_end_date)
+
+
+class PlacementUpdate(BaseModel):
+    start_date: date | None = None
+    final_salary: Decimal | None = Field(default=None, gt=0)
+    fee_percentage: Decimal | None = Field(default=None, gt=0, le=100)
+    guarantee_period_months: int | None = Field(default=None, ge=0)
+    status: PlacementStatus | None = None
 
 
 class FeeCreate(BaseModel):

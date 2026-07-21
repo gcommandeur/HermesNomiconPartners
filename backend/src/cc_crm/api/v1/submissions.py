@@ -10,13 +10,16 @@ from cc_crm.schemas.pagination import Page
 from cc_crm.schemas.recruiting import (
     FeedbackCreate,
     FeedbackRead,
+    FeedbackUpdate,
     InterviewCreate,
     InterviewRead,
     InterviewUpdate,
     OfferCreate,
     OfferRead,
+    OfferUpdate,
     PlacementCreate,
     PlacementRead,
+    PlacementUpdate,
 )
 from cc_crm.schemas.submission import (
     CandidateSubmissionCreate,
@@ -159,6 +162,28 @@ def create_feedback(
     )
 
 
+@router.patch("/{submission_id}/feedback/{feedback_id}", response_model=FeedbackRead)
+def update_feedback(
+    submission_id: uuid.UUID,
+    feedback_id: uuid.UUID,
+    payload: FeedbackUpdate,
+    session: DatabaseSession,
+) -> FeedbackRead:
+    return FeedbackRead.model_validate(
+        RecruitingProcessService(session).update_feedback(submission_id, feedback_id, payload)
+    )
+
+
+@router.delete("/{submission_id}/feedback/{feedback_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_feedback(
+    submission_id: uuid.UUID,
+    feedback_id: uuid.UUID,
+    session: DatabaseSession,
+) -> Response:
+    RecruitingProcessService(session).delete_feedback(submission_id, feedback_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/{submission_id}/interviews", response_model=list[InterviewRead])
 def list_interviews(submission_id: uuid.UUID, session: DatabaseSession) -> list[InterviewRead]:
     return [
@@ -228,6 +253,28 @@ def create_offer(
     )
 
 
+@router.patch("/{submission_id}/offers/{offer_id}", response_model=OfferRead)
+def update_offer(
+    submission_id: uuid.UUID,
+    offer_id: uuid.UUID,
+    payload: OfferUpdate,
+    session: DatabaseSession,
+) -> OfferRead:
+    return OfferRead.model_validate(
+        RecruitingProcessService(session).update_offer(submission_id, offer_id, payload)
+    )
+
+
+@router.delete("/{submission_id}/offers/{offer_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_offer(
+    submission_id: uuid.UUID,
+    offer_id: uuid.UUID,
+    session: DatabaseSession,
+) -> Response:
+    RecruitingProcessService(session).delete_offer(submission_id, offer_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/{submission_id}/placement", response_model=PlacementRead)
 def get_placement(submission_id: uuid.UUID, session: DatabaseSession) -> PlacementRead:
     return PlacementRead.model_validate(
@@ -248,6 +295,25 @@ def create_placement(
     return PlacementRead.model_validate(
         RecruitingProcessService(session).create_placement(submission_id, payload)
     )
+
+
+@router.patch("/{submission_id}/placement", response_model=PlacementRead)
+def update_placement(
+    submission_id: uuid.UUID,
+    payload: PlacementUpdate,
+    session: DatabaseSession,
+) -> PlacementRead:
+    # Placement ist singulaer (ein Objekt pro Submission) - kein :id-Segment
+    # im Pfad, analog zum bestehenden GET/POST oben.
+    return PlacementRead.model_validate(
+        RecruitingProcessService(session).update_placement(submission_id, payload)
+    )
+
+
+@router.delete("/{submission_id}/placement", status_code=status.HTTP_204_NO_CONTENT)
+def delete_placement(submission_id: uuid.UUID, session: DatabaseSession) -> Response:
+    RecruitingProcessService(session).delete_placement(submission_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.delete("/{submission_id}", status_code=status.HTTP_204_NO_CONTENT)

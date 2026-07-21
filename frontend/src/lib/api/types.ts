@@ -255,6 +255,37 @@ export interface CandidateSubmission extends Entity {
   owner_user_id?: string | null;
 }
 
+/** Freitext-Feedback zu einem Prozess (siehe Backend models/recruiting.py::
+ * SubmissionFeedback) - wird auch als generisches "Datum + Notiz"-Feld fuer
+ * die Stufen qualification_call/cv_in/cv_out wiederverwendet (bewusste
+ * Nutzer-Entscheidung: keine neuen DB-Spalten pro Stufe). */
+export type FeedbackType = "client" | "candidate" | "internal";
+
+export interface Feedback extends Entity {
+  submission_id: string;
+  feedback_type: FeedbackType;
+  feedback_text: string;
+  received_at: string;
+  next_step: string | null;
+  created_by: string | null;
+}
+
+export interface FeedbackCreate {
+  feedback_type: FeedbackType;
+  feedback_text: string;
+  received_at: string;
+  next_step?: string | null;
+  created_by?: string | null;
+}
+
+export interface FeedbackUpdate {
+  feedback_type?: FeedbackType;
+  feedback_text?: string;
+  received_at?: string;
+  next_step?: string | null;
+  created_by?: string | null;
+}
+
 /** Interview-Runde zu einem Prozess (siehe Backend models/recruiting.py::
  * Interview) - unabhaengig vom SubmissionStatus "interview": ein Prozess kann
  * mehrere Interview-Runden haben (Erstgespraech, 2. Runde, Finale, ...). Das
@@ -291,6 +322,33 @@ export interface InterviewUpdate {
   notes?: string | null;
 }
 
+export type OfferStatus = "draft" | "received" | "accepted" | "declined" | "withdrawn";
+
+export interface Offer extends Entity {
+  submission_id: string;
+  offered_salary: number;
+  variable_compensation: number | null;
+  start_date: string | null;
+  offer_status: OfferStatus;
+  notes: string | null;
+}
+
+export interface OfferCreate {
+  offered_salary: number;
+  variable_compensation?: number | null;
+  start_date?: string | null;
+  offer_status?: OfferStatus;
+  notes?: string | null;
+}
+
+export interface OfferUpdate {
+  offered_salary?: number;
+  variable_compensation?: number | null;
+  start_date?: string | null;
+  offer_status?: OfferStatus;
+  notes?: string | null;
+}
+
 export interface ClosingScoreResult {
   closing_probability: number;
   closing_status: ClosingStatus;
@@ -305,6 +363,8 @@ export interface RegionModifier extends Entity {
 
 export type WarrantyStatus = "laufend" | "bald_ablaufend" | "abgelaufen";
 
+export type PlacementStatus = "planned" | "started" | "completed" | "cancelled";
+
 export interface Placement extends Entity {
   submission_id: string;
   start_date: string;
@@ -312,9 +372,25 @@ export interface Placement extends Entity {
   fee_percentage: number;
   calculated_fee: number;
   guarantee_period_months: number;
-  status: "planned" | "started" | "completed" | "cancelled";
+  status: PlacementStatus;
   warranty_end_date: string;
   warranty_status: WarrantyStatus;
+}
+
+export interface PlacementCreate {
+  start_date: string;
+  final_salary: number;
+  fee_percentage?: number | null;
+  guarantee_period_months?: number;
+  status?: PlacementStatus;
+}
+
+export interface PlacementUpdate {
+  start_date?: string;
+  final_salary?: number;
+  fee_percentage?: number | null;
+  guarantee_period_months?: number;
+  status?: PlacementStatus;
 }
 
 export interface CockpitItem {

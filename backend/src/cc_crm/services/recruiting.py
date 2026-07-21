@@ -33,10 +33,13 @@ from cc_crm.repositories.tasks import TaskRepository
 from cc_crm.schemas.recruiting import (
     FeeCreate,
     FeedbackCreate,
+    FeedbackUpdate,
     InterviewCreate,
     InterviewUpdate,
     OfferCreate,
+    OfferUpdate,
     PlacementCreate,
+    PlacementUpdate,
 )
 from cc_crm.services.submissions import CandidateSubmissionService
 from cc_crm.services.warranty import WarrantyService
@@ -84,6 +87,34 @@ class RecruitingProcessService:
             "feedback_received",
             "Feedback received",
         )
+
+    def _get_feedback(
+        self, submission_id: uuid.UUID, feedback_id: uuid.UUID
+    ) -> SubmissionFeedback:
+        self.submissions.get(submission_id)
+        feedback = self.feedback.get(feedback_id)
+        if feedback is None or feedback.submission_id != submission_id:
+            raise EntityNotFoundError("Feedback not found")
+        return feedback
+
+    def update_feedback(
+        self,
+        submission_id: uuid.UUID,
+        feedback_id: uuid.UUID,
+        payload: FeedbackUpdate,
+    ) -> SubmissionFeedback:
+        feedback = self._get_feedback(submission_id, feedback_id)
+        values = payload.model_dump(exclude_unset=True)
+        updated = self.feedback.update(feedback, values)
+        self.session.commit()
+        return updated
+
+    def delete_feedback(self, submission_id: uuid.UUID, feedback_id: uuid.UUID) -> None:
+        # Kein Kalender-Sync noetig - Feedback (anders als Interview) hat
+        # keinen verknuepften CalendarEvent.
+        feedback = self._get_feedback(submission_id, feedback_id)
+        self.feedback.delete(feedback)
+        self.session.commit()
 
     def list_interviews(self, submission_id: uuid.UUID) -> list[Interview]:
         self.submissions.get(submission_id)
@@ -250,6 +281,30 @@ class RecruitingProcessService:
             "Offer received",
         )
 
+    def _get_offer(self, submission_id: uuid.UUID, offer_id: uuid.UUID) -> Offer:
+        self.submissions.get(submission_id)
+        offer = self.offers.get(offer_id)
+        if offer is None or offer.submission_id != submission_id:
+            raise EntityNotFoundError("Offer not found")
+        return offer
+
+    def update_offer(
+        self,
+        submission_id: uuid.UUID,
+        offer_id: uuid.UUID,
+        payload: OfferUpdate,
+    ) -> Offer:
+        offer = self._get_offer(submission_id, offer_id)
+        values = payload.model_dump(exclude_unset=True)
+        updated = self.offers.update(offer, values)
+        self.session.commit()
+        return updated
+
+    def delete_offer(self, submission_id: uuid.UUID, offer_id: uuid.UUID) -> None:
+        offer = self._get_offer(submission_id, offer_id)
+        self.offers.delete(offer)
+        self.session.commit()
+
     def get_placement(self, submission_id: uuid.UUID) -> Placement:
         self.submissions.get(submission_id)
         placement = self.placements.for_submission(submission_id)
@@ -283,6 +338,35 @@ class RecruitingProcessService:
         )
         self.session.commit()
         return placement
+
+    def update_placement(
+        self, submission_id: uuid.UUID, payload: PlacementUpdate
+    ) -> Placement:
+        # Placement ist singulaer (ein Objekt pro Submission, kein :id im
+        # Pfad) - Zugehoerigkeits-Check entfaellt daher, die Submission-ID
+        # allein identifiziert es bereits eindeutig.
+        placement = self.placements.for_submission(submission_id)
+        if placement is None:
+            raise EntityNotFoundError("Placement not found")
+        values = payload.model_dump(exclude_unset=True)
+        # calculated_fee neu berechnen, wenn final_salary oder fee_percentage
+        # sich aendern - gleiche Formel wie beim Anlegen (create_placement).
+        if "final_salary" in values or "fee_percentage" in values:
+            final_salary = values.get("final_salary", placement.final_salary)
+            fee_percentage = values.get("fee_percentage", placement.fee_percentage)
+            values["calculated_fee"] = (final_salary * fee_percentage / Decimal("100")).quantize(
+                MONEY, rounding=ROUND_HALF_UP
+            )
+        updated = self.placements.update(placement, values)
+        self.session.commit()
+        return updated
+
+    def delete_placement(self, submission_id: uuid.UUID) -> None:
+        placement = self.placements.for_submission(submission_id)
+        if placement is None:
+            raise EntityNotFoundError("Placement not found")
+        self.placements.delete(placement)
+        self.session.commit()
 
     def _resolve_fee_percentage(
         self, submission: CandidateSubmission, requested: Decimal | None

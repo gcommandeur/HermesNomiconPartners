@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailingGroup, PageQuery, Paginated, Placement, Task, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, Feedback, FeedbackCreate, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailingGroup, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, Task, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -116,6 +116,13 @@ export async function getAllInterviews() {
   return apiGet<Interview[]>("/interviews", []);
 }
 
+/** Interview-Runden EINES Prozesses - fuer das Interview-Panel der
+ * Stufen-Bearbeitung auf der Kandidat-Detailseite (dort ist nur ein
+ * Prozess relevant, anders als getAllInterviews() fuer die Kanban-Seite). */
+export async function getInterviews(submissionId: string) {
+  return apiGet<Interview[]>(`/submissions/${submissionId}/interviews`, []);
+}
+
 export async function createInterview(submissionId: string, payload: InterviewCreate) {
   return apiPost<Interview>(`/submissions/${submissionId}/interviews`, payload);
 }
@@ -130,6 +137,72 @@ export async function updateInterview(
 
 export async function deleteInterview(submissionId: string, interviewId: string) {
   return apiDelete(`/submissions/${submissionId}/interviews/${interviewId}`);
+}
+
+/** Feedback-Eintraege eines Prozesses - dienen auch als generisches
+ * "Datum + Notiz"-Feld fuer die Stufen qualification_call/cv_in/cv_out
+ * (siehe stage-edit-modal.tsx). */
+export async function getFeedback(submissionId: string) {
+  return apiGet<Feedback[]>(`/submissions/${submissionId}/feedback`, []);
+}
+
+export async function createFeedback(submissionId: string, payload: FeedbackCreate) {
+  return apiPost<Feedback>(`/submissions/${submissionId}/feedback`, payload);
+}
+
+export async function updateFeedback(
+  submissionId: string,
+  feedbackId: string,
+  payload: FeedbackUpdate,
+) {
+  return apiPatch<Feedback>(`/submissions/${submissionId}/feedback/${feedbackId}`, payload);
+}
+
+export async function deleteFeedback(submissionId: string, feedbackId: string) {
+  return apiDelete(`/submissions/${submissionId}/feedback/${feedbackId}`);
+}
+
+export async function getOffers(submissionId: string) {
+  return apiGet<Offer[]>(`/submissions/${submissionId}/offers`, []);
+}
+
+export async function createOffer(submissionId: string, payload: OfferCreate) {
+  return apiPost<Offer>(`/submissions/${submissionId}/offers`, payload);
+}
+
+export async function updateOffer(submissionId: string, offerId: string, payload: OfferUpdate) {
+  return apiPatch<Offer>(`/submissions/${submissionId}/offers/${offerId}`, payload);
+}
+
+export async function deleteOffer(submissionId: string, offerId: string) {
+  return apiDelete(`/submissions/${submissionId}/offers/${offerId}`);
+}
+
+/** Placement ist singulaer (ein Objekt pro Prozess) - kein :id-Segment im
+ * Pfad, analog zum Backend (siehe api/v1/submissions.py). Ein 404 vom GET
+ * bedeutet schlicht "noch kein Placement angelegt", kein echter Fehler -
+ * deshalb wird er hier zu `null` statt einer geworfenen Exception, der
+ * Aufrufer (stage-edit-modal.tsx) zeigt in diesem Fall das Anlegen-Formular. */
+export async function getPlacement(submissionId: string): Promise<Placement | null> {
+  try {
+    const result = await apiGet<Placement | null>(`/submissions/${submissionId}/placement`, null);
+    return result.data;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("404")) return null;
+    throw error;
+  }
+}
+
+export async function createPlacement(submissionId: string, payload: PlacementCreate) {
+  return apiPost<Placement>(`/submissions/${submissionId}/placement`, payload);
+}
+
+export async function updatePlacement(submissionId: string, payload: PlacementUpdate) {
+  return apiPatch<Placement>(`/submissions/${submissionId}/placement`, payload);
+}
+
+export async function deletePlacement(submissionId: string) {
+  return apiDelete(`/submissions/${submissionId}/placement`);
 }
 
 export async function getMailingGroups() {
