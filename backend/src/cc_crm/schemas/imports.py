@@ -48,3 +48,8 @@ class ImportResult(BaseModel):
     errors: list[str]
     duplicates: int
     merged: int = 0
+    # Anzahl per candidate_number auf einen bestehenden Kandidaten gemergter
+    # Zeilen (Master-Excel-Bulk-Korrektur, siehe ImportService.commit) -
+    # bewusst getrennt von `merged` (Kanzlei-Adressfeld-Merge) und von
+    # `duplicates`/`skipped`, da hier tatsaechlich Felder aktualisiert wurden.
+    updated: int = 0

@@ -76,6 +76,164 @@ def test_client_import_merges_address_into_existing_duplicate_instead_of_skippin
     assert updated["city"] == "Stuttgart"
 
 
+def test_candidate_export_contains_all_candidates_with_correct_columns(
+    client: TestClient,
+) -> None:
+    a = client.post(
+        "/api/v1/candidates",
+        json={
+            "candidate_number": "9001",
+            "first_name": "Export",
+            "last_name": "Eins",
+            "city": "Berlin",
+        },
+    ).json()
+    b = client.post(
+        "/api/v1/candidates",
+        json={"candidate_number": "9002", "first_name": "Export", "last_name": "Zwei"},
+    ).json()
+
+    response = client.get("/api/v1/import/candidates/export?file_format=csv")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/csv; charset=utf-8"
+
+    text = response.content.decode("utf-8-sig")
+    rows = text.strip().splitlines()
+    header = rows[0].split(",")
+    assert header == [
+        "candidate_number",
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "job_title",
+        "qualification",
+        "postal_code",
+        "city",
+        "salary_expectation",
+        "notice_period",
+        "status",
+    ]
+    body = "\n".join(rows[1:])
+    assert a["candidate_number"] in body
+    assert b["candidate_number"] in body
+    assert "Berlin" in body
+
+
+def test_candidate_export_xlsx_format_returns_valid_workbook(client: TestClient) -> None:
+    client.post(
+        "/api/v1/candidates",
+        json={"candidate_number": "9003", "first_name": "Export", "last_name": "Xlsx"},
+    )
+    response = client.get("/api/v1/import/candidates/export?file_format=xlsx")
+    assert response.status_code == 200
+    assert response.content.startswith(b"PK")
+
+
+def test_candidate_import_commit_updates_differing_nonempty_fields_on_candidate_number_match(
+    client: TestClient,
+) -> None:
+    """Master-Excel-Bulk-Korrektur: eine hochgeladene Zeile mit passender
+    candidate_number aktualisiert nur Felder, die (a) einen Wert haben und
+    (b) vom aktuellen Stand abweichen - eine leere Zelle fuer ein bereits
+    gefuelltes Feld (hier: email) darf den bestehenden Wert NICHT loeschen."""
+    original = client.post(
+        "/api/v1/candidates",
+        json={
+            "candidate_number": "9101",
+            "first_name": "Vorher",
+            "last_name": "Nachher",
+            "email": "vorher@example.com",
+            "postal_code": "10115",
+        },
+    ).json()
+    assert original["job_title"] is None
+
+    # Zeile: postal_code echt geaendert (a), job_title neu gefuellt (a),
+    # email-Spalte fehlt komplett in der Datei -> darf email nicht loeschen (b).
+    preview = client.post(
+        "/api/v1/import/candidates/preview",
+        json={
+            "filename": "master.csv",
+            "content_base64": encoded_csv(
+                "candidate_number,first_name,last_name,postal_code,job_title\n"
+                "9101,Vorher,Nachher,50667,Steuerberaterin\n"
+            ),
+        },
+    ).json()
+
+    commit = client.post(
+        "/api/v1/import/candidates/commit",
+        json={"rows": preview["rows"], "confirmed": True},
+    )
+    assert commit.status_code == 200, commit.text
+    result = commit.json()
+    assert result["updated"] == 1
+    assert result["imported"] == 0
+    assert result["duplicates"] == 0
+
+    updated = client.get(f"/api/v1/candidates/{original['id']}").json()
+    assert updated["postal_code"] == "50667"
+    assert updated["job_title"] == "Steuerberaterin"
+    # email war in der hochgeladenen Datei nicht vorhanden -> unveraendert.
+    assert updated["email"] == "vorher@example.com"
+
+
+def test_candidate_import_commit_with_no_actual_changes_counts_as_duplicate(
+    client: TestClient,
+) -> None:
+    original = client.post(
+        "/api/v1/candidates",
+        json={"candidate_number": "9102", "first_name": "Gleich", "last_name": "Geblieben"},
+    ).json()
+
+    preview = client.post(
+        "/api/v1/import/candidates/preview",
+        json={
+            "filename": "master.csv",
+            "content_base64": encoded_csv(
+                "candidate_number,first_name,last_name\n9102,Gleich,Geblieben\n"
+            ),
+        },
+    ).json()
+    commit = client.post(
+        "/api/v1/import/candidates/commit",
+        json={"rows": preview["rows"], "confirmed": True},
+    ).json()
+    assert commit["updated"] == 0
+    assert commit["duplicates"] == 1
+    assert commit["imported"] == 0
+
+    unchanged = client.get(f"/api/v1/candidates/{original['id']}").json()
+    assert unchanged["first_name"] == "Gleich"
+
+
+def test_candidate_import_commit_creates_new_row_without_candidate_number_match(
+    client: TestClient,
+) -> None:
+    """Eine Zeile ohne candidate_number-Match (bzw. mit einer Nummer, die
+    keinen bestehenden Kandidaten trifft) wird weiterhin ganz normal ueber
+    den bisherigen Duplikat-Check/Neuanlage-Pfad behandelt."""
+    preview = client.post(
+        "/api/v1/import/candidates/preview",
+        json={
+            "filename": "master.csv",
+            "content_base64": encoded_csv(
+                "candidate_number,first_name,last_name\n9999,Brandneu,Kandidat\n"
+            ),
+        },
+    ).json()
+    commit = client.post(
+        "/api/v1/import/candidates/commit",
+        json={"rows": preview["rows"], "confirmed": True},
+    ).json()
+    assert commit["imported"] == 1
+    assert commit["updated"] == 0
+
+    found = client.get("/api/v1/candidates?search=Brandneu").json()
+    assert any(item["candidate_number"] == "9999" for item in found["items"])
+
+
 def test_group_locations_lists_other_sites_of_same_kanzleigruppe(client: TestClient) -> None:
     first = client.post(
         "/api/v1/clients",
