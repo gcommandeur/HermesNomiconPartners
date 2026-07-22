@@ -17,11 +17,6 @@ function timeoutSignal(): AbortSignal {
   return AbortSignal.timeout(API_TIMEOUT_MS);
 }
 
-function readBrowserCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
 /** FastAPI error responses are JSON like {"detail": "..."}; showing that raw
  * in the UI ("{"detail":"..."}") looks broken. Extract just the message. */
 async function errorMessageFromResponse(response: Response): Promise<string> {
@@ -36,22 +31,40 @@ async function errorMessageFromResponse(response: Response): Promise<string> {
   return raw;
 }
 
+/** Nur noch serverseitig gebraucht (Server Components/Route Handler, die
+ * direkt gegen das FastAPI-Backend sprechen): der Auth-Cookie ist httpOnly
+ * und daher per document.cookie im Browser gar nicht mehr lesbar - Browser-
+ * seitige Aufrufe haengen den Header deshalb nicht mehr selbst an, sondern
+ * laufen ueber /api/proxy/... (siehe apiUrl()), das den Cookie server-seitig
+ * per next/headers liest und den Authorization-Header dort anhaengt. Der
+ * Token verlaesst dadurch nie den Server-Kontext. */
 async function authHeader(): Promise<Record<string, string>> {
   if (typeof window === "undefined") {
     const { cookies } = await import("next/headers");
     const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
-  const token = readBrowserCookie(AUTH_COOKIE_NAME);
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return {};
+}
+
+/** Browser-seitige Aufrufe (typeof window !== "undefined") gehen ueber die
+ * eigene Next.js-Instanz (/api/proxy/[...path]), die den httpOnly-Cookie
+ * server-seitig liest und den Request mit Authorization-Header an das
+ * FastAPI-Backend weiterreicht - der Browser spricht dadurch nie direkt mit
+ * dem Backend. Server-seitige Aufrufe (Server Components) sprechen weiterhin
+ * direkt mit dem Backend, das ist unproblematisch, da der Token dort ohnehin
+ * nie den Server verlaesst. */
+function apiUrl(path: string): string {
+  if (typeof window !== "undefined") return `/api/proxy${path}`;
+  if (!API_BASE_URL) throw new Error("NEXT_PUBLIC_CC_CRM_API_URL ist nicht konfiguriert.");
+  return `${API_BASE_URL}${path}`;
 }
 
 export async function apiGet<T>(path: string, fallback: T): Promise<DataResult<T>> {
   if (DEMO_MODE) return { data: fallback, source: "demo" };
-  if (!API_BASE_URL) throw new Error("NEXT_PUBLIC_CC_CRM_API_URL ist nicht konfiguriert.");
 
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await fetch(apiUrl(path), {
       headers: { Accept: "application/json", ...(await authHeader()) },
       // Kein Server-Cache: mit `next: { revalidate: 30 }` lieferte fetch()
       // nach einer Mutation (z.B. router.refresh()) bis zu 30s lang weiter
@@ -72,8 +85,7 @@ export async function apiGet<T>(path: string, fallback: T): Promise<DataResult<T
 }
 
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  if (!API_BASE_URL) throw new Error("API-URL ist nicht konfiguriert.");
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(apiUrl(path), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -94,8 +106,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
  * entscheidet, was mit dem Blob passiert (Vorschau via createObjectURL,
  * oder Weiterreichen an apiDownload-artiges Speichern). */
 export async function apiFetchBlob(path: string): Promise<Blob> {
-  if (!API_BASE_URL) throw new Error("API-URL ist nicht konfiguriert.");
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(apiUrl(path), {
     headers: { ...(await authHeader()) },
     // Datei-Transfers duerfen laenger dauern als eine normale JSON-Antwort,
     // sollen aber ebenfalls nicht unbegrenzt haengen koennen.
@@ -124,8 +135,7 @@ export async function apiDownload(path: string, filename: string): Promise<void>
 /** Uploads a file as multipart/form-data (e.g. document upload). Do not set
  * Content-Type manually - the browser needs to add the multipart boundary. */
 export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
-  if (!API_BASE_URL) throw new Error("API-URL ist nicht konfiguriert.");
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(apiUrl(path), {
     method: "POST",
     headers: { Accept: "application/json", ...(await authHeader()) },
     body: formData,
@@ -140,8 +150,7 @@ export async function apiUpload<T>(path: string, formData: FormData): Promise<T>
 }
 
 export async function apiDelete(path: string): Promise<void> {
-  if (!API_BASE_URL) throw new Error("API-URL ist nicht konfiguriert.");
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(apiUrl(path), {
     method: "DELETE",
     headers: { Accept: "application/json", ...(await authHeader()) },
     signal: timeoutSignal(),
@@ -152,8 +161,7 @@ export async function apiDelete(path: string): Promise<void> {
 }
 
 export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
-  if (!API_BASE_URL) throw new Error("API-URL ist nicht konfiguriert.");
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(apiUrl(path), {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",

@@ -22,7 +22,13 @@ export async function POST(request: Request) {
   const data = (await response.json()) as { token: string; user: { email: string } };
   const cookieStore = await cookies();
   cookieStore.set(AUTH_COOKIE_NAME, data.token, {
-    httpOnly: false,
+    // httpOnly: der Token ist per document.cookie im Browser nicht mehr
+    // lesbar (Schutz gegen Token-Diebstahl via XSS) - client-seitige API-
+    // Aufrufe laufen dafuer ueber /api/proxy/... (siehe lib/api/client.ts::
+    // apiUrl()), das den Cookie server-seitig liest. secure: Produktion
+    // laeuft ausschliesslich ueber HTTPS.
+    httpOnly: true,
+    secure: true,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 14,

@@ -17,5 +17,11 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|brand/|api/login|api/logout).*)"],
+  // api/proxy ausgeschlossen wie api/login/api/logout: ein Redirect auf
+  // /login (HTML) statt der erwarteten JSON-Antwort wuerde jeden
+  // client-seitigen apiGet/apiPost/... (siehe lib/api/client.ts) mit einem
+  // JSON.parse-Fehler scheitern lassen statt mit einer sauberen 401.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|brand/|api/login|api/logout|api/proxy).*)",
+  ],
 };
