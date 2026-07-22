@@ -627,3 +627,36 @@ export interface DataResult<T> {
   source: "api" | "demo";
   error?: string;
 }
+
+export type SourcingSourceType =
+  | "steuerberaterverzeichnis"
+  | "wpk_berufsregister"
+  | "brak_anwaltsverzeichnis"
+  | "kanzlei_team_page";
+
+export type SourcingLeadStatus = "pending" | "approved" | "rejected" | "possible_duplicate";
+
+/** Vorschlags-Ebene des Sourcing-Agents (siehe Backend
+ * models/sourcing_lead.py): automatisiert aus oeffentlichen Registern/
+ * Team-Seiten gefundene Personen, die erst nach expliziter Bestaetigung
+ * ("Uebernehmen") zu echten Kandidaten werden. */
+export interface SourcingLead {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  source_type: SourcingSourceType;
+  source_url: string | null;
+  first_name: string;
+  last_name: string;
+  current_employer: string | null;
+  city: string | null;
+  postal_code: string | null;
+  raw_data: Record<string, unknown> | null;
+  matched_client_company_id: string | null;
+  status: SourcingLeadStatus;
+  duplicate_of_candidate_id: string | null;
+  created_candidate_id: string | null;
+  found_at: string;
+  reviewed_at: string | null;
+  reviewed_by_user_id: string | null;
+}

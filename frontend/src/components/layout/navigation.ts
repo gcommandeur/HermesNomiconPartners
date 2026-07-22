@@ -5,6 +5,7 @@ import {
   CalendarDays,
   ContactRound,
   KanbanSquare,
+  UserRoundSearch,
   LayoutDashboard,
   Mail,
   Map,
@@ -18,6 +19,9 @@ export const primaryNavigation = [
   // "Erneut kontaktieren"-Filter auf /kandidaten (Phase K.3) deckt dieselbe
   // Funktion ab, /reaktivierung als Route wurde ebenfalls entfernt.
   { label: "Kandidaten", href: "/kandidaten", icon: Users },
+  // Review-Ebene des Sourcing-Agents: gefundene Personen werden hier
+  // bestaetigt/verworfen, bevor sie Kandidaten werden (siehe /sourcing).
+  { label: "Sourcing", href: "/sourcing", icon: UserRoundSearch },
   { label: "Kanzleien", href: "/kanzleien", icon: Building2 },
   { label: "Kontakte", href: "/kontakte", icon: ContactRound },
   { label: "Prozesse", href: "/prozesse", icon: KanbanSquare },

@@ -20,6 +20,7 @@ from cc_crm.api.v1.operational import router as operational_router
 from cc_crm.api.v1.profile_generator import router as profile_generator_router
 from cc_crm.api.v1.recruiting import router as recruiting_router
 from cc_crm.api.v1.region_modifiers import router as region_modifiers_router
+from cc_crm.api.v1.sourcing import router as sourcing_router
 from cc_crm.api.v1.submissions import router as submissions_router
 from cc_crm.api.v1.system import router as system_router
 from cc_crm.api.v1.tasks import router as tasks_router
@@ -43,6 +44,7 @@ protected_router.include_router(profile_generator_router, tags=["profile-generat
 protected_router.include_router(nl_search_router, tags=["nl-search"])
 protected_router.include_router(geo_router, tags=["geo-mapping"])
 protected_router.include_router(imports_router, tags=["imports"])
+protected_router.include_router(sourcing_router, tags=["sourcing"])
 protected_router.include_router(submissions_router, tags=["candidate-submissions"])
 protected_router.include_router(activities_router, tags=["activities"])
 protected_router.include_router(tasks_router, tags=["tasks"])

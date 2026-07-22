@@ -150,6 +150,30 @@ class CalendarEventType(StrEnum):
     OTHER = "other"
 
 
+class SourcingSourceType(StrEnum):
+    """Quelle, aus der ein SourcingLead stammt (siehe models/sourcing_lead.py)."""
+
+    STEUERBERATERVERZEICHNIS = "steuerberaterverzeichnis"
+    WPK_BERUFSREGISTER = "wpk_berufsregister"
+    BRAK_ANWALTSVERZEICHNIS = "brak_anwaltsverzeichnis"
+    KANZLEI_TEAM_PAGE = "kanzlei_team_page"
+
+
+class SourcingLeadStatus(StrEnum):
+    """Review-Status eines SourcingLeads: Leads landen NIE direkt im
+    Kandidatenbestand, sondern warten hier auf menschliche Bestaetigung
+    (Datenqualitaet + Datenschutz - keine ungeprueften Personendaten in
+    `candidates`). POSSIBLE_DUPLICATE: Fuzzy-Namensabgleich hat einen
+    bestehenden Kandidaten nahegelegt - im Review separat sichtbar statt
+    stillschweigend verworfen (koennte z.B. ein Arbeitgeberwechsel eines
+    Bestandskandidaten sein)."""
+
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    POSSIBLE_DUPLICATE = "possible_duplicate"
+
+
 class WarrantyStatus(StrEnum):
     """Gewährleistungsstatus eines Placements, berechnet aus
     start_date + guarantee_period_months (siehe services/warranty.py)."""

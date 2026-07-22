@@ -19,6 +19,7 @@ from cc_crm.models.recruiting import (
     SubmissionFeedback,
 )
 from cc_crm.models.region_modifier import RegionModifier
+from cc_crm.models.sourcing_lead import SourcingLead
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.task import Task
 from cc_crm.models.user import User
@@ -45,6 +46,7 @@ __all__ = [
     "Placement",
     "RegionModifier",
     "SubmissionFeedback",
+    "SourcingLead",
     "SourcingMetric",
     "Task",
     "User",
