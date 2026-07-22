@@ -57,10 +57,21 @@ from cc_crm.services.warranty import WarrantyService
 logger = logging.getLogger(__name__)
 
 MONEY = Decimal("0.01")
-# quick_log() unterstuetzt bewusst nur die beiden fruehesten Stufen - ab
-# Shortlist (cv_in) gibt es bereits den regulaeren Stage-Edit-Flow mit
-# vorhandener Submission (siehe StageEditModal im Frontend).
-QUICK_LOG_STAGE_ORDER = [SubmissionStatus.PITCH, SubmissionStatus.QUALIFICATION_CALL]
+# quick_log() deckt die vier fruehen, noch nicht zwingend an eine Kanzlei
+# gebundenen Stufen ab - ab Interview braucht der Prozess einen verknuepften
+# Kanzlei-Kontakt (siehe services/submissions.py::STATUSES_REQUIRING_CLIENT)
+# und hat eigene Panels (InterviewRoundsPanel/OfferPanel/PlacementPanel).
+QUICK_LOG_STAGE_ORDER = [
+    SubmissionStatus.PITCH,
+    SubmissionStatus.QUALIFICATION_CALL,
+    SubmissionStatus.CV_IN,
+    SubmissionStatus.CV_OUT,
+]
+# Zielwerte, die create_feedback() per target_status selbst in einen
+# Statuswechsel uebersetzen darf (siehe FeedbackCreate.target_status) - aus
+# denselben Gruenden wie QUICK_LOG_STAGE_ORDER auf die kanzlei-unabhaengigen
+# Fruehstufen begrenzt.
+FEEDBACK_TARGET_STATUSES = frozenset(QUICK_LOG_STAGE_ORDER)
 INTERVIEW_FOLLOW_UP_TITLE = "Interviewfeedback nachfassen"
 # Interviews brauchen in der Regel mehr Vorlauf als ein allgemeiner Termin
 # (Unterlagen/Notizen des Kandidaten nochmal durchgehen, Fragen vorbereiten)
@@ -93,14 +104,41 @@ class RecruitingProcessService:
     def create_feedback(
         self, submission_id: uuid.UUID, payload: FeedbackCreate
     ) -> SubmissionFeedback:
+        """Legt eine Notiz an - bringt optional per `target_status` (Bullhorn-
+        artiges "Action"-Feld, siehe Frontend feedback-panel.tsx) einen
+        Statuswechsel gleich mit: weicht der Zielstatus vom aktuellen
+        Submission-Status ab, wird in derselben Transaktion die bestehende,
+        validierte Transition-Logik (services/submissions.py::
+        ALLOWED_TRANSITIONS, inkl. BusinessRuleError bei ungueltigem
+        Uebergang) angewendet. `stage` auf der Notiz selbst wird dabei immer
+        auf den gewaehlten Zielstatus gesetzt, nicht auf den alten Status."""
         submission = self.submissions.get(submission_id)
-        return self._create_child(
-            self.feedback,
-            submission,
-            payload,
-            "feedback_received",
-            "Feedback received",
-        )
+        target_status = payload.target_status
+        stage = payload.stage
+        try:
+            if target_status is not None:
+                if target_status not in FEEDBACK_TARGET_STATUSES:
+                    raise BusinessRuleError(
+                        "target_status muss pitch, qualification_call, cv_in "
+                        "oder cv_out sein"
+                    )
+                stage = target_status
+                if target_status != submission.status:
+                    submission = self.submissions.transition(
+                        submission_id,
+                        CandidateSubmissionTransition(status=target_status),
+                        commit=False,
+                    )
+            values = payload.model_dump(exclude={"target_status"})
+            values["submission_id"] = submission.id
+            values["stage"] = stage
+            feedback = self.feedback.create(values)
+            self._event(submission, "feedback_received", "Feedback received", {})
+            self.session.commit()
+            return feedback
+        except Exception:
+            self.session.rollback()
+            raise
 
     def _get_feedback(
         self, submission_id: uuid.UUID, feedback_id: uuid.UUID
@@ -133,15 +171,19 @@ class RecruitingProcessService:
     def quick_log(
         self, candidate_id: uuid.UUID, payload: CandidateQuickLogCreate
     ) -> CandidateQuickLogResult:
-        """Legt eine Pitch-/Quali-Call-Notiz an und startet dabei bei Bedarf
-        automatisch einen Prozess - keine separate "Prozess erstellen"-Aktion
-        noetig (Nutzer-Feedback: eine Quali-Call-Notiz soll automatisch einen
-        Prozess starten). Sucht zuerst einen bereits offenen, noch nicht mit
-        einer Kanzlei verknuepften Prozess in Pitch/Quali-Call und fuehrt
-        diesen weiter, statt blind einen neuen anzulegen."""
+        """Legt eine Notiz zu einer der vier fruehen Stufen an und startet
+        dabei bei Bedarf automatisch einen Prozess - keine separate "Prozess
+        erstellen"-Aktion noetig (Nutzer-Feedback: eine Notiz soll automatisch
+        einen Prozess starten). Sucht zuerst einen bereits offenen, noch nicht
+        mit einer Kanzlei verknuepften Prozess in einer der vier Stufen und
+        fuehrt diesen weiter, statt blind einen neuen anzulegen. Liegt die
+        Zielstufe hinter dem aktuellen Status, wird jeder Zwischenschritt
+        einzeln durchlaufen (gleiches Prinzip wie services/matching.py::
+        CandidateMatchingService._transition_path fuer den Bulk-Submit-Flow)."""
         if payload.stage not in QUICK_LOG_STAGE_ORDER:
             raise BusinessRuleError(
-                "quick-log unterstuetzt nur die Stufen pitch und qualification_call"
+                "quick-log unterstuetzt nur die Stufen pitch, qualification_call, "
+                "cv_in und cv_out"
             )
         self.submissions.candidates.get(candidate_id)
 
@@ -150,12 +192,12 @@ class RecruitingProcessService:
             submission = self.submissions.create(
                 CandidateSubmissionCreate(candidate_id=candidate_id)
             )
-        if QUICK_LOG_STAGE_ORDER.index(submission.status) < QUICK_LOG_STAGE_ORDER.index(
-            payload.stage
-        ):
+        current_index = QUICK_LOG_STAGE_ORDER.index(submission.status)
+        target_index = QUICK_LOG_STAGE_ORDER.index(payload.stage)
+        for status in QUICK_LOG_STAGE_ORDER[current_index + 1 : target_index + 1]:
             submission = self.submissions.transition(
                 submission.id,
-                CandidateSubmissionTransition(status=payload.stage),
+                CandidateSubmissionTransition(status=status),
             )
 
         feedback = self.create_feedback(

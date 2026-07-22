@@ -5,24 +5,25 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorBanner } from "@/components/crm/error-banner";
+import { STAGE_LABELS } from "@/components/crm/submission-stage-bar";
 import {
   createFeedback,
   deleteFeedback,
   getFeedback,
   updateFeedback,
 } from "@/lib/api/queries";
+import { isAllowedTransition } from "@/lib/submission-transitions";
 import { formatDateTime } from "@/lib/utils";
-import type { Feedback, FeedbackType, SubmissionStatus } from "@/lib/api/types";
+import type { CandidateSubmission, Feedback, FeedbackTargetStatus, SubmissionStatus } from "@/lib/api/types";
 
 const labelClass = "mb-1 block text-xs text-[#94A3B8]";
 const textareaClass = "min-h-16 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
 const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
 
-const TYPE_OPTIONS: { value: FeedbackType; label: string }[] = [
-  { value: "internal", label: "Intern" },
-  { value: "client", label: "Von Kanzlei" },
-  { value: "candidate", label: "Von Kandidat/in" },
-];
+// Nur diese vier Stufen sind gueltige Ziele fuer das Status-Feld einer Notiz -
+// Interview/Offer/Placement brauchen eine verknuepfte Kanzlei und haben eigene
+// Panels (siehe backend services/recruiting.py::FEEDBACK_TARGET_STATUSES).
+const FEEDBACK_STAGES: FeedbackTargetStatus[] = ["pitch", "qualification_call", "cv_in", "cv_out"];
 
 /** ISO-Datetime aus dem Backend direkt auf die ersten 16 Zeichen kuerzen -
  * gleiches Muster wie calendar-event-modal.tsx/interview-modal.tsx
@@ -35,10 +36,14 @@ function toDatetimeLocalValue(iso: string | null | undefined): string {
 
 interface FormState {
   id: string | null;
-  feedback_type: FeedbackType;
+  // Nicht mehr per UI editierbar (siehe TYPE_OPTIONS-Entfernung) - neue
+  // Eintraege werden fest auf "internal" gesetzt, bestehende Eintraege
+  // behalten beim Bearbeiten ihren ursprünglichen Wert unveraendert bei.
+  feedback_type: Feedback["feedback_type"];
   feedback_text: string;
   received_at: string;
   next_step: string;
+  targetStatus: FeedbackTargetStatus;
 }
 
 // Vorlage nur fuer NEUE Quali-Call-Eintraege (kein form.id) - macht das
@@ -48,31 +53,46 @@ interface FormState {
 const QUALIFICATION_CALL_TEMPLATE =
   "Aktuelle Stelle: \nQualifikationen: \nGehalt: \nKündigungsfrist: \n\nAufgabenbereich: \n\nWechselgrund: \n\nWeitere Notizen: ";
 
-function emptyForm(stage: SubmissionStatus): FormState {
+function emptyForm(stage: FeedbackTargetStatus): FormState {
   return {
     id: null,
     feedback_type: "internal",
     feedback_text: stage === "qualification_call" ? QUALIFICATION_CALL_TEMPLATE : "",
     received_at: toDatetimeLocalValue(new Date().toISOString()),
     next_step: "",
+    targetStatus: stage,
   };
 }
 
-function formFromEntry(entry: Feedback): FormState {
+function formFromEntry(entry: Feedback, fallbackStage: FeedbackTargetStatus): FormState {
   return {
     id: entry.id,
     feedback_type: entry.feedback_type,
     feedback_text: entry.feedback_text,
     received_at: toDatetimeLocalValue(entry.received_at),
     next_step: entry.next_step ?? "",
+    targetStatus: (entry.stage as FeedbackTargetStatus | null) ?? fallbackStage,
   };
 }
 
-/** Generisches "Datum + Notiz"-Panel fuer die Stufen qualification_call/
+/** Generisches "Datum + Notiz"-Panel fuer die Stufen pitch/qualification_call/
  * cv_in/cv_out - nutzt das bestehende Feedback-Modell wieder statt neuer
  * DB-Spalten pro Stufe anzulegen (siehe Backend models/recruiting.py::
- * SubmissionFeedback). Mehrere Eintraege je Prozess/Stufe moeglich. */
-export function FeedbackPanel({ submissionId, stage }: { submissionId: string; stage: SubmissionStatus }) {
+ * SubmissionFeedback). Mehrere Eintraege je Prozess/Stufe moeglich. Das
+ * Status-Feld ersetzt das frühere "Art"-Dropdown und setzt bei neuen
+ * Eintraegen bei Bedarf direkt den Prozess-Status (Bullhorn-artiges
+ * "Action"-Feld, siehe backend services/recruiting.py::create_feedback). */
+export function FeedbackPanel({
+  submissionId,
+  stage,
+  currentStatus,
+  onTransitioned,
+}: {
+  submissionId: string;
+  stage: SubmissionStatus;
+  currentStatus: SubmissionStatus;
+  onTransitioned?: (updated: CandidateSubmission) => void;
+}) {
   const [entries, setEntries] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -93,6 +113,14 @@ export function FeedbackPanel({ submissionId, stage }: { submissionId: string; s
   }, [submissionId]);
 
   const sorted = [...entries].sort((a, b) => b.received_at.localeCompare(a.received_at));
+
+  // Waehlbare Ziele: alle laut lib/submission-transitions.ts vom aktuellen
+  // Status aus gueltigen naechsten Stufen, PLUS die gerade betrachtete Stufe
+  // selbst (damit auch ohne Statuswechsel einfach nur eine Notiz zur
+  // laufenden/betrachteten Stufe hinzugefuegt werden kann).
+  const statusOptions = FEEDBACK_STAGES.filter(
+    (candidate) => candidate === stage || isAllowedTransition(currentStatus, candidate),
+  );
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => (current ? { ...current, [key]: value } : current));
@@ -118,17 +146,21 @@ export function FeedbackPanel({ submissionId, stage }: { submissionId: string; s
           feedback_text: form.feedback_text.trim(),
           received_at: form.received_at,
           next_step: form.next_step.trim() || null,
+          stage: form.targetStatus,
         });
         setEntries((current) => current.map((item) => (item.id === form.id ? updated : item)));
       } else {
-        const created = await createFeedback(submissionId, {
-          feedback_type: form.feedback_type,
+        const result = await createFeedback(submissionId, {
+          feedback_type: "internal",
           feedback_text: form.feedback_text.trim(),
           received_at: form.received_at,
           next_step: form.next_step.trim() || null,
-          stage,
+          target_status: form.targetStatus,
         });
-        setEntries((current) => [...current, created]);
+        setEntries((current) => [...current, result.feedback]);
+        if (result.submission.status !== currentStatus) {
+          onTransitioned?.(result.submission);
+        }
       }
       setForm(null);
     } catch (error) {
@@ -158,7 +190,7 @@ export function FeedbackPanel({ submissionId, stage }: { submissionId: string; s
           Notizen &amp; Feedback
         </p>
         {!form && (
-          <Button size="sm" variant="outline" onClick={() => setForm(emptyForm(stage))}>
+          <Button size="sm" variant="outline" onClick={() => setForm(emptyForm(stage as FeedbackTargetStatus))}>
             <Plus size={13} />Eintrag hinzufügen
           </Button>
         )}
@@ -179,14 +211,15 @@ export function FeedbackPanel({ submissionId, stage }: { submissionId: string; s
               />
             </div>
             <div>
-              <label className={labelClass}>Art</label>
+              <label className={labelClass}>Status *</label>
               <select
                 className={selectClass}
-                value={form.feedback_type}
-                onChange={(e) => set("feedback_type", e.target.value as FeedbackType)}
+                required
+                value={form.targetStatus}
+                onChange={(e) => set("targetStatus", e.target.value as FeedbackTargetStatus)}
               >
-                {TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                {statusOptions.map((option) => (
+                  <option key={option} value={option}>{STAGE_LABELS[option]}</option>
                 ))}
               </select>
             </div>
@@ -241,12 +274,12 @@ export function FeedbackPanel({ submissionId, stage }: { submissionId: string; s
             <button
               key={entry.id}
               type="button"
-              onClick={() => setForm(formFromEntry(entry))}
+              onClick={() => setForm(formFromEntry(entry, stage as FeedbackTargetStatus))}
               className="block w-full rounded-lg border border-white/10 bg-[#0D1B2E] p-3 text-left text-xs hover:border-[#1F5FA8]/50"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold text-[#F8FAFC]">
-                  {TYPE_OPTIONS.find((option) => option.value === entry.feedback_type)?.label}
+                  {entry.stage ? STAGE_LABELS[entry.stage] : "–"}
                 </span>
                 <span className="text-[#94A3B8]">{formatDateTime(entry.received_at)}</span>
               </div>

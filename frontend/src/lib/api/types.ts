@@ -290,6 +290,11 @@ export interface FeedbackCreate {
   next_step?: string | null;
   created_by?: string | null;
   stage?: SubmissionStatus | null;
+  /** Bullhorn-artiges "Action"-Feld (siehe feedback-panel.tsx): weicht dieser
+   * Zielstatus vom aktuellen Submission-Status ab, wendet das Backend in
+   * derselben Transaktion die bestehende Transition-Validierung an. Nur
+   * pitch/qualification_call/cv_in/cv_out sind hier erlaubte Ziele. */
+  target_status?: FeedbackTargetStatus | null;
 }
 
 export interface FeedbackUpdate {
@@ -301,10 +306,22 @@ export interface FeedbackUpdate {
   stage?: SubmissionStatus | null;
 }
 
+/** Antwort von POST /submissions/{id}/feedback - enthaelt neben der neuen
+ * Notiz auch den (ggf. per target_status aktualisierten) Submission-Stand. */
+export interface FeedbackCreateResult {
+  feedback: Feedback;
+  submission: CandidateSubmission;
+}
+
+/** Stufen, die ueber das Notiz-Status-Feld (FeedbackPanel/CandidateProcessLog)
+ * gesetzt werden koennen - Interview/Offer/Placement brauchen eine
+ * verknuepfte Kanzlei und haben eigene Panels (siehe stage-edit-modal.tsx). */
+export type FeedbackTargetStatus = "pitch" | "qualification_call" | "cv_in" | "cv_out";
+
 /** Payload fuer POST /candidates/{id}/quick-log - legt bei Bedarf automatisch
  * einen Prozess an (siehe candidate-process-log.tsx). */
 export interface CandidateQuickLogCreate {
-  stage: "pitch" | "qualification_call";
+  stage: FeedbackTargetStatus;
   feedback_type: FeedbackType;
   feedback_text: string;
   received_at: string;

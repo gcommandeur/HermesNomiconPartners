@@ -60,19 +60,24 @@ class CandidateSubmissionRepository(SQLAlchemyRepository[CandidateSubmission]):
         return self.session.scalar(statement.limit(1))
 
     def find_open_unassigned(self, candidate_id: uuid.UUID) -> CandidateSubmission | None:
-        """Neueste noch nicht mit einer Kanzlei verknuepfte Submission in Pitch
-        oder Quali-Call - Basis fuer den automatischen Prozess-Start beim
-        Quick-Log (siehe RecruitingProcessService.quick_log): eine neue
-        Pitch-/Quali-Call-Notiz soll nach Moeglichkeit einen bereits
-        begonnenen, noch offenen Prozess weiterfuehren statt immer einen
-        neuen anzulegen."""
+        """Neueste noch nicht mit einer Kanzlei verknuepfte Submission in einer
+        der vier fruehen Stufen (Pitch/Quali-Call/Shortlist/CV-Sent) - Basis
+        fuer den automatischen Prozess-Start beim Quick-Log (siehe
+        RecruitingProcessService.quick_log): eine neue Notiz soll nach
+        Moeglichkeit einen bereits begonnenen, noch offenen Prozess
+        weiterfuehren statt immer einen neuen anzulegen."""
         statement = (
             select(CandidateSubmission)
             .where(
                 CandidateSubmission.candidate_id == candidate_id,
                 CandidateSubmission.client_company_id.is_(None),
                 CandidateSubmission.status.in_(
-                    [SubmissionStatus.PITCH, SubmissionStatus.QUALIFICATION_CALL]
+                    [
+                        SubmissionStatus.PITCH,
+                        SubmissionStatus.QUALIFICATION_CALL,
+                        SubmissionStatus.CV_IN,
+                        SubmissionStatus.CV_OUT,
+                    ]
                 ),
             )
             .order_by(CandidateSubmission.created_at.desc())

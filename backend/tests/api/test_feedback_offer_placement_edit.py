@@ -40,7 +40,7 @@ def test_feedback_can_be_updated_and_deleted(client: TestClient) -> None:
             "feedback_text": "Erste Notiz",
             "received_at": "2026-06-01T10:00:00",
         },
-    ).json()
+    ).json()["feedback"]
 
     updated = client.patch(
         f"/api/v1/submissions/{submission['id']}/feedback/{created['id']}",
@@ -69,7 +69,7 @@ def test_feedback_update_rejects_mismatched_submission(client: TestClient) -> No
             "feedback_text": "Nur fuer A",
             "received_at": "2026-06-01T10:00:00",
         },
-    ).json()
+    ).json()["feedback"]
 
     response = client.patch(
         f"/api/v1/submissions/{submission_b['id']}/feedback/{feedback['id']}",

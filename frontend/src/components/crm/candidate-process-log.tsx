@@ -6,18 +6,18 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorBanner } from "@/components/crm/error-banner";
+import { STAGE_LABELS } from "@/components/crm/submission-stage-bar";
 import { getStageSummary, quickLogCandidateStage } from "@/lib/api/queries";
-import type { CandidateStageSummary, FeedbackType } from "@/lib/api/types";
+import type { CandidateStageSummary, FeedbackTargetStatus } from "@/lib/api/types";
 
 const labelClass = "mb-1 block text-xs text-[#94A3B8]";
 const textareaClass = "min-h-16 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
 const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
 
-const TYPE_OPTIONS: { value: FeedbackType; label: string }[] = [
-  { value: "internal", label: "Intern" },
-  { value: "client", label: "Von Kanzlei" },
-  { value: "candidate", label: "Von Kandidat/in" },
-];
+// Unabhaengig vom aktuellen Prozess-Status waehlbar - beim Quick-Log muss ja
+// evtl. noch gar kein Prozess existieren (siehe RecruitingProcessService.
+// quick_log, das bei Bedarf automatisch einen anlegt).
+const FEEDBACK_STAGES: FeedbackTargetStatus[] = ["pitch", "qualification_call", "cv_in", "cv_out"];
 
 // Gleiche Vorlage wie feedback-panel.tsx::QUALIFICATION_CALL_TEMPLATE - hier
 // dupliziert statt importiert, da die beiden Formulare (Quick-Log ohne
@@ -41,21 +41,30 @@ function toDatetimeLocalValue(iso: string): string {
 }
 
 interface FormState {
-  stage: "pitch" | "qualification_call";
-  feedback_type: FeedbackType;
+  stage: FeedbackTargetStatus;
   feedback_text: string;
   received_at: string;
   next_step: string;
 }
 
-function emptyForm(stage: "pitch" | "qualification_call"): FormState {
+function emptyForm(stage: FeedbackTargetStatus): FormState {
   return {
     stage,
-    feedback_type: "internal",
     feedback_text: stage === "qualification_call" ? QUALIFICATION_CALL_TEMPLATE : "",
     received_at: toDatetimeLocalValue(new Date().toISOString()),
     next_step: "",
   };
+}
+
+/** Sinnvolle Default-Stufe fuer eine neue Quick-Log-Notiz: die erste, noch
+ * nicht erreichte Stufe in der natuerlichen Reihenfolge - laeuft ein Prozess
+ * schon weiter (z.B. bereits im Shortlist-Status), macht ein Default auf
+ * "Pitch" wenig Sinn. */
+function defaultStage(summary: CandidateStageSummary | null): FeedbackTargetStatus {
+  if (!summary || summary.pitch === 0) return "pitch";
+  if (summary.qualification_call === 0) return "qualification_call";
+  if (summary.cv_in === 0) return "cv_in";
+  return "cv_out";
 }
 
 /** Immer sichtbare Prozess-Timeline auf der Kandidat-Detailseite - anders als
@@ -103,7 +112,7 @@ export function CandidateProcessLog({ candidateId }: { candidateId: string }) {
     try {
       await quickLogCandidateStage(candidateId, {
         stage: form.stage,
-        feedback_type: form.feedback_type,
+        feedback_type: "internal",
         feedback_text: form.feedback_text.trim(),
         received_at: form.received_at,
         next_step: form.next_step.trim() || null,
@@ -128,14 +137,9 @@ export function CandidateProcessLog({ candidateId }: { candidateId: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Prozess-Timeline</p>
         {!form && (
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setForm(emptyForm("pitch"))}>
-              <Plus size={13} />Pitch-Notiz
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setForm(emptyForm("qualification_call"))}>
-              <Plus size={13} />Quali-Call-Notiz
-            </Button>
-          </div>
+          <Button size="sm" variant="outline" onClick={() => setForm(emptyForm(defaultStage(summary)))}>
+            <Plus size={13} />Notiz
+          </Button>
         )}
       </div>
 
@@ -157,9 +161,7 @@ export function CandidateProcessLog({ candidateId }: { candidateId: string }) {
 
       {form && (
         <form className="space-y-3 rounded-lg border border-white/10 bg-[#0D1B2E] p-3" onSubmit={handleSubmit}>
-          <p className="text-xs font-semibold text-[#D8DADF]">
-            Neue {form.stage === "pitch" ? "Pitch" : "Quali-Call"}-Notiz
-          </p>
+          <p className="text-xs font-semibold text-[#D8DADF]">Neue Notiz</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelClass}>Datum *</label>
@@ -171,14 +173,15 @@ export function CandidateProcessLog({ candidateId }: { candidateId: string }) {
               />
             </div>
             <div>
-              <label className={labelClass}>Art</label>
+              <label className={labelClass}>Status *</label>
               <select
                 className={selectClass}
-                value={form.feedback_type}
-                onChange={(e) => set("feedback_type", e.target.value as FeedbackType)}
+                required
+                value={form.stage}
+                onChange={(e) => set("stage", e.target.value as FeedbackTargetStatus)}
               >
-                {TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                {FEEDBACK_STAGES.map((option) => (
+                  <option key={option} value={option}>{STAGE_LABELS[option]}</option>
                 ))}
               </select>
             </div>

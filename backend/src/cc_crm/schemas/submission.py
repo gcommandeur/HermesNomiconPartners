@@ -99,7 +99,9 @@ class ClosingScoreRead(BaseModel):
 class CandidateQuickLogCreate(BaseModel):
     """Payload fuer POST /candidates/{id}/quick-log - legt bei Bedarf
     automatisch einen Prozess an (siehe RecruitingProcessService.quick_log),
-    ohne dass vorher eine separate "Prozess erstellen"-Aktion noetig ist."""
+    ohne dass vorher eine separate "Prozess erstellen"-Aktion noetig ist.
+    `stage` ist auf pitch/qualification_call/cv_in/cv_out begrenzt (validiert
+    in RecruitingProcessService.quick_log)."""
 
     stage: SubmissionStatus
     feedback_type: FeedbackType
@@ -111,6 +113,16 @@ class CandidateQuickLogCreate(BaseModel):
 class CandidateQuickLogResult(BaseModel):
     submission: CandidateSubmissionRead
     feedback: FeedbackRead
+
+
+class FeedbackCreateResult(BaseModel):
+    """Antwort von POST /submissions/{id}/feedback - enthaelt neben der neu
+    angelegten Notiz auch den (ggf. per `target_status` aktualisierten)
+    Submission-Stand, damit das Frontend (feedback-panel.tsx) einen
+    Statuswechsel ohne zusaetzlichen Request uebernehmen kann."""
+
+    feedback: FeedbackRead
+    submission: CandidateSubmissionRead
 
 
 class CandidateStageSummary(BaseModel):

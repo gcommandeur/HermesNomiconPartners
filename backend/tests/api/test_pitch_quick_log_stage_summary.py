@@ -203,6 +203,161 @@ def test_quick_log_rejects_stage_outside_pitch_and_qualification_call(
     assert "quick-log" in response.json()["detail"]
 
 
+def test_quick_log_can_advance_directly_to_cv_out_without_existing_submission(
+    client: TestClient,
+) -> None:
+    candidate = _create_candidate(client, "QuickLogToCvOut")
+    response = client.post(
+        f"/api/v1/candidates/{candidate['id']}/quick-log",
+        json={
+            "stage": "cv_out",
+            "feedback_type": "internal",
+            "feedback_text": "Direkt bis CV-Sent vorgezogen.",
+            "received_at": "2026-07-01T09:00:00",
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["submission"]["status"] == "cv_out"
+    assert body["feedback"]["stage"] == "cv_out"
+
+    submissions = client.get(f"/api/v1/candidates/{candidate['id']}/submissions").json()
+    assert len(submissions) == 1
+
+
+def test_quick_log_advances_existing_pitch_submission_to_cv_in(
+    client: TestClient,
+) -> None:
+    candidate = _create_candidate(client, "QuickLogToCvIn")
+    client.post(
+        f"/api/v1/candidates/{candidate['id']}/quick-log",
+        json={
+            "stage": "pitch",
+            "feedback_type": "internal",
+            "feedback_text": "Pitch-Notiz.",
+            "received_at": "2026-07-01T09:00:00",
+        },
+    )
+    response = client.post(
+        f"/api/v1/candidates/{candidate['id']}/quick-log",
+        json={
+            "stage": "cv_in",
+            "feedback_type": "internal",
+            "feedback_text": "Shortlist erreicht.",
+            "received_at": "2026-07-03T09:00:00",
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["submission"]["status"] == "cv_in"
+    assert body["feedback"]["stage"] == "cv_in"
+
+    submissions = client.get(f"/api/v1/candidates/{candidate['id']}/submissions").json()
+    assert len(submissions) == 1
+
+
+def test_feedback_with_target_status_transitions_submission_and_sets_stage(
+    client: TestClient,
+) -> None:
+    candidate = _create_candidate(client, "TargetStatusTransition")
+    submission = client.post(
+        "/api/v1/submissions", json={"candidate_id": candidate["id"]}
+    ).json()
+    assert submission["status"] == "pitch"
+
+    response = client.post(
+        f"/api/v1/submissions/{submission['id']}/feedback",
+        json={
+            "feedback_type": "internal",
+            "feedback_text": "Quali-Call durchgefuehrt.",
+            "received_at": "2026-07-02T09:00:00",
+            "target_status": "qualification_call",
+        },
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["feedback"]["stage"] == "qualification_call"
+    assert body["submission"]["status"] == "qualification_call"
+
+
+def test_feedback_with_target_status_equal_to_current_status_does_not_transition(
+    client: TestClient,
+) -> None:
+    candidate = _create_candidate(client, "TargetStatusNoop")
+    submission = client.post(
+        "/api/v1/submissions", json={"candidate_id": candidate["id"]}
+    ).json()
+
+    response = client.post(
+        f"/api/v1/submissions/{submission['id']}/feedback",
+        json={
+            "feedback_type": "internal",
+            "feedback_text": "Weitere Pitch-Notiz, kein Statuswechsel.",
+            "received_at": "2026-07-02T09:00:00",
+            "target_status": "pitch",
+        },
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["feedback"]["stage"] == "pitch"
+    assert body["submission"]["status"] == "pitch"
+
+
+def test_feedback_with_invalid_target_status_transition_is_rejected(
+    client: TestClient,
+) -> None:
+    candidate = _create_candidate(client, "TargetStatusInvalid")
+    submission = client.post(
+        "/api/v1/submissions", json={"candidate_id": candidate["id"]}
+    ).json()
+
+    response = client.post(
+        f"/api/v1/submissions/{submission['id']}/feedback",
+        json={
+            "feedback_type": "internal",
+            "feedback_text": "Sollte fehlschlagen - kein Ein-Schritt-Uebergang.",
+            "received_at": "2026-07-02T09:00:00",
+            "target_status": "cv_out",
+        },
+    )
+    assert response.status_code == 422
+    assert "not allowed" in response.json()["detail"]
+
+    # Kein Statuswechsel und keine Notiz wurden angelegt (Transaktion rolled back).
+    updated_submission = client.get(f"/api/v1/submissions/{submission['id']}").json()
+    assert updated_submission["status"] == "pitch"
+    feedback_entries = client.get(f"/api/v1/submissions/{submission['id']}/feedback").json()
+    assert feedback_entries == []
+
+
+def test_feedback_with_target_status_outside_allowed_set_is_rejected(
+    client: TestClient,
+) -> None:
+    candidate = _create_candidate(client, "TargetStatusOutsideSet")
+    company = client.post("/api/v1/clients", json={"name": "Kanzlei TargetStatus"}).json()
+    submission = client.post(
+        "/api/v1/submissions",
+        json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
+    ).json()
+    for target in ("qualification_call", "cv_in", "cv_out", "interview"):
+        transitioned = client.patch(
+            f"/api/v1/submissions/{submission['id']}/transition", json={"status": target}
+        )
+        assert transitioned.status_code == 200, transitioned.text
+
+    response = client.post(
+        f"/api/v1/submissions/{submission['id']}/feedback",
+        json={
+            "feedback_type": "internal",
+            "feedback_text": "Sollte fehlschlagen - Offer ist kein erlaubtes Feedback-Ziel.",
+            "received_at": "2026-07-10T09:00:00",
+            "target_status": "offer",
+        },
+    )
+    assert response.status_code == 422
+    assert "target_status" in response.json()["detail"]
+
+
 def test_quick_log_returns_404_for_unknown_candidate(client: TestClient) -> None:
     response = client.post(
         "/api/v1/candidates/00000000-0000-0000-0000-000000000000/quick-log",

@@ -24,6 +24,13 @@ class FeedbackCreate(BaseModel):
     next_step: str | None = None
     created_by: str | None = None
     stage: SubmissionStatus | None = None
+    # Bullhorn-artiges "Action"-Feld: wird der Notiz ein Zielstatus mitgegeben
+    # und weicht dieser vom aktuellen Submission-Status ab, wendet
+    # RecruitingProcessService.create_feedback in derselben Transaktion die
+    # bestehende Transition-Logik (services/submissions.py::ALLOWED_TRANSITIONS)
+    # an und setzt `stage` auf diesen Zielstatus - siehe Frontend
+    # feedback-panel.tsx, wo das bisherige "Art"-Dropdown dadurch ersetzt wurde.
+    target_status: SubmissionStatus | None = None
 
 
 class FeedbackRead(FeedbackCreate, EntityRead):

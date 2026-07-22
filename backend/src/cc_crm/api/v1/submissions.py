@@ -28,6 +28,7 @@ from cc_crm.schemas.submission import (
     CandidateSubmissionUpdate,
     ClosingScoreInput,
     ClosingScoreRead,
+    FeedbackCreateResult,
 )
 from cc_crm.services.closing_score import ACTION_RECOMMENDATIONS
 from cc_crm.services.recruiting import RecruitingProcessService
@@ -149,16 +150,20 @@ def list_feedback(submission_id: uuid.UUID, session: DatabaseSession) -> list[Fe
 
 @router.post(
     "/{submission_id}/feedback",
-    response_model=FeedbackRead,
+    response_model=FeedbackCreateResult,
     status_code=status.HTTP_201_CREATED,
 )
 def create_feedback(
     submission_id: uuid.UUID,
     payload: FeedbackCreate,
     session: DatabaseSession,
-) -> FeedbackRead:
-    return FeedbackRead.model_validate(
-        RecruitingProcessService(session).create_feedback(submission_id, payload)
+) -> FeedbackCreateResult:
+    service = RecruitingProcessService(session)
+    feedback = service.create_feedback(submission_id, payload)
+    submission = service.submissions.get(submission_id)
+    return FeedbackCreateResult(
+        feedback=FeedbackRead.model_validate(feedback),
+        submission=CandidateSubmissionRead.model_validate(submission),
     )
 
 
