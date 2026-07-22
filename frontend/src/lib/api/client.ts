@@ -53,7 +53,12 @@ export async function apiGet<T>(path: string, fallback: T): Promise<DataResult<T
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       headers: { Accept: "application/json", ...(await authHeader()) },
-      next: { revalidate: 30 },
+      // Kein Server-Cache: mit `next: { revalidate: 30 }` lieferte fetch()
+      // nach einer Mutation (z.B. router.refresh()) bis zu 30s lang weiter
+      // die alte Antwort - neu angelegte/geaenderte Daten erschienen erst
+      // nach mehreren manuellen Reloads. Alle Listen-Endpoints antworten
+      // ohnehin in <1s (siehe fetchAllPages-Kommentar in queries.ts).
+      cache: "no-store",
       signal: timeoutSignal(),
     });
     if (!response.ok) throw new Error(`API antwortet mit ${response.status}`);
