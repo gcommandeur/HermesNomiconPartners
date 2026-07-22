@@ -14,6 +14,14 @@ python scripts/create_api_key.py "Bullhorn Sync"
 Gibt einmalig den Rohschluessel aus (`ccrm_...`). Bitte sicher speichern - er ist danach nicht
 mehr abrufbar (nur der Hash liegt in der Datenbank).
 
+Optional mit Ablaufdatum (z.B. fuer einen zeitlich begrenzten Export-Job):
+
+```powershell
+python scripts/create_api_key.py "Temporary Export Job" --expires-in-days 30
+```
+
+Ohne `--expires-in-days` laeuft der Key nie ab (unveraendertes Verhalten).
+
 ## Verwendung
 
 Statt `Authorization: Bearer <token>` einfach den Header `X-API-Key: <key>` setzen:
@@ -37,4 +45,6 @@ with SessionLocal() as session:
     ApiKeyService(session).revoke(api_key_id)
 ```
 
-Ein widerrufener Key wird sofort mit 401 abgelehnt (siehe `tests/api/test_api_keys.py`).
+Ein widerrufener Key wird sofort mit 401 abgelehnt (siehe `tests/api/test_api_keys.py`). Ein
+abgelaufener Key (`expires_at` in der Vergangenheit) wird bei der naechsten Auth-Pruefung genauso
+wie ein widerrufener Key behandelt.

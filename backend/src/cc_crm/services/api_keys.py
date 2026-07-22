@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from cc_crm.core.errors import AuthenticationError
 from cc_crm.core.security import generate_session_token, hash_token
+from cc_crm.core.time import naive_utc
 from cc_crm.models.api_key import ApiKey
 from cc_crm.models.user import User
 
@@ -28,7 +29,7 @@ class ApiKeyService:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def create(self, name: str) -> tuple[ApiKey, str]:
+    def create(self, name: str, expires_at: datetime | None = None) -> tuple[ApiKey, str]:
         service_email = f"service+{_slugify(name)}-{secrets.token_hex(4)}@cc-crm.local"
         user = User(
             email=service_email,
@@ -39,7 +40,9 @@ class ApiKeyService:
         self.session.flush()
 
         raw_key = f"ccrm_{generate_session_token()}"
-        api_key = ApiKey(name=name, key_hash=hash_token(raw_key), user_id=user.id)
+        api_key = ApiKey(
+            name=name, key_hash=hash_token(raw_key), user_id=user.id, expires_at=expires_at
+        )
         self.session.add(api_key)
         self.session.commit()
         return api_key, raw_key
@@ -54,6 +57,10 @@ class ApiKeyService:
         key_hash = hash_token(raw_key)
         api_key = self.session.scalar(select(ApiKey).where(ApiKey.key_hash == key_hash))
         if api_key is None or api_key.revoked_at is not None:
+            raise AuthenticationError("API key is invalid or revoked")
+        if api_key.expires_at is not None and naive_utc(api_key.expires_at) <= naive_utc(
+            datetime.now(UTC)
+        ):
             raise AuthenticationError("API key is invalid or revoked")
         api_key.last_used_at = datetime.now(UTC)
         user = self.session.get(User, api_key.user_id)

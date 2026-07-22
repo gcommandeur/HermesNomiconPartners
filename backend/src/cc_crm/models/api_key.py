@@ -24,3 +24,9 @@ class ApiKey(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Optionales Ablaufdatum - NULL bedeutet "laeuft nie ab" (unveraendertes
+    # Verhalten fuer bestehende Schluessel ohne Backfill). Wird beim
+    # Erzeugen optional gesetzt (siehe ApiKeyService.create) und bei jeder
+    # Auth-Pruefung wie ein widerrufener Key behandelt, sobald er
+    # abgelaufen ist (siehe ApiKeyService.user_for_key).
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
