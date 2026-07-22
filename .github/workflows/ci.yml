@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Ruff
+        run: ruff check .
+
+      - name: Mypy
+        run: mypy src
+
+      # Kein Postgres-Service-Container: die Testsuite laeuft (siehe
+      # tests/conftest.py) komplett gegen eine In-Memory-SQLite-DB und
+      # braucht dafuer keine externe Infrastruktur. CC_CRM_DATABASE_URL
+      # zeigt hier nur auf eine wegwerfbare lokale SQLite-Datei, damit der
+      # FastAPI-Lifespan-Hook (ensure_database_at_head(), laeuft bei jedem
+      # App-Start inkl. TestClient) nicht versucht, sich mit dem
+      # Postgres-Default aus core/config.py zu verbinden.
+      - name: Pytest
+        env:
+          CC_CRM_DATABASE_URL: "sqlite:///./cc_crm_ci.db"
+          CC_CRM_ENVIRONMENT: "local"
+        run: pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # DEMO_MODE=true statt einer echten API-URL: in CI laeuft kein
+      # Backend, ein paar Seiten sind statisch prerendert (siehe next build-
+      # Output "○ (Static)") - DEMO_MODE laesst apiGet() ohne Netzwerk-Call
+      # sofort die eingebauten Demo-Daten liefern, falls beim Prerendern
+      # irgendwo doch ein Fetch ausgeloest wird.
+      - name: Build
+        env:
+          NEXT_PUBLIC_CC_CRM_DEMO_MODE: "true"
+        run: pnpm build
