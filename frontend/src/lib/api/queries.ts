@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, Feedback, FeedbackCreate, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailingGroup, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, Task, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, Feedback, FeedbackCreate, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailingGroup, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, Task, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -260,6 +260,28 @@ export async function getDocumentsForOwner(ownerType: string, ownerId: string) {
 
 export async function getCandidateMatches(candidateId: string) {
   return apiGet<ClientMatch[]>(`/candidates/${candidateId}/matches`, []);
+}
+
+const emptyStageSummary: CandidateStageSummary = {
+  pitch: 0,
+  qualification_call: 0,
+  cv_in: 0,
+  cv_out: 0,
+  interview: 0,
+  offer: 0,
+  placement: 0,
+};
+
+/** Anzahl erreichter Ereignisse je Stufe ueber ALLE Submissions eines
+ * Kandidaten - Basis der Prozess-Timeline (candidate-process-log.tsx). */
+export async function getStageSummary(candidateId: string) {
+  return apiGet<CandidateStageSummary>(`/candidates/${candidateId}/stage-summary`, emptyStageSummary);
+}
+
+/** Pitch-/Quali-Call-Notiz anlegen - startet dabei bei Bedarf automatisch
+ * einen Prozess (siehe candidate-process-log.tsx). */
+export async function quickLogCandidateStage(candidateId: string, payload: CandidateQuickLogCreate) {
+  return apiPost<CandidateQuickLogResult>(`/candidates/${candidateId}/quick-log`, payload);
 }
 
 export interface CalendarEventQuery {

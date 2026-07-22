@@ -39,7 +39,12 @@ def _create_submission(client: TestClient, company_name: str = "Kanzlei Alpha") 
         },
     )
     assert response.status_code == 201
-    return response.json()
+    submission = response.json()
+    # Neue Submissions starten seit der Pitch-Stufe (siehe models/enums.py::
+    # SubmissionStatus) statt direkt bei qualification_call - dieser Helper
+    # simuliert weiterhin einen Prozess, der die Quali-Call-Stufe bereits
+    # erreicht hat, wie es die meisten Tests hier erwarten.
+    return _transition(client, submission["id"], "qualification_call")
 
 
 def _transition(client: TestClient, submission_id: str, status: str, **extra: object) -> dict:
@@ -95,6 +100,7 @@ def test_client_not_required_before_interview_but_required_from_interview_on(
     submission_id = submission.json()["id"]
     assert submission.json()["client_company_id"] is None
 
+    _transition(client, submission_id, "qualification_call")
     _transition(client, submission_id, "cv_in")
     without_client = client.patch(
         f"/api/v1/submissions/{submission_id}/transition",
@@ -222,6 +228,7 @@ def test_placement_defaults_to_client_fee_percentage_when_omitted(client: TestCl
         json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
     ).json()
 
+    _transition(client, submission["id"], "qualification_call")
     _transition(client, submission["id"], "cv_in")
     _transition(client, submission["id"], "cv_out")
     _transition(client, submission["id"], "interview")

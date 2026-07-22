@@ -12,6 +12,7 @@ from cc_crm.models.enums import (
     InvoiceStatus,
     OfferStatus,
     PlacementStatus,
+    SubmissionStatus,
 )
 
 
@@ -27,6 +28,14 @@ class SubmissionFeedback(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     next_step: Mapped[str | None] = mapped_column(String(240))
     created_by: Mapped[str | None] = mapped_column(String(240))
+    # Welche Prozess-Stufe dieser Feedback-Eintrag betrifft (Pitch/Quali-Call/
+    # Shortlist/CV-Sent - siehe stage-edit-modal.tsx auf dem Frontend).
+    # Nullable, weil bestehende Feedback-Eintraege vor dieser Erweiterung
+    # keine Stufe gespeichert haben - NULL bedeutet "Stufe unbekannt/
+    # historisch", kein Backfill fuer Altdaten (siehe Migration).
+    stage: Mapped[SubmissionStatus | None] = mapped_column(
+        Enum(SubmissionStatus, native_enum=False, length=40)
+    )
 
 
 class Interview(UUIDPrimaryKeyMixin, TimestampMixin, Base):

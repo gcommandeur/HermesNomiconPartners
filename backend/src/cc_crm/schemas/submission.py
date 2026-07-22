@@ -4,8 +4,14 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from cc_crm.models.enums import ClosingStatus, SubmissionCancellationReason, SubmissionStatus
+from cc_crm.models.enums import (
+    ClosingStatus,
+    FeedbackType,
+    SubmissionCancellationReason,
+    SubmissionStatus,
+)
 from cc_crm.schemas.base import EntityRead
+from cc_crm.schemas.recruiting import FeedbackRead
 
 
 class CandidateSubmissionBase(BaseModel):
@@ -13,7 +19,7 @@ class CandidateSubmissionBase(BaseModel):
     client_company_id: uuid.UUID | None = None
     job_mandate_id: uuid.UUID | None = None
     contact_person_id: uuid.UUID | None = None
-    status: SubmissionStatus = SubmissionStatus.QUALIFICATION_CALL
+    status: SubmissionStatus = SubmissionStatus.PITCH
     submitted_at: datetime | None = None
     summary: str | None = None
     sent_profile_text: str | None = None
@@ -88,3 +94,35 @@ class ClosingScoreRead(BaseModel):
     closing_probability: float
     closing_status: ClosingStatus
     action_recommendation: str
+
+
+class CandidateQuickLogCreate(BaseModel):
+    """Payload fuer POST /candidates/{id}/quick-log - legt bei Bedarf
+    automatisch einen Prozess an (siehe RecruitingProcessService.quick_log),
+    ohne dass vorher eine separate "Prozess erstellen"-Aktion noetig ist."""
+
+    stage: SubmissionStatus
+    feedback_type: FeedbackType
+    feedback_text: str = Field(min_length=1)
+    received_at: datetime
+    next_step: str | None = None
+
+
+class CandidateQuickLogResult(BaseModel):
+    submission: CandidateSubmissionRead
+    feedback: FeedbackRead
+
+
+class CandidateStageSummary(BaseModel):
+    """Anzahl erreichter Ereignisse je Stufe ueber ALLE Submissions eines
+    Kandidaten hinweg (auch ueber mehrere Kanzleien) - Basis der Prozess-
+    Timeline auf der Kandidat-Detailseite (siehe
+    RecruitingProcessService.stage_summary)."""
+
+    pitch: int = 0
+    qualification_call: int = 0
+    cv_in: int = 0
+    cv_out: int = 0
+    interview: int = 0
+    offer: int = 0
+    placement: int = 0

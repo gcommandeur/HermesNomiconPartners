@@ -33,6 +33,10 @@ CLOSED_STATUSES = {
 # Every non-terminal status may additionally transition to CANCELLED (with a
 # mandatory cancellation_reason, enforced in transition()).
 ALLOWED_TRANSITIONS = {
+    SubmissionStatus.PITCH: {
+        SubmissionStatus.QUALIFICATION_CALL,
+        SubmissionStatus.CANCELLED,
+    },
     SubmissionStatus.QUALIFICATION_CALL: {
         SubmissionStatus.CV_IN,
         SubmissionStatus.CANCELLED,
@@ -129,8 +133,8 @@ class CandidateSubmissionService(
         )
 
     def create(self, payload: CandidateSubmissionCreate) -> CandidateSubmission:
-        if payload.status != SubmissionStatus.QUALIFICATION_CALL:
-            raise BusinessRuleError("New submissions must start in qualification_call status")
+        if payload.status != SubmissionStatus.PITCH:
+            raise BusinessRuleError("New submissions must start in pitch status")
         self.candidates.get(payload.candidate_id)
         if payload.client_company_id is not None:
             self.clients.get(payload.client_company_id)

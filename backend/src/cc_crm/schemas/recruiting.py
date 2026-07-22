@@ -10,6 +10,7 @@ from cc_crm.models.enums import (
     InvoiceStatus,
     OfferStatus,
     PlacementStatus,
+    SubmissionStatus,
     WarrantyStatus,
 )
 from cc_crm.schemas.base import EntityRead, ORMModel
@@ -22,6 +23,7 @@ class FeedbackCreate(BaseModel):
     received_at: datetime
     next_step: str | None = None
     created_by: str | None = None
+    stage: SubmissionStatus | None = None
 
 
 class FeedbackRead(FeedbackCreate, EntityRead):
@@ -34,6 +36,7 @@ class FeedbackUpdate(BaseModel):
     received_at: datetime | None = None
     next_step: str | None = None
     created_by: str | None = None
+    stage: SubmissionStatus | None = None
 
 
 class InterviewCreate(BaseModel):

@@ -109,7 +109,7 @@ export function SubmissionCreateModal({
         <Modal
           title="Prozess erstellen"
           eyebrow="Recruiting-Prozesse"
-          description="Ein Prozess beginnt bei Quali Call. Die Kanzlei kann optional sofort verknüpft oder erst ab Interview ergänzt werden."
+          description="Ein Prozess beginnt bei Pitch. Die Kanzlei kann optional sofort verknüpft oder erst ab Interview ergänzt werden."
           onClose={() => setOpen(false)}
         >
           <SubmissionCreateForm onDone={(submission) => { setOpen(false); onCreated?.(submission); }} />

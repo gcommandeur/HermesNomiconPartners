@@ -70,8 +70,8 @@ export function StageEditModal({
         {stage === "interview" && (
           <InterviewRoundsPanel submissionId={submissionId} canPlanNew={currentStatus === "interview"} />
         )}
-        {(stage === "qualification_call" || stage === "cv_in" || stage === "cv_out") && (
-          <FeedbackPanel submissionId={submissionId} />
+        {(stage === "pitch" || stage === "qualification_call" || stage === "cv_in" || stage === "cv_out") && (
+          <FeedbackPanel submissionId={submissionId} stage={stage} />
         )}
         {stage === "offer" && <OfferPanel submissionId={submissionId} />}
         {stage === "placement" && <PlacementPanel submissionId={submissionId} />}

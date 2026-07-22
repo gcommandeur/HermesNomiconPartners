@@ -65,6 +65,10 @@ def test_duplicate_active_submission_is_rejected_and_status_is_audited(
     assert submission.status_code == 201
     assert duplicate.status_code == 409
 
+    client.patch(
+        f"/api/v1/submissions/{submission.json()['id']}/transition",
+        json={"status": "qualification_call"},
+    )
     update = client.patch(
         f"/api/v1/submissions/{submission.json()['id']}/transition",
         json={"status": "cv_in"},

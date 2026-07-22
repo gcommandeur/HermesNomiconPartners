@@ -65,6 +65,7 @@ class JobStatus(StrEnum):
 
 
 class SubmissionStatus(StrEnum):
+    PITCH = "pitch"
     QUALIFICATION_CALL = "qualification_call"
     CV_IN = "cv_in"
     CV_OUT = "cv_out"

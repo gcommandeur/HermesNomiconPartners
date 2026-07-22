@@ -9,7 +9,8 @@ import type { SubmissionStatus } from "@/lib/api/types";
 // "cancelled" ist kein Fortschritts-Schritt, sondern ein Abbruch und wird
 // separat als roter Endzustand markiert (siehe STAGE_ORDER/isCancelled).
 export const STAGE_ORDER: { status: SubmissionStatus; label: string }[] = [
-  { status: "qualification_call", label: "Prescreen" },
+  { status: "pitch", label: "Pitch" },
+  { status: "qualification_call", label: "Quali Call" },
   { status: "cv_in", label: "Shortlist" },
   { status: "cv_out", label: "CV Sent" },
   { status: "interview", label: "Interview" },
@@ -21,7 +22,8 @@ export const STAGE_ORDER: { status: SubmissionStatus; label: string }[] = [
  * genutzt, damit Kanban/Stage-Bar/Bearbeitungs-Panel immer denselben
  * Wortlaut zeigen. */
 export const STAGE_LABELS: Record<SubmissionStatus, string> = {
-  qualification_call: "Prescreen",
+  pitch: "Pitch",
+  qualification_call: "Quali Call",
   cv_in: "Shortlist",
   cv_out: "CV Sent",
   interview: "Interview",

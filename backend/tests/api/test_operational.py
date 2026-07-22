@@ -29,7 +29,7 @@ def test_cockpit_hot_processes_and_important_include_candidate_and_client_names(
         "/api/v1/submissions",
         json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
     ).json()
-    for target in ["cv_in", "cv_out", "interview"]:
+    for target in ["qualification_call", "cv_in", "cv_out", "interview"]:
         response = client.patch(
             f"/api/v1/submissions/{submission['id']}/transition", json={"status": target}
         )

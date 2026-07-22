@@ -10,6 +10,7 @@ from cc_crm.models.submission import CandidateSubmission
 from cc_crm.repositories.base import SQLAlchemyRepository
 
 ACTIVE_SUBMISSION_STATUSES = {
+    SubmissionStatus.PITCH,
     SubmissionStatus.QUALIFICATION_CALL,
     SubmissionStatus.CV_IN,
     SubmissionStatus.CV_OUT,
@@ -56,6 +57,26 @@ class CandidateSubmissionRepository(SQLAlchemyRepository[CandidateSubmission]):
             statement = statement.where(CandidateSubmission.job_mandate_id.is_(None))
         else:
             statement = statement.where(CandidateSubmission.job_mandate_id == job_mandate_id)
+        return self.session.scalar(statement.limit(1))
+
+    def find_open_unassigned(self, candidate_id: uuid.UUID) -> CandidateSubmission | None:
+        """Neueste noch nicht mit einer Kanzlei verknuepfte Submission in Pitch
+        oder Quali-Call - Basis fuer den automatischen Prozess-Start beim
+        Quick-Log (siehe RecruitingProcessService.quick_log): eine neue
+        Pitch-/Quali-Call-Notiz soll nach Moeglichkeit einen bereits
+        begonnenen, noch offenen Prozess weiterfuehren statt immer einen
+        neuen anzulegen."""
+        statement = (
+            select(CandidateSubmission)
+            .where(
+                CandidateSubmission.candidate_id == candidate_id,
+                CandidateSubmission.client_company_id.is_(None),
+                CandidateSubmission.status.in_(
+                    [SubmissionStatus.PITCH, SubmissionStatus.QUALIFICATION_CALL]
+                ),
+            )
+            .order_by(CandidateSubmission.created_at.desc())
+        )
         return self.session.scalar(statement.limit(1))
 
     def priority_candidates(self) -> Sequence[CandidateSubmission]:

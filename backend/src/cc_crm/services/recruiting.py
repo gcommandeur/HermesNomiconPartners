@@ -5,6 +5,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import TypeVar
 
 from pydantic import BaseModel
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from cc_crm.core.config import get_settings
@@ -33,6 +34,7 @@ from cc_crm.repositories.tasks import TaskRepository
 from cc_crm.schemas.recruiting import (
     FeeCreate,
     FeedbackCreate,
+    FeedbackRead,
     FeedbackUpdate,
     InterviewCreate,
     InterviewUpdate,
@@ -41,12 +43,24 @@ from cc_crm.schemas.recruiting import (
     PlacementCreate,
     PlacementUpdate,
 )
+from cc_crm.schemas.submission import (
+    CandidateQuickLogCreate,
+    CandidateQuickLogResult,
+    CandidateStageSummary,
+    CandidateSubmissionCreate,
+    CandidateSubmissionRead,
+    CandidateSubmissionTransition,
+)
 from cc_crm.services.submissions import CandidateSubmissionService
 from cc_crm.services.warranty import WarrantyService
 
 logger = logging.getLogger(__name__)
 
 MONEY = Decimal("0.01")
+# quick_log() unterstuetzt bewusst nur die beiden fruehesten Stufen - ab
+# Shortlist (cv_in) gibt es bereits den regulaeren Stage-Edit-Flow mit
+# vorhandener Submission (siehe StageEditModal im Frontend).
+QUICK_LOG_STAGE_ORDER = [SubmissionStatus.PITCH, SubmissionStatus.QUALIFICATION_CALL]
 INTERVIEW_FOLLOW_UP_TITLE = "Interviewfeedback nachfassen"
 # Interviews brauchen in der Regel mehr Vorlauf als ein allgemeiner Termin
 # (Unterlagen/Notizen des Kandidaten nochmal durchgehen, Fragen vorbereiten)
@@ -115,6 +129,93 @@ class RecruitingProcessService:
         feedback = self._get_feedback(submission_id, feedback_id)
         self.feedback.delete(feedback)
         self.session.commit()
+
+    def quick_log(
+        self, candidate_id: uuid.UUID, payload: CandidateQuickLogCreate
+    ) -> CandidateQuickLogResult:
+        """Legt eine Pitch-/Quali-Call-Notiz an und startet dabei bei Bedarf
+        automatisch einen Prozess - keine separate "Prozess erstellen"-Aktion
+        noetig (Nutzer-Feedback: eine Quali-Call-Notiz soll automatisch einen
+        Prozess starten). Sucht zuerst einen bereits offenen, noch nicht mit
+        einer Kanzlei verknuepften Prozess in Pitch/Quali-Call und fuehrt
+        diesen weiter, statt blind einen neuen anzulegen."""
+        if payload.stage not in QUICK_LOG_STAGE_ORDER:
+            raise BusinessRuleError(
+                "quick-log unterstuetzt nur die Stufen pitch und qualification_call"
+            )
+        self.submissions.candidates.get(candidate_id)
+
+        submission = self.submissions.submissions.find_open_unassigned(candidate_id)
+        if submission is None:
+            submission = self.submissions.create(
+                CandidateSubmissionCreate(candidate_id=candidate_id)
+            )
+        if QUICK_LOG_STAGE_ORDER.index(submission.status) < QUICK_LOG_STAGE_ORDER.index(
+            payload.stage
+        ):
+            submission = self.submissions.transition(
+                submission.id,
+                CandidateSubmissionTransition(status=payload.stage),
+            )
+
+        feedback = self.create_feedback(
+            submission.id,
+            FeedbackCreate(
+                feedback_type=payload.feedback_type,
+                feedback_text=payload.feedback_text,
+                received_at=payload.received_at,
+                next_step=payload.next_step,
+                stage=payload.stage,
+            ),
+        )
+        return CandidateQuickLogResult(
+            submission=CandidateSubmissionRead.model_validate(submission),
+            feedback=FeedbackRead.model_validate(feedback),
+        )
+
+    def stage_summary(self, candidate_id: uuid.UUID) -> CandidateStageSummary:
+        """Anzahl erreichter Ereignisse je Stufe ueber ALLE Submissions eines
+        Kandidaten (auch ueber mehrere Kanzleien hinweg) - Basis der Prozess-
+        Timeline auf der Kandidat-Detailseite."""
+        self.submissions.candidates.get(candidate_id)
+        feedback_counts: dict[SubmissionStatus, int] = dict(
+            self.session.execute(
+                select(SubmissionFeedback.stage, func.count())
+                .join(
+                    CandidateSubmission,
+                    SubmissionFeedback.submission_id == CandidateSubmission.id,
+                )
+                .where(
+                    CandidateSubmission.candidate_id == candidate_id,
+                    SubmissionFeedback.stage.isnot(None),
+                )
+                .group_by(SubmissionFeedback.stage)
+            ).all()  # type: ignore[arg-type]
+        )
+
+        def _count(model: type[Base]) -> int:
+            return (
+                self.session.scalar(
+                    select(func.count())
+                    .select_from(model)
+                    .join(
+                        CandidateSubmission,
+                        model.submission_id == CandidateSubmission.id,  # type: ignore[attr-defined]
+                    )
+                    .where(CandidateSubmission.candidate_id == candidate_id)
+                )
+                or 0
+            )
+
+        return CandidateStageSummary(
+            pitch=feedback_counts.get(SubmissionStatus.PITCH, 0),
+            qualification_call=feedback_counts.get(SubmissionStatus.QUALIFICATION_CALL, 0),
+            cv_in=feedback_counts.get(SubmissionStatus.CV_IN, 0),
+            cv_out=feedback_counts.get(SubmissionStatus.CV_OUT, 0),
+            interview=_count(Interview),
+            offer=_count(Offer),
+            placement=_count(Placement),
+        )
 
     def list_interviews(self, submission_id: uuid.UUID) -> list[Interview]:
         self.submissions.get(submission_id)

@@ -37,6 +37,7 @@ function ClosingScoreBadge({ status, probability }: { status: CandidateSubmissio
 }
 
 const columns: { status: SubmissionStatus; title: string }[] = [
+  { status: "pitch", title: "Pitch" },
   { status: "qualification_call", title: "Quali Call" },
   { status: "cv_in", title: "CV IN" },
   { status: "cv_out", title: "CV OUT" },

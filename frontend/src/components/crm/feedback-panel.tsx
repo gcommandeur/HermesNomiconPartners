@@ -12,7 +12,7 @@ import {
   updateFeedback,
 } from "@/lib/api/queries";
 import { formatDateTime } from "@/lib/utils";
-import type { Feedback, FeedbackType } from "@/lib/api/types";
+import type { Feedback, FeedbackType, SubmissionStatus } from "@/lib/api/types";
 
 const labelClass = "mb-1 block text-xs text-[#94A3B8]";
 const textareaClass = "min-h-16 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
@@ -41,11 +41,18 @@ interface FormState {
   next_step: string;
 }
 
-function emptyForm(): FormState {
+// Vorlage nur fuer NEUE Quali-Call-Eintraege (kein form.id) - macht das
+// Ausfuellen der wichtigsten Eckdaten aus dem Gespraech schneller/
+// vollstaendiger, statt mit einem leeren Textfeld zu starten. Bei Pitch-
+// Notizen bleibt das Feld wie bisher leer.
+const QUALIFICATION_CALL_TEMPLATE =
+  "Aktuelle Stelle: \nQualifikationen: \nGehalt: \nKündigungsfrist: \n\nAufgabenbereich: \n\nWechselgrund: \n\nWeitere Notizen: ";
+
+function emptyForm(stage: SubmissionStatus): FormState {
   return {
     id: null,
     feedback_type: "internal",
-    feedback_text: "",
+    feedback_text: stage === "qualification_call" ? QUALIFICATION_CALL_TEMPLATE : "",
     received_at: toDatetimeLocalValue(new Date().toISOString()),
     next_step: "",
   };
@@ -65,7 +72,7 @@ function formFromEntry(entry: Feedback): FormState {
  * cv_in/cv_out - nutzt das bestehende Feedback-Modell wieder statt neuer
  * DB-Spalten pro Stufe anzulegen (siehe Backend models/recruiting.py::
  * SubmissionFeedback). Mehrere Eintraege je Prozess/Stufe moeglich. */
-export function FeedbackPanel({ submissionId }: { submissionId: string }) {
+export function FeedbackPanel({ submissionId, stage }: { submissionId: string; stage: SubmissionStatus }) {
   const [entries, setEntries] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -119,6 +126,7 @@ export function FeedbackPanel({ submissionId }: { submissionId: string }) {
           feedback_text: form.feedback_text.trim(),
           received_at: form.received_at,
           next_step: form.next_step.trim() || null,
+          stage,
         });
         setEntries((current) => [...current, created]);
       }
@@ -150,7 +158,7 @@ export function FeedbackPanel({ submissionId }: { submissionId: string }) {
           Notizen &amp; Feedback
         </p>
         {!form && (
-          <Button size="sm" variant="outline" onClick={() => setForm(emptyForm())}>
+          <Button size="sm" variant="outline" onClick={() => setForm(emptyForm(stage))}>
             <Plus size={13} />Eintrag hinzufügen
           </Button>
         )}

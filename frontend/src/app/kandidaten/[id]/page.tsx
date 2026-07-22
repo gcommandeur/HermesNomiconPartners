@@ -18,6 +18,7 @@ import { CandidateEditModal } from "@/components/crm/candidate-create-modal";
 import { AddToMailingButton } from "@/components/crm/add-to-mailing-button";
 import { RegisterRecentCandidate } from "@/components/crm/register-recent-candidate";
 import { CandidateSubmissionStages } from "@/components/crm/candidate-submission-stages";
+import { CandidateProcessLog } from "@/components/crm/candidate-process-log";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -90,6 +91,8 @@ export default async function CandidateDetailPage({
           <CandidateEditModal candidate={candidate} />
         </div>
       </div>
+
+      <CandidateProcessLog candidateId={candidate.id} />
 
       {submissions.length > 0 && (
         <div className="mb-6 space-y-4 border-b border-white/10 pb-6">

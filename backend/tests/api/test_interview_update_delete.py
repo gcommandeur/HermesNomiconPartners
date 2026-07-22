@@ -16,7 +16,7 @@ def _create_interview_ready_submission(client: TestClient) -> dict:
         "/api/v1/submissions",
         json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
     ).json()
-    for target in ("cv_in", "cv_out", "interview"):
+    for target in ("qualification_call", "cv_in", "cv_out", "interview"):
         response = client.patch(
             f"/api/v1/submissions/{submission['id']}/transition",
             json={"status": target},

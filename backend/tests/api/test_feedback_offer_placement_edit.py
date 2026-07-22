@@ -15,7 +15,11 @@ def _create_submission(client: TestClient, company_name: str = "Kanzlei Edit") -
         json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
     )
     assert response.status_code == 201
-    return response.json()
+    submission = response.json()
+    # Neue Submissions starten seit der Pitch-Stufe (siehe models/enums.py::
+    # SubmissionStatus) - dieser Helper simuliert weiterhin einen Prozess,
+    # der die Quali-Call-Stufe bereits erreicht hat.
+    return _transition(client, submission["id"], "qualification_call")
 
 
 def _transition(client: TestClient, submission_id: str, status: str, **extra: object) -> dict:

@@ -15,7 +15,7 @@ def _create_placed_submission(client: TestClient, name_suffix: str) -> dict:
         "/api/v1/submissions",
         json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
     ).json()
-    for target in ["cv_in", "cv_out", "interview", "offer", "placement"]:
+    for target in ["qualification_call", "cv_in", "cv_out", "interview", "offer", "placement"]:
         response = client.patch(
             f"/api/v1/submissions/{submission['id']}/transition", json={"status": target}
         )

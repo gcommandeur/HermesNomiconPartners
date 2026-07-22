@@ -140,7 +140,15 @@ class CandidateMatchingService:
 
     @staticmethod
     def _transition_path(target: SubmissionStatus) -> list[SubmissionStatus]:
-        ordered = [SubmissionStatus.CV_IN, SubmissionStatus.CV_OUT]
+        # Neue Submissions starten seit der Pitch-Stufe (siehe
+        # models/enums.py::SubmissionStatus), nicht mehr direkt bei
+        # qualification_call - der Weg zu cv_in/cv_out muss deshalb jetzt
+        # ueber qualification_call fuehren.
+        ordered = [
+            SubmissionStatus.QUALIFICATION_CALL,
+            SubmissionStatus.CV_IN,
+            SubmissionStatus.CV_OUT,
+        ]
         return ordered[: ordered.index(target) + 1]
 
     def _active_submission_client_ids(self, candidate_id: uuid.UUID) -> set[uuid.UUID]:

@@ -14,10 +14,16 @@ from cc_crm.schemas.candidate import (
     CvExtractionSuggestion,
 )
 from cc_crm.schemas.pagination import Page
-from cc_crm.schemas.submission import CandidateSubmissionRead
+from cc_crm.schemas.submission import (
+    CandidateQuickLogCreate,
+    CandidateQuickLogResult,
+    CandidateStageSummary,
+    CandidateSubmissionRead,
+)
 from cc_crm.services.candidates import CandidateService
 from cc_crm.services.cv_extraction import extract_text_from_bytes
 from cc_crm.services.operational import DocumentService
+from cc_crm.services.recruiting import RecruitingProcessService
 from cc_crm.services.storage import read_document_bytes
 from cc_crm.services.submissions import CandidateSubmissionService
 
@@ -120,6 +126,25 @@ def list_candidate_submissions(
             candidate_id, offset=offset, limit=limit
         )
     ]
+
+
+@router.post("/{candidate_id}/quick-log", response_model=CandidateQuickLogResult)
+def quick_log_candidate_stage(
+    candidate_id: uuid.UUID,
+    payload: CandidateQuickLogCreate,
+    session: DatabaseSession,
+) -> CandidateQuickLogResult:
+    """Pitch-/Quali-Call-Notiz anlegen - startet dabei bei Bedarf automatisch
+    einen Prozess (siehe RecruitingProcessService.quick_log), ohne dass vorher
+    eine separate "Prozess erstellen"-Aktion noetig ist."""
+    return RecruitingProcessService(session).quick_log(candidate_id, payload)
+
+
+@router.get("/{candidate_id}/stage-summary", response_model=CandidateStageSummary)
+def get_candidate_stage_summary(
+    candidate_id: uuid.UUID, session: DatabaseSession
+) -> CandidateStageSummary:
+    return RecruitingProcessService(session).stage_summary(candidate_id)
 
 
 @router.post("/{candidate_id}/cv-extraction", response_model=CvExtractionSuggestion)

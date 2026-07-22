@@ -9,7 +9,7 @@ export interface BeruflicheStation {
   dauer_jahre: number;
 }
 export type SubmissionStatus =
-  | "qualification_call" | "cv_in" | "cv_out" | "interview" | "offer" | "placement" | "cancelled";
+  | "pitch" | "qualification_call" | "cv_in" | "cv_out" | "interview" | "offer" | "placement" | "cancelled";
 export type SubmissionCancellationReason =
   | "candidate_rejected" | "client_rejected" | "candidate_ghosting";
 export type ClosingStatus = "hot" | "warm" | "risk" | "stop";
@@ -280,6 +280,7 @@ export interface Feedback extends Entity {
   received_at: string;
   next_step: string | null;
   created_by: string | null;
+  stage: SubmissionStatus | null;
 }
 
 export interface FeedbackCreate {
@@ -288,6 +289,7 @@ export interface FeedbackCreate {
   received_at: string;
   next_step?: string | null;
   created_by?: string | null;
+  stage?: SubmissionStatus | null;
 }
 
 export interface FeedbackUpdate {
@@ -296,6 +298,34 @@ export interface FeedbackUpdate {
   received_at?: string;
   next_step?: string | null;
   created_by?: string | null;
+  stage?: SubmissionStatus | null;
+}
+
+/** Payload fuer POST /candidates/{id}/quick-log - legt bei Bedarf automatisch
+ * einen Prozess an (siehe candidate-process-log.tsx). */
+export interface CandidateQuickLogCreate {
+  stage: "pitch" | "qualification_call";
+  feedback_type: FeedbackType;
+  feedback_text: string;
+  received_at: string;
+  next_step?: string | null;
+}
+
+export interface CandidateQuickLogResult {
+  submission: CandidateSubmission;
+  feedback: Feedback;
+}
+
+/** Anzahl erreichter Ereignisse je Stufe ueber ALLE Submissions eines
+ * Kandidaten (siehe candidate-process-log.tsx). */
+export interface CandidateStageSummary {
+  pitch: number;
+  qualification_call: number;
+  cv_in: number;
+  cv_out: number;
+  interview: number;
+  offer: number;
+  placement: number;
 }
 
 /** Interview-Runde zu einem Prozess (siehe Backend models/recruiting.py::
