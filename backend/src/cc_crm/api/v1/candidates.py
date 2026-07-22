@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Response, status
 
@@ -40,6 +40,12 @@ def list_candidates(
     owner_user_id: uuid.UUID | None = None,
     created_from: datetime | None = None,
     created_to: datetime | None = None,
+    sort_by: Annotated[
+        Literal["candidate_number", "name", "job_title", "city", "salary_expectation", "status"]
+        | None,
+        Query(),
+    ] = None,
+    sort_dir: Annotated[Literal["asc", "desc"], Query()] = "asc",
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> Page[CandidateRead]:
@@ -53,6 +59,8 @@ def list_candidates(
         owner_user_id=owner_user_id,
         created_from=created_from,
         created_to=created_to,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
         offset=offset,
         limit=limit,
     )

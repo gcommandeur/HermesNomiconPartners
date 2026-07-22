@@ -57,6 +57,8 @@ function pageQueryString(query: PageQuery): string {
   if (query.search?.trim()) params.set("search", query.search.trim());
   if (query.status) params.set("status", query.status);
   if (query.ownerUserId) params.set("owner_user_id", query.ownerUserId);
+  if (query.sortBy) params.set("sort_by", query.sortBy);
+  if (query.sortDir) params.set("sort_dir", query.sortDir);
   params.set("limit", String(query.limit));
   params.set("offset", String(query.offset));
   return params.toString();

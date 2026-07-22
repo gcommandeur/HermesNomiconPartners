@@ -144,3 +144,82 @@ def test_contact_search_by_own_name_and_email(client: TestClient) -> None:
 
     by_email = client.get("/api/v1/contacts?search=sabine.mueller")
     assert contact["id"] in [item["id"] for item in by_email.json()["items"]]
+
+
+def test_candidate_sort_by_candidate_number_is_numeric_across_full_dataset(
+    client: TestClient,
+) -> None:
+    """Sortierung muss ueber den gesamten Bestand laufen (ORDER BY), nicht
+    nur ueber eine Seite - und candidate_number numerisch ("99" vor "100"),
+    nicht lexikografisch."""
+    numbers = ["9", "10", "2", "100"]
+    ids_by_number = {}
+    for number in numbers:
+        candidate = client.post(
+            "/api/v1/candidates",
+            json={"first_name": "Sort", "last_name": f"Test{number}", "candidate_number": number},
+        ).json()
+        ids_by_number[number] = candidate["id"]
+
+    response = client.get("/api/v1/candidates?sort_by=candidate_number&sort_dir=asc&limit=4")
+    assert response.status_code == 200
+    items = response.json()["items"]
+    relevant = [item for item in items if item["candidate_number"] in numbers]
+    assert [item["candidate_number"] for item in relevant] == ["2", "9", "10", "100"]
+
+    desc_response = client.get("/api/v1/candidates?sort_by=candidate_number&sort_dir=desc&limit=4")
+    desc_items = desc_response.json()["items"]
+    relevant_desc = [item for item in desc_items if item["candidate_number"] in numbers]
+    assert [item["candidate_number"] for item in relevant_desc] == ["100", "10", "9", "2"]
+
+
+def test_candidate_sort_by_candidate_number_reaches_beyond_first_page(
+    client: TestClient,
+) -> None:
+    """Kernbug-Nachweis: ein Datensatz, der alphabetisch/zeitlich NICHT auf
+    Seite 1 waere, muss bei sort_by=candidate_number trotzdem an der
+    richtigen Position ueber den gesamten Bestand erscheinen."""
+    for index in range(15):
+        client.post(
+            "/api/v1/candidates",
+            json={
+                "first_name": "Filler",
+                "last_name": f"Aaa{index:02d}",
+                "candidate_number": f"{5000 + index}",
+            },
+        )
+    lowest = client.post(
+        "/api/v1/candidates",
+        json={"first_name": "Ganz", "last_name": "Unten", "candidate_number": "1"},
+    ).json()
+
+    response = client.get("/api/v1/candidates?sort_by=candidate_number&sort_dir=asc&limit=5")
+    items = response.json()["items"]
+    assert items[0]["id"] == lowest["id"]
+
+
+def test_candidate_sort_by_name(client: TestClient) -> None:
+    client.post("/api/v1/candidates", json={"first_name": "Zora", "last_name": "SortName"})
+    client.post("/api/v1/candidates", json={"first_name": "Anna", "last_name": "SortName"})
+
+    response = client.get("/api/v1/candidates?search=SortName&sort_by=name&sort_dir=asc")
+    names = [f"{item['first_name']} {item['last_name']}" for item in response.json()["items"]]
+    assert names == ["Anna SortName", "Zora SortName"]
+
+
+def test_client_sort_by_name_across_full_dataset(client: TestClient) -> None:
+    client.post("/api/v1/clients", json={"name": "Zzz Sort Kanzlei"})
+    client.post("/api/v1/clients", json={"name": "Aaa Sort Kanzlei"})
+
+    response = client.get("/api/v1/clients?search=Sort Kanzlei&sort_by=name&sort_dir=asc")
+    names = [item["name"] for item in response.json()["items"]]
+    assert names == ["Aaa Sort Kanzlei", "Zzz Sort Kanzlei"]
+
+    desc_response = client.get("/api/v1/clients?search=Sort Kanzlei&sort_by=name&sort_dir=desc")
+    desc_names = [item["name"] for item in desc_response.json()["items"]]
+    assert desc_names == ["Zzz Sort Kanzlei", "Aaa Sort Kanzlei"]
+
+
+def test_candidate_sort_rejects_unknown_column(client: TestClient) -> None:
+    response = client.get("/api/v1/candidates?sort_by=not_a_real_column")
+    assert response.status_code == 422

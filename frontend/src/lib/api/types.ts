@@ -599,6 +599,11 @@ export interface PageQuery {
   /** Komfort-Filter "Meine..." - siehe owner_user_id auf Candidate/
    * ClientCompany/CandidateSubmission/Task oben. */
   ownerUserId?: string;
+  /** Serverseitige Sortierspalte - muss ueber den gesamten Bestand laufen
+   * (ORDER BY im Backend), nicht nur ueber die aktuell geladene Seite (siehe
+   * candidates-table.tsx/clients-table.tsx SORT_ACCESSORS-Kommentar). */
+  sortBy?: string;
+  sortDir?: "asc" | "desc";
   limit: number;
   offset: number;
 }

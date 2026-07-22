@@ -24,22 +24,28 @@ const DEBOUNCE_MS = 300;
 export function useServerSearchList<T>(
   cacheKeyPrefix: string,
   fetcher: (query: PageQuery) => Promise<DataResult<Paginated<T>>>,
-  options: { status?: string; ownerUserId?: string; pageSize?: number } = {},
+  options: {
+    status?: string;
+    ownerUserId?: string;
+    pageSize?: number;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+  } = {},
 ) {
   const pageSize = options.pageSize ?? 100;
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const debouncedSearch = useDebouncedValue(search.trim(), DEBOUNCE_MS);
 
-  // Zurueck auf Seite 1, wenn sich Suche oder Filter aendern - sonst bliebe
-  // man auf einer Seite haengen, die es im neuen (kuerzeren) Ergebnis
-  // vielleicht gar nicht mehr gibt.
+  // Zurueck auf Seite 1, wenn sich Suche, Filter oder Sortierung aendern -
+  // sonst bliebe man auf einer Seite haengen, die es im neuen (kuerzeren/
+  // anders sortierten) Ergebnis vielleicht gar nicht mehr an dieser Stelle gibt.
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, options.status, options.ownerUserId]);
+  }, [debouncedSearch, options.status, options.ownerUserId, options.sortBy, options.sortDir]);
 
   const offset = page * pageSize;
-  const swrKey = `${cacheKeyPrefix}?search=${debouncedSearch}&status=${options.status ?? ""}&owner_user_id=${options.ownerUserId ?? ""}&limit=${pageSize}&offset=${offset}`;
+  const swrKey = `${cacheKeyPrefix}?search=${debouncedSearch}&status=${options.status ?? ""}&owner_user_id=${options.ownerUserId ?? ""}&sort_by=${options.sortBy ?? ""}&sort_dir=${options.sortDir ?? ""}&limit=${pageSize}&offset=${offset}`;
 
   const { data, error, isLoading, mutate } = useSWR<DataResult<Paginated<T>>>(
     swrKey,
@@ -48,6 +54,8 @@ export function useServerSearchList<T>(
         search: debouncedSearch || undefined,
         status: options.status,
         ownerUserId: options.ownerUserId,
+        sortBy: options.sortBy,
+        sortDir: options.sortDir,
         limit: pageSize,
         offset,
       }),

@@ -159,6 +159,8 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         owner_user_id: uuid.UUID | None = None,
         created_from: datetime | None = None,
         created_to: datetime | None = None,
+        sort_by: str | None = None,
+        sort_dir: str = "asc",
         offset: int = 0,
         limit: int = 100,
     ) -> tuple[Sequence[Candidate], int]:
@@ -170,6 +172,8 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             owner_user_id=owner_user_id,
             created_from=created_from,
             created_to=created_to,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
             offset=offset,
             limit=limit,
         )

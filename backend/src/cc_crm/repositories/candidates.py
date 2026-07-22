@@ -1,14 +1,44 @@
 import uuid
 from collections.abc import Sequence
 from datetime import date, datetime
+from typing import Any
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import ColumnElement, Integer, cast, func, or_, select
 from sqlalchemy.orm import Session
 
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.enums import CandidateStatus, SubmissionCancellationReason
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.repositories.base import SQLAlchemyRepository
+
+# Dieselben Spalten wie SORT_ACCESSORS in candidates-table.tsx - Sortierung
+# muss ueber den gesamten Bestand laufen (ORDER BY), nicht nur ueber die
+# aktuell geladene Seite (siehe Kandidaten-Sortier-Bug: bei 30k+ Kandidaten
+# sortierte ein Klick auf "Name" bislang nur innerhalb der sichtbaren Zeile).
+# candidate_number wird auf Integer gecastet, damit "99" vor "100" einsortiert
+# wird statt lexikografisch danach - Kandidatennummern sind durchgehend
+# numerische Strings (siehe models/candidate.py::candidate_number).
+_SORT_COLUMNS: dict[str, Any] = {
+    "candidate_number": cast(Candidate.candidate_number, Integer),
+    "name": (Candidate.last_name, Candidate.first_name),
+    "job_title": Candidate.job_title,
+    "city": func.coalesce(Candidate.city, Candidate.postal_code),
+    "salary_expectation": Candidate.salary_expectation,
+    "status": Candidate.status,
+}
+
+
+def _order_by_clauses(sort_by: str | None, sort_dir: str) -> list[ColumnElement[Any]]:
+    descending = sort_dir == "desc"
+    columns: Any = _SORT_COLUMNS.get(sort_by) if sort_by else None
+    resolved: tuple[Any, ...]
+    if columns is None:
+        resolved = (Candidate.last_name, Candidate.first_name)
+    elif isinstance(columns, tuple):
+        resolved = columns
+    else:
+        resolved = (columns,)
+    return [column.desc() if descending else column.asc() for column in resolved]
 
 
 class CandidateRepository(SQLAlchemyRepository[Candidate]):
@@ -25,6 +55,8 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
         owner_user_id: uuid.UUID | None = None,
         created_from: datetime | None = None,
         created_to: datetime | None = None,
+        sort_by: str | None = None,
+        sort_dir: str = "asc",
         offset: int = 0,
         limit: int = 100,
     ) -> tuple[Sequence[Candidate], int]:
@@ -57,7 +89,7 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
         query = (
             select(Candidate)
             .where(*filters)
-            .order_by(Candidate.last_name, Candidate.first_name)
+            .order_by(*_order_by_clauses(sort_by, sort_dir))
             .offset(offset)
             .limit(limit)
         )

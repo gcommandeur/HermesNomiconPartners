@@ -213,7 +213,9 @@ def main(argv: list[str] | None = None) -> None:
     skip_tables = {name.strip() for name in args.skip_tables.split(",") if name.strip()}
 
     try:
-        results = run_migration(source_url, args.target_url, force=args.force, skip_tables=skip_tables)
+        results = run_migration(
+            source_url, args.target_url, force=args.force, skip_tables=skip_tables
+        )
     except MigrationError as exception:
         print(f"FEHLER: {exception}")
         raise SystemExit(1) from exception

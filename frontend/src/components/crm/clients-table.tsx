@@ -10,7 +10,6 @@ import { DemoNotice } from "@/components/crm/demo-notice";
 import { ErrorState } from "@/components/crm/error-state";
 import { PaginationControls } from "@/components/crm/pagination-controls";
 import { formatDate, termsStatusLabel } from "@/lib/utils";
-import { compareValues } from "@/lib/sort";
 import { useCurrentUser } from "@/lib/api/hooks";
 import { useServerSearchList } from "@/lib/api/use-server-search";
 import { getClientsPage } from "@/lib/api/queries";
@@ -24,16 +23,6 @@ const STATUS_OPTIONS = [
   { value: "archived", label: "Archiviert" },
 ];
 
-const SORT_ACCESSORS: Record<string, (client: ClientCompany) => unknown> = {
-  name: (c) => c.name,
-  region: (c) => c.region ?? c.city ?? c.postal_code,
-  company_size: (c) => c.company_size ?? c.size,
-  focus: (c) => c.focus,
-  active_mandates: (c) => c.active_mandates ?? 0,
-  last_contact_at: (c) => c.last_contact_at ?? c.last_contact ?? c.updated_at,
-  fee_percentage: (c) => Number(c.fee_percentage ?? 27),
-};
-
 export function ClientsTable() {
   const [status, setStatus] = useState("");
   // "Meine Kanzleien" - reiner Komfort-Filter nach owner_user_id, KEINE
@@ -41,9 +30,27 @@ export function ClientsTable() {
   const [mineOnly, setMineOnly] = useState(false);
   const { data: currentUserData } = useCurrentUser();
   const currentUserId = currentUserData?.data.id;
-  // Serverseitige Suche + Pagination (siehe lib/api/use-server-search.ts) -
-  // laedt nur die aktuell sichtbare Seite + Suchtreffer statt (wie vorher
-  // via fetchAllPages) immer den kompletten Kanzlei-Bestand.
+  const [sortKey, setSortKey] = useState<string | null>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  function handleSort(key: string) {
+    if (sortKey === key) {
+      setSortDir((current) => (current === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  // Serverseitige Suche + Pagination + Sortierung (siehe
+  // lib/api/use-server-search.ts) - laedt nur die aktuell sichtbare Seite +
+  // Suchtreffer statt (wie vorher via fetchAllPages) immer den kompletten
+  // Kanzlei-Bestand. Sortierung laeuft ueber ORDER BY im Backend (siehe
+  // repositories/clients.py::_order_by_clauses) und damit ueber den
+  // GESAMTEN Bestand, nicht mehr nur die aktuell geladene Seite. Fuer
+  // "active_mandates" gibt es kein Backend-Feld (siehe Kommentar in
+  // SORT_ACCESSORS unten) - der Server ignoriert diesen sortBy-Wert und
+  // faellt auf die Default-Sortierung nach Name zurueck.
   const {
     search,
     setSearch,
@@ -60,27 +67,10 @@ export function ClientsTable() {
   } = useServerSearchList<ClientCompany>("/clients", getClientsPage, {
     status,
     ownerUserId: mineOnly ? currentUserId : undefined,
+    sortBy: sortKey ?? undefined,
+    sortDir,
   });
-  const [sortKey, setSortKey] = useState<string | null>("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-
-  function handleSort(key: string) {
-    if (sortKey === key) {
-      setSortDir((current) => (current === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-  }
-
-  // Sortierung wirkt bewusst nur INNERHALB der aktuell vom Server geladenen
-  // Seite, nicht mehr ueber den gesamten Bestand - der ist nicht mehr
-  // komplett geladen (siehe Kommentar oben).
-  const sorted = useMemo(() => {
-    if (!sortKey || !SORT_ACCESSORS[sortKey]) return clients;
-    const accessor = SORT_ACCESSORS[sortKey];
-    return [...clients].sort((a, b) => compareValues(accessor(a), accessor(b), sortDir));
-  }, [clients, sortKey, sortDir]);
+  const sorted = clients;
 
   const exportRows = useMemo(() => sorted.map((client) => ({
     Kanzlei: client.name,

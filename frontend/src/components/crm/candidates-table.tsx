@@ -61,10 +61,26 @@ export function CandidatesTable() {
   const [mineOnly, setMineOnly] = useState(false);
   const { data: currentUserData } = useCurrentUser();
   const currentUserId = currentUserData?.data.id;
+  const [sortKey, setSortKey] = useState<string | null>("candidate_number");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  // Serverseitige Suche + Pagination (siehe lib/api/use-server-search.ts) -
-  // laedt nur die aktuell sichtbare Seite + Suchtreffer statt (wie vorher
-  // via fetchAllPages) immer den kompletten Kandidatenbestand. Die
+  function handleSort(key: string) {
+    if (sortKey === key) {
+      setSortDir((current) => (current === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  // Serverseitige Suche + Pagination + Sortierung (siehe
+  // lib/api/use-server-search.ts) - laedt nur die aktuell sichtbare Seite +
+  // Suchtreffer statt (wie vorher via fetchAllPages) immer den kompletten
+  // Kandidatenbestand. Sortierung laeuft ueber ORDER BY im Backend (siehe
+  // repositories/candidates.py::_order_by_clauses) und damit ueber den
+  // GESAMTEN Bestand - vorher sortierte compareValues() nur die aktuell
+  // geladene Seite, bei 30k+ Kandidaten also nur innerhalb von ~100
+  // sichtbaren Zeilen statt ueber den gesamten Bestand. Die
   // Reaktivierungsliste bleibt bewusst ein separater, vollstaendig
   // geladener kleiner Datensatz (eigener, bereits bestehender Endpoint ohne
   // Skalierungsproblem) - beim Umschalten auf "Erneut kontaktieren" wird sie
@@ -85,6 +101,8 @@ export function CandidatesTable() {
   } = useServerSearchList<Candidate>("/candidates", getCandidatesPage, {
     status,
     ownerUserId: mineOnly ? currentUserId : undefined,
+    sortBy: sortKey ?? undefined,
+    sortDir,
   });
 
   const {
@@ -101,17 +119,6 @@ export function CandidatesTable() {
   const [aiHint, setAiHint] = useState<string | null>(null);
   const [aiSearching, setAiSearching] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<string | null>("candidate_number");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-
-  function handleSort(key: string) {
-    if (sortKey === key) {
-      setSortDir((current) => (current === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-  }
 
   function handleSearchChange(value: string) {
     setServerSearch(value);
@@ -159,14 +166,16 @@ export function CandidatesTable() {
 
   const { pageItems: reactivationPageItems, page: reactivationPage, pageCount: reactivationPageCount, setPage: setReactivationPage } = usePagination(reactivationFiltered);
 
-  // Server-Ergebnisseite ist bereits die anzuzeigende Seite - Sortierung
-  // wirkt hier bewusst nur INNERHALB der aktuell geladenen Seite (nicht mehr
-  // ueber den gesamten Bestand), da nicht mehr alle Datensaetze geladen sind.
+  // serverCandidates kommt bereits serverseitig sortiert zurueck (sortBy/
+  // sortDir werden an useServerSearchList durchgereicht). Nur die
+  // KI-Suche-Treffer (aiResults) sind ein fixes, nicht paginiertes Array
+  // eines separaten Endpoints und werden weiterhin clientseitig sortiert -
+  // das ist unproblematisch, da KI-Suche-Ergebnismengen klein sind.
   const sortedServerCandidates = useMemo(() => {
-    const base = aiResults ?? serverCandidates;
-    if (!sortKey || !SORT_ACCESSORS[sortKey]) return base;
+    if (!aiResults) return serverCandidates;
+    if (!sortKey || !SORT_ACCESSORS[sortKey]) return aiResults;
     const accessor = SORT_ACCESSORS[sortKey];
-    return [...base].sort((a, b) => compareValues(accessor(a), accessor(b), sortDir));
+    return [...aiResults].sort((a, b) => compareValues(accessor(a), accessor(b), sortDir));
   }, [serverCandidates, aiResults, sortKey, sortDir]);
 
   const displayedCandidates = reactivationOnly ? reactivationPageItems : sortedServerCandidates;
