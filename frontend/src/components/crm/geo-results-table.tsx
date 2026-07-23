@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MailPlus, SlidersHorizontal } from "lucide-react";
+import { MailPlus, MapPin, SlidersHorizontal } from "lucide-react";
 import { FilterBar } from "@/components/crm/filter-bar";
 import { DataTable } from "@/components/crm/data-table";
 import { StatusPill } from "@/components/crm/status-pill";
@@ -49,8 +49,21 @@ function distinctValues(results: GeoMappingResult[], pick: (item: GeoMappingResu
   return Array.from(values).sort((a, b) => a.localeCompare(b, "de"));
 }
 
+/** Ort/PLZ-Vorschlaege aus den tatsaechlich im CRM vorkommenden Standorten
+ * (nicht aus einer externen Ortsliste) - Basis fuer die Autovervollstaendigung
+ * der Ort/PLZ-Suche (Phase 6). Jede Vorschlagszeile traegt sowohl den
+ * Ort-Text als auch die PLZ, damit die Suche danach gegen beide Felder
+ * matchen kann (bidirektional: "München" findet auch nur-PLZ-Datensaetze). */
+function placeSuggestions(results: GeoMappingResult[]): string[] {
+  const values = new Set<string>();
+  for (const item of results) {
+    if (item.location && item.location !== "Ort unbekannt") values.add(item.location);
+    if (item.postal_code) values.add(item.postal_code);
+  }
+  return Array.from(values).sort((a, b) => a.localeCompare(b, "de"));
+}
+
 export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
-  const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [groupName, setGroupName] = useState("");
@@ -58,61 +71,95 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
-  // Echte Filterfelder statt der reinen Beschreibungskarte auf der Seite -
-  // je ein Dropdown pro tatsaechlich im Backend vorhandenem Feld (siehe
-  // GeoMappingResult in lib/api/types.ts / schemas/geo.py).
+  // Gemeinsame Filter, gelten fuer Kandidaten UND Kanzleien gleichzeitig
+  // (Phase 6) - additiv: jede Auswahl bleibt bestehen, wenn eine andere
+  // Filteroption dazukommt (keine der folgenden useState-Aenderungen setzt
+  // eine andere zurueck).
+  const [placeQuery, setPlaceQuery] = useState("");
+  const [radiusEnabled, setRadiusEnabled] = useState(false);
+  const [centerId, setCenterId] = useState("");
+  const [radiusKm, setRadiusKm] = useState("25");
+
+  // Kandidaten-spezifische Filter.
+  const [candidateSearch, setCandidateSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [qualificationFilter, setQualificationFilter] = useState("");
   const [noticePeriodFilter, setNoticePeriodFilter] = useState("");
   const [availableOnly, setAvailableOnly] = useState(false);
+
+  // Kanzleien-spezifische Filter.
+  const [clientSearch, setClientSearch] = useState("");
   const [termsStatusFilter, setTermsStatusFilter] = useState("");
   const [feeTierFilter, setFeeTierFilter] = useState("");
   const [activeVacanciesOnly, setActiveVacanciesOnly] = useState(false);
-  const [centerId, setCenterId] = useState("");
-  const [radiusKm, setRadiusKm] = useState("25");
 
   const roleOptions = useMemo(() => distinctValues(results, (item) => item.role), [results]);
   const qualificationOptions = useMemo(() => distinctValues(results, (item) => item.qualification), [results]);
   const noticePeriodOptions = useMemo(() => distinctValues(results, (item) => item.notice_period), [results]);
   const termsStatusOptions = useMemo(() => distinctValues(results, (item) => item.terms_status), [results]);
   const feeTierOptions = useMemo(() => distinctValues(results, (item) => item.fee_tier), [results]);
+  const placeOptions = useMemo(() => placeSuggestions(results), [results]);
   const geocodedResults = useMemo(() => results.filter((item) => item.latitude != null && item.longitude != null), [results]);
   const center = useMemo(() => geocodedResults.find((item) => item.id === centerId) ?? null, [geocodedResults, centerId]);
 
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
+  // Gemeinsamer Ort/PLZ- und Umkreis-Filter, unabhaengig von Kandidat/Kanzlei.
+  function matchesSharedFilters(item: GeoMappingResult): boolean {
+    const place = placeQuery.trim().toLowerCase();
+    if (place) {
+      const haystack = `${item.location} ${item.postal_code ?? ""}`.toLowerCase();
+      if (!haystack.includes(place)) return false;
+    }
+    if (radiusEnabled && center) {
+      if (item.latitude == null || item.longitude == null) return false;
+      const radius = Number(radiusKm) || 0;
+      if (haversineKm(center.latitude!, center.longitude!, item.latitude, item.longitude) > radius) return false;
+    }
+    return true;
+  }
+
+  const candidateResults = useMemo(() => {
+    const term = candidateSearch.trim().toLowerCase();
     const todayIso = new Date().toISOString().slice(0, 10);
-    const radius = Number(radiusKm) || 0;
     return results.filter((item) => {
+      if (item.kind !== "candidate") return false;
+      if (!matchesSharedFilters(item)) return false;
       if (term) {
-        const haystack = [item.name, item.location, item.postal_code, item.status, ...item.tags]
-          .filter(Boolean).join(" ").toLowerCase();
+        const haystack = [item.name, item.role, item.qualification].filter(Boolean).join(" ").toLowerCase();
         if (!haystack.includes(term)) return false;
       }
       if (roleFilter && item.role !== roleFilter) return false;
       if (qualificationFilter && item.qualification !== qualificationFilter) return false;
       if (noticePeriodFilter && item.notice_period !== noticePeriodFilter) return false;
-      if (availableOnly) {
-        if (item.kind !== "candidate") return false;
-        if (item.available_from && item.available_from > todayIso) return false;
+      if (availableOnly && item.available_from && item.available_from > todayIso) return false;
+      return true;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results, candidateSearch, roleFilter, qualificationFilter, noticePeriodFilter, availableOnly, placeQuery, radiusEnabled, center, radiusKm]);
+
+  const clientResults = useMemo(() => {
+    const term = clientSearch.trim().toLowerCase();
+    return results.filter((item) => {
+      if (item.kind !== "client") return false;
+      if (!matchesSharedFilters(item)) return false;
+      if (term) {
+        const haystack = [item.name, ...item.tags].filter(Boolean).join(" ").toLowerCase();
+        if (!haystack.includes(term)) return false;
       }
       if (termsStatusFilter && item.terms_status !== termsStatusFilter) return false;
       if (feeTierFilter && item.fee_tier !== feeTierFilter) return false;
-      if (activeVacanciesOnly) {
-        if (item.kind !== "client") return false;
-        if (!item.active_vacancy_count) return false;
-      }
-      if (center) {
-        if (item.latitude == null || item.longitude == null) return false;
-        if (haversineKm(center.latitude!, center.longitude!, item.latitude, item.longitude) > radius) return false;
-      }
+      if (activeVacanciesOnly && !item.active_vacancy_count) return false;
       return true;
     });
-  }, [results, search, roleFilter, qualificationFilter, noticePeriodFilter, availableOnly, termsStatusFilter, feeTierFilter, activeVacanciesOnly, center, radiusKm]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results, clientSearch, termsStatusFilter, feeTierFilter, activeVacanciesOnly, placeQuery, radiusEnabled, center, radiusKm]);
 
-  const { pageItems, page, pageCount, setPage } = usePagination(filtered);
+  const candidatePagination = usePagination(candidateResults);
+  const clientPagination = usePagination(clientResults);
 
-  const allVisibleSelected = pageItems.length > 0 && pageItems.every((item) => selectedIds.has(item.id));
+  const selectedItems = useMemo(
+    () => results.filter((item) => selectedIds.has(item.id)),
+    [results, selectedIds],
+  );
 
   function toggle(id: string) {
     setSelectedIds((current) => {
@@ -122,23 +169,15 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
     });
   }
 
-  function toggleAllVisible() {
+  function toggleAllVisible(pageItems: GeoMappingResult[]) {
+    const allSelected = pageItems.length > 0 && pageItems.every((item) => selectedIds.has(item.id));
     setSelectedIds((current) => {
-      if (allVisibleSelected) {
-        const next = new Set(current);
-        pageItems.forEach((item) => next.delete(item.id));
-        return next;
-      }
       const next = new Set(current);
-      pageItems.forEach((item) => next.add(item.id));
+      if (allSelected) pageItems.forEach((item) => next.delete(item.id));
+      else pageItems.forEach((item) => next.add(item.id));
       return next;
     });
   }
-
-  const selectedItems = useMemo(
-    () => results.filter((item) => selectedIds.has(item.id)),
-    [results, selectedIds],
-  );
 
   async function createGroupFromSelection() {
     if (!groupName.trim()) return;
@@ -166,79 +205,94 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   const selectClass = "h-9 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-2.5 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
   const labelClass = "mb-1 block text-[10px] uppercase tracking-wider text-[#94A3B8]";
 
+  function renderColumn(
+    kindLabel: string,
+    items: GeoMappingResult[],
+    pagination: ReturnType<typeof usePagination<GeoMappingResult>>,
+  ) {
+    const allVisibleSelected = pagination.pageItems.length > 0 && pagination.pageItems.every((item) => selectedIds.has(item.id));
+    return (
+      <div className="min-w-0">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">{kindLabel} ({items.length})</h3>
+        <DataTable headers={["", "Name", "Standort", "PLZ", "Status", "Tags", "Mailing"]}>
+          {pagination.pageItems.map((item) => (
+            <tr key={item.id} className="hover:bg-[#203A5A]/35">
+              <td className="w-8 px-4 py-3.5">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(item.id)}
+                  onChange={() => toggle(item.id)}
+                  aria-label={`${item.name} auswählen`}
+                />
+              </td>
+              <td className="px-4 py-3.5 font-semibold text-[#D8DADF]">{item.name}</td>
+              <td className="px-4 py-3.5">{item.location}</td>
+              <td className="px-4 py-3.5">{item.postal_code ?? "—"}</td>
+              <td className="px-4 py-3.5"><StatusPill status={item.status} /></td>
+              <td className="px-4 py-3.5"><div className="flex flex-wrap gap-1">{item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-[#102A4C]/70 px-2 py-1 text-[10px] text-[#CBD5E1]">{tag}</span>)}</div></td>
+              <td className="px-4 py-3.5">{item.mailing_ready ? "übertragbar" : "gesperrt"}</td>
+            </tr>
+          ))}
+          {items.length === 0 && (
+            <tr><td colSpan={7} className="px-4 py-8 text-center text-xs text-[#8a9095]">Keine Ergebnisse.</td></tr>
+          )}
+        </DataTable>
+        <PaginationControls page={pagination.page} pageCount={pagination.pageCount} onChange={pagination.setPage} />
+        {pagination.pageItems.length > 0 && (
+          <label className="mt-2 flex items-center gap-1.5 text-xs text-[#8a9095]">
+            <input type="checkbox" checked={allVisibleSelected} onChange={() => toggleAllVisible(pagination.pageItems)} />
+            Alle auf dieser Seite auswählen
+          </label>
+        )}
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-        <FilterBar placeholder="Nach Name, Standort, PLZ oder Status suchen" value={search} onChange={setSearch} />
-      </div>
-
-      {/* Echte Filter statt der reinen Beschreibungskarte - je Feld nur
-       * aufgenommen, wenn es tatsaechlich im Backend existiert (siehe
-       * GeoMappingResult). Kandidaten- und Kanzlei-Filter stehen nebeneinander,
-       * greifen aber nur auf ihren jeweiligen kind (siehe filtered oben). */}
+      {/* Gemeinsamer Ort/PLZ-Filter (Phase 6) - echte Adress-/Ortssuche mit
+       * Autovervollstaendigung aus den tatsaechlich im CRM vorkommenden
+       * Orten/PLZ (siehe placeSuggestions), keine reine Radius-Eingabe mehr.
+       * Die bestehende Umkreissuche bleibt bestehen, ist aber jetzt eine
+       * separat aktivierbare Zusatzoption ("Umkreissuche aktivieren"). */}
       <Card className="mb-3">
         <CardContent>
-          <div className="mb-3 flex items-center gap-2"><SlidersHorizontal size={15} className="text-[#D8DADF]" /><h2 className="text-sm font-semibold">Filter</h2></div>
+          <div className="mb-3 flex items-center gap-2"><MapPin size={15} className="text-[#D8DADF]" /><h2 className="text-sm font-semibold">Ort / PLZ</h2></div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <label className={labelClass}>Rolle (Kandidat)</label>
-              <select className={selectClass} value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-                <option value="">Alle</option>
-                {roleOptions.map((value) => <option key={value} value={value}>{value}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>Qualifikation (Kandidat)</label>
-              <select className={selectClass} value={qualificationFilter} onChange={(e) => setQualificationFilter(e.target.value)}>
-                <option value="">Alle</option>
-                {qualificationOptions.map((value) => <option key={value} value={value}>{value}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>Kündigungsfrist (Kandidat)</label>
-              <select className={selectClass} value={noticePeriodFilter} onChange={(e) => setNoticePeriodFilter(e.target.value)}>
-                <option value="">Alle</option>
-                {noticePeriodOptions.map((value) => <option key={value} value={value}>{value}</option>)}
-              </select>
+            <div className="sm:col-span-2">
+              <label className={labelClass}>Ort oder PLZ suchen</label>
+              <Input
+                list="geo-place-options"
+                placeholder="z.B. München oder 80331"
+                value={placeQuery}
+                onChange={(e) => setPlaceQuery(e.target.value)}
+              />
+              <datalist id="geo-place-options">
+                {placeOptions.map((value) => <option key={value} value={value} />)}
+              </datalist>
             </div>
             <div className="flex items-end pb-0.5">
               <label className="flex items-center gap-2 text-xs text-[#CBD5E1]">
-                <input type="checkbox" checked={availableOnly} onChange={(e) => setAvailableOnly(e.target.checked)} />
-                Nur aktuell verfügbare Kandidat:innen
+                <input type="checkbox" checked={radiusEnabled} onChange={(e) => setRadiusEnabled(e.target.checked)} />
+                Umkreissuche aktivieren
               </label>
             </div>
-            <div>
-              <label className={labelClass}>AGB-Status (Kanzlei)</label>
-              <select className={selectClass} value={termsStatusFilter} onChange={(e) => setTermsStatusFilter(e.target.value)}>
-                <option value="">Alle</option>
-                {termsStatusOptions.map((value) => <option key={value} value={value}>{termsStatusLabel(value)}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>Honorar-Stufe (Kanzlei)</label>
-              <select className={selectClass} value={feeTierFilter} onChange={(e) => setFeeTierFilter(e.target.value)}>
-                <option value="">Alle</option>
-                {feeTierOptions.map((value) => <option key={value} value={value}>{FEE_TIER_LABELS[value] ?? value}</option>)}
-              </select>
-            </div>
-            <div className="flex items-end pb-0.5">
-              <label className="flex items-center gap-2 text-xs text-[#CBD5E1]">
-                <input type="checkbox" checked={activeVacanciesOnly} onChange={(e) => setActiveVacanciesOnly(e.target.checked)} />
-                Nur mit aktiven Vakanzen
-              </label>
-            </div>
-            <div className="sm:col-span-2 lg:col-span-1">
-              <label className={labelClass}>Umkreis-Zentrum</label>
-              <select className={selectClass} value={centerId} onChange={(e) => setCenterId(e.target.value)}>
-                <option value="">Kein Zentrum gewählt</option>
-                {geocodedResults.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.location})</option>)}
-              </select>
-            </div>
-            {center && (
-              <div>
-                <label className={labelClass}>Radius um Zentrum (km)</label>
-                <Input type="number" min={1} value={radiusKm} onChange={(e) => setRadiusKm(e.target.value)} />
-              </div>
+            {radiusEnabled && (
+              <>
+                <div>
+                  <label className={labelClass}>Umkreis-Zentrum</label>
+                  <select className={selectClass} value={centerId} onChange={(e) => setCenterId(e.target.value)}>
+                    <option value="">Kein Zentrum gewählt</option>
+                    {geocodedResults.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.location})</option>)}
+                  </select>
+                </div>
+                {center && (
+                  <div>
+                    <label className={labelClass}>Radius um Zentrum (km)</label>
+                    <Input type="number" min={1} value={radiusKm} onChange={(e) => setRadiusKm(e.target.value)} />
+                  </div>
+                )}
+              </>
             )}
           </div>
         </CardContent>
@@ -255,37 +309,84 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
           </div>
         </div>
       )}
-      <DataTable headers={["", "Typ", "Name", "Standort", "PLZ", "Status", "Tags", "Mailing"]}>
-        {pageItems.map((item) => (
-          <tr key={item.id} className="hover:bg-[#203A5A]/35">
-            <td className="w-8 px-4 py-3.5">
-              <input
-                type="checkbox"
-                checked={selectedIds.has(item.id)}
-                onChange={() => toggle(item.id)}
-                aria-label={`${item.name} auswählen`}
-              />
-            </td>
-            <td className="px-4 py-3.5 capitalize">{item.kind}</td>
-            <td className="px-4 py-3.5 font-semibold text-[#D8DADF]">{item.name}</td>
-            <td className="px-4 py-3.5">{item.location}</td>
-            <td className="px-4 py-3.5">{item.postal_code ?? "—"}</td>
-            <td className="px-4 py-3.5"><StatusPill status={item.status} /></td>
-            <td className="px-4 py-3.5"><div className="flex flex-wrap gap-1">{item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-[#102A4C]/70 px-2 py-1 text-[10px] text-[#CBD5E1]">{tag}</span>)}</div></td>
-            <td className="px-4 py-3.5">{item.mailing_ready ? "übertragbar" : "gesperrt"}</td>
-          </tr>
-        ))}
-      </DataTable>
-      <PaginationControls page={page} pageCount={pageCount} onChange={setPage} />
-      <div className="mt-3 flex items-center justify-between text-xs text-[#8a9095]">
-        <span>{filtered.length} von {results.length} Ergebnissen</span>
-        {pageItems.length > 0 && (
-          <label className="flex items-center gap-1.5">
-            <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} />
-            Alle auf dieser Seite auswählen
-          </label>
-        )}
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div>
+          <Card className="mb-3">
+            <CardContent>
+              <div className="mb-3 flex items-center gap-2"><SlidersHorizontal size={15} className="text-[#D8DADF]" /><h2 className="text-sm font-semibold">Kandidaten-Filter</h2></div>
+              <div className="space-y-3">
+                <FilterBar placeholder="Rolle, Qualifikation oder Name suchen" value={candidateSearch} onChange={setCandidateSearch} />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className={labelClass}>Rolle</label>
+                    <select className={selectClass} value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+                      <option value="">Alle</option>
+                      {roleOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Qualifikation</label>
+                    <select className={selectClass} value={qualificationFilter} onChange={(e) => setQualificationFilter(e.target.value)}>
+                      <option value="">Alle</option>
+                      {qualificationOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Kündigungsfrist</label>
+                    <select className={selectClass} value={noticePeriodFilter} onChange={(e) => setNoticePeriodFilter(e.target.value)}>
+                      <option value="">Alle</option>
+                      {noticePeriodOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-end pb-0.5">
+                    <label className="flex items-center gap-2 text-xs text-[#CBD5E1]">
+                      <input type="checkbox" checked={availableOnly} onChange={(e) => setAvailableOnly(e.target.checked)} />
+                      Nur aktuell verfügbar
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          {renderColumn("Kandidaten", candidateResults, candidatePagination)}
+        </div>
+
+        <div>
+          <Card className="mb-3">
+            <CardContent>
+              <div className="mb-3 flex items-center gap-2"><SlidersHorizontal size={15} className="text-[#D8DADF]" /><h2 className="text-sm font-semibold">Kanzleien-Filter</h2></div>
+              <div className="space-y-3">
+                <FilterBar placeholder="Name oder Tag suchen" value={clientSearch} onChange={setClientSearch} />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className={labelClass}>AGB-Status</label>
+                    <select className={selectClass} value={termsStatusFilter} onChange={(e) => setTermsStatusFilter(e.target.value)}>
+                      <option value="">Alle</option>
+                      {termsStatusOptions.map((value) => <option key={value} value={value}>{termsStatusLabel(value)}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Honorar-Stufe</label>
+                    <select className={selectClass} value={feeTierFilter} onChange={(e) => setFeeTierFilter(e.target.value)}>
+                      <option value="">Alle</option>
+                      {feeTierOptions.map((value) => <option key={value} value={value}>{FEE_TIER_LABELS[value] ?? value}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-end pb-0.5">
+                    <label className="flex items-center gap-2 text-xs text-[#CBD5E1]">
+                      <input type="checkbox" checked={activeVacanciesOnly} onChange={(e) => setActiveVacanciesOnly(e.target.checked)} />
+                      Nur mit aktiven Vakanzen
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          {renderColumn("Kanzleien", clientResults, clientPagination)}
+        </div>
       </div>
+
       {modalOpen && (
         <Modal title="Auswahl ins Mailing übernehmen" eyebrow={`${selectedIds.size} Empfänger:innen`} onClose={() => setModalOpen(false)}>
           <div className="space-y-4">
