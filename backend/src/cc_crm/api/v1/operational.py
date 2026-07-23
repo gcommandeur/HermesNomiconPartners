@@ -162,6 +162,21 @@ def download_document(document_id: uuid.UUID, session: DatabaseSession) -> Respo
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Datei wurde in der Datenbank gefunden, liegt aber nicht mehr im Speicher.",
         ) from exc
+    except OSError as exc:
+        # Der lokale Dokumentenspeicher liegt im OneDrive-synchronisierten
+        # Projektordner - OneDrive "Dateien bei Bedarf" kann selten genutzte
+        # Dateien zu reinen Cloud-Platzhaltern machen (ReparsePoint), die bei
+        # pausierter/fehlender Synchronisierung nicht lesbar sind. Das ist
+        # kein 404 (die Datei existiert, ist nur gerade nicht abrufbar) und
+        # kein unbehandelter 500 - klare 503-Meldung statt generischem
+        # "Internal Server Error".
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Datei ist gerade nicht verfügbar (vermutlich OneDrive-Synchronisierung). "
+                "Bitte in Kürze erneut versuchen."
+            ),
+        ) from exc
     return Response(
         content=content,
         media_type=document.content_type or "application/octet-stream",
