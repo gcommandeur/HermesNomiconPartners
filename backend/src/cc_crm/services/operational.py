@@ -86,18 +86,137 @@ class SourcingMetricService(CrudService[SourcingMetric, SourcingMetricCreate, Em
 
 
 class EmailWorkflowService:
+    # (key, name, subject, body) - jede Vorlage hat einen eigenen, auf ihren
+    # Anlass zugeschnittenen body-Text (vorher lieferte templates() fuer
+    # jeden Key denselben generischen Fliesstext, nur der subject
+    # unterschied sich - Nutzer-Feedback: das reicht fuer die gewuenschten
+    # Vorlagen nicht aus). Adressat (Kandidat vs. Kanzlei-Kontakt) ergibt
+    # sich aus dem jeweiligen body-Text selbst.
     TEMPLATES = [
-        ("candidate_submission", "Kandidat vorstellen", "Profil: {candidate} – {role}"),
-        ("request_cv", "CV nachfordern", "Unterlagen zu Ihrem Profil"),
-        ("profile_approval", "Kurzprofil freigeben", "Freigabe Ihres Kurzprofils"),
-        ("submission_follow_up", "CV-Out nachfassen", "Feedback zu {candidate}"),
-        ("interview_confirmation", "Interview bestätigen", "Interview bei {client}"),
-        ("interview_feedback", "Interviewfeedback nachfassen", "Feedback zum Interview"),
-        ("offer_follow_up", "Offer nachfassen", "Abstimmung zum Angebot"),
-        ("candidate_rejection", "Absage Kandidat", "Rückmeldung zum Prozess"),
-        ("client_rejection", "Absage Kunde", "Rückmeldung zu {candidate}"),
-        ("send_terms", "AGB senden", "Zusammenarbeit mit CC"),
-        ("placement_invoice", "Placement / Rechnung", "Erfolgreiche Besetzung"),
+        (
+            "post_qualification_call",
+            "Nach Quali Call",
+            "Vielen Dank für das Gespräch, {candidate}",
+            "Guten Tag {candidate},\n\n"
+            "vielen Dank für das offene und informative Gespräch eben. Ich habe ein gutes Bild "
+            "von Ihrem Profil und Ihren Vorstellungen gewinnen können.\n\n"
+            "Nächster Schritt: {next_step}\n\n"
+            "Ich melde mich, sobald es Neuigkeiten gibt. Bei Rückfragen erreichen Sie mich "
+            "jederzeit.\n\nBeste Grüße",
+        ),
+        (
+            "request_cv",
+            "CV nachfordern",
+            "Unterlagen zu Ihrem Profil",
+            "Guten Tag {candidate},\n\n"
+            "um Ihr Profil vollständig vorstellen zu können, fehlen mir noch aktuelle "
+            "Unterlagen (Lebenslauf/Zeugnisse). Könnten Sie mir diese bei Gelegenheit "
+            "zusenden?\n\nVielen Dank und beste Grüße",
+        ),
+        (
+            "profile_approval",
+            "Kurzprofil freigeben",
+            "Freigabe Ihres Kurzprofils",
+            "Guten Tag {candidate},\n\n"
+            "anbei finden Sie das anonymisierte Kurzprofil, das ich potenziellen Kanzleien "
+            "vorstellen möchte:\n\n{short_profile}\n\n"
+            "Bitte prüfen Sie den Text kurz und geben Sie mir Bescheid, ob ich ihn so "
+            "verwenden darf oder ob noch etwas angepasst werden soll.\n\nBeste Grüße",
+        ),
+        (
+            "candidate_submission",
+            "CV-Out Vorstellung",
+            "Profilvorstellung: {candidate} – {role}",
+            "Guten Tag {contact},\n\n"
+            "ich möchte Ihnen folgendes Profil für die Position {role} vorstellen:\n\n"
+            "{short_profile}\n\n"
+            "Gehaltsvorstellung: {salary}\n"
+            "Kündigungsfrist: {notice_period}\n\n"
+            "Die vollständigen Unterlagen finden Sie im Anhang. Über Ihre Rückmeldung, ob Sie "
+            "{candidate} kennenlernen möchten, freue ich mich.\n\nBeste Grüße",
+        ),
+        (
+            "submission_follow_up",
+            "CV-Out nachfassen",
+            "Feedback zu {candidate}",
+            "Guten Tag {contact},\n\n"
+            "ich wollte kurz nachfragen, ob Sie das Profil von {candidate} bereits prüfen "
+            "konnten und ob Interesse an einem Kennenlernen besteht.\n\n"
+            "Über eine kurze Rückmeldung würde ich mich freuen.\n\nBeste Grüße",
+        ),
+        (
+            "interview_confirmation",
+            "Interview bestätigen",
+            "Interviewtermin bei {client}",
+            "Guten Tag {contact},\n\n"
+            "hiermit bestätige ich den vereinbarten Interviewtermin für {candidate} bei "
+            "{client}.\n\nNächster Schritt: {next_step}\n\n"
+            "Bitte geben Sie mir Bescheid, falls sich am Termin noch etwas ändert.\n\n"
+            "Beste Grüße",
+        ),
+        (
+            "interview_feedback",
+            "Interviewfeedback nachfassen (Kanzlei)",
+            "Kurzes Feedback zum Interview mit {candidate}",
+            "Guten Tag {contact},\n\n"
+            "wie war Ihr Eindruck vom Gespräch mit {candidate}? Über eine kurze Rückmeldung "
+            "- positiv wie kritisch - würde ich mich freuen, damit wir den Prozess zeitnah "
+            "fortsetzen können.\n\nBeste Grüße",
+        ),
+        (
+            "interview_feedback_candidate",
+            "Interviewfeedback nachfassen (Kandidat)",
+            "Rückmeldung zu Ihrem Interview bei {client}",
+            "Guten Tag {candidate},\n\n"
+            "vielen Dank, dass Sie sich Zeit für das Gespräch bei {client} genommen haben. "
+            "Ich wollte kurz nachfragen, wie Sie das Interview erlebt haben, und Sie über den "
+            "aktuellen Stand informieren.\n\nNächster Schritt: {next_step}\n\nBeste Grüße",
+        ),
+        (
+            "offer_follow_up",
+            "Offer nachfassen",
+            "Abstimmung zum Angebot",
+            "Guten Tag {contact},\n\n"
+            "wie ist der aktuelle Stand beim Angebot für {candidate}? Gibt es von Ihrer Seite "
+            "noch offene Punkte, die wir gemeinsam klären sollten?\n\nBeste Grüße",
+        ),
+        (
+            "candidate_rejection",
+            "Absage Kandidat",
+            "Rückmeldung zum Prozess",
+            "Guten Tag {candidate},\n\n"
+            "leider muss ich Ihnen mitteilen, dass sich {client} für einen anderen "
+            "Kandidaten entschieden hat. Ich weiß, das ist keine schöne Nachricht.\n\n"
+            "Ich halte weiterhin Ausschau nach passenden Positionen für Sie und melde mich, "
+            "sobald es Neuigkeiten gibt.\n\nBeste Grüße",
+        ),
+        (
+            "client_rejection",
+            "Absage Kunde",
+            "Rückmeldung zu {candidate}",
+            "Guten Tag {contact},\n\n"
+            "{candidate} hat sich nach reiflicher Überlegung gegen die Position bei {client} "
+            "entschieden.\n\nIch halte Sie über weitere passende Profile gerne auf dem "
+            "Laufenden.\n\nBeste Grüße",
+        ),
+        (
+            "send_terms",
+            "AGB senden",
+            "Zusammenarbeit mit CC",
+            "Guten Tag {contact},\n\n"
+            "vielen Dank für Ihr Interesse an einer Zusammenarbeit. Anbei erhalten Sie "
+            "unsere Allgemeinen Geschäftsbedingungen zur Prüfung und Unterschrift.\n\n"
+            "Bei Rückfragen stehe ich Ihnen gerne zur Verfügung.\n\nBeste Grüße",
+        ),
+        (
+            "placement_invoice",
+            "Placement / Rechnung",
+            "Erfolgreiche Besetzung",
+            "Guten Tag {contact},\n\n"
+            "vielen Dank für die gute Zusammenarbeit - die Position ist mit {candidate} "
+            "erfolgreich besetzt. Die Rechnung zur vereinbarten Vermittlungsprovision "
+            "erhalten Sie anbei.\n\nBeste Grüße",
+        ),
     ]
 
     def __init__(self, session: Session) -> None:
@@ -120,13 +239,10 @@ class EmailWorkflowService:
                 "key": key,
                 "name": name,
                 "subject": subject,
-                "body": (
-                    "Guten Tag {contact},\n\n{short_profile}\n\n"
-                    "Nächster Schritt: {next_step}\n\nBeste Grüße"
-                ),
+                "body": body,
                 "placeholders": placeholders,
             }
-            for key, name, subject in self.TEMPLATES
+            for key, name, subject, body in self.TEMPLATES
         ]
 
     def create_draft(self, payload: EmailDraftCreate) -> EmailDraftLog:

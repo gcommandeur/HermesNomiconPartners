@@ -18,6 +18,46 @@ def test_cockpit_and_email_templates(client: TestClient) -> None:
     assert any(item["key"] == "candidate_submission" for item in templates)
 
 
+def test_email_templates_have_distinct_specific_bodies(client: TestClient) -> None:
+    """Regressionsschutz: templates() lieferte frueher fuer JEDEN Key
+    denselben generischen body-Text - nur der subject unterschied sich."""
+    templates = client.get("/api/v1/email-templates").json()
+    by_key = {item["key"]: item for item in templates}
+
+    expected_keys = {
+        "post_qualification_call",
+        "candidate_submission",
+        "interview_confirmation",
+        "interview_feedback",
+        "interview_feedback_candidate",
+    }
+    assert expected_keys.issubset(by_key.keys())
+
+    bodies = [item["body"] for item in templates]
+    assert len(bodies) == len(set(bodies)), "jede Vorlage muss einen eigenen body-Text haben"
+
+    post_qc = by_key["post_qualification_call"]
+    assert post_qc["subject"] == "Vielen Dank für das Gespräch, {candidate}"
+    assert "{next_step}" in post_qc["body"]
+    assert "{candidate}" in post_qc["body"]
+
+    submission = by_key["candidate_submission"]
+    assert submission["subject"] == "Profilvorstellung: {candidate} – {role}"
+    assert "{short_profile}" in submission["body"]
+    assert "{salary}" in submission["body"]
+    assert "{notice_period}" in submission["body"]
+
+    interview_confirmation = by_key["interview_confirmation"]
+    assert interview_confirmation["subject"] == "Interviewtermin bei {client}"
+
+    interview_feedback = by_key["interview_feedback"]
+    assert interview_feedback["subject"] == "Kurzes Feedback zum Interview mit {candidate}"
+
+    interview_feedback_candidate = by_key["interview_feedback_candidate"]
+    assert interview_feedback_candidate["subject"] == "Rückmeldung zu Ihrem Interview bei {client}"
+    assert "{next_step}" in interview_feedback_candidate["body"]
+
+
 def test_cockpit_hot_processes_and_important_include_candidate_and_client_names(
     client: TestClient,
 ) -> None:
