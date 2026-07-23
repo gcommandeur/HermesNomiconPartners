@@ -473,10 +473,21 @@ export interface SourcingFunnel {
   response_to_qualification_call_rate: number | null;
 }
 
+/** Etablierte Standard-Recruiting-Kennzahlen ueber den gesamten historischen
+ * Bestand (nicht auf den period-Zeitraum beschraenkt) - siehe Backend
+ * CockpitService::_recruiting_kpis. null, solange keine einzige
+ * Placement/Interview-Transition vorliegt. */
+export interface RecruitingKpis {
+  time_to_fill_days: number | null;
+  time_to_interview_days: number | null;
+  average_fee_per_placement: number | null;
+}
+
 export interface Cockpit {
   period: string;
   important: CockpitItem[];
   hot_processes: CockpitItem[];
+  recruiting_kpis: RecruitingKpis;
   kpis: {
     qualification_calls: number;
     cv_available: number;

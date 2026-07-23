@@ -50,6 +50,7 @@ export const demoCockpit: Cockpit = {
     { kind: "submission", title: "Offer erwartet", detail: "Julia König · Neckar Treuhand", due_at: date(0), candidate_id: "c-3", client_company_id: "cl-3", submission_id: "s-2", priority: "high" },
     { kind: "submission", title: "Placement", detail: "David Braun · Neckar Treuhand", due_at: null, candidate_id: "c-4", client_company_id: "cl-3", submission_id: "s-5", priority: "normal" },
   ],
+  recruiting_kpis: { time_to_fill_days: 38, time_to_interview_days: 11, average_fee_per_placement: 18250 },
   kpis: { qualification_calls: 7, cv_available: 12, submissions: 9, interviews: 4, offers: 2, placements: 1, expected_fees: 48600, realized_fees: 18250 },
   rates: { submission_to_interview: 44.4, interview_to_offer: 50, offer_to_placement: 50, placement_to_paid: 100 },
   sourcing: { has_data: true, pitches: 126, responses: 34, positive_responses: 18, qualification_calls: 7, pitch_to_response_rate: 27, response_to_qualification_call_rate: 20.6 },

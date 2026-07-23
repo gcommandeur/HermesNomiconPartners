@@ -107,10 +107,24 @@ class SourcingFunnel(BaseModel):
     response_to_qualification_call_rate: float | None
 
 
+class RecruitingKpis(BaseModel):
+    """Etablierte Standard-Recruiting-Kennzahlen (siehe CockpitService::
+    _recruiting_kpis) - bewusst NICHT auf den gewaehlten period-Zeitraum
+    beschraenkt, sondern ueber den gesamten historischen Bestand berechnet,
+    da Median-Durchlaufzeiten ueber wenige Wochen/Monate zu wenig Datenpunkte
+    haetten, um aussagekraeftig zu sein. None, solange keine einzige
+    Placement/Interview-Transition vorliegt (keine Kennzahl vorspiegeln)."""
+
+    time_to_fill_days: float | None
+    time_to_interview_days: float | None
+    average_fee_per_placement: float | None
+
+
 class CockpitRead(BaseModel):
     period: str
     important: list[CockpitItem]
     hot_processes: list[CockpitItem]
     kpis: CockpitKpis
+    recruiting_kpis: RecruitingKpis
     rates: CockpitRates
     sourcing: SourcingFunnel

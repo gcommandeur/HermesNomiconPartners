@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from statistics import mean, median
 
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from cc_crm.core.errors import ConflictError
 from cc_crm.core.time import naive_utc
+from cc_crm.models.activity import Activity
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.enums import InvoiceStatus, SubmissionStatus, TaskStatus
@@ -424,6 +426,7 @@ class CockpitService:
             "important": important,
             "hot_processes": hot,
             "sourcing": sourcing,
+            "recruiting_kpis": self._recruiting_kpis(),
             "kpis": {
                 "qualification_calls": len(period_submissions),
                 "cv_available": cv_count,
@@ -442,6 +445,50 @@ class CockpitService:
                 "offer_to_placement": self._rate(len(placements), len(offers)),
                 "placement_to_paid": self._rate(paid, len(placements)),
             },
+        }
+
+    def _recruiting_kpis(self) -> dict[str, float | None]:
+        """Etablierte Standard-Recruiting-Kennzahlen ueber den GESAMTEN
+        historischen Bestand (nicht auf den period-Zeitraum beschraenkt -
+        ein Median ueber nur eine Woche/einen Monat haette zu wenige
+        Datenpunkte, um aussagekraeftig zu sein)."""
+        all_submissions = {
+            row.id: row for row in self.session.scalars(select(CandidateSubmission)).all()
+        }
+        placements = list(self.session.scalars(select(Placement)).all())
+
+        fill_days = [
+            (naive_utc(placement.created_at) - naive_utc(submission.created_at)).days
+            for placement in placements
+            if (submission := all_submissions.get(placement.submission_id)) is not None
+        ]
+
+        # Time-to-Interview: Submission-Erstellung bis zum Activity-Eintrag,
+        # der den Uebergang IN "interview" protokolliert (siehe
+        # services/submissions.py::transition(), Activity.details ist immer
+        # "{alter_status} -> {neuer_status}" mit optionalem ": {grund}"-
+        # Suffix nur bei Abbruch/Storno-Transitionen).
+        interview_activities = list(
+            self.session.scalars(
+                select(Activity).where(
+                    Activity.activity_type == "submission_status_changed",
+                    Activity.details.like("%-> interview"),
+                )
+            ).all()
+        )
+        interview_days = [
+            (naive_utc(activity.occurred_at) - naive_utc(submission.created_at)).days
+            for activity in interview_activities
+            if activity.candidate_submission_id is not None
+            and (submission := all_submissions.get(activity.candidate_submission_id)) is not None
+        ]
+
+        fees = [float(placement.calculated_fee) for placement in placements]
+
+        return {
+            "time_to_fill_days": median(fill_days) if fill_days else None,
+            "time_to_interview_days": median(interview_days) if interview_days else None,
+            "average_fee_per_placement": round(mean(fees), 2) if fees else None,
         }
 
     def profile_suggestion(self, candidate_id: uuid.UUID) -> str:

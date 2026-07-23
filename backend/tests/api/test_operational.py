@@ -1,6 +1,9 @@
+import uuid
 from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
+
+from cc_crm.models.submission import CandidateSubmission
 
 
 def test_cockpit_and_email_templates(client: TestClient) -> None:
@@ -240,3 +243,53 @@ def test_documents_filter_by_owner(client: TestClient) -> None:
     ).json()
     assert len(documents) == 1
     assert documents[0]["filename"] == "cv.pdf"
+
+
+def test_recruiting_kpis_are_null_until_data_exists(client: TestClient) -> None:
+    cockpit = client.get("/api/v1/cockpit?period=month").json()
+    kpis = cockpit["recruiting_kpis"]
+    assert kpis["time_to_fill_days"] is None
+    assert kpis["time_to_interview_days"] is None
+    assert kpis["average_fee_per_placement"] is None
+
+
+def test_recruiting_kpis_time_to_fill_time_to_interview_and_average_fee(
+    client: TestClient, session_factory
+) -> None:
+    """time_to_fill_days/time_to_interview_days/average_fee_per_placement
+    laufen ueber den GESAMTEN historischen Bestand (nicht period-begrenzt) -
+    siehe CockpitService._recruiting_kpis. Backdatiert submission.created_at
+    direkt in der DB, um einen deterministischen Tage-Delta zu erzwingen
+    (created_at ist server-seitig gesetzt, ueber die API nicht steuerbar)."""
+    candidate = client.post(
+        "/api/v1/candidates", json={"first_name": "KPI", "last_name": "Test"}
+    ).json()
+    company = client.post("/api/v1/clients", json={"name": "Kanzlei KPI"}).json()
+    submission = client.post(
+        "/api/v1/submissions",
+        json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
+    ).json()
+    for status in ("qualification_call", "cv_in", "cv_out", "interview", "offer", "placement"):
+        response = client.patch(
+            f"/api/v1/submissions/{submission['id']}/transition", json={"status": status}
+        )
+        assert response.status_code == 200, response.text
+
+    placement = client.post(
+        f"/api/v1/submissions/{submission['id']}/placement",
+        json={"start_date": "2026-09-01", "final_salary": "60000.00", "fee_percentage": "25.00"},
+    ).json()
+
+    with session_factory() as session:
+        db_submission = session.get(CandidateSubmission, uuid.UUID(submission["id"]))
+        assert db_submission is not None
+        db_submission.created_at = datetime.now(UTC) - timedelta(days=12)
+        session.commit()
+
+    cockpit = client.get("/api/v1/cockpit?period=month").json()
+    kpis = cockpit["recruiting_kpis"]
+    assert kpis["time_to_fill_days"] is not None
+    assert 11 <= kpis["time_to_fill_days"] <= 13
+    assert kpis["time_to_interview_days"] is not None
+    assert 11 <= kpis["time_to_interview_days"] <= 13
+    assert kpis["average_fee_per_placement"] == float(placement["calculated_fee"])
