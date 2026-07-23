@@ -564,6 +564,13 @@ export interface DocumentMeta extends Entity {
   has_generic_filename?: boolean;
 }
 
+export interface Note extends Entity {
+  candidate_id: string | null;
+  client_company_id: string | null;
+  candidate_submission_id: string | null;
+  body: string;
+}
+
 export interface CvExtractionSuggestion {
   postal_code: string | null;
   city: string | null;

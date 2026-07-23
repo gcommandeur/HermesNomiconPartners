@@ -1,0 +1,88 @@
+"use client";
+
+import { useState } from "react";
+import { StickyNote } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ErrorBanner } from "@/components/crm/error-banner";
+import { createNote } from "@/lib/api/queries";
+import type { Note } from "@/lib/api/types";
+import { formatDate } from "@/lib/utils";
+
+const textareaClass = "min-h-24 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+
+/** Freier, nicht prozessgebundener Notizen-Tab am Kandidaten (Phase 1b) -
+ * nutzt das bestehende Note-Modell/API mit candidate_submission_id == null
+ * (siehe queries.ts::getNotesForCandidate/createNote), anders als die
+ * bestehende Prozess-Timeline (candidate-process-log.tsx), die immer an
+ * einen Recruiting-Prozess/-Stufe gebunden ist. */
+export function NotesPanel({ candidateId, initialNotes }: { candidateId: string; initialNotes: Note[] }) {
+  const [notes, setNotes] = useState(initialNotes);
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!body.trim()) {
+      setError("Bitte einen Text eingeben.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const created = await createNote({ candidate_id: candidateId, body: body.trim() });
+      setNotes((current) => [created, ...current]);
+      setBody("");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Notiz konnte nicht gespeichert werden.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardContent>
+          <form className="space-y-3" onSubmit={handleSubmit}>
+            <ErrorBanner message={error} />
+            <textarea
+              className={textareaClass}
+              placeholder="Neue Notiz…"
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+            />
+            <div className="flex justify-end">
+              <Button type="submit" size="sm" disabled={busy}>
+                {busy ? "Speichert…" : "Speichern"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+      <div className="space-y-2">
+        {notes.map((note) => (
+          <Card key={note.id}>
+            <CardContent className="flex items-start gap-3">
+              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-[#102A4C] text-[#D8DADF]">
+                <StickyNote size={14} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="whitespace-pre-wrap text-sm text-[#D8DADF]">{note.body}</p>
+                <span className="mt-2 inline-block text-xs text-[#8b9196]">{formatDate(note.created_at)}</span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {notes.length === 0 && (
+          <Card>
+            <CardContent className="py-12 text-center text-sm text-[#858b90]">
+              Noch keine Notizen für diesen Kandidaten.
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}

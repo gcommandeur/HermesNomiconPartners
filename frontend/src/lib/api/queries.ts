@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailingGroup, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, Task, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, Task, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -258,6 +258,17 @@ export async function getTasksForCandidate(candidateId: string) {
 
 export async function getDocumentsForOwner(ownerType: string, ownerId: string) {
   return apiGet<DocumentMeta[]>(`/documents?owner_type=${ownerType}&owner_id=${ownerId}`, []);
+}
+
+/** Nur die allgemeinen (nicht prozessgebundenen) Notizen eines Kandidaten -
+ * siehe repositories/notes.py::NoteRepository.filtered() (ohne submission_id
+ * filtert das serverseitig automatisch auf candidate_submission_id IS NULL). */
+export async function getNotesForCandidate(candidateId: string) {
+  return apiGet<Note[]>(`/notes?candidate_id=${candidateId}`, []);
+}
+
+export async function createNote(payload: { candidate_id: string; body: string }) {
+  return apiPost<Note>("/notes", payload);
 }
 
 export async function getCandidateMatches(candidateId: string) {

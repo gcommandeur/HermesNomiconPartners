@@ -6,6 +6,7 @@ import {
   getCandidate,
   getClients,
   getDocumentsForOwner,
+  getNotesForCandidate,
   getSubmissions,
   getTasksForCandidate,
 } from "@/lib/api/queries";
@@ -19,6 +20,7 @@ import { AddToMailingButton } from "@/components/crm/add-to-mailing-button";
 import { RegisterRecentCandidate } from "@/components/crm/register-recent-candidate";
 import { CandidateSubmissionStages } from "@/components/crm/candidate-submission-stages";
 import { CandidateProcessLog } from "@/components/crm/candidate-process-log";
+import { NotesPanel } from "@/components/crm/notes-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,13 +40,14 @@ export default async function CandidateDetailPage({
   const backLink = from === "prozesse"
     ? { href: "/prozesse", label: "Zurück zu Prozesse" }
     : { href: "/kandidaten", label: "Zur Kandidatenliste" };
-  const [result, submissionsResult, clientsResult, activitiesResult, tasksResult, documentsResult] = await Promise.all([
+  const [result, submissionsResult, clientsResult, activitiesResult, tasksResult, documentsResult, notesResult] = await Promise.all([
     getCandidate(id),
     getSubmissions(),
     getClients(),
     getActivitiesForCandidate(id),
     getTasksForCandidate(id),
     getDocumentsForOwner("candidate", id),
+    getNotesForCandidate(id),
   ]);
   const candidate = result.data;
   if (!candidate) notFound();
@@ -53,6 +56,7 @@ export default async function CandidateDetailPage({
   const activities = activitiesResult.data;
   const tasks = tasksResult.data;
   const documents = documentsResult.data;
+  const notes = notesResult.data;
   const clientName = (clientId: string | null) => clientId ? (clientsResult.data.find((client) => client.id === clientId)?.name ?? "Kanzlei") : "Kanzlei offen";
   const anonymousProfile = candidate.short_profile ?? [
     `${candidate.job_title ?? "Kandidat/in"} mit Schwerpunkt ${candidate.summary ?? "Steuern / Beratung"}.`,
@@ -60,7 +64,7 @@ export default async function CandidateDetailPage({
     `Gehaltsrahmen: ${candidate.salary_expectation ?? "nach Absprache"}.`,
     `Verfügbarkeit: ${candidate.notice_period ?? "nach Absprache"}.`,
   ].join("\n");
-  const tabs = ["Übersicht", "Anonymes Profil", "Matching", "CV-Outs", "Timeline", "Aufgaben", "Dokumente"];
+  const tabs = ["Übersicht", "Anonymes Profil", "Notizen", "Matching", "CV-Outs", "Timeline", "Aufgaben", "Dokumente"];
 
   return (
     <>
@@ -157,6 +161,9 @@ export default async function CandidateDetailPage({
         </TabsContent>
         <TabsContent value="Anonymes Profil">
           <AnonymousProfilePanel candidateId={candidate.id} initialText={anonymousProfile} />
+        </TabsContent>
+        <TabsContent value="Notizen">
+          <NotesPanel candidateId={candidate.id} initialNotes={notes} />
         </TabsContent>
         <TabsContent value="Matching">
           <CandidateMatchingPanel candidateId={candidate.id} />

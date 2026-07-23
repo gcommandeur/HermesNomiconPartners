@@ -8,4 +8,6 @@ from cc_crm.services.base import CrudService
 
 class NoteService(CrudService[Note, NoteCreate, NoteUpdate]):
     def __init__(self, session: Session) -> None:
-        super().__init__(session, NoteRepository(session), "Note")
+        repository = NoteRepository(session)
+        super().__init__(session, repository, "Note")
+        self.notes = repository
