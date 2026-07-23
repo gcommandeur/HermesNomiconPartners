@@ -197,6 +197,7 @@ def test_sourcing_run_creates_leads_and_reports_counts(
         "skipped_existing": 0,
         "possible_duplicates": 1,
         "errors": [],
+        "background_started": 0,
     }
 
     # Wiederholter Lauf: gleiche Personen -> keine Doppel-Leads.
@@ -232,3 +233,104 @@ def test_sourcing_run_reports_too_many_results_as_error(
     assert result["created"] == 0
     assert len(result["errors"]) == 1
     assert "Berlin" in result["errors"][0]
+
+
+def test_sourcing_run_wpk_source(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "cc_crm.services.wpk_berufsregister.fetch_search_results",
+        lambda plz_or_ort: [
+            {
+                "istPerson": True,
+                "klassifizierungBRO": "WP",
+                "name": "Bechtold",
+                "vorname": "Jürgen",
+                "strasse": "Kronprinzstr. 8",
+                "plz": "70173",
+                "ort": "Stuttgart",
+                "registernummer": 121669500,
+                "statusTxt": "aktiv",
+            },
+            {"istPerson": False, "klassifizierungBRO": "WPG", "name": "X GmbH", "vorname": ""},
+        ],
+    )
+    result = client.post(
+        "/api/v1/sourcing/run",
+        json={"source_type": "wpk_berufsregister", "plz_or_ort": ["70173"]},
+    ).json()
+    assert result["found"] == 1
+    assert result["created"] == 1
+
+    leads = client.get("/api/v1/sourcing/leads").json()
+    lead = leads["items"][0]
+    assert lead["source_type"] == "wpk_berufsregister"
+    assert lead["last_name"] == "Bechtold"
+    assert lead["raw_data"]["beruf"] == "Wirtschaftsprüfer/in"
+    assert lead["raw_data"]["registernummer"] == 121669500
+
+
+def test_sourcing_run_team_scrape_for_client_company(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    company = client.post(
+        "/api/v1/clients",
+        json={
+            "name": "Muster & Partner StBG",
+            "website": "https://kanzlei-muster.example",
+            "postal_code": "50667",
+            "city": "Köln",
+        },
+    ).json()
+
+    pages = {
+        "https://kanzlei-muster.example": '<a href="/team/">Unser Team</a>',
+        "https://kanzlei-muster.example/team/": "<p>Dr. Eva Muster, Steuerberaterin</p>",
+    }
+    monkeypatch.setattr("cc_crm.services.kanzlei_team_scrape.fetch_page", lambda url: pages[url])
+    monkeypatch.setattr(
+        "cc_crm.services.kanzlei_team_scrape.generate_text",
+        lambda **kwargs: (
+            '[{"first_name": "Eva", "last_name": "Muster", "title": "Dr., Steuerberaterin"}]'
+        ),
+    )
+    monkeypatch.setattr("cc_crm.services.sourcing.time.sleep", lambda seconds: None)
+
+    result = client.post(
+        "/api/v1/sourcing/run",
+        json={"source_type": "kanzlei_team_page", "client_company_ids": [company["id"]]},
+    ).json()
+    assert result == {
+        "found": 1,
+        "created": 1,
+        "skipped_existing": 0,
+        "possible_duplicates": 0,
+        "errors": [],
+        "background_started": 0,
+    }
+
+    lead = client.get("/api/v1/sourcing/leads").json()["items"][0]
+    assert lead["source_type"] == "kanzlei_team_page"
+    assert lead["current_employer"] == "Muster & Partner StBG"
+    assert lead["matched_client_company_id"] == company["id"]
+    assert lead["source_url"] == "https://kanzlei-muster.example/team/"
+    assert lead["raw_data"]["title"] == "Dr., Steuerberaterin"
+    assert (lead["postal_code"], lead["city"]) == ("50667", "Köln")
+
+
+def test_sourcing_run_team_scrape_without_website_reports_error(
+    client: TestClient,
+) -> None:
+    company = client.post("/api/v1/clients", json={"name": "Kanzlei ohne Web"}).json()
+    result = client.post(
+        "/api/v1/sourcing/run",
+        json={"source_type": "kanzlei_team_page", "client_company_ids": [company["id"]]},
+    ).json()
+    assert result["created"] == 0
+    assert "keine Website" in result["errors"][0]
+
+
+def test_sourcing_run_rejects_brak_source(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/sourcing/run",
+        json={"source_type": "brak_anwaltsverzeichnis", "plz_or_ort": ["70173"]},
+    )
+    assert response.status_code == 422

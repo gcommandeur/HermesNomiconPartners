@@ -20,13 +20,14 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cc_crm.core.errors import BusinessRuleError, EntityNotFoundError
+from cc_crm.core.errors import AIProviderError, BusinessRuleError, EntityNotFoundError
 from cc_crm.models.candidate import Candidate
+from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.enums import SourcingLeadStatus, SourcingSourceType
 from cc_crm.models.sourcing_lead import SourcingLead
 from cc_crm.schemas.candidate import CandidateCreate
 from cc_crm.schemas.sourcing import SourcingLeadCreate, SourcingRunResult
-from cc_crm.services import steuerberater_verzeichnis
+from cc_crm.services import kanzlei_team_scrape, steuerberater_verzeichnis, wpk_berufsregister
 from cc_crm.services.candidates import CandidateService
 from cc_crm.services.steuerberater_verzeichnis import TooManyResultsError
 
@@ -40,6 +41,30 @@ NAME_SIMILARITY_THRESHOLD = 0.90
 # der oeffentlichen Behoerdenseite - keine Parallel-Anfragen, ein Request
 # pro PLZ/Ort mit Abstand).
 DIRECTORY_REQUEST_PAUSE_SECONDS = 1.5
+# Kurze Pause zwischen zwei Seiten-Abrufen DERSELBEN Kanzlei-Website beim
+# Team-Scrape (Startseite -> Team-Unterseite).
+TEAM_PAGE_FETCH_PAUSE_SECONDS = 0.5
+
+
+def _merge_results(total: "SourcingRunResult", partial: "SourcingRunResult") -> None:
+    total.found += partial.found
+    total.created += partial.created
+    total.skipped_existing += partial.skipped_existing
+    total.possible_duplicates += partial.possible_duplicates
+    total.errors.extend(partial.errors)
+
+
+def scan_team_pages_in_background(client_company_ids: list[uuid.UUID]) -> None:
+    """FastAPI-BackgroundTask fuer "alle erfassten Kanzleien scannen": laeuft
+    nach der HTTP-Antwort mit eigener DB-Session weiter (die Request-Session
+    ist dann bereits geschlossen). Ergebnisse erscheinen fortlaufend als
+    Leads auf der /sourcing-Seite; Fehler einzelner Kanzleien brechen den
+    Scan nicht ab."""
+    from cc_crm.infrastructure.database.session import SessionLocal
+
+    with SessionLocal() as session:
+        SourcingService(session).run_team_scrapes(client_company_ids)
+
 
 _NON_LETTER_RE = re.compile(r"[^a-z0-9 ]")
 _WHITESPACE_RE = re.compile(r"\s+")
@@ -156,7 +181,8 @@ class SourcingService:
             return result
         result.found = len(persons)
         for person in persons:
-            lead = self.create_lead(
+            self._record_lead_result(
+                result,
                 SourcingLeadCreate(
                     source_type=SourcingSourceType.STEUERBERATERVERZEICHNIS,
                     source_url=person.detail_url,
@@ -172,33 +198,138 @@ class SourcingService:
                         "address_lines": person.address_lines,
                         "suchbegriff": plz_or_ort,
                     },
-                )
+                ),
             )
-            if lead is None:
-                result.skipped_existing += 1
-            elif lead.status == SourcingLeadStatus.POSSIBLE_DUPLICATE:
-                result.created += 1
-                result.possible_duplicates += 1
-            else:
-                result.created += 1
         return result
 
-    def run_steuerberater_searches(self, plz_or_ort_list: list[str]) -> SourcingRunResult:
+    def run_wpk_search(self, plz_or_ort: str) -> SourcingRunResult:
+        """Analog zu run_steuerberater_search, Quelle WPK-Berufsregister
+        (strukturierte JSON-Antwort statt HTML, siehe wpk_berufsregister.py)."""
+        result = SourcingRunResult()
+        try:
+            rows = wpk_berufsregister.fetch_search_results(plz_or_ort)
+            persons = wpk_berufsregister.parse_persons(rows)
+        except httpx.HTTPError as exception:
+            result.errors.append(f"{plz_or_ort}: WPK-Register nicht erreichbar ({exception})")
+            return result
+        result.found = len(persons)
+        for person in persons:
+            self._record_lead_result(
+                result,
+                SourcingLeadCreate(
+                    source_type=SourcingSourceType.WPK_BERUFSREGISTER,
+                    source_url=wpk_berufsregister.REGISTER_URL,
+                    first_name=person.first_name,
+                    last_name=person.last_name,
+                    city=person.city,
+                    postal_code=person.postal_code,
+                    raw_data={
+                        "beruf": person.beruf,
+                        "akademische_grade": person.akademische_grade,
+                        "street": person.street,
+                        "registernummer": person.registernummer,
+                        "suchbegriff": plz_or_ort,
+                    },
+                ),
+            )
+        return result
+
+    def run_area_searches(
+        self, source_type: SourcingSourceType, plz_or_ort_list: list[str]
+    ) -> SourcingRunResult:
         """Sequenzieller Lauf ueber mehrere PLZ/Orte mit Pause zwischen den
         Requests (hoefliches Crawling, siehe DIRECTORY_REQUEST_PAUSE_SECONDS).
         Fehler einzelner Gebiete brechen den Lauf nicht ab, sondern landen
         gesammelt in errors."""
+        run_single = (
+            self.run_steuerberater_search
+            if source_type == SourcingSourceType.STEUERBERATERVERZEICHNIS
+            else self.run_wpk_search
+        )
         total = SourcingRunResult()
         for index, value in enumerate(plz_or_ort_list):
             if index > 0:
                 time.sleep(DIRECTORY_REQUEST_PAUSE_SECONDS)
-            partial = self.run_steuerberater_search(value)
-            total.found += partial.found
-            total.created += partial.created
-            total.skipped_existing += partial.skipped_existing
-            total.possible_duplicates += partial.possible_duplicates
-            total.errors.extend(partial.errors)
+            _merge_results(total, run_single(value))
         return total
+
+    def run_steuerberater_searches(self, plz_or_ort_list: list[str]) -> SourcingRunResult:
+        return self.run_area_searches(SourcingSourceType.STEUERBERATERVERZEICHNIS, plz_or_ort_list)
+
+    def run_kanzlei_team_scrape(self, client_company_id: uuid.UUID) -> SourcingRunResult:
+        """Team-/Mitarbeiter-Seiten der Kanzlei-Website per LLM extrahieren
+        (siehe kanzlei_team_scrape.py) und Treffer als Leads anlegen -
+        matched_client_company_id ist gesetzt, da von der Kanzlei aus
+        gestartet wird."""
+        result = SourcingRunResult()
+        client = self.session.get(ClientCompany, client_company_id)
+        if client is None:
+            result.errors.append(f"{client_company_id}: Kanzlei nicht gefunden")
+            return result
+        if not client.website:
+            result.errors.append(f"{client.name}: keine Website hinterlegt")
+            return result
+        base_url = client.website
+        if not base_url.startswith(("http://", "https://")):
+            base_url = f"https://{base_url}"
+        try:
+            homepage = kanzlei_team_scrape.fetch_page(base_url)
+        except httpx.HTTPError as exception:
+            result.errors.append(f"{client.name}: Website nicht erreichbar ({exception})")
+            return result
+        for page_url in kanzlei_team_scrape.find_team_page_urls(base_url, homepage):
+            time.sleep(TEAM_PAGE_FETCH_PAUSE_SECONDS)
+            try:
+                page_html = kanzlei_team_scrape.fetch_page(page_url)
+            except httpx.HTTPError:
+                # Fallback-Pfade duerfen 404 sein - kein Fehler, naechste URL.
+                continue
+            page_text = kanzlei_team_scrape.html_to_text(page_html)
+            if not page_text:
+                continue
+            try:
+                members = kanzlei_team_scrape.extract_team_members(page_text)
+            except (AIProviderError, ValueError) as exception:
+                result.errors.append(f"{client.name}: Extraktion fehlgeschlagen ({exception})")
+                continue
+            result.found += len(members)
+            for member in members:
+                self._record_lead_result(
+                    result,
+                    SourcingLeadCreate(
+                        source_type=SourcingSourceType.KANZLEI_TEAM_PAGE,
+                        source_url=page_url,
+                        first_name=member.first_name,
+                        last_name=member.last_name,
+                        current_employer=client.name,
+                        city=client.city,
+                        postal_code=client.postal_code,
+                        matched_client_company_id=client.id,
+                        raw_data={"title": member.title, "team_page": page_url},
+                    ),
+                )
+            if result.found > 0:
+                # Erste Seite mit echten Treffern reicht - weitere Seiten
+                # derselben Kanzlei listen fast immer dieselben Personen.
+                break
+        return result
+
+    def run_team_scrapes(self, client_company_ids: list[uuid.UUID]) -> SourcingRunResult:
+        total = SourcingRunResult()
+        for index, company_id in enumerate(client_company_ids):
+            if index > 0:
+                time.sleep(DIRECTORY_REQUEST_PAUSE_SECONDS)
+            _merge_results(total, self.run_kanzlei_team_scrape(company_id))
+        return total
+
+    def _record_lead_result(self, result: SourcingRunResult, payload: SourcingLeadCreate) -> None:
+        lead = self.create_lead(payload)
+        if lead is None:
+            result.skipped_existing += 1
+            return
+        result.created += 1
+        if lead.status == SourcingLeadStatus.POSSIBLE_DUPLICATE:
+            result.possible_duplicates += 1
 
     def approve_lead(self, lead_id: uuid.UUID, user_id: uuid.UUID) -> SourcingLead:
         """Erstellt aus dem Lead einen echten Kandidaten ueber den bestehenden
