@@ -1,6 +1,7 @@
 """Sourcing-Agent Phase 1: Review-Workflow (Lead anlegen, Duplikat-Abgleich
 gegen bestehende Kandidaten, approve/reject)."""
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -150,3 +151,84 @@ def test_reject_lead(client: TestClient, session_factory: sessionmaker[Session])
 def test_sourcing_routes_require_auth(client: TestClient) -> None:
     client.headers.pop("Authorization")
     assert client.get("/api/v1/sourcing/leads").status_code == 401
+
+
+RUN_RESULT_HTML = """
+<a class="link-to-detail" href="details/AA-11/?lang=de">
+  <p class="beruf text-wrap">Steuerberaterin</p>
+  <p class="akademische-grade text-wrap"></p>
+  <p class="name text-wrap">Petra Fundstelle</p>
+  <p class="address-display text-wrap">Fund &amp; Stelle StBG<br>Weg 1<br>70173 Stuttgart</p>
+</a>
+<a class="link-to-detail" href="details/BB-22/?lang=de">
+  <p class="beruf text-wrap">Steuerberater</p>
+  <p class="akademische-grade text-wrap"></p>
+  <p class="name text-wrap">Hans Müller</p>
+  <p class="address-display text-wrap">Weg 2<br>70173 Stuttgart</p>
+</a>
+"""
+
+
+def test_sourcing_run_creates_leads_and_reports_counts(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Bestehender Kandidat -> der zweite Verzeichnis-Treffer muss als
+    # possible_duplicate markiert werden statt als frischer Lead.
+    assert (
+        client.post(
+            "/api/v1/candidates", json={"first_name": "Hans", "last_name": "Mueller"}
+        ).status_code
+        == 201
+    )
+    monkeypatch.setattr(
+        "cc_crm.services.steuerberater_verzeichnis.fetch_search_html",
+        lambda plz_or_ort: RUN_RESULT_HTML,
+    )
+
+    response = client.post(
+        "/api/v1/sourcing/run",
+        json={"source_type": "steuerberaterverzeichnis", "plz_or_ort": ["70173"]},
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result == {
+        "found": 2,
+        "created": 2,
+        "skipped_existing": 0,
+        "possible_duplicates": 1,
+        "errors": [],
+    }
+
+    # Wiederholter Lauf: gleiche Personen -> keine Doppel-Leads.
+    second = client.post(
+        "/api/v1/sourcing/run",
+        json={"source_type": "steuerberaterverzeichnis", "plz_or_ort": ["70173"]},
+    ).json()
+    assert second["created"] == 0
+    assert second["skipped_existing"] == 2
+
+    leads = client.get("/api/v1/sourcing/leads").json()
+    assert leads["total_count"] == 2
+    by_name = {item["last_name"]: item for item in leads["items"]}
+    assert by_name["Fundstelle"]["status"] == "pending"
+    assert by_name["Fundstelle"]["current_employer"] == "Fund & Stelle StBG"
+    assert by_name["Müller"]["status"] == "possible_duplicate"
+    assert by_name["Müller"]["duplicate_of_candidate_id"] is not None
+    assert by_name["Müller"]["raw_data"]["beruf"] == "Steuerberater"
+
+
+def test_sourcing_run_reports_too_many_results_as_error(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "cc_crm.services.steuerberater_verzeichnis.fetch_search_html",
+        lambda plz_or_ort: "<h5>Zu viele mögliche Treffer</h5>",
+    )
+    result = client.post(
+        "/api/v1/sourcing/run",
+        json={"source_type": "steuerberaterverzeichnis", "plz_or_ort": ["Berlin"]},
+    ).json()
+    assert result["found"] == 0
+    assert result["created"] == 0
+    assert len(result["errors"]) == 1
+    assert "Berlin" in result["errors"][0]

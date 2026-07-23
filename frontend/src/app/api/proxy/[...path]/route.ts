@@ -25,6 +25,11 @@ import { AUTH_COOKIE_NAME, apiBaseUrl } from "@/lib/api/client";
  */
 
 const API_TIMEOUT_MS = 30_000;
+// Der synchrone Sourcing-Lauf (POST /sourcing/run) macht pro PLZ einen
+// externen Verzeichnis-Request mit hoeflicher Pause (~2s/Gebiet, max. 20
+// Gebiete) - er braucht deshalb ein laengeres Fenster als normale
+// JSON-Endpoints (siehe auch client.ts::apiPost timeoutMs).
+const SOURCING_RUN_TIMEOUT_MS = 120_000;
 
 async function proxy(request: NextRequest, path: string[]): Promise<NextResponse> {
   if (!apiBaseUrl) {
@@ -49,7 +54,9 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
       method: request.method,
       headers,
       body: body && body.byteLength > 0 ? body : undefined,
-      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+      signal: AbortSignal.timeout(
+        path.join("/").endsWith("sourcing/run") ? SOURCING_RUN_TIMEOUT_MS : API_TIMEOUT_MS,
+      ),
     });
   } catch {
     return NextResponse.json({ detail: "API nicht erreichbar" }, { status: 502 });

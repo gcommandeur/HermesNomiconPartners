@@ -84,7 +84,11 @@ export async function apiGet<T>(path: string, fallback: T): Promise<DataResult<T
   }
 }
 
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+/** timeoutMs nur fuer bewusst langlaufende Aktionen setzen (z.B. der
+ * synchrone Sourcing-Lauf, der pro PLZ einen externen Verzeichnis-Request
+ * mit hoeflicher Pause macht) - alle normalen JSON-Endpoints bleiben beim
+ * knappen Default-Timeout, damit ein haengendes Backend schnell auffaellt. */
+export async function apiPost<T>(path: string, body: unknown, timeoutMs?: number): Promise<T> {
   const response = await fetch(apiUrl(path), {
     method: "POST",
     headers: {
@@ -93,7 +97,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
       ...(await authHeader()),
     },
     body: JSON.stringify(body),
-    signal: timeoutSignal(),
+    signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : timeoutSignal(),
   });
   if (!response.ok) {
     throw new Error(await errorMessageFromResponse(response));

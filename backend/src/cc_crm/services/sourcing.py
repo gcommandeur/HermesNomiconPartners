@@ -10,11 +10,13 @@ Sortieren der Namens-Tokens vor dem Vergleich erreicht, so dass
 "Müller, Hans" und "Hans Müller" als identisch erkannt werden."""
 
 import re
+import time
 import unicodedata
 import uuid
 from datetime import UTC, datetime
 from difflib import SequenceMatcher
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -23,14 +25,21 @@ from cc_crm.models.candidate import Candidate
 from cc_crm.models.enums import SourcingLeadStatus, SourcingSourceType
 from cc_crm.models.sourcing_lead import SourcingLead
 from cc_crm.schemas.candidate import CandidateCreate
-from cc_crm.schemas.sourcing import SourcingLeadCreate
+from cc_crm.schemas.sourcing import SourcingLeadCreate, SourcingRunResult
+from cc_crm.services import steuerberater_verzeichnis
 from cc_crm.services.candidates import CandidateService
+from cc_crm.services.steuerberater_verzeichnis import TooManyResultsError
 
 # Schwelle analog zur Nutzer-Vorgabe (~90 bei rapidfuzz.token_sort_ratio,
 # dort 0-100 skaliert) - Personennamen sind kurz, unterhalb von 0.9 haeufen
 # sich falsch-positive Treffer (z.B. "Meier"/"Maier" verschiedener Personen
 # ist dagegen genau der gewollte Graubereich knapp ueber der Schwelle).
 NAME_SIMILARITY_THRESHOLD = 0.90
+
+# Pause zwischen zwei Verzeichnis-Requests (hoefliches Crawling gegenueber
+# der oeffentlichen Behoerdenseite - keine Parallel-Anfragen, ein Request
+# pro PLZ/Ort mit Abstand).
+DIRECTORY_REQUEST_PAUSE_SECONDS = 1.5
 
 _NON_LETTER_RE = re.compile(r"[^a-z0-9 ]")
 _WHITESPACE_RE = re.compile(r"\s+")
@@ -75,6 +84,7 @@ class SourcingService:
         # Sourcing-Lauf) genau einmal geladen statt bei jedem create_lead
         # erneut - ein Lauf legt leicht hunderte Leads am Stueck an.
         self._candidate_names: list[tuple[uuid.UUID, str]] | None = None
+        self._lead_names: dict[SourcingSourceType, set[str]] = {}
 
     def list_leads(
         self,
@@ -125,7 +135,70 @@ class SourcingService:
         self.session.add(lead)
         self.session.commit()
         self.session.refresh(lead)
+        self._lead_name_index(payload.source_type).add(
+            normalize_person_name(payload.first_name, payload.last_name)
+        )
         return lead
+
+    def run_steuerberater_search(self, plz_or_ort: str) -> SourcingRunResult:
+        """Ein Verzeichnis-Request fuer EINE PLZ bzw. EINEN Ort: Ergebnisliste
+        parsen und jeden Personen-Treffer als Lead anlegen (mit der ueblichen
+        Doppel-Lead-/Kandidaten-Duplikat-Pruefung aus create_lead)."""
+        result = SourcingRunResult()
+        try:
+            html = steuerberater_verzeichnis.fetch_search_html(plz_or_ort)
+            persons = steuerberater_verzeichnis.parse_persons(html)
+        except TooManyResultsError as exception:
+            result.errors.append(f"{plz_or_ort}: {exception}")
+            return result
+        except httpx.HTTPError as exception:
+            result.errors.append(f"{plz_or_ort}: Verzeichnis nicht erreichbar ({exception})")
+            return result
+        result.found = len(persons)
+        for person in persons:
+            lead = self.create_lead(
+                SourcingLeadCreate(
+                    source_type=SourcingSourceType.STEUERBERATERVERZEICHNIS,
+                    source_url=person.detail_url,
+                    first_name=person.first_name,
+                    last_name=person.last_name,
+                    current_employer=person.employer,
+                    city=person.city,
+                    postal_code=person.postal_code,
+                    raw_data={
+                        "beruf": person.beruf,
+                        "akademische_grade": person.akademische_grade,
+                        "street": person.street,
+                        "address_lines": person.address_lines,
+                        "suchbegriff": plz_or_ort,
+                    },
+                )
+            )
+            if lead is None:
+                result.skipped_existing += 1
+            elif lead.status == SourcingLeadStatus.POSSIBLE_DUPLICATE:
+                result.created += 1
+                result.possible_duplicates += 1
+            else:
+                result.created += 1
+        return result
+
+    def run_steuerberater_searches(self, plz_or_ort_list: list[str]) -> SourcingRunResult:
+        """Sequenzieller Lauf ueber mehrere PLZ/Orte mit Pause zwischen den
+        Requests (hoefliches Crawling, siehe DIRECTORY_REQUEST_PAUSE_SECONDS).
+        Fehler einzelner Gebiete brechen den Lauf nicht ab, sondern landen
+        gesammelt in errors."""
+        total = SourcingRunResult()
+        for index, value in enumerate(plz_or_ort_list):
+            if index > 0:
+                time.sleep(DIRECTORY_REQUEST_PAUSE_SECONDS)
+            partial = self.run_steuerberater_search(value)
+            total.found += partial.found
+            total.created += partial.created
+            total.skipped_existing += partial.skipped_existing
+            total.possible_duplicates += partial.possible_duplicates
+            total.errors.extend(partial.errors)
+        return total
 
     def approve_lead(self, lead_id: uuid.UUID, user_id: uuid.UUID) -> SourcingLead:
         """Erstellt aus dem Lead einen echten Kandidaten ueber den bestehenden
@@ -179,13 +252,21 @@ class SourcingService:
         self, first_name: str, last_name: str, source_type: SourcingSourceType
     ) -> bool:
         normalized = normalize_person_name(first_name, last_name)
-        existing = self.session.scalars(
-            select(SourcingLead).where(SourcingLead.source_type == source_type)
-        ).all()
-        return any(
-            normalize_person_name(lead.first_name, lead.last_name) == normalized
-            for lead in existing
-        )
+        return normalized in self._lead_name_index(source_type)
+
+    def _lead_name_index(self, source_type: SourcingSourceType) -> set[str]:
+        """Normalisierte Namen aller bereits vorhandenen Leads einer Quelle -
+        pro Service-Instanz einmal geladen und bei create_lead fortgeschrieben
+        (ein Sourcing-Lauf prueft sonst pro Treffer den kompletten
+        Lead-Bestand erneut)."""
+        if source_type not in self._lead_names:
+            rows = self.session.execute(
+                select(SourcingLead.first_name, SourcingLead.last_name).where(
+                    SourcingLead.source_type == source_type
+                )
+            ).all()
+            self._lead_names[source_type] = {normalize_person_name(row[0], row[1]) for row in rows}
+        return self._lead_names[source_type]
 
     def _find_similar_candidate(self, first_name: str, last_name: str) -> uuid.UUID | None:
         normalized = normalize_person_name(first_name, last_name)
@@ -193,8 +274,21 @@ class SourcingService:
             return None
         best_id: uuid.UUID | None = None
         best_score = 0.0
+        # Gestufter Vergleich (real_quick_ratio/quick_ratio als billige obere
+        # Schranken vor dem teuren ratio()) - ein Sourcing-Lauf vergleicht
+        # sonst hunderte Leads gegen zehntausende Kandidaten mit vollem
+        # SequenceMatcher und wird minutenlang.
+        matcher = SequenceMatcher()
+        matcher.set_seq2(normalized)
         for candidate_id, candidate_name in self._candidate_name_index():
-            score = person_name_similarity(normalized, candidate_name)
+            if candidate_name == normalized:
+                return candidate_id
+            matcher.set_seq1(candidate_name)
+            if matcher.real_quick_ratio() < NAME_SIMILARITY_THRESHOLD:
+                continue
+            if matcher.quick_ratio() < NAME_SIMILARITY_THRESHOLD:
+                continue
+            score = matcher.ratio()
             if score >= NAME_SIMILARITY_THRESHOLD and score > best_score:
                 best_id = candidate_id
                 best_score = score

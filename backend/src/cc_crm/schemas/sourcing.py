@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -18,6 +18,24 @@ class SourcingLeadCreate(BaseModel):
     postal_code: str | None = Field(default=None, max_length=20)
     raw_data: dict[str, Any] | None = None
     matched_client_company_id: uuid.UUID | None = None
+
+
+class SourcingRunRequest(BaseModel):
+    # Phase 2: nur das Steuerberaterverzeichnis; weitere Quellen (Team-Seiten,
+    # WPK/BRAK) folgen in Phase 3 mit eigenen Parametern.
+    source_type: Literal[SourcingSourceType.STEUERBERATERVERZEICHNIS]
+    # Max. 20 Gebiete pro Lauf: der Lauf ist synchron (Ergebnis-Zahlen direkt
+    # in der Antwort) und pausiert zwischen Requests - mehr Gebiete wuerden
+    # den Request zu lange offen halten.
+    plz_or_ort: list[str] = Field(min_length=1, max_length=20)
+
+
+class SourcingRunResult(BaseModel):
+    found: int = 0
+    created: int = 0
+    skipped_existing: int = 0
+    possible_duplicates: int = 0
+    errors: list[str] = Field(default_factory=list)
 
 
 class SourcingLeadRead(EntityRead):

@@ -6,10 +6,19 @@ from fastapi import APIRouter, Query
 from cc_crm.api.dependencies import CurrentUser, DatabaseSession
 from cc_crm.models.enums import SourcingLeadStatus
 from cc_crm.schemas.pagination import Page
-from cc_crm.schemas.sourcing import SourcingLeadRead
+from cc_crm.schemas.sourcing import SourcingLeadRead, SourcingRunRequest, SourcingRunResult
 from cc_crm.services.sourcing import SourcingService
 
 router = APIRouter(prefix="/sourcing")
+
+
+@router.post("/run", response_model=SourcingRunResult)
+def run_sourcing(payload: SourcingRunRequest, session: DatabaseSession) -> SourcingRunResult:
+    """Manuell ausgeloester Sourcing-Lauf (kein Cron) - synchron, damit die
+    Antwort direkt die Zahlen (gefunden/neu/uebersprungen) enthaelt. Dauer
+    ~2s pro PLZ (ein Verzeichnis-Request + hoefliche Pause), das Frontend
+    ruft mit verlaengertem Timeout auf."""
+    return SourcingService(session).run_steuerberater_searches(payload.plz_or_ort)
 
 
 @router.get("/leads", response_model=Page[SourcingLeadRead])
