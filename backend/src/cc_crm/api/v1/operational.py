@@ -85,7 +85,12 @@ async def _read_upload_with_size_limit(file: UploadFile, max_bytes: int) -> byte
 @router.get("/cockpit", response_model=CockpitRead)
 def get_cockpit(
     session: DatabaseSession,
-    period: Annotated[Literal["week", "month", "quarter"], Query()] = "week",
+    # Frontend fragt keinen wählbaren Zeitraum mehr ab (Woche/Monat/Quartal-
+    # Umschalter auf der Übersicht wurde entfernt, siehe dashboard-
+    # cockpit.tsx) - "month" statt vorher "week", da KPI-Zeiträume sonst zu
+    # eng geschnitten waren. Parameter bleibt fuer bestehende/kuenftige
+    # direkte API-Aufrufe erhalten.
+    period: Annotated[Literal["week", "month", "quarter"], Query()] = "month",
 ) -> CockpitRead:
     return CockpitRead.model_validate(CockpitService(session).build(period))
 

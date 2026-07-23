@@ -4,6 +4,6 @@ import { getCockpit } from "@/lib/api/queries";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const result = await getCockpit("week");
+  const result = await getCockpit("month");
   return <DashboardCockpit initialCockpit={result.data} initialSource={result.source} initialError={result.error} />;
 }

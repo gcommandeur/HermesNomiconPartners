@@ -1,28 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { AlertTriangle, ArrowRight, CalendarClock, FileCheck2, Flame, Gauge, ReceiptText, TimerReset } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/crm/page-header";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { WeeklyChartLoader } from "@/components/crm/weekly-chart-loader";
-import { getCockpit } from "@/lib/api/queries";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import type { Cockpit } from "@/lib/api/types";
-
-type Period = "week" | "month" | "quarter";
-
-// Backend unterstuetzt nur diese drei Zeitraeume (siehe
-// api/v1/operational.py::get_cockpit, Literal["week","month","quarter"]) -
-// "Heute" gab es vorher als Button-Beschriftung, aber ohne echten
-// Tages-Zeitraum im Backend waere das ein Button, der etwas verspricht, das
-// er nicht einloest.
-const PERIODS: { value: Period; label: string }[] = [
-  { value: "week", label: "Woche" },
-  { value: "month", label: "Monat" },
-  { value: "quarter", label: "Quartal" },
-];
 
 function buildChartData(cockpit: Cockpit) {
   return [
@@ -44,28 +29,9 @@ export function DashboardCockpit({
   initialSource: "api" | "demo" | "error";
   initialError?: string;
 }) {
-  const [period, setPeriod] = useState<Period>("week");
-  const [cockpit, setCockpit] = useState(initialCockpit);
-  const [source, setSource] = useState(initialSource);
-  const [error, setError] = useState(initialError);
-  const [loading, setLoading] = useState(false);
-
-  async function selectPeriod(next: Period) {
-    if (next === period) return;
-    setPeriod(next);
-    setLoading(true);
-    try {
-      const result = await getCockpit(next);
-      setCockpit(result.data);
-      setSource(result.source);
-      setError(result.error);
-    } catch (exception) {
-      setSource("error");
-      setError(exception instanceof Error ? exception.message : "Cockpit konnte nicht geladen werden.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const cockpit = initialCockpit;
+  const source = initialSource;
+  const error = initialError;
 
   const chartData = buildChartData(cockpit);
   const warnings = [
@@ -82,28 +48,7 @@ export function DashboardCockpit({
 
   return (
     <>
-      <PageHeader
-        eyebrow="Operative Schaltzentrale"
-        title="Übersicht"
-        action={
-          <div className="flex rounded-lg border bg-[#0D1B2E] p-1 text-[11px] sm:text-xs">
-            {PERIODS.map((item) => (
-              <button
-                key={item.value}
-                type="button"
-                disabled={loading}
-                onClick={() => void selectPeriod(item.value)}
-                className={cn(
-                  "rounded-md px-2 py-1.5 sm:px-3 sm:py-2",
-                  period === item.value ? "bg-[#153A66] text-white" : "text-[#94A3B8] hover:text-white",
-                )}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        }
-      />
+      <PageHeader eyebrow="Operative Schaltzentrale" title="Übersicht" />
       <DemoNotice source={source} error={error} />
 
       {/* Auf Mobile ein horizontal scrollbarer Streifen aus kompakten Chips
