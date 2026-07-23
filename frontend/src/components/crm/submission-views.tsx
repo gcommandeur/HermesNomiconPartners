@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Ban, Building2, CalendarPlus, Columns3, Download, Eye, List, ShieldAlert } from "lucide-react";
+import { Ban, Building2, CalendarPlus, ChevronDown, Columns3, Download, Eye, List, ShieldAlert } from "lucide-react";
 import type {
   Candidate,
   CandidateSubmission,
@@ -24,7 +24,7 @@ import { useCurrentUser } from "@/lib/api/hooks";
 import { useInterviewMutations } from "@/lib/use-interview-mutations";
 import { formatTimeFromIso, toLocalIsoString } from "@/lib/calendar-utils";
 import { allowedTransitions } from "@/lib/submission-transitions";
-import { contactName as formatContactName, formatDate } from "@/lib/utils";
+import { cn, contactName as formatContactName, formatDate } from "@/lib/utils";
 import { CandidateQuickViewDrawer } from "./candidate-quickview-drawer";
 import { ClosingScoreForm } from "./closing-score-form";
 
@@ -37,7 +37,6 @@ function ClosingScoreBadge({ status, probability }: { status: CandidateSubmissio
 }
 
 const columns: { status: SubmissionStatus; title: string }[] = [
-  { status: "pitch", title: "Pitch" },
   { status: "qualification_call", title: "Quali Call" },
   { status: "cv_in", title: "CV IN" },
   { status: "cv_out", title: "CV OUT" },
@@ -92,6 +91,18 @@ function interviewDotClass(interview: Interview): string {
   return isOverdue ? "bg-[#94A3B8]" : "bg-[#1F5FA8]";
 }
 
+/** Nachfassen faellig, wenn follow_up_at heute oder in der Vergangenheit
+ * liegt (Phase 5b) - farblich klar unterscheidbar vom bestehenden blauen
+ * "Hot"-Badge (siehe isHot oben), das den Prozess-Status widerspiegelt statt
+ * eines konkreten Termins. follow_up_at ist ein echtes tz-aware ISO-Datetime
+ * (anders als scheduled_at bei Interviews), new Date() ist hier also sicher. */
+function isFollowUpDue(item: CandidateSubmission): boolean {
+  if (!item.follow_up_at) return false;
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  return new Date(item.follow_up_at) <= endOfToday;
+}
+
 export function SubmissionViews({ submissions, candidates, clients, contacts = [], interviews: initialInterviews = [] }: {
   submissions: CandidateSubmission[];
   candidates: Candidate[];
@@ -121,6 +132,20 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
   const [clientPrompt, setClientPrompt] = useState<{ submissionId: string; target?: SubmissionStatus } | null>(null);
   const [cancelPrompt, setCancelPrompt] = useState<string | null>(null);
   const [quickViewCandidateId, setQuickViewCandidateId] = useState<string | null>(null);
+  // Kanban-Karten sind auf eine Zeile (Name/Kanzlei/Datum) reduziert (Phase
+  // 5b) - Closing-Score, Naechster Schritt, Interview-Runden und Fee werden
+  // erst bei Klick auf den Ausklapp-Pfeil sichtbar, statt permanent Platz zu
+  // beanspruchen.
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  function toggleExpanded(submissionId: string) {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (next.has(submissionId)) next.delete(submissionId);
+      else next.add(submissionId);
+      return next;
+    });
+  }
 
   const candidateOf = (id: string) => candidates.find((candidate) => candidate.id === id);
   const candidateName = (id: string) => {
@@ -397,30 +422,37 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                    * letzten Kanban-Karten dahinter verschwinden. Ab lg gibt
                    * es keine BottomNav, dort bleibt der urspruengliche Wert. */}
                   <div className="scrollbar-subtle max-h-[calc(100vh-360px-5rem)] space-y-2 overflow-y-auto lg:max-h-[calc(100vh-360px)]">
-                    {columnItems.map((item) => (
+                    {columnItems.map((item) => {
+                      const expanded = expandedIds.has(item.id);
+                      const dueFollowUp = isFollowUpDue(item);
+                      return (
                       <article
                         key={item.id}
                         draggable
                         onDragStart={() => setDraggedId(item.id)}
                         onClick={() => openCandidate(item.candidate_id)}
                         title="Zum Kandidatenprofil"
-                        className="cursor-pointer rounded-lg border border-white/10 bg-[#12243A] p-3 shadow-[0_1px_1px_rgba(0,0,0,.03)] hover:border-[#1F5FA8]/50 active:cursor-grabbing"
+                        className={cn(
+                          "cursor-pointer rounded-lg border p-2 shadow-[0_1px_1px_rgba(0,0,0,.03)] active:cursor-grabbing",
+                          dueFollowUp
+                            ? "border-red-400/50 bg-red-950/20 hover:border-red-400/70"
+                            : "border-white/10 bg-[#12243A] hover:border-[#1F5FA8]/50",
+                        )}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-semibold hover:underline">{candidateName(item.candidate_id)}</p>
-                            <p className="mt-1 text-xs text-[#CBD5E1]">{clientName(item.client_company_id)}</p>
-                            {item.closing_status && <div className="mt-1.5"><ClosingScoreBadge status={item.closing_status} probability={item.closing_probability} /></div>}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {isHot(item.status) && <span className="rounded-full bg-[#1F5FA8]/20 px-2 py-1 text-[10px] text-[#69A7EA]">Hot</span>}
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="min-w-0 flex-1 truncate text-xs font-semibold hover:underline">
+                            {candidateName(item.candidate_id)} <span className="text-[#5b6167]">·</span> {clientName(item.client_company_id)}
+                          </p>
+                          <span className="shrink-0 text-[10px] text-[#94A3B8]">{formatDate(item.follow_up_at)}</span>
+                          <div className="flex shrink-0 items-center gap-0.5">
+                            {isHot(item.status) && <span className="rounded-full bg-[#1F5FA8]/20 px-1.5 py-0.5 text-[9px] text-[#69A7EA]">Hot</span>}
                             <button
                               type="button"
                               title="Kanzlei hinzufügen/ändern"
                               onClick={(event) => { event.stopPropagation(); setClientPrompt({ submissionId: item.id }); }}
                               className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
                             >
-                              <Building2 size={13} />
+                              <Building2 size={12} />
                             </button>
                             <button
                               type="button"
@@ -428,7 +460,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                               onClick={(event) => { event.stopPropagation(); setQuickViewCandidateId(item.candidate_id); }}
                               className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
                             >
-                              <Eye size={13} />
+                              <Eye size={12} />
                             </button>
                             <button
                               type="button"
@@ -436,7 +468,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                               onClick={(event) => { event.stopPropagation(); setCancelPrompt(item.id); }}
                               className="rounded p-1 text-[#94A3B8] hover:bg-red-950/40 hover:text-red-200"
                             >
-                              <Ban size={13} />
+                              <Ban size={12} />
                             </button>
                             {item.status === "interview" && (
                               <button
@@ -445,54 +477,68 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                                 onClick={(event) => { event.stopPropagation(); setInterviewModal({ submissionId: item.id, interview: null }); }}
                                 className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
                               >
-                                <CalendarPlus size={13} />
+                                <CalendarPlus size={12} />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              title={expanded ? "Details ausblenden" : "Details anzeigen"}
+                              onClick={(event) => { event.stopPropagation(); toggleExpanded(item.id); }}
+                              className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
+                            >
+                              <ChevronDown size={12} className={cn("transition-transform", expanded && "rotate-180")} />
+                            </button>
+                          </div>
+                        </div>
+                        {expanded && (
+                          <div className="mt-2 space-y-2 border-t border-white/10 pt-2" onClick={(event) => event.stopPropagation()}>
+                            {item.closing_status && <ClosingScoreBadge status={item.closing_status} probability={item.closing_probability} />}
+                            <ClosingScoreForm submissionId={item.id} />
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Nächster Schritt</p>
+                              <p className="mt-1 text-xs">{item.next_step ?? item.summary ?? "Follow-up festlegen"}</p>
+                            </div>
+                            {(interviewsBySubmission.get(item.id)?.length ?? 0) > 0 && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Interview-Runden</p>
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {(interviewsBySubmission.get(item.id) ?? []).map((interview, index) => (
+                                    <button
+                                      key={interview.id}
+                                      type="button"
+                                      title={`${interview.interview_type} — ${formatChipDateTime(interview.scheduled_at)}`}
+                                      onClick={() => setInterviewModal({ submissionId: item.id, interview })}
+                                      className="flex items-center gap-1 rounded-full border border-white/10 bg-[#0D1B2E] px-2 py-1 text-[10px] text-[#CBD5E1] hover:border-[#1F5FA8]/50 hover:text-white"
+                                    >
+                                      <span className={`size-1.5 rounded-full ${interviewDotClass(interview)}`} />
+                                      R{index + 1} · {formatChipDateTime(interview.scheduled_at)}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[10px] text-[#A7ADB7]">
+                              {nextUpcomingInterview(item.id) ? (
+                                <span>Nächstes Interview: {formatChipDateTime(nextUpcomingInterview(item.id)!.scheduled_at)}</span>
+                              ) : (
+                                <span>Follow-up {formatDate(item.follow_up_at)}</span>
+                              )}
+                              <span>{expectedFee(item).toLocaleString("de-DE")} €</span>
+                            </div>
+                            {item.client_company_id ? null : (
+                              <button
+                                type="button"
+                                onClick={(event) => { event.stopPropagation(); setClientPrompt({ submissionId: item.id }); }}
+                                className="flex w-full items-center justify-center gap-1.5 rounded bg-[#7F1D1D]/40 px-2 py-1.5 text-[10px] text-red-100 hover:bg-[#7F1D1D]/60"
+                              >
+                                <Building2 size={11} />Ab Interview Kanzlei verknüpfen — jetzt hinzufügen
                               </button>
                             )}
                           </div>
-                        </div>
-                        <div className="mt-2" onClick={(event) => event.stopPropagation()}>
-                          <ClosingScoreForm submissionId={item.id} />
-                        </div>
-                        <p className="mt-3 text-[10px] uppercase tracking-wider text-[#94A3B8]">Nächster Schritt</p>
-                        <p className="mt-1 text-xs">{item.next_step ?? item.summary ?? "Follow-up festlegen"}</p>
-                        {(interviewsBySubmission.get(item.id)?.length ?? 0) > 0 && (
-                          <div className="mt-3" onClick={(event) => event.stopPropagation()}>
-                            <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Interview-Runden</p>
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {(interviewsBySubmission.get(item.id) ?? []).map((interview, index) => (
-                                <button
-                                  key={interview.id}
-                                  type="button"
-                                  title={`${interview.interview_type} — ${formatChipDateTime(interview.scheduled_at)}`}
-                                  onClick={() => setInterviewModal({ submissionId: item.id, interview })}
-                                  className="flex items-center gap-1 rounded-full border border-white/10 bg-[#0D1B2E] px-2 py-1 text-[10px] text-[#CBD5E1] hover:border-[#1F5FA8]/50 hover:text-white"
-                                >
-                                  <span className={`size-1.5 rounded-full ${interviewDotClass(interview)}`} />
-                                  R{index + 1} · {formatChipDateTime(interview.scheduled_at)}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-[10px] text-[#A7ADB7]">
-                          {nextUpcomingInterview(item.id) ? (
-                            <span>Nächstes Interview: {formatChipDateTime(nextUpcomingInterview(item.id)!.scheduled_at)}</span>
-                          ) : (
-                            <span>Follow-up {formatDate(item.follow_up_at)}</span>
-                          )}
-                          <span>{expectedFee(item).toLocaleString("de-DE")} €</span>
-                        </div>
-                        {item.client_company_id ? null : (
-                          <button
-                            type="button"
-                            onClick={(event) => { event.stopPropagation(); setClientPrompt({ submissionId: item.id }); }}
-                            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded bg-[#7F1D1D]/40 px-2 py-1.5 text-[10px] text-red-100 hover:bg-[#7F1D1D]/60"
-                          >
-                            <Building2 size={11} />Ab Interview Kanzlei verknüpfen — jetzt hinzufügen
-                          </button>
                         )}
                       </article>
-                    ))}
+                      );
+                    })}
                     {columnItems.length === 0 && <div className="rounded-lg border border-dashed border-white/10 p-5 text-center text-[11px] text-[#94A3B8]">Keine Prozesse</div>}
                   </div>
                 </section>
