@@ -276,7 +276,6 @@ export async function getCandidateMatches(candidateId: string) {
 }
 
 const emptyStageSummary: CandidateStageSummary = {
-  pitch: 0,
   qualification_call: 0,
   cv_in: 0,
   cv_out: 0,

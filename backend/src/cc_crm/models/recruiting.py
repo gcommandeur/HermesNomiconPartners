@@ -28,7 +28,7 @@ class SubmissionFeedback(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     next_step: Mapped[str | None] = mapped_column(String(240))
     created_by: Mapped[str | None] = mapped_column(String(240))
-    # Welche Prozess-Stufe dieser Feedback-Eintrag betrifft (Pitch/Quali-Call/
+    # Welche Prozess-Stufe dieser Feedback-Eintrag betrifft (Quali-Call/
     # Shortlist/CV-Sent - siehe stage-edit-modal.tsx auf dem Frontend).
     # Nullable, weil bestehende Feedback-Eintraege vor dieser Erweiterung
     # keine Stufe gespeichert haben - NULL bedeutet "Stufe unbekannt/

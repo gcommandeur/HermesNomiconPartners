@@ -65,7 +65,13 @@ class JobStatus(StrEnum):
 
 
 class SubmissionStatus(StrEnum):
-    PITCH = "pitch"
+    """Die "Pitch"-Stufe (vor QUALIFICATION_CALL) wurde bewusst wieder
+    entfernt (Task #136 hatte sie eingefuehrt) - die Pipeline beginnt jetzt
+    direkt bei QUALIFICATION_CALL. Bestehende Submissions/Feedback-Eintraege
+    mit dem historischen Wert "pitch" wurden per Alembic-Migration auf
+    QUALIFICATION_CALL migriert (siehe alembic/versions/
+    c4d7e1a9f3b2_remove_pitch_submission_status.py)."""
+
     QUALIFICATION_CALL = "qualification_call"
     CV_IN = "cv_in"
     CV_OUT = "cv_out"

@@ -19,7 +19,7 @@ class CandidateSubmissionBase(BaseModel):
     client_company_id: uuid.UUID | None = None
     job_mandate_id: uuid.UUID | None = None
     contact_person_id: uuid.UUID | None = None
-    status: SubmissionStatus = SubmissionStatus.PITCH
+    status: SubmissionStatus = SubmissionStatus.QUALIFICATION_CALL
     submitted_at: datetime | None = None
     summary: str | None = None
     sent_profile_text: str | None = None
@@ -100,7 +100,7 @@ class CandidateQuickLogCreate(BaseModel):
     """Payload fuer POST /candidates/{id}/quick-log - legt bei Bedarf
     automatisch einen Prozess an (siehe RecruitingProcessService.quick_log),
     ohne dass vorher eine separate "Prozess erstellen"-Aktion noetig ist.
-    `stage` ist auf pitch/qualification_call/cv_in/cv_out begrenzt (validiert
+    `stage` ist auf qualification_call/cv_in/cv_out begrenzt (validiert
     in RecruitingProcessService.quick_log)."""
 
     stage: SubmissionStatus
@@ -131,7 +131,6 @@ class CandidateStageSummary(BaseModel):
     Timeline auf der Kandidat-Detailseite (siehe
     RecruitingProcessService.stage_summary)."""
 
-    pitch: int = 0
     qualification_call: int = 0
     cv_in: int = 0
     cv_out: int = 0

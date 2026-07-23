@@ -17,7 +17,7 @@ const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] 
 // Unabhaengig vom aktuellen Prozess-Status waehlbar - beim Quick-Log muss ja
 // evtl. noch gar kein Prozess existieren (siehe RecruitingProcessService.
 // quick_log, das bei Bedarf automatisch einen anlegt).
-const FEEDBACK_STAGES: FeedbackTargetStatus[] = ["pitch", "qualification_call", "cv_in", "cv_out"];
+const FEEDBACK_STAGES: FeedbackTargetStatus[] = ["qualification_call", "cv_in", "cv_out"];
 
 // Gleiche Vorlage wie feedback-panel.tsx::QUALIFICATION_CALL_TEMPLATE - hier
 // dupliziert statt importiert, da die beiden Formulare (Quick-Log ohne
@@ -27,7 +27,6 @@ const QUALIFICATION_CALL_TEMPLATE =
   "Aktuelle Stelle: \nQualifikationen: \nGehalt: \nKündigungsfrist: \n\nAufgabenbereich: \n\nWechselgrund: \n\nWeitere Notizen: ";
 
 const STAGE_TILES: { key: keyof CandidateStageSummary; label: string }[] = [
-  { key: "pitch", label: "Pitch" },
   { key: "qualification_call", label: "Quali Call" },
   { key: "cv_in", label: "Shortlist" },
   { key: "cv_out", label: "CV Sent" },
@@ -59,10 +58,9 @@ function emptyForm(stage: FeedbackTargetStatus): FormState {
 /** Sinnvolle Default-Stufe fuer eine neue Quick-Log-Notiz: die erste, noch
  * nicht erreichte Stufe in der natuerlichen Reihenfolge - laeuft ein Prozess
  * schon weiter (z.B. bereits im Shortlist-Status), macht ein Default auf
- * "Pitch" wenig Sinn. */
+ * "Quali Call" wenig Sinn. */
 function defaultStage(summary: CandidateStageSummary | null): FeedbackTargetStatus {
-  if (!summary || summary.pitch === 0) return "pitch";
-  if (summary.qualification_call === 0) return "qualification_call";
+  if (!summary || summary.qualification_call === 0) return "qualification_call";
   if (summary.cv_in === 0) return "cv_in";
   return "cv_out";
 }
@@ -71,7 +69,7 @@ function defaultStage(summary: CandidateStageSummary | null): FeedbackTargetStat
  * die bestehende SubmissionStageBar-Sektion (siehe candidate-submission-
  * stages.tsx) NICHT an "mindestens ein Prozess existiert bereits" gebunden:
  * ohne dieses Panel gab es fuer einen frisch angelegten Kandidaten ohne
- * Prozess keine Moeglichkeit, ueberhaupt eine erste Quali-Call-/Pitch-Notiz
+ * Prozess keine Moeglichkeit, ueberhaupt eine erste Quali-Call-Notiz
  * zu erfassen (Nutzer-Feedback). Eine neue Notiz startet dabei automatisch
  * einen Prozess (siehe queries.ts::quickLogCandidateStage), keine separate
  * "Prozess erstellen"-Aktion noetig. */

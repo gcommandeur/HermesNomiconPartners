@@ -142,7 +142,7 @@ def quick_log_candidate_stage(
     payload: CandidateQuickLogCreate,
     session: DatabaseSession,
 ) -> CandidateQuickLogResult:
-    """Pitch-/Quali-Call-Notiz anlegen - startet dabei bei Bedarf automatisch
+    """Quali-Call-Notiz anlegen - startet dabei bei Bedarf automatisch
     einen Prozess (siehe RecruitingProcessService.quick_log), ohne dass vorher
     eine separate "Prozess erstellen"-Aktion noetig ist."""
     return RecruitingProcessService(session).quick_log(candidate_id, payload)

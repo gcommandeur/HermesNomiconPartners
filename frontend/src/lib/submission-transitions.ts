@@ -13,7 +13,6 @@ import type { SubmissionStatus } from "@/lib/api/types";
  * die naechste (oder nach "cancelled") wechseln, nie zurueck.
  */
 export const allowedTransitions: Partial<Record<SubmissionStatus, SubmissionStatus[]>> = {
-  pitch: ["qualification_call", "cancelled"],
   qualification_call: ["cv_in", "cancelled"],
   cv_in: ["cv_out", "cancelled"],
   cv_out: ["interview", "cancelled"],

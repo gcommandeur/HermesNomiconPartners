@@ -9,7 +9,7 @@ export interface BeruflicheStation {
   dauer_jahre: number;
 }
 export type SubmissionStatus =
-  | "pitch" | "qualification_call" | "cv_in" | "cv_out" | "interview" | "offer" | "placement" | "cancelled";
+  | "qualification_call" | "cv_in" | "cv_out" | "interview" | "offer" | "placement" | "cancelled";
 export type SubmissionCancellationReason =
   | "candidate_rejected" | "client_rejected" | "candidate_ghosting";
 export type ClosingStatus = "hot" | "warm" | "risk" | "stop";
@@ -293,7 +293,7 @@ export interface FeedbackCreate {
   /** Bullhorn-artiges "Action"-Feld (siehe feedback-panel.tsx): weicht dieser
    * Zielstatus vom aktuellen Submission-Status ab, wendet das Backend in
    * derselben Transaktion die bestehende Transition-Validierung an. Nur
-   * pitch/qualification_call/cv_in/cv_out sind hier erlaubte Ziele. */
+   * qualification_call/cv_in/cv_out sind hier erlaubte Ziele. */
   target_status?: FeedbackTargetStatus | null;
 }
 
@@ -316,7 +316,7 @@ export interface FeedbackCreateResult {
 /** Stufen, die ueber das Notiz-Status-Feld (FeedbackPanel/CandidateProcessLog)
  * gesetzt werden koennen - Interview/Offer/Placement brauchen eine
  * verknuepfte Kanzlei und haben eigene Panels (siehe stage-edit-modal.tsx). */
-export type FeedbackTargetStatus = "pitch" | "qualification_call" | "cv_in" | "cv_out";
+export type FeedbackTargetStatus = "qualification_call" | "cv_in" | "cv_out";
 
 /** Payload fuer POST /candidates/{id}/quick-log - legt bei Bedarf automatisch
  * einen Prozess an (siehe candidate-process-log.tsx). */
@@ -336,7 +336,6 @@ export interface CandidateQuickLogResult {
 /** Anzahl erreichter Ereignisse je Stufe ueber ALLE Submissions eines
  * Kandidaten (siehe candidate-process-log.tsx). */
 export interface CandidateStageSummary {
-  pitch: number;
   qualification_call: number;
   cv_in: number;
   cv_out: number;

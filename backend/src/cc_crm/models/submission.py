@@ -51,7 +51,7 @@ class CandidateSubmission(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     status: Mapped[SubmissionStatus] = mapped_column(
         Enum(SubmissionStatus, native_enum=False, length=40),
-        default=SubmissionStatus.PITCH,
+        default=SubmissionStatus.QUALIFICATION_CALL,
         nullable=False,
         index=True,
     )

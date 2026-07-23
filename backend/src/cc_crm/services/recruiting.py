@@ -57,12 +57,11 @@ from cc_crm.services.warranty import WarrantyService
 logger = logging.getLogger(__name__)
 
 MONEY = Decimal("0.01")
-# quick_log() deckt die vier fruehen, noch nicht zwingend an eine Kanzlei
+# quick_log() deckt die drei fruehen, noch nicht zwingend an eine Kanzlei
 # gebundenen Stufen ab - ab Interview braucht der Prozess einen verknuepften
 # Kanzlei-Kontakt (siehe services/submissions.py::STATUSES_REQUIRING_CLIENT)
 # und hat eigene Panels (InterviewRoundsPanel/OfferPanel/PlacementPanel).
 QUICK_LOG_STAGE_ORDER = [
-    SubmissionStatus.PITCH,
     SubmissionStatus.QUALIFICATION_CALL,
     SubmissionStatus.CV_IN,
     SubmissionStatus.CV_OUT,
@@ -119,8 +118,7 @@ class RecruitingProcessService:
             if target_status is not None:
                 if target_status not in FEEDBACK_TARGET_STATUSES:
                     raise BusinessRuleError(
-                        "target_status muss pitch, qualification_call, cv_in "
-                        "oder cv_out sein"
+                        "target_status muss qualification_call, cv_in oder cv_out sein"
                     )
                 stage = target_status
                 if target_status != submission.status:
@@ -171,18 +169,18 @@ class RecruitingProcessService:
     def quick_log(
         self, candidate_id: uuid.UUID, payload: CandidateQuickLogCreate
     ) -> CandidateQuickLogResult:
-        """Legt eine Notiz zu einer der vier fruehen Stufen an und startet
+        """Legt eine Notiz zu einer der drei fruehen Stufen an und startet
         dabei bei Bedarf automatisch einen Prozess - keine separate "Prozess
         erstellen"-Aktion noetig (Nutzer-Feedback: eine Notiz soll automatisch
         einen Prozess starten). Sucht zuerst einen bereits offenen, noch nicht
-        mit einer Kanzlei verknuepften Prozess in einer der vier Stufen und
+        mit einer Kanzlei verknuepften Prozess in einer der drei Stufen und
         fuehrt diesen weiter, statt blind einen neuen anzulegen. Liegt die
         Zielstufe hinter dem aktuellen Status, wird jeder Zwischenschritt
         einzeln durchlaufen (gleiches Prinzip wie services/matching.py::
         CandidateMatchingService._transition_path fuer den Bulk-Submit-Flow)."""
         if payload.stage not in QUICK_LOG_STAGE_ORDER:
             raise BusinessRuleError(
-                "quick-log unterstuetzt nur die Stufen pitch, qualification_call, "
+                "quick-log unterstuetzt nur die Stufen qualification_call, "
                 "cv_in und cv_out"
             )
         self.submissions.candidates.get(candidate_id)
@@ -250,7 +248,6 @@ class RecruitingProcessService:
             )
 
         return CandidateStageSummary(
-            pitch=feedback_counts.get(SubmissionStatus.PITCH, 0),
             qualification_call=feedback_counts.get(SubmissionStatus.QUALIFICATION_CALL, 0),
             cv_in=feedback_counts.get(SubmissionStatus.CV_IN, 0),
             cv_out=feedback_counts.get(SubmissionStatus.CV_OUT, 0),

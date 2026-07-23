@@ -20,10 +20,10 @@ const labelClass = "mb-1 block text-xs text-[#94A3B8]";
 const textareaClass = "min-h-16 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
 const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
 
-// Nur diese vier Stufen sind gueltige Ziele fuer das Status-Feld einer Notiz -
+// Nur diese drei Stufen sind gueltige Ziele fuer das Status-Feld einer Notiz -
 // Interview/Offer/Placement brauchen eine verknuepfte Kanzlei und haben eigene
 // Panels (siehe backend services/recruiting.py::FEEDBACK_TARGET_STATUSES).
-const FEEDBACK_STAGES: FeedbackTargetStatus[] = ["pitch", "qualification_call", "cv_in", "cv_out"];
+const FEEDBACK_STAGES: FeedbackTargetStatus[] = ["qualification_call", "cv_in", "cv_out"];
 
 /** ISO-Datetime aus dem Backend direkt auf die ersten 16 Zeichen kuerzen -
  * gleiches Muster wie calendar-event-modal.tsx/interview-modal.tsx
@@ -48,8 +48,7 @@ interface FormState {
 
 // Vorlage nur fuer NEUE Quali-Call-Eintraege (kein form.id) - macht das
 // Ausfuellen der wichtigsten Eckdaten aus dem Gespraech schneller/
-// vollstaendiger, statt mit einem leeren Textfeld zu starten. Bei Pitch-
-// Notizen bleibt das Feld wie bisher leer.
+// vollstaendiger, statt mit einem leeren Textfeld zu starten.
 const QUALIFICATION_CALL_TEMPLATE =
   "Aktuelle Stelle: \nQualifikationen: \nGehalt: \nKündigungsfrist: \n\nAufgabenbereich: \n\nWechselgrund: \n\nWeitere Notizen: ";
 
@@ -75,7 +74,7 @@ function formFromEntry(entry: Feedback, fallbackStage: FeedbackTargetStatus): Fo
   };
 }
 
-/** Generisches "Datum + Notiz"-Panel fuer die Stufen pitch/qualification_call/
+/** Generisches "Datum + Notiz"-Panel fuer die Stufen qualification_call/
  * cv_in/cv_out - nutzt das bestehende Feedback-Modell wieder statt neuer
  * DB-Spalten pro Stufe anzulegen (siehe Backend models/recruiting.py::
  * SubmissionFeedback). Mehrere Eintraege je Prozess/Stufe moeglich. Das

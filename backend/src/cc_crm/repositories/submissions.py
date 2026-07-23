@@ -10,7 +10,6 @@ from cc_crm.models.submission import CandidateSubmission
 from cc_crm.repositories.base import SQLAlchemyRepository
 
 ACTIVE_SUBMISSION_STATUSES = {
-    SubmissionStatus.PITCH,
     SubmissionStatus.QUALIFICATION_CALL,
     SubmissionStatus.CV_IN,
     SubmissionStatus.CV_OUT,
@@ -61,7 +60,7 @@ class CandidateSubmissionRepository(SQLAlchemyRepository[CandidateSubmission]):
 
     def find_open_unassigned(self, candidate_id: uuid.UUID) -> CandidateSubmission | None:
         """Neueste noch nicht mit einer Kanzlei verknuepfte Submission in einer
-        der vier fruehen Stufen (Pitch/Quali-Call/Shortlist/CV-Sent) - Basis
+        der drei fruehen Stufen (Quali-Call/Shortlist/CV-Sent) - Basis
         fuer den automatischen Prozess-Start beim Quick-Log (siehe
         RecruitingProcessService.quick_log): eine neue Notiz soll nach
         Moeglichkeit einen bereits begonnenen, noch offenen Prozess
@@ -73,7 +72,6 @@ class CandidateSubmissionRepository(SQLAlchemyRepository[CandidateSubmission]):
                 CandidateSubmission.client_company_id.is_(None),
                 CandidateSubmission.status.in_(
                     [
-                        SubmissionStatus.PITCH,
                         SubmissionStatus.QUALIFICATION_CALL,
                         SubmissionStatus.CV_IN,
                         SubmissionStatus.CV_OUT,
