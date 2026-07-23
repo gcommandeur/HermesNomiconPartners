@@ -23,6 +23,23 @@ class TaskRepository(SQLAlchemyRepository[Task]):
         )
         return self.session.scalar(statement.limit(1))
 
+    # Bewusst nicht per Titel gefiltert wie find_open_by_submission_and_title
+    # oben - der Titel eines automatischen Follow-ups variiert je Stufe (z.B.
+    # "CV-Out nachfassen" vs. "Interviewfeedback nachfassen"), waehrend die
+    # description dafuer bei jedem automatisch erzeugten Follow-up identisch
+    # ist (siehe services/submissions.py::AUTO_FOLLOW_UP_DESCRIPTION) - genau
+    # darauf stuetzt sich die Pruefung, damit manuell angelegte Aufgaben mit
+    # zufaellig demselben Titel nicht mitgeschlossen werden.
+    def find_open_auto_follow_ups(
+        self, submission_id: uuid.UUID, description: str
+    ) -> Sequence[Task]:
+        statement = select(Task).where(
+            Task.candidate_submission_id == submission_id,
+            Task.description == description,
+            Task.status.in_([TaskStatus.OPEN, TaskStatus.IN_PROGRESS]),
+        )
+        return self.session.scalars(statement).all()
+
     def filtered(
         self,
         *,

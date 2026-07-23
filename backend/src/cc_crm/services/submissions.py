@@ -73,6 +73,13 @@ FOLLOW_UP_RULES = {
     SubmissionStatus.PLACEMENT: (timedelta(days=1), "Placement und Rechnung nachverfolgen"),
 }
 
+# Exakte description, mit der jeder automatisch erzeugte Follow-up-Task
+# unten angelegt wird - dient als eindeutiges Erkennungsmerkmal, um bei
+# einem weiteren Statuswechsel NUR diese automatischen Tasks zu schliessen,
+# nicht manuell vom Nutzer angelegte Aufgaben mit zufaellig demselben Titel
+# (z.B. "CV-Out nachfassen" von Hand nochmal angelegt).
+AUTO_FOLLOW_UP_DESCRIPTION = "Automatisch aus dem Prozessstatus erzeugtes Follow-up"
+
 # Zusaetzliches, von FOLLOW_UP_RULES unabhaengiges Referral-Follow-up: bei
 # jedem Placement soll der Recruiter aktiv nach einer Empfehlung fragen.
 REFERRAL_FOLLOW_UP = (timedelta(days=7), "Nach Empfehlung fragen")
@@ -281,6 +288,17 @@ class CandidateSubmissionService(
                     "new_values": {"status": payload.status.value},
                 }
             )
+            # Vorherige automatische Follow-ups fuer denselben Prozess schliessen,
+            # bevor ein neuer angelegt wird - sonst blieb z.B. "CV-Out
+            # nachfassen" sichtbar offen, obwohl der Prozess laengst bei
+            # "Interview" war (kein Task wurde je geschlossen, siehe
+            # Nutzer-Feedback). Nur Tasks mit der exakten automatischen
+            # description werden geschlossen, keine manuell angelegten.
+            stale_auto_follow_ups = self.tasks.find_open_auto_follow_ups(
+                updated.id, AUTO_FOLLOW_UP_DESCRIPTION
+            )
+            for stale_task in stale_auto_follow_ups:
+                self.tasks.update(stale_task, {"status": TaskStatus.DONE})
             if follow_up is not None:
                 self.tasks.create(
                     {
@@ -288,7 +306,7 @@ class CandidateSubmissionService(
                         "client_company_id": updated.client_company_id,
                         "candidate_submission_id": updated.id,
                         "title": follow_up[1],
-                        "description": "Automatisch aus dem Prozessstatus erzeugtes Follow-up",
+                        "description": AUTO_FOLLOW_UP_DESCRIPTION,
                         "due_at": values["follow_up_at"],
                         "status": TaskStatus.OPEN,
                         "priority": TaskPriority.HIGH,
