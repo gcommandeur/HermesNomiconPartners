@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.enums import ClientStatus
+from cc_crm.models.postal_locality import PostalLocality
 from cc_crm.repositories.base import SQLAlchemyRepository
 
 # Dieselben Spalten wie SORT_ACCESSORS in clients-table.tsx, soweit es echte
@@ -37,6 +38,38 @@ class ClientCompanyRepository(SQLAlchemyRepository[ClientCompany]):
     def __init__(self, session: Session) -> None:
         super().__init__(session, ClientCompany)
 
+    def _region_conditions(self, region: str) -> list[ColumnElement[bool]]:
+        """Bidirektionales Ort/PLZ-Matching (Phase 4b): eine Suche nach
+        "München" muss auch Kanzleien finden, die nur die PLZ 80331 gepflegt
+        haben (kein Ort-Feld), und eine Suche nach "80331" muss Kanzleien
+        finden, die nur "München" als Ort gepflegt haben. Nutzt den
+        PLZ<->Ort-Referenzdatensatz aus models/postal_locality.py (Phase 4b),
+        NICHT services/geo.py::CITY_COORDINATES (nur Kartenanzeige)."""
+        term = f"%{region}%"
+        conditions: list[ColumnElement[bool]] = [
+            ClientCompany.city.ilike(term),
+            ClientCompany.postal_code.ilike(term),
+        ]
+        matching_postal_codes = self.session.scalars(
+            select(PostalLocality.postal_code)
+            .where(
+                or_(
+                    PostalLocality.locality.ilike(term),
+                    PostalLocality.borough.ilike(term),
+                    PostalLocality.suburb.ilike(term),
+                )
+            )
+            .distinct()
+        ).all()
+        if matching_postal_codes:
+            conditions.append(ClientCompany.postal_code.in_(matching_postal_codes))
+        matching_localities = self.session.scalars(
+            select(PostalLocality.locality).where(PostalLocality.postal_code.ilike(term)).distinct()
+        ).all()
+        if matching_localities:
+            conditions.append(ClientCompany.city.in_(matching_localities))
+        return conditions
+
     def filtered(
         self,
         *,
@@ -57,12 +90,7 @@ class ClientCompanyRepository(SQLAlchemyRepository[ClientCompany]):
         if owner_user_id is not None:
             filters.append(ClientCompany.owner_user_id == owner_user_id)
         if region:
-            filters.append(
-                or_(
-                    ClientCompany.city.ilike(f"%{region}%"),
-                    ClientCompany.postal_code.ilike(f"%{region}%"),
-                )
-            )
+            filters.append(or_(*self._region_conditions(region)))
         if search:
             term = f"%{search}%"
             filters.append(

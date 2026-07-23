@@ -10,6 +10,7 @@ from cc_crm.models.job_mandate import JobMandate
 from cc_crm.models.mailing_group import MailingGroup
 from cc_crm.models.note import Note
 from cc_crm.models.operational import Document, EmailDraftLog, SourcingMetric
+from cc_crm.models.postal_locality import PostalLocality
 from cc_crm.models.recruiting import (
     AuditLog,
     Fee,
@@ -44,6 +45,7 @@ __all__ = [
     "Note",
     "Offer",
     "Placement",
+    "PostalLocality",
     "RegionModifier",
     "SubmissionFeedback",
     "SourcingLead",
