@@ -2,8 +2,10 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.models.submission import CandidateSubmission
+from cc_crm.models.task import Task
 
 
 def test_cockpit_and_email_templates(client: TestClient) -> None:
@@ -84,6 +86,44 @@ def test_cockpit_hot_processes_and_important_include_candidate_and_client_names(
 
     important_details = [item["detail"] for item in cockpit["important"]]
     assert any("Max Mustermann" in detail for detail in important_details)
+
+
+def test_cockpit_important_resolves_names_via_submission_when_task_fields_are_null(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
+    """Aeltere Task-Zeilen (vor Einfuehrung von candidate_id/client_company_id
+    auf automatischen Follow-ups) haben diese Spalten leer, obwohl die
+    verknuepfte Submission Kandidat/Kanzlei kennt - die Uebersicht muss den
+    Namen trotzdem ueber candidate_submission_id auflösen, statt einen
+    namenlosen Eintrag zu zeigen (siehe services/operational.py::build)."""
+    candidate = client.post(
+        "/api/v1/candidates", json={"first_name": "Erika", "last_name": "Beispiel"}
+    ).json()
+    company = client.post("/api/v1/clients", json={"name": "Beispiel Steuerberatung"}).json()
+    submission = client.post(
+        "/api/v1/submissions",
+        json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
+    ).json()
+
+    with session_factory() as session:
+        session.add(
+            Task(
+                candidate_id=None,
+                client_company_id=None,
+                candidate_submission_id=uuid.UUID(submission["id"]),
+                title="Interviewfeedback nachfassen",
+                description="Automatisch aus dem Prozessstatus erzeugtes Follow-up",
+                due_at=datetime.now(UTC),
+            )
+        )
+        session.commit()
+
+    cockpit = client.get("/api/v1/cockpit?period=week").json()
+    important_details = [item["detail"] for item in cockpit["important"]]
+    assert any(
+        "Erika Beispiel" in detail and "Beispiel Steuerberatung" in detail
+        for detail in important_details
+    )
 
 
 def test_cockpit_sourcing_funnel_has_no_data_until_a_metric_is_recorded(

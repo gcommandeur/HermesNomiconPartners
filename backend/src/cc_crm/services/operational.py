@@ -353,44 +353,74 @@ class CockpitService:
             task for task in tasks if task.due_at is None or naive_utc(task.due_at) <= due_soon
         ]
         hot_submissions = [item for item in submissions if item.status in self.HOT]
+        # Aeltere Task-Zeilen (vor Einfuehrung von candidate_id/client_company_id
+        # auf automatischen Follow-ups) haben diese Spalten leer, obwohl die
+        # verknuepfte Submission Kandidat/Kanzlei kennt - als Fallback ueber
+        # candidate_submission_id aufloesen, statt auf der Uebersicht
+        # namenlose Eintraege ("Automatisch aus dem Prozessstatus erzeugtes
+        # Follow-up" ohne Kandidat/Kanzlei davor) anzuzeigen.
+        submissions_by_id = {item.id: item for item in submissions}
+
+        def _task_submission(task: Task) -> CandidateSubmission | None:
+            if task.candidate_submission_id is None:
+                return None
+            return submissions_by_id.get(task.candidate_submission_id)
+
+        def _task_candidate_id(task: Task) -> uuid.UUID | None:
+            if task.candidate_id:
+                return task.candidate_id
+            submission = _task_submission(task)
+            return submission.candidate_id if submission else None
+
+        def _task_client_id(task: Task) -> uuid.UUID | None:
+            if task.client_company_id:
+                return task.client_company_id
+            submission = _task_submission(task)
+            return submission.client_company_id if submission else None
+
+        task_candidate_ids = {task.id: _task_candidate_id(task) for task in due_tasks}
+        task_client_ids = {task.id: _task_client_id(task) for task in due_tasks}
 
         # Namen fuer Kandidat/Kanzlei in einem Bulk-Query je Entitaet statt pro
         # Zeile nachzuladen (kein ORM relationship() in diesem Codebase, daher
         # kein selectinload moeglich - bulk IN-Query erreicht denselben Zweck:
         # konstante statt mit der Datenmenge wachsende Query-Anzahl).
-        candidate_ids = {task.candidate_id for task in due_tasks if task.candidate_id} | {
+        candidate_ids = {value for value in task_candidate_ids.values() if value} | {
             item.candidate_id for item in hot_submissions
         }
-        client_ids = {task.client_company_id for task in due_tasks if task.client_company_id} | {
+        client_ids = {value for value in task_client_ids.values() if value} | {
             item.client_company_id for item in hot_submissions if item.client_company_id
         }
         candidate_names = self._candidate_names(candidate_ids)
         client_names = self._client_names(client_ids)
 
-        important = [
-            {
-                "kind": "task",
-                "title": task.title,
-                "detail": " — ".join(
-                    filter(
-                        None,
-                        [
-                            candidate_names.get(task.candidate_id) if task.candidate_id else None,
-                            client_names.get(task.client_company_id)
-                            if task.client_company_id
-                            else None,
-                            task.description or "Offene Aufgabe",
-                        ],
-                    )
-                ),
-                "due_at": task.due_at,
-                "candidate_id": task.candidate_id,
-                "client_company_id": task.client_company_id,
-                "submission_id": task.candidate_submission_id,
-                "priority": task.priority.value,
-            }
-            for task in due_tasks
-        ]
+        def _task_names(task: Task) -> tuple[str | None, str | None]:
+            candidate_id = task_candidate_ids[task.id]
+            client_id = task_client_ids[task.id]
+            candidate_name = candidate_names.get(candidate_id) if candidate_id else None
+            client_name = client_names.get(client_id) if client_id else None
+            return candidate_name, client_name
+
+        important = []
+        for task in due_tasks:
+            candidate_name, client_name = _task_names(task)
+            important.append(
+                {
+                    "kind": "task",
+                    "title": task.title,
+                    "detail": " — ".join(
+                        filter(
+                            None,
+                            [candidate_name, client_name, task.description or "Offene Aufgabe"],
+                        )
+                    ),
+                    "due_at": task.due_at,
+                    "candidate_id": task_candidate_ids[task.id],
+                    "client_company_id": task_client_ids[task.id],
+                    "submission_id": task.candidate_submission_id,
+                    "priority": task.priority.value,
+                }
+            )
         hot = [
             {
                 "kind": "submission",
