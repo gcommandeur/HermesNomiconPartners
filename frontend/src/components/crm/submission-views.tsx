@@ -439,10 +439,26 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                             : "border-white/10 bg-[#12243A] hover:border-[#1F5FA8]/50",
                         )}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="min-w-0 flex-1 truncate text-xs font-semibold hover:underline">
-                            {candidateName(item.candidate_id)} <span className="text-[#5b6167]">·</span> {clientName(item.client_company_id)}
+                        {/* Name und Kanzlei je auf eigener Zeile, in einer
+                         * eigenen Kopfzeile ohne Konkurrenz um Breite mit
+                         * Datum/Icons (die stehen jetzt in einer eigenen
+                         * Zeile darunter) - bei langen Kanzleinamen (z.B.
+                         * "GmbH & Co. KG Steuerberatungsgesellschaft") fielen
+                         * beide vorher in ein gemeinsames truncate, sodass
+                         * selbst der Kandidatenname nur noch als
+                         * "Pascal-Arnold Sli…" sichtbar war. Volltitel via
+                         * title-Attribut bei Kanzlei-Truncation weiterhin per
+                         * Hover einsehbar. */}
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold hover:underline">{candidateName(item.candidate_id)}</p>
+                          <p
+                            className="mt-0.5 truncate text-[10px] text-[#94A3B8]"
+                            title={clientName(item.client_company_id)}
+                          >
+                            {clientName(item.client_company_id)}
                           </p>
+                        </div>
+                        <div className="mt-1.5 flex items-center justify-between gap-2">
                           <span className="shrink-0 text-[10px] text-[#94A3B8]">{formatDate(item.follow_up_at)}</span>
                           <div className="flex shrink-0 items-center gap-0.5">
                             {isHot(item.status) && <span className="rounded-full bg-[#1F5FA8]/20 px-1.5 py-0.5 text-[9px] text-[#69A7EA]">Hot</span>}
