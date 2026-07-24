@@ -23,8 +23,9 @@ from sqlalchemy.orm import Session
 from cc_crm.core.errors import AIProviderError, BusinessRuleError, EntityNotFoundError
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
-from cc_crm.models.enums import SourcingLeadStatus, SourcingSourceType
+from cc_crm.models.enums import SourcingLeadStatus, SourcingRunStatus, SourcingSourceType
 from cc_crm.models.sourcing_lead import SourcingLead
+from cc_crm.models.sourcing_run import SourcingRun
 from cc_crm.schemas.candidate import CandidateCreate
 from cc_crm.schemas.sourcing import SourcingLeadCreate, SourcingRunResult
 from cc_crm.services import kanzlei_team_scrape, steuerberater_verzeichnis, wpk_berufsregister
@@ -54,16 +55,42 @@ def _merge_results(total: "SourcingRunResult", partial: "SourcingRunResult") -> 
     total.errors.extend(partial.errors)
 
 
-def scan_team_pages_in_background(client_company_ids: list[uuid.UUID]) -> None:
+def scan_team_pages_in_background(client_company_ids: list[uuid.UUID], run_id: uuid.UUID) -> None:
     """FastAPI-BackgroundTask fuer "alle erfassten Kanzleien scannen": laeuft
     nach der HTTP-Antwort mit eigener DB-Session weiter (die Request-Session
     ist dann bereits geschlossen). Ergebnisse erscheinen fortlaufend als
     Leads auf der /sourcing-Seite; Fehler einzelner Kanzleien brechen den
-    Scan nicht ab."""
+    Scan nicht ab.
+
+    Prueft vor JEDER Kanzlei den stop_requested-Flag des zugehoerigen
+    SourcingRun (per POST /sourcing/stop von aussen gesetzt) und bricht dann
+    ab - ein bereits laufender Website-/LLM-Request fuer die aktuelle
+    Kanzlei wird nicht mitten drin abgebrochen, erst die naechste Iteration
+    startet nicht mehr. DB-gestuetzt statt In-Memory-Flag, da Stop-Kommando
+    und Hintergrund-Lauf in unterschiedlichen Sessions/Requests laufen."""
     from cc_crm.infrastructure.database.session import SessionLocal
 
     with SessionLocal() as session:
-        SourcingService(session).run_team_scrapes(client_company_ids)
+        service = SourcingService(session)
+        run = session.get(SourcingRun, run_id)
+        if run is None:
+            return
+        for index, company_id in enumerate(client_company_ids):
+            if index > 0:
+                time.sleep(DIRECTORY_REQUEST_PAUSE_SECONDS)
+            session.refresh(run)
+            if run.stop_requested:
+                run.status = SourcingRunStatus.STOPPED
+                run.finished_at = datetime.now(UTC)
+                session.commit()
+                return
+            result = service.run_kanzlei_team_scrape(company_id)
+            run.processed = index + 1
+            run.leads_created += result.created
+            session.commit()
+        run.status = SourcingRunStatus.COMPLETED
+        run.finished_at = datetime.now(UTC)
+        session.commit()
 
 
 _NON_LETTER_RE = re.compile(r"[^a-z0-9 ]")
@@ -110,6 +137,35 @@ class SourcingService:
         # erneut - ein Lauf legt leicht hunderte Leads am Stueck an.
         self._candidate_names: list[tuple[uuid.UUID, str]] | None = None
         self._lead_names: dict[SourcingSourceType, set[str]] = {}
+
+    def start_run(self, source_type: SourcingSourceType, total: int) -> SourcingRun:
+        run = SourcingRun(source_type=source_type, status=SourcingRunStatus.RUNNING, total=total)
+        self.session.add(run)
+        self.session.commit()
+        self.session.refresh(run)
+        return run
+
+    def get_run_status(self) -> SourcingRun | None:
+        """Neuester Lauf ueberhaupt (laufend oder zuletzt beendet) - genau
+        einer zur Zeit, da scan_all_companies serialisiert ueber alle
+        Kanzleien laeuft."""
+        return self.session.scalars(
+            select(SourcingRun).order_by(SourcingRun.started_at.desc()).limit(1)
+        ).first()
+
+    def request_stop(self) -> SourcingRun:
+        run = self.session.scalars(
+            select(SourcingRun)
+            .where(SourcingRun.status == SourcingRunStatus.RUNNING)
+            .order_by(SourcingRun.started_at.desc())
+            .limit(1)
+        ).first()
+        if run is None:
+            raise EntityNotFoundError("Kein laufender Sourcing-Lauf gefunden")
+        run.stop_requested = True
+        self.session.commit()
+        self.session.refresh(run)
+        return run
 
     def list_leads(
         self,

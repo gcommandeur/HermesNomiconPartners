@@ -4,8 +4,8 @@ from typing import Any, Self
 
 from pydantic import BaseModel, Field, model_validator
 
-from cc_crm.models.enums import SourcingLeadStatus, SourcingSourceType
-from cc_crm.schemas.base import EntityRead
+from cc_crm.models.enums import SourcingLeadStatus, SourcingRunStatus, SourcingSourceType
+from cc_crm.schemas.base import EntityRead, ORMModel
 
 
 class SourcingLeadCreate(BaseModel):
@@ -69,6 +69,25 @@ class SourcingRunResult(BaseModel):
     # (scan_all_companies) - die Zaehler oben bleiben dann 0, die Leads
     # erscheinen fortlaufend in der Liste.
     background_started: int = 0
+    # Gesetzt, wenn background_started > 0 - Frontend pollt damit
+    # GET /sourcing/status und kann ueber POST /sourcing/stop denselben Lauf
+    # abbrechen.
+    run_id: uuid.UUID | None = None
+
+
+class SourcingRunStatusRead(ORMModel):
+    """Aktueller Stand des (einzigen) Hintergrund-Sourcing-Laufs - Basis fuer
+    die Lauf-Anzeige samt Stop-Button im Frontend."""
+
+    id: uuid.UUID
+    source_type: SourcingSourceType
+    status: SourcingRunStatus
+    total: int
+    processed: int
+    leads_created: int
+    stop_requested: bool
+    started_at: datetime
+    finished_at: datetime | None
 
 
 class SourcingLeadRead(EntityRead):

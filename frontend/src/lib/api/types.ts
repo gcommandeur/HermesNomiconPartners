@@ -677,3 +677,19 @@ export interface SourcingLead {
   reviewed_at: string | null;
   reviewed_by_user_id: string | null;
 }
+
+export type SourcingRunStatusValue = "running" | "completed" | "stopped";
+
+/** Stand des Hintergrund-Sourcing-Laufs "alle Kanzleien scannen" (siehe
+ * Backend models/sourcing_run.py) - Basis fuer Lauf-Anzeige + Stop-Button. */
+export interface SourcingRunStatus {
+  id: string;
+  source_type: SourcingSourceType;
+  status: SourcingRunStatusValue;
+  total: number;
+  processed: number;
+  leads_created: number;
+  stop_requested: boolean;
+  started_at: string;
+  finished_at: string | null;
+}

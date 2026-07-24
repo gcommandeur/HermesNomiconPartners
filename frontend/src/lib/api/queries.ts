@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, Task, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -343,6 +343,12 @@ export async function getAuditLogs() {
  * /sourcing - beide Status in einem Rutsch, da die Seite sie gemeinsam (aber
  * getrennt hervorgehoben) anzeigt. Bewusst limit=500 statt fetchAllPages: ein
  * einzelner Sourcing-Lauf liefert Dutzende, nicht Tausende offener Leads. */
+/** Stand des Hintergrund-Sourcing-Laufs fuer die Lauf-Anzeige/Stop-Button -
+ * null (per Fallback), solange noch nie ein Lauf gestartet wurde. */
+export async function getSourcingRunStatus() {
+  return apiGet<SourcingRunStatus | null>("/sourcing/status", null);
+}
+
 export async function getOpenSourcingLeads() {
   const [pending, duplicates] = await Promise.all([
     apiGet<Paginated<SourcingLead>>("/sourcing/leads?status=pending&limit=500", { items: [], total_count: 0, limit: 500, offset: 0 }),

@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { mutate } from "swr";
-import { Play } from "lucide-react";
+import useSWR, { mutate } from "swr";
+import { Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { apiPost } from "@/lib/api/client";
+import { getSourcingRunStatus } from "@/lib/api/queries";
+import type { DataResult, SourcingRunStatus } from "@/lib/api/types";
 
 interface SourcingRunResult {
   found: number;
@@ -14,6 +16,7 @@ interface SourcingRunResult {
   possible_duplicates: number;
   errors: string[];
   background_started: number;
+  run_id: string | null;
 }
 
 type RunSource = "steuerberaterverzeichnis" | "wpk_berufsregister" | "kanzlei_team_page";
@@ -49,16 +52,41 @@ export function SourcingRunForm() {
   const [source, setSource] = useState<RunSource>("steuerberaterverzeichnis");
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [result, setResult] = useState<SourcingRunResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Pollt den Hintergrund-Lauf ("alle Kanzleien scannen") alle 4s, solange
+  // er laeuft - das ist der einzige Sourcing-Pfad, der lange genug laeuft,
+  // um eine Fortschrittsanzeige + Stop-Button zu brauchen (siehe Backend
+  // GET /sourcing/status). Stoppt automatisch, sobald der Lauf beendet ist.
+  const { data: statusData, mutate: mutateStatus } = useSWR<DataResult<SourcingRunStatus | null>>(
+    "/sourcing/status",
+    getSourcingRunStatus,
+    { refreshInterval: (latest) => (latest?.data?.status === "running" ? 4000 : 0) },
+  );
+  const activeRun = statusData?.data?.status === "running" ? statusData.data : null;
 
   const isTeamScrape = source === "kanzlei_team_page";
   const areas = input
     .split(/[,;\n]/)
     .map((value) => value.trim())
     .filter(Boolean);
-  const canRun = !running && (isTeamScrape || (areas.length > 0 && areas.length <= 20));
+  const canRun = !running && !activeRun && (isTeamScrape || (areas.length > 0 && areas.length <= 20));
   const selectedOption = SOURCE_OPTIONS.find((option) => option.value === source);
+
+  async function handleStop() {
+    setStopping(true);
+    setError(null);
+    try {
+      await apiPost("/sourcing/stop", {});
+      await mutateStatus();
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Stopp fehlgeschlagen.");
+    } finally {
+      setStopping(false);
+    }
+  }
 
   async function handleRun() {
     if (!canRun) return;
@@ -78,6 +106,7 @@ export function SourcingRunForm() {
       // Leads-Liste sofort aktualisieren (gleicher SWR-Key wie in
       // sourcing-leads-table.tsx).
       await mutate("/sourcing/leads-open");
+      if (runResult.run_id) await mutateStatus();
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Sourcing-Lauf fehlgeschlagen.");
     } finally {
@@ -87,17 +116,27 @@ export function SourcingRunForm() {
 
   return (
     <div className="mb-6 rounded-lg border border-white/10 bg-[#0D1B2E] p-4">
-      <p className="mb-2 text-sm font-semibold text-[#D8DADF]">Sourcing-Lauf starten</p>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <p className="text-sm font-semibold text-[#D8DADF]">Sourcing-Lauf starten</p>
+        {activeRun && (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#1F5FA8]/40 bg-[#1F5FA8]/15 px-2.5 py-0.5 text-[11px] font-medium text-[#8FB4E3]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#8FB4E3]" />
+            Läuft: {activeRun.processed}/{activeRun.total} Kanzleien
+            {activeRun.stop_requested && " · wird gestoppt…"}
+          </span>
+        )}
+      </div>
       <p className="mb-3 text-xs text-[#94A3B8]">{selectedOption?.hint}</p>
       <div className="flex flex-wrap items-center gap-2">
         <select
           value={source}
+          disabled={!!activeRun}
           onChange={(event) => {
             setSource(event.target.value as RunSource);
             setResult(null);
             setError(null);
           }}
-          className="h-9 rounded-md border border-white/15 bg-[#0D1B2E] px-2 text-sm text-[#D8DADF] focus:outline-none focus:ring-2 focus:ring-[#1F5FA8]/30"
+          className="h-9 rounded-md border border-white/15 bg-[#0D1B2E] px-2 text-sm text-[#D8DADF] focus:outline-none focus:ring-2 focus:ring-[#1F5FA8]/30 disabled:opacity-50"
         >
           {SOURCE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -108,15 +147,28 @@ export function SourcingRunForm() {
         {!isTeamScrape && (
           <input
             value={input}
+            disabled={!!activeRun}
             onChange={(event) => setInput(event.target.value)}
             placeholder="z.B. 70173, 80331, Würzburg"
-            className="h-9 w-full max-w-md rounded-md border border-white/15 bg-white/5 px-3 text-sm text-[#D8DADF] placeholder:text-[#5b6167] focus:outline-none focus:ring-2 focus:ring-[#1F5FA8]/30"
+            className="h-9 w-full max-w-md rounded-md border border-white/15 bg-white/5 px-3 text-sm text-[#D8DADF] placeholder:text-[#5b6167] focus:outline-none focus:ring-2 focus:ring-[#1F5FA8]/30 disabled:opacity-50"
           />
         )}
-        <Button size="sm" disabled={!canRun} onClick={() => void handleRun()}>
-          <Play size={14} />
-          {running ? "Lauf läuft…" : isTeamScrape ? "Alle Kanzleien scannen" : "Lauf starten"}
-        </Button>
+        {activeRun ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={stopping || activeRun.stop_requested}
+            onClick={() => void handleStop()}
+          >
+            <Square size={14} />
+            {activeRun.stop_requested ? "Stopp angefordert…" : stopping ? "Stoppe…" : "Stoppen"}
+          </Button>
+        ) : (
+          <Button size="sm" disabled={!canRun} onClick={() => void handleRun()}>
+            <Play size={14} />
+            {running ? "Lauf läuft…" : isTeamScrape ? "Alle Kanzleien scannen" : "Lauf starten"}
+          </Button>
+        )}
       </div>
       {areas.length > 20 && !isTeamScrape && (
         <p className="mt-2 text-xs text-[#e4aeb4]">Maximal 20 Gebiete pro Lauf.</p>

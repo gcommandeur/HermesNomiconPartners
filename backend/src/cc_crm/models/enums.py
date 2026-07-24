@@ -180,6 +180,16 @@ class SourcingLeadStatus(StrEnum):
     POSSIBLE_DUPLICATE = "possible_duplicate"
 
 
+class SourcingRunStatus(StrEnum):
+    """Laufzeit-Status eines SourcingRun (siehe models/sourcing_run.py) -
+    aktuell nur fuer den Hintergrund-Lauf "alle Kanzleien scannen" befuellt,
+    da nur dieser lange genug laeuft, um stopp-/anzeigebar sein zu muessen."""
+
+    RUNNING = "running"
+    COMPLETED = "completed"
+    STOPPED = "stopped"
+
+
 class WarrantyStatus(StrEnum):
     """Gewährleistungsstatus eines Placements, berechnet aus
     start_date + guarantee_period_months (siehe services/warranty.py)."""

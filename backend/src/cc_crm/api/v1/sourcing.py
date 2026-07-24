@@ -8,7 +8,12 @@ from cc_crm.api.dependencies import CurrentUser, DatabaseSession
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.enums import SourcingLeadStatus, SourcingSourceType
 from cc_crm.schemas.pagination import Page
-from cc_crm.schemas.sourcing import SourcingLeadRead, SourcingRunRequest, SourcingRunResult
+from cc_crm.schemas.sourcing import (
+    SourcingLeadRead,
+    SourcingRunRequest,
+    SourcingRunResult,
+    SourcingRunStatusRead,
+)
 from cc_crm.services.sourcing import SourcingService, scan_team_pages_in_background
 
 router = APIRouter(prefix="/sourcing")
@@ -36,12 +41,29 @@ def run_sourcing(
                     )
                 ).all()
             )
-            background_tasks.add_task(scan_team_pages_in_background, company_ids)
-            return SourcingRunResult(background_started=len(company_ids))
+            run = service.start_run(payload.source_type, total=len(company_ids))
+            background_tasks.add_task(scan_team_pages_in_background, company_ids, run.id)
+            return SourcingRunResult(background_started=len(company_ids), run_id=run.id)
         assert payload.client_company_ids is not None  # per Schema-Validierung
         return service.run_team_scrapes(payload.client_company_ids)
     assert payload.plz_or_ort is not None  # per Schema-Validierung
     return service.run_area_searches(payload.source_type, payload.plz_or_ort)
+
+
+@router.get("/status", response_model=SourcingRunStatusRead | None)
+def get_sourcing_run_status(session: DatabaseSession) -> SourcingRunStatusRead | None:
+    """Stand des Hintergrund-Laufs "alle Kanzleien scannen" fuer die
+    Lauf-Anzeige/Stop-Button im Frontend - null, wenn noch nie ein Lauf
+    gestartet wurde."""
+    run = SourcingService(session).get_run_status()
+    return SourcingRunStatusRead.model_validate(run) if run is not None else None
+
+
+@router.post("/stop", response_model=SourcingRunStatusRead)
+def stop_sourcing_run(session: DatabaseSession) -> SourcingRunStatusRead:
+    """Signalisiert dem laufenden Hintergrund-Lauf, nach der aktuellen
+    Kanzlei abzubrechen (siehe scan_team_pages_in_background)."""
+    return SourcingRunStatusRead.model_validate(SourcingService(session).request_stop())
 
 
 @router.get("/leads", response_model=Page[SourcingLeadRead])

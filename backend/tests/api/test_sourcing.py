@@ -198,6 +198,7 @@ def test_sourcing_run_creates_leads_and_reports_counts(
         "possible_duplicates": 1,
         "errors": [],
         "background_started": 0,
+        "run_id": None,
     }
 
     # Wiederholter Lauf: gleiche Personen -> keine Doppel-Leads.
@@ -305,6 +306,7 @@ def test_sourcing_run_team_scrape_for_client_company(
         "possible_duplicates": 0,
         "errors": [],
         "background_started": 0,
+        "run_id": None,
     }
 
     lead = client.get("/api/v1/sourcing/leads").json()["items"][0]
