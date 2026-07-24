@@ -74,6 +74,18 @@ CLEANUP_NOTE = (
 )
 
 
+def _redact_url(database_url: str) -> str:
+    """Passwort in einer Connection-URL fuer Logs/Print-Ausgaben maskieren -
+    Produktions-Zugangsdaten sollen unter keinen Umstaenden in Terminal-
+    Output oder Skript-Logs landen."""
+    if "@" not in database_url or "://" not in database_url:
+        return database_url
+    scheme, rest = database_url.split("://", 1)
+    credentials, host_part = rest.split("@", 1)
+    user = credentials.split(":", 1)[0]
+    return f"{scheme}://{user}:***@{host_part}"
+
+
 def _open_auto_follow_ups(session: Session) -> list[Task]:
     statement = select(Task).where(
         Task.description == AUTO_FOLLOW_UP_DESCRIPTION,
@@ -205,7 +217,10 @@ def main() -> None:
     args = parser.parse_args()
 
     mode = "APPLY" if args.apply else "DRY-RUN"
-    target = args.database_url or "lokale DB (CC_CRM_DATABASE_URL)"
+    if args.database_url:
+        target = _redact_url(args.database_url)
+    else:
+        target = "lokale DB (CC_CRM_DATABASE_URL)"
     print(f"=== Follow-up-Duplikat-Bereinigung ({mode}) ===")
     print(f"Ziel-DB: {target}\n")
     stats = cleanup(apply=args.apply, database_url=args.database_url)
