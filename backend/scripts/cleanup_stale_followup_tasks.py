@@ -1,21 +1,30 @@
-"""Einmalige Bereinigung von Follow-up-Task-Duplikaten aus der Zeit VOR dem
+"""Einmalige Bereinigung von Follow-up-Task-Altlasten aus der Zeit VOR dem
 Fix in services/submissions.py::transition() (siehe AUTO_FOLLOW_UP_DESCRIPTION
-dort): der Fix schliesst bei jedem Statuswechsel automatisch die vorherigen
-offenen automatischen Follow-ups, bevor ein neuer angelegt wird - wirkt aber
-nur vorwaerts, ab dem Deploy des Fixes. Alle davor bereits automatisch
-angelegten Follow-ups (z.B. "CV-Out nachfassen" UND "Interviewfeedback
-nachfassen" gleichzeitig offen fuer denselben Prozess) blieben unangetastet
-offen und erzeugen sichtbare Duplikate im "Fällig und überfällig"-Bereich der
-Übersicht.
+dort): der Fix schliesst bei jedem Statuswechsel (auch bei CANCELLED)
+automatisch alle vorherigen offenen automatischen Follow-ups, bevor ein neuer
+angelegt wird - wirkt aber nur vorwaerts, ab dem Deploy des Fixes. Dieses
+Skript deckt drei Arten von Altlasten ab, die davor entstanden sind und
+seither unangetastet offen blieben:
+
+1. DUPLIKATE: mehrere offene automatische Follow-ups fuer dieselbe
+   Submission (z.B. "CV-Out nachfassen" UND "Interviewfeedback nachfassen"
+   gleichzeitig offen). Es bleibt die zuletzt erstellte (created_at DESC)
+   offen, aeltere werden geschlossen.
+2. GEGENSTANDSLOS (Prozess abgebrochen): die verknuepfte Submission steht
+   auf CANCELLED - der Follow-up ist damit hinfaellig, wird aber vom
+   Duplikat-Check allein nicht erfasst, wenn es der einzige offene
+   automatische Follow-up dieser Submission ist (kein Duplikat, aber trotzdem
+   veraltet). Alle offenen automatischen Follow-ups einer abgebrochenen
+   Submission werden geschlossen.
+3. VERWAIST: candidate_submission_id ist leer (oder verweist auf eine nicht
+   mehr existierende Submission) - es gibt keinen Bezug mehr, ueber den sich
+   Kandidat/Kanzlei auflösen liesse, der Task ist nicht mehr aktionabel.
 
 Kriterium fuer "automatisch erzeugt": exakter String-Match auf
 description == AUTO_FOLLOW_UP_DESCRIPTION (siehe services/submissions.py) -
 KEIN Fuzzy-Match auf den Titel, da der Titel je Prozessstufe variiert
 ("CV-Out nachfassen", "Interviewfeedback nachfassen", ...) und manuell vom
-Nutzer angelegte Aufgaben zufaellig denselben Titel tragen koennten. Von
-mehreren offenen automatischen Follow-ups pro candidate_submission_id bleibt
-die zuletzt erstellte (created_at DESC) offen - das ist die zum aktuellen
-Prozessstatus passende -, alle aelteren werden geschlossen.
+Nutzer angelegte Aufgaben zufaellig denselben Titel tragen koennten.
 
 Jeder automatisiert geschlossene Task bekommt einen Audit-Log-Eintrag
 (entity_type "task", action "stale_followup_cleanup_closed") und einen
@@ -58,7 +67,7 @@ from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
 from cc_crm.infrastructure.database.session import SessionLocal  # noqa: E402
 from cc_crm.models.candidate import Candidate  # noqa: E402
 from cc_crm.models.client_company import ClientCompany  # noqa: E402
-from cc_crm.models.enums import TaskStatus  # noqa: E402
+from cc_crm.models.enums import SubmissionStatus, TaskStatus  # noqa: E402
 from cc_crm.models.submission import CandidateSubmission  # noqa: E402
 from cc_crm.models.task import Task  # noqa: E402
 from cc_crm.repositories.recruiting import AuditLogRepository  # noqa: E402
@@ -67,11 +76,16 @@ from cc_crm.services.submissions import AUTO_FOLLOW_UP_DESCRIPTION  # noqa: E402
 
 CLEANUP_NOTE = (
     "\n\n[Automatisch geschlossen durch einmaliges Bereinigungs-Skript "
-    "cleanup_stale_followup_tasks.py am {timestamp} - Alt-Duplikat von vor "
-    "dem Fix in services/submissions.py::transition(), das seither "
-    "vorherige automatische Follow-ups vor dem Anlegen eines neuen "
-    "schliesst.]"
+    "cleanup_stale_followup_tasks.py am {timestamp} - {reason}]"
 )
+
+REASON_DUPLICATE = (
+    "Alt-Duplikat von vor dem Fix in services/submissions.py::transition(), "
+    "das seither vorherige automatische Follow-ups vor dem Anlegen eines "
+    "neuen schliesst."
+)
+REASON_CANCELLED = "Prozess ist abgebrochen (cancelled) - Follow-up ist hinfaellig."
+REASON_ORPHANED = "Follow-up ohne (mehr) gueltigen Prozessbezug (candidate_submission_id leer)."
 
 
 def _redact_url(database_url: str) -> str:
@@ -90,31 +104,19 @@ def _open_auto_follow_ups(session: Session) -> list[Task]:
     statement = select(Task).where(
         Task.description == AUTO_FOLLOW_UP_DESCRIPTION,
         Task.status.in_([TaskStatus.OPEN, TaskStatus.IN_PROGRESS]),
-        Task.candidate_submission_id.isnot(None),
     )
     return list(session.scalars(statement).all())
 
 
-def _group_by_submission(tasks: list[Task]) -> dict[uuid.UUID, list[Task]]:
-    groups: dict[uuid.UUID, list[Task]] = defaultdict(list)
-    for task in tasks:
-        assert task.candidate_submission_id is not None
-        groups[task.candidate_submission_id].append(task)
-    return groups
-
-
-def _label(session: Session, task: Task) -> str:
+def _label(session: Session, task: Task, submission: CandidateSubmission | None) -> str:
     # Task.candidate_id/client_company_id sind bei automatischen Follow-ups
     # normalerweise gesetzt (siehe services/submissions.py::transition()),
     # als Fallback aber ueber die zugehoerige Submission aufloesen, falls
     # doch mal leer.
-    candidate_id = task.candidate_id
-    client_company_id = task.client_company_id
-    if (candidate_id is None or client_company_id is None) and task.candidate_submission_id:
-        submission = session.get(CandidateSubmission, task.candidate_submission_id)
-        if submission is not None:
-            candidate_id = candidate_id or submission.candidate_id
-            client_company_id = client_company_id or submission.client_company_id
+    candidate_id = task.candidate_id or (submission.candidate_id if submission else None)
+    client_company_id = task.client_company_id or (
+        submission.client_company_id if submission else None
+    )
     candidate = session.get(Candidate, candidate_id) if candidate_id else None
     client = session.get(ClientCompany, client_company_id) if client_company_id else None
     candidate_label = (
@@ -122,6 +124,39 @@ def _label(session: Session, task: Task) -> str:
     )
     client_label = client.name if client is not None else "?"
     return f"{candidate_label} @ {client_label}"
+
+
+def _close_task(
+    session: Session,
+    tasks: TaskRepository,
+    audit_logs: AuditLogRepository,
+    task: Task,
+    *,
+    apply: bool,
+    reason: str,
+    now: datetime,
+) -> None:
+    if not apply:
+        return
+    tasks.update(
+        task,
+        {
+            "status": TaskStatus.DONE,
+            "description": AUTO_FOLLOW_UP_DESCRIPTION
+            + CLEANUP_NOTE.format(timestamp=now.isoformat(), reason=reason),
+        },
+    )
+    audit_logs.create(
+        {
+            "entity_type": "task",
+            "entity_id": task.id,
+            "action": "stale_followup_cleanup_closed",
+            "changed_at": now,
+            "changed_by": "cleanup_stale_followup_tasks.py",
+            "old_values": {"status": task.status.value},
+            "new_values": {"status": TaskStatus.DONE.value, "note": reason},
+        }
+    )
 
 
 def cleanup(*, apply: bool, database_url: str | None = None) -> dict[str, int]:
@@ -134,23 +169,54 @@ def cleanup(*, apply: bool, database_url: str | None = None) -> dict[str, int]:
 
     with session_factory() as session:
         open_tasks = _open_auto_follow_ups(session)
-        groups = _group_by_submission(open_tasks)
-        duplicate_groups = {
-            submission_id: tasks for submission_id, tasks in groups.items() if len(tasks) > 1
+        submission_ids = {
+            task.candidate_submission_id for task in open_tasks if task.candidate_submission_id
+        }
+        submissions = {
+            item.id: item
+            for item in session.scalars(
+                select(CandidateSubmission).where(CandidateSubmission.id.in_(submission_ids))
+            ).all()
         }
 
-        submissions_affected = 0
-        tasks_closed = 0
-        tasks = TaskRepository(session)
+        orphaned: list[Task] = []
+        moot: list[Task] = []
+        active_by_submission: dict[uuid.UUID, list[Task]] = defaultdict(list)
+
+        for task in open_tasks:
+            submission = (
+                submissions.get(task.candidate_submission_id)
+                if task.candidate_submission_id
+                else None
+            )
+            if submission is None:
+                orphaned.append(task)
+            elif submission.status == SubmissionStatus.CANCELLED:
+                moot.append(task)
+            else:
+                active_by_submission[submission.id].append(task)
+
+        duplicate_groups = {
+            submission_id: tasks
+            for submission_id, tasks in active_by_submission.items()
+            if len(tasks) > 1
+        }
+
+        tasks_repo = TaskRepository(session)
         audit_logs = AuditLogRepository(session)
         now = datetime.now(UTC)
+        duplicates_closed = 0
+        moot_closed = 0
+        orphaned_closed = 0
 
+        if duplicate_groups:
+            print("--- Duplikate (mehrere offene automatische Follow-ups pro Prozess) ---")
         for submission_id, group_tasks in duplicate_groups.items():
             ordered = sorted(group_tasks, key=lambda t: t.created_at, reverse=True)
             keep, stale = ordered[0], ordered[1:]
-            submissions_affected += 1
+            submission = submissions.get(submission_id)
             print(
-                f"Submission {submission_id} ({_label(session, keep)}): "
+                f"Submission {submission_id} ({_label(session, keep, submission)}): "
                 f"{len(group_tasks)} offene automatische Follow-ups, "
                 f"{len(stale)} würde(n) geschlossen (behält '{keep.title}', "
                 f"erstellt {keep.created_at.isoformat()})"
@@ -161,43 +227,53 @@ def cleanup(*, apply: bool, database_url: str | None = None) -> dict[str, int]:
                     f"  {action}: '{stale_task.title}' "
                     f"(fällig {stale_task.due_at}, erstellt {stale_task.created_at.isoformat()})"
                 )
-                tasks_closed += 1
-                if apply:
-                    old_status = stale_task.status.value
-                    note = CLEANUP_NOTE.format(timestamp=now.isoformat())
-                    tasks.update(
-                        stale_task,
-                        {
-                            "status": TaskStatus.DONE,
-                            "description": AUTO_FOLLOW_UP_DESCRIPTION + note,
-                        },
-                    )
-                    audit_logs.create(
-                        {
-                            "entity_type": "task",
-                            "entity_id": stale_task.id,
-                            "action": "stale_followup_cleanup_closed",
-                            "changed_at": now,
-                            "changed_by": "cleanup_stale_followup_tasks.py",
-                            "old_values": {"status": old_status},
-                            "new_values": {
-                                "status": TaskStatus.DONE.value,
-                                "note": (
-                                    "Alt-Duplikat vor dem Fix in "
-                                    "services/submissions.py::transition() - "
-                                    "einmalige Bereinigung"
-                                ),
-                            },
-                        }
-                    )
+                duplicates_closed += 1
+                _close_task(
+                    session, tasks_repo, audit_logs, stale_task,
+                    apply=apply, reason=REASON_DUPLICATE, now=now,
+                )
+
+        if moot:
+            print("\n--- Gegenstandslos (Prozess abgebrochen) ---")
+        for task in moot:
+            submission = (
+                submissions.get(task.candidate_submission_id)
+                if task.candidate_submission_id
+                else None
+            )
+            action = "GESCHLOSSEN" if apply else "WÜRDE SCHLIESSEN"
+            print(
+                f"{action}: '{task.title}' ({_label(session, task, submission)}) "
+                f"(fällig {task.due_at}, erstellt {task.created_at.isoformat()})"
+            )
+            moot_closed += 1
+            _close_task(
+                session, tasks_repo, audit_logs, task,
+                apply=apply, reason=REASON_CANCELLED, now=now,
+            )
+
+        if orphaned:
+            print("\n--- Verwaist (kein Prozessbezug mehr) ---")
+        for task in orphaned:
+            action = "GESCHLOSSEN" if apply else "WÜRDE SCHLIESSEN"
+            print(
+                f"{action}: '{task.title}' (fällig {task.due_at}, "
+                f"erstellt {task.created_at.isoformat()})"
+            )
+            orphaned_closed += 1
+            _close_task(
+                session, tasks_repo, audit_logs, task,
+                apply=apply, reason=REASON_ORPHANED, now=now,
+            )
 
         if apply:
             session.commit()
 
         return {
-            "submissions_checked": len(groups),
-            "submissions_affected": submissions_affected,
-            "tasks_closed": tasks_closed,
+            "duplicates_closed": duplicates_closed,
+            "moot_closed": moot_closed,
+            "orphaned_closed": orphaned_closed,
+            "tasks_closed": duplicates_closed + moot_closed + orphaned_closed,
         }
 
 
@@ -221,15 +297,15 @@ def main() -> None:
         target = _redact_url(args.database_url)
     else:
         target = "lokale DB (CC_CRM_DATABASE_URL)"
-    print(f"=== Follow-up-Duplikat-Bereinigung ({mode}) ===")
+    print(f"=== Follow-up-Altlasten-Bereinigung ({mode}) ===")
     print(f"Ziel-DB: {target}\n")
     stats = cleanup(apply=args.apply, database_url=args.database_url)
 
     print("\n=== Zusammenfassung ===")
-    checked = stats["submissions_checked"]
-    print(f"Submissions mit mind. 1 offenem automatischen Follow-up: {checked}")
-    print(f"Davon mit Duplikaten (>1 offen): {stats['submissions_affected']}")
-    print(f"Tasks geschlossen: {stats['tasks_closed']}")
+    print(f"Duplikate geschlossen: {stats['duplicates_closed']}")
+    print(f"Gegenstandslos (abgebrochen) geschlossen: {stats['moot_closed']}")
+    print(f"Verwaist geschlossen: {stats['orphaned_closed']}")
+    print(f"Insgesamt geschlossen: {stats['tasks_closed']}")
     if not args.apply:
         print("\nDies war ein Dry-Run - nichts wurde geschrieben.")
         print("Mit --apply erneut ausführen, um zu übernehmen.")
