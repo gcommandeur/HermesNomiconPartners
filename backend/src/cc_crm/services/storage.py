@@ -98,9 +98,26 @@ def save_document_bytes(
 
 def read_document_bytes(storage_key: str) -> bytes:
     if _s3_configured():
+        from botocore.exceptions import ClientError  # lazy - siehe _s3_client()
+
         settings = get_settings()
         assert settings.s3_bucket is not None
-        response = _s3_client().get_object(Bucket=settings.s3_bucket, Key=storage_key)
+        try:
+            response = _s3_client().get_object(Bucket=settings.s3_bucket, Key=storage_key)
+        except ClientError as exc:
+            # Ein Dokument, dessen DB-Zeile existiert, aber dessen Objekt im
+            # Bucket fehlt (z.B. bei einer Migration mitgenommene Zeilen ohne
+            # zugehoerigen Datei-Upload) - vereinheitlicht mit dem lokalen
+            # Backend, das fuer denselben Fall FileNotFoundError wirft (siehe
+            # unten), damit beide Aufrufer (Download-Endpoint,
+            # profile_generator.py::_cv_text_for_candidate) EINEN
+            # Exception-Typ behandeln muessen, nicht zwei parallele.
+            error_code = exc.response.get("Error", {}).get("Code", "")
+            if error_code in {"NoSuchKey", "404"}:
+                raise FileNotFoundError(
+                    f"Objekt nicht im Speicher gefunden: {storage_key}"
+                ) from exc
+            raise
         return bytes(response["Body"].read())
 
     return (_local_storage_root() / storage_key).read_bytes()
