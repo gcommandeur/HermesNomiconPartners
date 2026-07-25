@@ -1,9 +1,12 @@
+import logging
 from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AnyUrl
+from pydantic import AnyUrl, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger("cc_crm.config")
 
 # backend/src/cc_crm/core/config.py -> backend/ (3 parents up). Resolved as an
 # absolute path so .env is found regardless of the process's working
@@ -54,6 +57,38 @@ class Settings(BaseSettings):
     s3_region: str = "auto"
     s3_access_key_id: str | None = None
     s3_secret_access_key: str | None = None
+
+    @model_validator(mode="after")
+    def _strip_bucket_prefix_from_s3_endpoint(self) -> "Settings":
+        """Live auf Produktion bestätigt: `S3_ENDPOINT_URL` war auf die
+        bucket-spezifische ("virtual-hosted-style") Adresse gesetzt
+        (`https://<bucket>.<region>.digitaloceanspaces.com`), bei der der
+        Bucket-Name bereits Teil des Hostnamens ist. `services/storage.py`
+        übergibt an JEDEN boto3-Aufruf zusätzlich `Bucket=s3_bucket` - boto3
+        hängt den Bucket-Namen dann ein zweites Mal vor den bereits
+        bucket-spezifischen Host, was zu einer falsch adressierten URL führt
+        (vom Anbieter mit einem irreführenden `NoSuchKey` statt einem
+        aussagekräftigeren Fehler quittiert - jeder S3-Aufruf schlug fehl,
+        unabhängig davon, ob das jeweilige Objekt existierte). Repariert das
+        automatisch, falls dieser Konfigurationsfehler erneut auftritt,
+        statt erneut lautlos jeden S3-Aufruf scheitern zu lassen - der
+        korrekte Wert ist der regionale Endpoint OHNE Bucket-Namen im Host,
+        der Bucket wird ausschließlich als separater Parameter übergeben."""
+        if self.s3_endpoint_url and self.s3_bucket:
+            bucket_prefix = f"https://{self.s3_bucket}."
+            if self.s3_endpoint_url.startswith(bucket_prefix):
+                fixed = "https://" + self.s3_endpoint_url.removeprefix(bucket_prefix)
+                logger.warning(
+                    "CC_CRM_S3_ENDPOINT_URL enthielt den Bucket-Namen als Host-Präfix "
+                    "(%s) - automatisch auf den regionalen Endpoint ohne Bucket-Präfix "
+                    "korrigiert (%s). Bitte die Umgebungsvariable selbst auf den "
+                    "korrigierten Wert setzen, damit sich niemand auf diese "
+                    "Notkorrektur verlassen muss.",
+                    self.s3_endpoint_url,
+                    fixed,
+                )
+                self.s3_endpoint_url = fixed
+        return self
 
     @property
     def resolved_database_url(self) -> str:
