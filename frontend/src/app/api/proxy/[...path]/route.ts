@@ -63,26 +63,39 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
   const hasBody = !["GET", "HEAD"].includes(request.method);
   const body = hasBody ? await request.arrayBuffer() : undefined;
 
-  let upstream: Response;
+  // Der try/catch umschliesst bewusst NICHT nur den fetch()-Aufruf selbst,
+  // sondern auch das Body-Einlesen (arrayBuffer()) - das AbortSignal gilt
+  // fuer die gesamte fetch-Laufzeit inkl. Streaming der Antwort, ein
+  // Abbruch WAEHREND des Einlesens (z.B. bei einer sehr langsamen/grossen
+  // Antwort nahe am Timeout) wirft also erst hier, nicht beim fetch()-
+  // Aufruf. Ohne diesen weiter gefassten try/catch entkam so ein Fehler als
+  // unbehandelte Exception aus dem Next.js-Route-Handler und erschien beim
+  // Nutzer als generisches "Internal Server Error" (Next.js' eigener
+  // Default) statt der erwarteten sauberen JSON-Fehlermeldung - das war die
+  // tatsaechliche Ursache eines auf Produktion gemeldeten 500ers.
   try {
-    upstream = await fetch(targetUrl, {
+    const upstream = await fetch(targetUrl, {
       method: request.method,
       headers,
       body: body && body.byteLength > 0 ? body : undefined,
       signal: AbortSignal.timeout(timeoutForPath(path.join("/"))),
     });
-  } catch {
-    return NextResponse.json({ detail: "API nicht erreichbar" }, { status: 502 });
+
+    const responseBody = await upstream.arrayBuffer();
+    const responseHeaders = new Headers();
+    const upstreamContentType = upstream.headers.get("content-type");
+    if (upstreamContentType) responseHeaders.set("content-type", upstreamContentType);
+    const disposition = upstream.headers.get("content-disposition");
+    if (disposition) responseHeaders.set("content-disposition", disposition);
+
+    return new NextResponse(responseBody, { status: upstream.status, headers: responseHeaders });
+  } catch (error) {
+    const detail =
+      error instanceof DOMException && error.name === "TimeoutError"
+        ? "API antwortet nicht rechtzeitig."
+        : "API nicht erreichbar";
+    return NextResponse.json({ detail }, { status: 502 });
   }
-
-  const responseBody = await upstream.arrayBuffer();
-  const responseHeaders = new Headers();
-  const upstreamContentType = upstream.headers.get("content-type");
-  if (upstreamContentType) responseHeaders.set("content-type", upstreamContentType);
-  const disposition = upstream.headers.get("content-disposition");
-  if (disposition) responseHeaders.set("content-disposition", disposition);
-
-  return new NextResponse(responseBody, { status: upstream.status, headers: responseHeaders });
 }
 
 async function handler(

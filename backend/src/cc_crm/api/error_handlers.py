@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
@@ -10,6 +12,8 @@ from cc_crm.core.errors import (
     PermissionDeniedError,
     RateLimitExceededError,
 )
+
+logger = logging.getLogger("cc_crm.errors")
 
 
 def register_error_handlers(app: FastAPI) -> None:
@@ -82,4 +86,25 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_502_BAD_GATEWAY,
             content={"detail": str(exception)},
+        )
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(
+        request: Request,
+        exception: Exception,
+    ) -> JSONResponse:
+        # Ohne diesen Catch-All faellt eine unerwartete Exception auf
+        # Starlettes eingebauten Default zurueck - ein reiner Plain-Text-Body
+        # "Internal Server Error" ohne jede weitere Information, UND (in
+        # diesem Projekt beobachtet) ohne verlaesslich sichtbaren Traceback
+        # in den DigitalOcean-Runtime-Logs. Explizites `logger.exception()`
+        # hier stellt sicher, dass der volle Traceback in jedem Fall geloggt
+        # wird, unabhaengig davon, ob/wie der ASGI-Server selbst unbehandelte
+        # Exceptions protokolliert - und die Antwort an den Client bleibt
+        # trotzdem die gewohnte knappe JSON-Form statt eines rohen
+        # Plain-Text-500ers.
+        logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Ein unerwarteter Fehler ist aufgetreten."},
         )
