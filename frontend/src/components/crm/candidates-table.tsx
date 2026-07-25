@@ -93,7 +93,8 @@ export function CandidatesTable() {
     pageCount,
     items: serverCandidates,
     totalCount,
-    isLoading,
+    hasLoadedOnce,
+    isValidating,
     error,
     source,
     demoError,
@@ -197,7 +198,14 @@ export function CandidatesTable() {
     return <ErrorState onRetry={() => { void retryCandidates(); void retryReactivation(); }} />;
   }
 
-  if ((!reactivationOnly && isLoading) || (reactivationOnly && reactivationLoading)) {
+  // Skeleton NUR beim allerersten Laden (hasLoadedOnce), nicht bei jeder
+  // Sucheingabe: SWRs `isLoading` wird bei jedem Cache-Key-Wechsel kurz wahr
+  // (auch mit keepPreviousData, siehe use-server-search.ts) - wer darauf die
+  // ganze Tabelle+Suchfeld durch ein Skeleton ersetzt, verliert bei jeder
+  // Debounce-Runde den Fokus im Suchfeld und die Seite "flackert" sichtbar.
+  // Waehrend einer Folgesuche bleiben Tabelle+Eingabe montiert (siehe
+  // isValidating-Anzeige unten in der FilterBar-Zeile).
+  if ((!reactivationOnly && !hasLoadedOnce) || (reactivationOnly && reactivationLoading)) {
     return (
       <div className="space-y-2">
         {Array.from({ length: 8 }).map((_, index) => (
@@ -240,6 +248,7 @@ export function CandidatesTable() {
         onSubmit={handleAiSearch}
         aiSearch={{ loading: aiSearching, onClick: handleAiSearch }}
         ownerFilter={{ mineOnly, onChange: setMineOnly }}
+        loading={!reactivationOnly && isValidating}
       />
       <ErrorBanner message={aiError} className="mb-3" />
       {aiResults && (

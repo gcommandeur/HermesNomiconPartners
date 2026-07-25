@@ -33,6 +33,20 @@ def generate_text(*, system_prompt: str, user_message: str, max_tokens: int = 10
             json={
                 "model": settings.anthropic_model,
                 "max_tokens": max_tokens,
+                # claude-sonnet-5 runs adaptive (extended) thinking by default
+                # when "thinking" is omitted - thinking tokens count against
+                # max_tokens like any other output. With the modest max_tokens
+                # values used by this project's single-shot extraction/
+                # generation prompts (no multi-step reasoning needed here),
+                # thinking alone could consume the entire budget, leaving zero
+                # tokens for the actual answer and making every call fail with
+                # "kein Text-Inhalt zurueckgegeben" (confirmed live: stop_reason
+                # "max_tokens", output_tokens_details.thinking_tokens == max_tokens,
+                # content == a single empty thinking block). Disabling thinking
+                # is supported on Sonnet-tier models (unlike Opus 5, where it's
+                # only allowed up to effort "high") and gives these prompts
+                # their full max_tokens budget for output.
+                "thinking": {"type": "disabled"},
                 "system": system_prompt,
                 "messages": [{"role": "user", "content": user_message}],
             },

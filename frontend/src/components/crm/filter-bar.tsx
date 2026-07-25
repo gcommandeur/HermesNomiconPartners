@@ -20,6 +20,7 @@ export function FilterBar({
   onSubmit,
   aiSearch,
   ownerFilter,
+  loading,
 }: {
   placeholder?: string;
   value: string;
@@ -36,6 +37,11 @@ export function FilterBar({
    * owner_user_id, KEINE Sichtbarkeitsgrenze - jeder Nutzer sieht ohne
    * diesen Filter weiterhin alle Datensaetze). Default ist immer "Alle". */
   ownerFilter?: { mineOnly: boolean; onChange: (mineOnly: boolean) => void };
+  /** Dezentes Pulsieren des Such-Icons waehrend im Hintergrund neu geladen
+   * wird (z.B. debounce-getriebene Server-Suche) - bewusst KEIN Ersetzen von
+   * Eingabefeld/Ergebnisliste, das wuerde den Fokus aus dem Suchfeld werfen
+   * und als Flackern wahrgenommen (siehe use-server-search.ts). */
+  loading?: boolean;
 }) {
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -48,7 +54,10 @@ export function FilterBar({
           onSubmit?.();
         }}
       >
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#959b9f]" size={15} />
+        <Search
+          className={`absolute left-3 top-1/2 -translate-y-1/2 text-[#959b9f] ${loading ? "animate-pulse" : ""}`}
+          size={15}
+        />
         <Input className="pl-9" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
       </form>
       {aiSearch && (

@@ -50,8 +50,10 @@ _HEADING_LEBENSLAUF = "Lebenslauf (Auszug)"
 _HEADING_AUSBILDUNG = "Ausbildung & Weiterbildung"
 _HEADING_WEITERE_INFOS = "Weitere Infos"
 
-_ZEITRAUM_CV = re.compile(r"^(seit\s+\d{1,2}/\d{4}|\d{1,2}/\d{4}\s*[–-]\s*\d{1,2}/\d{4})\s+(.*)$")
-_ZEITRAUM_AUSBILDUNG = re.compile(r"^(\d{4}\s*[–-]\s*\d{4}|\d{4})\s+(.*)$")
+_ZEITRAUM_CV = re.compile(
+    r"^[•\-*]?\s*(seit\s+\d{1,2}/\d{4}|\d{1,2}/\d{4}\s*[–-]\s*\d{1,2}/\d{4})[:\s]+(.*)$"
+)
+_ZEITRAUM_AUSBILDUNG = re.compile(r"^[•\-*]?\s*(\d{4}\s*[–-]\s*\d{4}|\d{4})[:\s]+(.*)$")
 
 _HEADER_LABELS = {
     Anrede.FRAU: "Kandidatin-Nr.",

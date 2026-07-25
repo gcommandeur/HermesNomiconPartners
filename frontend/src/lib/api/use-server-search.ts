@@ -20,7 +20,16 @@ const DEBOUNCE_MS = 300;
  * einfliesst. `keepPreviousData` haelt die zuletzt geladene Seite sichtbar,
  * waehrend im Hintergrund neu geladen wird, statt zwischendurch ein Skeleton
  * zu zeigen (wichtig beim Tippen: sonst flackert bei jeder Debounce-Runde
- * die ganze Tabelle). */
+ * die ganze Tabelle).
+ *
+ * Wichtig fuer Aufrufer: SWRs `isLoading` wird bei JEDEM Cache-Key-Wechsel
+ * kurz wahr (auch mit `keepPreviousData`, das nur `data` ueberbrueckt, nicht
+ * `isLoading` - offizielles SWR-Verhalten) - ein Aufrufer, der bei jedem
+ * `isLoading` die komplette Liste durch ein Skeleton ersetzt, flackert daher
+ * bei JEDER Sucheingabe, obwohl `keepPreviousData` genau das verhindern
+ * sollte. Fuer den initialen Ladezustand `hasLoadedOnce` verwenden (wird erst
+ * nach der allerersten erfolgreichen Antwort wahr und bleibt danach stabil),
+ * fuer eine dezente Lade-Anzeige waehrend Folgesuchen `isValidating`. */
 export function useServerSearchList<T>(
   cacheKeyPrefix: string,
   fetcher: (query: PageQuery) => Promise<DataResult<Paginated<T>>>,
@@ -47,7 +56,7 @@ export function useServerSearchList<T>(
   const offset = page * pageSize;
   const swrKey = `${cacheKeyPrefix}?search=${debouncedSearch}&status=${options.status ?? ""}&owner_user_id=${options.ownerUserId ?? ""}&sort_by=${options.sortBy ?? ""}&sort_dir=${options.sortDir ?? ""}&limit=${pageSize}&offset=${offset}`;
 
-  const { data, error, isLoading, mutate } = useSWR<DataResult<Paginated<T>>>(
+  const { data, error, isLoading, isValidating, mutate } = useSWR<DataResult<Paginated<T>>>(
     swrKey,
     () =>
       fetcher({
@@ -61,6 +70,15 @@ export function useServerSearchList<T>(
       }),
     { revalidateOnFocus: false, keepPreviousData: true },
   );
+
+  // Wird einmalig wahr, sobald die allererste Antwort da ist, und bleibt
+  // danach stabil wahr - siehe Doc-Kommentar oben, warum das (statt SWRs
+  // eigenem `isLoading`) der richtige Wert fuer "initialer Skeleton ja/nein"
+  // ist.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  useEffect(() => {
+    if (data !== undefined) setHasLoadedOnce(true);
+  }, [data]);
 
   const totalCount = data?.data.total_count ?? 0;
   const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -76,6 +94,8 @@ export function useServerSearchList<T>(
     items: data?.data.items ?? [],
     totalCount,
     isLoading,
+    hasLoadedOnce,
+    isValidating,
     error,
     source: data?.source,
     demoError: data?.error,
