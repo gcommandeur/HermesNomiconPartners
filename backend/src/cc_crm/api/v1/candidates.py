@@ -164,4 +164,4 @@ def extract_cv_fields(
     document = DocumentService(session).get(uuid.UUID(payload.document_id))
     content = read_document_bytes(document.storage_key)
     cv_text = extract_text_from_bytes(document.filename, content)
-    return CandidateService(session).suggest_cv_fields(candidate_id, cv_text)
+    return CandidateService(session).auto_fill_from_cv(candidate_id, cv_text)

@@ -130,8 +130,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
     def suggest_cv_fields(self, candidate_id: uuid.UUID, cv_text: str) -> CvExtractionSuggestion:
         """Phase M, Punkt 2: schlaegt aus einem hochgeladenen CV nur Felder
         vor, die beim Kandidaten aktuell leer sind - ein vorhandener Wert
-        wird nie ueberschrieben, auch nicht als Vorschlag. Der Nutzer
-        entscheidet im Frontend, ob er einen Vorschlag uebernimmt."""
+        wird nie ueberschrieben, auch nicht als Vorschlag."""
         candidate = self.get(candidate_id)
         extracted = extract_candidate_fields(cv_text)
 
@@ -148,6 +147,34 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             ausbildung_titel=suggestion_for("ausbildung_titel", candidate.ausbildung_titel),
             source_is_agency_profile=is_agency_letterhead(cv_text),
         )
+
+    def auto_fill_from_cv(self, candidate_id: uuid.UUID, cv_text: str) -> CvExtractionSuggestion:
+        """Wendet die aus dem CV erkannten Felder (siehe suggest_cv_fields)
+        sofort auf den Kandidaten an, statt eine manuelle Bestaetigung pro
+        Feld zu verlangen - Nutzer-Vorgabe: Felder sollen "beim Hochladen
+        eines Profils sofort entstehen". Ueberschreibt wie zuvor nie einen
+        bereits vorhandenen Wert (suggest_cv_fields liefert dafuer je Feld
+        None). Gibt zurueck, was tatsaechlich uebernommen wurde, damit das
+        Frontend das dem Nutzer anzeigen kann."""
+        suggestion = self.suggest_cv_fields(candidate_id, cv_text)
+        updates = {
+            field: value
+            for field, value in (
+                ("postal_code", suggestion.postal_code),
+                ("city", suggestion.city),
+                ("phone", suggestion.phone),
+                ("job_title", suggestion.job_title),
+                ("qualification", suggestion.qualification),
+                ("ausbildung_titel", suggestion.ausbildung_titel),
+            )
+            if value
+        }
+        if updates:
+            candidate = self.get(candidate_id)
+            for field, value in updates.items():
+                setattr(candidate, field, value)
+            self.session.commit()
+        return suggestion
 
     def list_filtered(
         self,

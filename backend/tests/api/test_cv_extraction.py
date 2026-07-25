@@ -61,6 +61,14 @@ def test_cv_extraction_fills_only_empty_fields(client: TestClient) -> None:
     assert suggestion["job_title"] == "Steuerberater"
     assert suggestion["source_is_agency_profile"] is False
 
+    # Regressionsschutz: die erkannten Felder muessen sofort am Kandidaten
+    # gespeichert sein, keine manuelle Bestaetigung mehr noetig (siehe
+    # CandidateService.auto_fill_from_cv).
+    candidate = client.get(f"/api/v1/candidates/{candidate_id}").json()
+    assert candidate["postal_code"] == "60327"
+    assert candidate["city"] == "Bereits gesetzt"
+    assert candidate["job_title"] == "Steuerberater"
+
 
 def test_cv_extraction_suppresses_address_for_agency_letterhead(client: TestClient) -> None:
     candidate_id = _create_candidate(client)

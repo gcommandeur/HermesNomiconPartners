@@ -99,11 +99,19 @@ Gehaltsvorstellung: [gehaltswunsch, gerundet z.B. "ca. 70.000 € p.a."]
 Verfügbarkeit / Kündigungsfrist: [kuendigungsfrist]
 
 **Kurzprofil**
-[3-4 Sätze Fließtext: Wer ist diese Person beruflich, was macht sie interessant
-für eine Kanzlei? Aus freitextNotizen und Kernfeldern destilliert.]
+[3-5 Sätze Fließtext, ausführlich und konkret (keine Floskeln): Wer ist diese
+Person beruflich, welche Aufgabenschwerpunkte und Erfahrungstiefe bringt sie
+mit, was macht sie für eine Kanzlei interessant? Falls freitextNotizen oder
+CV-Text etwas zur Wechselmotivation oder Arbeitsweise hergeben (z.B. warum
+ein Wechsel angestrebt wird, besondere Stärken), darf das in einem weiteren
+Satz ergänzt werden - aber nur wenn es sich anonym formulieren lässt.]
 
 **Fachliche Qualifikationen**
-[Bullet-Liste aus fachlicheSchwerpunkte, 4-8 Punkte]
+[Bullet-Liste, so viele konkrete, spezifische Punkte wie die Datenlage
+hergibt (typisch 6-12 bei einem vollständigen CV) - lieber ein zusätzlicher
+präziser Punkt mehr als zu knapp. Jeder Punkt eine konkrete Tätigkeit/
+Kompetenz aus fachlicheSchwerpunkte bzw. dem CV-Text, keine Wiederholungen,
+keine generischen Sammelbegriffe ohne Substanz.]
 
 **Lebenslauf (Auszug)**
 [Zeitraum] [Rolle], [anonymisierter Arbeitgeber-Typ — NIEMALS Firmenname, nur

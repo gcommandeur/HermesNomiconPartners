@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
-import { apiDownload, apiFetchBlob, apiPatch, apiPost, apiUpload } from "@/lib/api/client";
+import { apiDownload, apiFetchBlob, apiPost, apiUpload } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { formatDate } from "@/lib/utils";
 import type { CvExtractionSuggestion, DocumentMeta } from "@/lib/api/types";
@@ -22,55 +21,28 @@ const CV_FIELD_LABELS: Record<keyof Omit<CvExtractionSuggestion, "source_is_agen
   ausbildung_titel: "Ausbildung/Weiterbildung",
 };
 
-/** Zeigt aus einem gerade hochgeladenen CV automatisch erkannte Feldvorschlaege
- * (Phase M, Punkt 2) - nur Felder, die beim Kandidaten aktuell leer sind
- * (siehe Backend CandidateService.suggest_cv_fields). Der Nutzer waehlt pro
- * Feld einzeln, ob er den Vorschlag uebernimmt, und kann den Wert vor dem
- * Uebernehmen noch korrigieren - nichts wird automatisch gespeichert. */
-function CvExtractionPanel({ candidateId, suggestion, onApplied, onDismiss }: {
-  candidateId: string;
+/** Zeigt an, welche Kandidatenfelder gerade automatisch aus einem frisch
+ * hochgeladenen CV uebernommen wurden (siehe Backend
+ * CandidateService.auto_fill_from_cv) - nur Felder, die beim Kandidaten
+ * vorher leer waren, werden je befuellt, ein vorhandener Wert wird nie
+ * ueberschrieben. Rein informativ: das Uebernehmen ist zu diesem Zeitpunkt
+ * bereits serverseitig passiert (Nutzer-Vorgabe: "soll beim Hochladen sofort
+ * entstehen", keine manuelle Bestaetigung pro Feld mehr noetig). */
+function CvExtractionPanel({ suggestion, onDismiss }: {
   suggestion: CvExtractionSuggestion;
-  onApplied: () => void;
   onDismiss: () => void;
 }) {
   const fieldEntries = (Object.keys(CV_FIELD_LABELS) as (keyof typeof CV_FIELD_LABELS)[])
     .map((key) => ({ key, value: suggestion[key] }))
     .filter((entry): entry is { key: keyof typeof CV_FIELD_LABELS; value: string } => Boolean(entry.value));
 
-  const [values, setValues] = useState<Record<string, string>>(
-    Object.fromEntries(fieldEntries.map(({ key, value }) => [key, value])),
-  );
-  const [accepted, setAccepted] = useState<Record<string, boolean>>(
-    Object.fromEntries(fieldEntries.map(({ key }) => [key, true])),
-  );
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   if (fieldEntries.length === 0) return null;
-
-  async function handleApply() {
-    setBusy(true);
-    setError(null);
-    try {
-      const payload = Object.fromEntries(
-        fieldEntries.filter(({ key }) => accepted[key]).map(({ key }) => [key, values[key]]),
-      );
-      if (Object.keys(payload).length > 0) {
-        await apiPatch(`/candidates/${candidateId}`, payload);
-      }
-      onApplied();
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Übernehmen fehlgeschlagen.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <Card className="border-[#1F5FA8]/30 bg-[#102A4C]/50">
       <CardContent>
         <div className="flex items-center gap-2 text-sm font-semibold text-[#D8DADF]">
-          <Sparkles size={15} />Aus dem CV erkannt
+          <Sparkles size={15} />Aus dem CV übernommen
         </div>
         {suggestion.source_is_agency_profile && (
           <p className="mt-2 rounded bg-[#F0B429]/10 px-2 py-1.5 text-[11px] text-[#F0B429]">
@@ -78,29 +50,16 @@ function CvExtractionPanel({ candidateId, suggestion, onApplied, onDismiss }: {
             wurden deshalb nicht übernommen, nur Rolle/Qualifikation.
           </p>
         )}
-        <div className="mt-3 space-y-2">
-          {fieldEntries.map(({ key }) => (
-            <label key={key} className="flex items-center gap-2 text-xs text-[#CBD5E1]">
-              <input
-                type="checkbox"
-                checked={accepted[key] ?? false}
-                onChange={(event) => setAccepted((current) => ({ ...current, [key]: event.target.checked }))}
-              />
+        <div className="mt-3 space-y-1.5">
+          {fieldEntries.map(({ key, value }) => (
+            <div key={key} className="flex items-center gap-2 text-xs text-[#CBD5E1]">
               <span className="w-40 shrink-0 text-[#94A3B8]">{CV_FIELD_LABELS[key]}</span>
-              <Input
-                value={values[key] ?? ""}
-                onChange={(event) => setValues((current) => ({ ...current, [key]: event.target.value }))}
-                disabled={!accepted[key]}
-              />
-            </label>
+              <span>{value}</span>
+            </div>
           ))}
         </div>
-        {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
-        <div className="mt-3 flex justify-end gap-2">
-          <Button size="sm" variant="outline" onClick={onDismiss}>Verwerfen</Button>
-          <Button size="sm" onClick={handleApply} disabled={busy}>
-            {busy ? "Übernehme…" : "Felder übernehmen"}
-          </Button>
+        <div className="mt-3 flex justify-end">
+          <Button size="sm" variant="outline" onClick={onDismiss}>Ausblenden</Button>
         </div>
       </CardContent>
     </Card>
@@ -210,9 +169,9 @@ export function DocumentPanel({ ownerType, ownerId, documentType, documents }: D
       formData.append("document_type", documentType);
       formData.append("file", file);
       const uploaded = await apiUpload<DocumentMeta>("/documents/upload", formData);
-      router.refresh();
-      // Beim manuellen CV-Upload eines Kandidaten automatisch strukturierte
-      // Felder vorschlagen (Phase M, Punkt 2) - fehlschlagende Extraktion
+      // Beim manuellen CV-Upload eines Kandidaten werden leere Felder (PLZ,
+      // Rolle, ...) serverseitig sofort aus dem CV befuellt (siehe
+      // CandidateService.auto_fill_from_cv) - fehlschlagende Extraktion
       // (z.B. kein Anthropic-Key konfiguriert) darf den Upload selbst nicht
       // als fehlgeschlagen erscheinen lassen, daher separat abgefangen.
       if (ownerType === "candidate" && documentType === "cv") {
@@ -226,6 +185,7 @@ export function DocumentPanel({ ownerType, ownerId, documentType, documents }: D
           setCvSuggestion(null);
         }
       }
+      router.refresh();
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Upload fehlgeschlagen.");
     } finally {
@@ -257,12 +217,7 @@ export function DocumentPanel({ ownerType, ownerId, documentType, documents }: D
       </div>
       <ErrorBanner message={error} />
       {cvSuggestion && ownerType === "candidate" && (
-        <CvExtractionPanel
-          candidateId={ownerId}
-          suggestion={cvSuggestion}
-          onApplied={() => { setCvSuggestion(null); router.refresh(); }}
-          onDismiss={() => setCvSuggestion(null)}
-        />
+        <CvExtractionPanel suggestion={cvSuggestion} onDismiss={() => setCvSuggestion(null)} />
       )}
       {documents.map((document) => (
         <Card key={document.id}>
