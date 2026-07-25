@@ -27,9 +27,17 @@ export function AnonymousProfilePanel({ candidateId, initialText }: AnonymousPro
     setError(null);
     setSavedAt(null);
     try {
+      // Ruft synchron die Anthropic-API auf (bis zu 3000 Output-Tokens) -
+      // der bisherige Default-Timeout von apiPost (8s, siehe client.ts) war
+      // weit zu knapp fuer eine realistische LLM-Antwortzeit und liess den
+      // Aufruf auf Produktion regelmaessig als Fehler erscheinen, obwohl das
+      // Backend die Anfrage noch erfolgreich fertig verarbeitet haette.
+      // 90s deckungsgleich mit dem Proxy-Timeout fuer diesen Pfad (siehe
+      // app/api/proxy/[...path]/route.ts::ANONYMOUS_PROFILE_TIMEOUT_MS).
       const result = await apiPost<{ profile_text: string }>(
         `/candidates/${candidateId}/anonymous-profile`,
         {},
+        90_000,
       );
       setText(result.profile_text);
     } catch (exception) {

@@ -89,20 +89,31 @@ export async function apiGet<T>(path: string, fallback: T): Promise<DataResult<T
  * mit hoeflicher Pause macht) - alle normalen JSON-Endpoints bleiben beim
  * knappen Default-Timeout, damit ein haengendes Backend schnell auffaellt. */
 export async function apiPost<T>(path: string, body: unknown, timeoutMs?: number): Promise<T> {
-  const response = await fetch(apiUrl(path), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      ...(await authHeader()),
-    },
-    body: JSON.stringify(body),
-    signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : timeoutSignal(),
-  });
-  if (!response.ok) {
-    throw new Error(await errorMessageFromResponse(response));
+  const effectiveTimeoutMs = timeoutMs ?? API_TIMEOUT_MS;
+  try {
+    const response = await fetch(apiUrl(path), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(await authHeader()),
+      },
+      body: JSON.stringify(body),
+      signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : timeoutSignal(),
+    });
+    if (!response.ok) {
+      throw new Error(await errorMessageFromResponse(response));
+    }
+    return (await response.json()) as T;
+  } catch (error) {
+    // Ohne diesen Abfang landete ein Timeout als rohe DOMException beim
+    // Aufrufer ("signal timed out" o.ae.) statt einer verstaendlichen
+    // Meldung - gleiches Muster wie apiGet oben.
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      throw new Error(`API antwortet nicht innerhalb von ${effectiveTimeoutMs / 1000}s (${path}).`);
+    }
+    throw error;
   }
-  return response.json() as Promise<T>;
 }
 
 /** Holt eine binaere Antwort als Blob (z.B. fuer eine Dokument-Vorschau).

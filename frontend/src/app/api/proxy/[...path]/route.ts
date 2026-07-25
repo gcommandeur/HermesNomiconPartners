@@ -30,6 +30,21 @@ const API_TIMEOUT_MS = 30_000;
 // Gebiete) - er braucht deshalb ein laengeres Fenster als normale
 // JSON-Endpoints (siehe auch client.ts::apiPost timeoutMs).
 const SOURCING_RUN_TIMEOUT_MS = 120_000;
+// Anonymes-Profil-Generierung ruft synchron die Anthropic-API auf (bis zu
+// 3000 Output-Tokens, siehe profile_generator.py) - das Backend selbst
+// erlaubt dafuer bereits 60s (anthropic_client.py::generate_text). Mit dem
+// alten 30s-Default hier lief der Proxy dem Backend regelmaessig davon und
+// gab "API nicht erreichbar" zurueck, obwohl das Backend die Anfrage noch
+// laenger, aber erfolgreich, verarbeitet haette - das war die tatsaechliche
+// Ursache eines auf Produktion gemeldeten 500ers (der Browser gab noch
+// frueher auf, siehe client.ts::apiPost timeoutMs bei diesem Aufruf).
+const ANONYMOUS_PROFILE_TIMEOUT_MS = 90_000;
+
+function timeoutForPath(joinedPath: string): number {
+  if (joinedPath.endsWith("sourcing/run")) return SOURCING_RUN_TIMEOUT_MS;
+  if (/\/candidates\/[^/]+\/anonymous-profile$/.test(joinedPath)) return ANONYMOUS_PROFILE_TIMEOUT_MS;
+  return API_TIMEOUT_MS;
+}
 
 async function proxy(request: NextRequest, path: string[]): Promise<NextResponse> {
   if (!apiBaseUrl) {
@@ -54,9 +69,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
       method: request.method,
       headers,
       body: body && body.byteLength > 0 ? body : undefined,
-      signal: AbortSignal.timeout(
-        path.join("/").endsWith("sourcing/run") ? SOURCING_RUN_TIMEOUT_MS : API_TIMEOUT_MS,
-      ),
+      signal: AbortSignal.timeout(timeoutForPath(path.join("/"))),
     });
   } catch {
     return NextResponse.json({ detail: "API nicht erreichbar" }, { status: 502 });
