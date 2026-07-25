@@ -9,6 +9,7 @@ import { StatusPill } from "@/components/crm/status-pill";
 import { ExportActions } from "@/components/crm/export-actions";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { ErrorState } from "@/components/crm/error-state";
+import { ListSkeleton } from "@/components/crm/list-skeleton";
 import { PaginationControls } from "@/components/crm/pagination-controls";
 import { formatDate, termsStatusLabel } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/api/hooks";
@@ -88,7 +89,8 @@ export function ClientsTable() {
     pageCount,
     items: clients,
     totalCount,
-    isLoading,
+    hasLoadedOnce,
+    isValidating,
     error,
     source,
     demoError,
@@ -117,14 +119,11 @@ export function ClientsTable() {
     return <ErrorState onRetry={() => void retry()} />;
   }
 
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
-        ))}
-      </div>
-    );
+  // Skeleton NUR beim allerersten Laden - siehe list-skeleton.tsx, warum
+  // hier NICHT SWRs `isLoading` verwendet werden darf (Fokusverlust im
+  // Suchfeld bei jedem Tastendruck).
+  if (!hasLoadedOnce) {
+    return <ListSkeleton />;
   }
 
   return (
@@ -139,6 +138,7 @@ export function ClientsTable() {
         statusValue={status}
         onStatusChange={setStatus}
         ownerFilter={{ mineOnly, onChange: setMineOnly }}
+        loading={isValidating}
       />
       <DataTable
         headers={[

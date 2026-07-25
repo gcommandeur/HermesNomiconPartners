@@ -11,6 +11,7 @@ import { ExportActions } from "@/components/crm/export-actions";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { ErrorState } from "@/components/crm/error-state";
 import { ErrorBanner } from "@/components/crm/error-banner";
+import { ListSkeleton } from "@/components/crm/list-skeleton";
 import { PaginationControls } from "@/components/crm/pagination-controls";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -206,13 +207,7 @@ export function CandidatesTable() {
   // Waehrend einer Folgesuche bleiben Tabelle+Eingabe montiert (siehe
   // isValidating-Anzeige unten in der FilterBar-Zeile).
   if ((!reactivationOnly && !hasLoadedOnce) || (reactivationOnly && reactivationLoading)) {
-    return (
-      <div className="space-y-2">
-        {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
-        ))}
-      </div>
-    );
+    return <ListSkeleton />;
   }
 
   return (

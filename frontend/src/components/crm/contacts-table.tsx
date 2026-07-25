@@ -8,6 +8,7 @@ import { StatusPill } from "@/components/crm/status-pill";
 import { ExportActions } from "@/components/crm/export-actions";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { ErrorState } from "@/components/crm/error-state";
+import { ListSkeleton } from "@/components/crm/list-skeleton";
 import { PaginationControls } from "@/components/crm/pagination-controls";
 import { AddToMailingButton } from "@/components/crm/add-to-mailing-button";
 import { contactName } from "@/lib/utils";
@@ -28,7 +29,8 @@ export function ContactsTable() {
     pageCount,
     items: contacts,
     totalCount,
-    isLoading,
+    hasLoadedOnce,
+    isValidating,
     error,
     source,
     demoError,
@@ -48,21 +50,23 @@ export function ContactsTable() {
     return <ErrorState onRetry={() => void retry()} />;
   }
 
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
-        ))}
-      </div>
-    );
+  // Skeleton NUR beim allerersten Laden - siehe list-skeleton.tsx, warum
+  // hier NICHT SWRs `isLoading` verwendet werden darf (Fokusverlust im
+  // Suchfeld bei jedem Tastendruck).
+  if (!hasLoadedOnce) {
+    return <ListSkeleton />;
   }
 
   return (
     <>
       <div className="mb-4 flex justify-end"><ExportActions filename="kontakte" rows={exportRows} /></div>
       <DemoNotice source={source ?? "api"} error={demoError} />
-      <FilterBar placeholder="Nach Name, Kanzlei oder Rolle suchen" value={search} onChange={setSearch} />
+      <FilterBar
+        placeholder="Nach Name, Kanzlei oder Rolle suchen"
+        value={search}
+        onChange={setSearch}
+        loading={isValidating}
+      />
       <DataTable headers={["Kontakt", "Kanzlei", "Rolle", "E-Mail", "Telefon", "Hauptkontakt", "Mailing"]}>
         {contacts.map((contact) => (
           <tr key={contact.id} className="hover:bg-[#203A5A]/35">
