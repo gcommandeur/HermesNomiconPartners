@@ -119,41 +119,43 @@ def check_local(missing_keys_file: Path) -> None:
 
     local_root = get_settings().resolved_documents_storage_dir
     with SessionLocal() as session:
-        found_locally: list[tuple[Document, Path]] = []
-        missing_everywhere: list[Document] = []
+        found_locally: list[tuple[str, Path]] = []
+        missing_everywhere: list[str] = []
 
         for storage_key in storage_keys:
-            document = session.scalar(
-                select(Document).where(Document.storage_key == storage_key)
-            )
-            if document is None:
-                print(
-                    f"WARNUNG: kein Document mit storage_key={storage_key!r} "
-                    "in der DB gefunden - übersprungen."
-                )
-                continue
-
+            # Der lokale Existenz-Check braucht KEINE lokale DB-Zeile - der
+            # storage_key selbst ist bereits der vollstaendige relative Pfad
+            # ("owner_type/owner_id/dateiname"). Eine DB-Zeile wird nur fuer
+            # die huebschere Kandidaten-Beschriftung in der Ausgabe genutzt
+            # (siehe unten) - ohne diese Trennung wurden storage_keys, die
+            # es nur in der PRODUKTIONS-DB gibt (z.B. ein zweites, hier lokal
+            # nie gesehenes Dokument desselben Kandidaten), bisher komplett
+            # uebersprungen statt korrekt einer Kategorie zugeordnet.
             local_path = local_root / storage_key
             if local_path.is_file():
-                found_locally.append((document, local_path))
+                found_locally.append((storage_key, local_path))
             else:
-                missing_everywhere.append(document)
+                missing_everywhere.append(storage_key)
+
+        def _label_for(storage_key: str) -> str:
+            document = session.scalar(select(Document).where(Document.storage_key == storage_key))
+            if document is None:
+                return "(kein lokaler DB-Eintrag - vermutlich nur in Produktion angelegt)"
+            return f"{_candidate_label(session, document.owner_id)} - {document.filename}"
 
         print("=== Kategorie: fehlt im Bucket, aber lokal vorhanden (reparierbar) ===")
         print(f"Anzahl: {len(found_locally)}")
-        for document, local_path in found_locally:
-            label = _candidate_label(session, document.owner_id)
+        for storage_key, local_path in found_locally:
             size = local_path.stat().st_size
-            print(f"  {label} - {document.filename} ({size:,} Bytes) - {document.storage_key}")
+            print(f"  {_label_for(storage_key)} ({size:,} Bytes) - {storage_key}")
 
         print(
             "\n=== Kategorie: fehlt sowohl im Bucket als auch lokal "
             "(nicht automatisch reparierbar) ==="
         )
         print(f"Anzahl: {len(missing_everywhere)}")
-        for document in missing_everywhere:
-            label = _candidate_label(session, document.owner_id)
-            print(f"  {label} - {document.filename} - {document.storage_key}")
+        for storage_key in missing_everywhere:
+            print(f"  {_label_for(storage_key)} - {storage_key}")
 
 
 def main() -> None:
