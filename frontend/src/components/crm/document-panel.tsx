@@ -13,6 +13,9 @@ import { formatDate } from "@/lib/utils";
 import type { CvExtractionSuggestion, DocumentMeta } from "@/lib/api/types";
 
 const CV_FIELD_LABELS: Record<keyof Omit<CvExtractionSuggestion, "source_is_agency_profile">, string> = {
+  first_name: "Vorname",
+  last_name: "Nachname",
+  email: "E-Mail",
   postal_code: "PLZ",
   city: "Ort",
   phone: "Telefon",

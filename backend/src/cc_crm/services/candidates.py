@@ -139,6 +139,9 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             return value if (value and not current_value) else None
 
         return CvExtractionSuggestion(
+            first_name=suggestion_for("first_name", candidate.first_name),
+            last_name=suggestion_for("last_name", candidate.last_name),
+            email=suggestion_for("email", candidate.email),
             postal_code=suggestion_for("postal_code", candidate.postal_code),
             city=suggestion_for("city", candidate.city),
             phone=suggestion_for("phone", candidate.phone),
@@ -160,6 +163,9 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         updates = {
             field: value
             for field, value in (
+                ("first_name", suggestion.first_name),
+                ("last_name", suggestion.last_name),
+                ("email", suggestion.email),
                 ("postal_code", suggestion.postal_code),
                 ("city", suggestion.city),
                 ("phone", suggestion.phone),

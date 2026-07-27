@@ -113,6 +113,9 @@ class CvExtractionSuggestion(BaseModel):
     services/cv_extraction.py); der Nutzer entscheidet im Frontend pro Feld,
     ob er den Vorschlag übernimmt, bevor irgendetwas gespeichert wird."""
 
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
     postal_code: str | None = None
     city: str | None = None
     phone: str | None = None

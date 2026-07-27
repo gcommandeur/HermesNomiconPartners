@@ -34,10 +34,20 @@ _JSON_FENCE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
 _FIELD_EXTRACTION_SYSTEM_PROMPT = """Du extrahierst strukturierte Kontakt- und Rollendaten aus einem
 Lebenslauf-Text für ein Recruiting-CRM (Fokus Steuern/Wirtschaftsprüfung/Recht).
+Der Text stammt aus einer automatischen PDF/DOCX-Extraktion und kann Layout-
+Artefakte enthalten (z.B. Buchstaben durch Leerzeichen getrennt wie "J a n a
+G u ß e r" statt "Jana Gußer", oder einzelne Sonderzeichen/Umlaute, die als
+Platzhalter wie "�" erscheinen, weil die Schriftart im PDF keine korrekte
+Unicode-Zuordnung hat) - erkenne solche Artefakte und rekonstruiere den
+naheliegenden echten Namen/Text daraus, erfinde aber keine Informationen, die
+sich nicht aus dem Kontext ableiten lassen.
 
 Gib AUSSCHLIESSLICH ein JSON-Objekt zurück (kein Markdown-Codeblock, keine
 Erklärung davor/danach), mit exakt diesen Schlüsseln:
 {
+  "first_name": "<Vorname der Person, oder null>",
+  "last_name": "<Nachname der Person, oder null>",
+  "email": "<E-Mail-Adresse der Person, oder null>",
   "postal_code": "<deutsche Postleitzahl, 5 Ziffern, oder null>",
   "city": "<Ort, oder null>",
   "phone": "<Telefonnummer wie im Text, oder null>",
@@ -47,15 +57,23 @@ Erklärung davor/danach), mit exakt diesen Schlüsseln:
 }
 
 REGELN:
-- Nutze NUR Informationen, die explizit im Text stehen. Erfinde nichts.
+- Nutze NUR Informationen, die explizit im Text stehen (auch wenn durch Layout-
+  Artefakte leicht verzerrt, siehe oben). Erfinde nichts.
 - Falls ein Feld nicht sicher aus dem Text hervorgeht, setze null statt zu raten.
+- first_name/last_name: der Name der Person, der der Lebenslauf gehört - meist
+  in der Kopfzeile/Überschrift zu finden, nicht der Name eines Sachbearbeiters
+  oder einer Kontaktperson bei einem früheren Arbeitgeber.
 - job_title/qualification: nur die aktuellste/letzte Position, nicht die gesamte Berufshistorie.
-- Adresse/Telefon: NIEMALS übernehmen, wenn der Text erkennbar ein anonymisiertes,
-  von einer Personalberatung selbst erstelltes Kandidatenprofil ist (Briefkopf/
-  Fußzeile mit der Adresse der Beratung statt der Adresse der Person) statt das
-  Original-CV der Person - in diesem Fall postal_code, city und phone auf null
-  setzen, auch wenn im Text irgendeine Adresse steht (das wäre die Adresse der
-  Beratung, nicht der Person)."""
+- qualification: falls die Person mehrere aktuell gültige Berufsbezeichnungen/
+  -abschlüsse hat (z.B. "Steuerberater" UND "Wirtschaftsprüfer"), beide durch
+  " / " getrennt angeben.
+- Name/Adresse/Telefon/E-Mail: NIEMALS übernehmen, wenn der Text erkennbar ein
+  anonymisiertes, von einer Personalberatung selbst erstelltes Kandidatenprofil
+  ist (Briefkopf/Fußzeile mit der Adresse der Beratung statt der Adresse der
+  Person) statt das Original-CV der Person - in diesem Fall first_name,
+  last_name, email, postal_code, city und phone auf null setzen, auch wenn im
+  Text irgendein Name/eine Adresse steht (das wäre der Name/die Adresse der
+  Beratung bzw. eines dortigen Ansprechpartners, nicht der Person)."""
 
 _LAST_ROLE_SYSTEM_PROMPT = """Du extrahierst die aktuellste/letzte berufliche Station aus einem
 Lebenslauf-Text für ein Recruiting-CRM (Fokus Steuern/Wirtschaftsprüfung/Recht).
@@ -89,7 +107,15 @@ def extract_text_from_bytes(filename: str, content: bytes) -> str:
         )
     if suffix == ".pdf":
         reader = PdfReader(BytesIO(content))
-        return "\n".join(page.extract_text() or "" for page in reader.pages)
+        # "layout" statt des pypdf-Default-Modus: der Default reiht Glyphen oft
+        # strikt nach ihrer Position in der Content-Stream-Reihenfolge auf, was
+        # bei vielen CVs (Kopfzeile mit grosszuegigem Buchstabenabstand, mehr-
+        # spaltige Layouts) zu falsch getrenntem Text fuehrt, z.B. "J a n a
+        # G u ß e r" statt "Jana Gußer" - "layout" rekonstruiert stattdessen die
+        # sichtbare Seitenposition und haelt zusammengehoerige Woerter zusammen.
+        return "\n".join(
+            page.extract_text(extraction_mode="layout") or "" for page in reader.pages
+        )
     return content.decode("utf-8", errors="ignore")
 
 
@@ -105,10 +131,10 @@ def _parse_json_response(raw: str) -> dict[str, Any]:
 
 
 def extract_candidate_fields(cv_text: str) -> dict[str, Any]:
-    """Fuer Punkt 2 (manueller Einzel-Upload): PLZ/Ort/Telefon/Rolle/
-    Qualifikation/Ausbildung. Adress-/Kontaktfelder werden zusaetzlich zur
-    Prompt-Instruktion hart auf None gesetzt, wenn der Agentur-Briefkopf
-    erkannt wird (siehe Modul-Docstring)."""
+    """Fuer Punkt 2 (manueller Einzel-Upload): Name/E-Mail/PLZ/Ort/Telefon/
+    Rolle/Qualifikation/Ausbildung. Alle personenbezogenen Felder werden
+    zusaetzlich zur Prompt-Instruktion hart auf None gesetzt, wenn der
+    Agentur-Briefkopf erkannt wird (siehe Modul-Docstring)."""
     raw = generate_text(
         system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
         user_message=cv_text[:12000],
@@ -116,7 +142,7 @@ def extract_candidate_fields(cv_text: str) -> dict[str, Any]:
     )
     data = _parse_json_response(raw)
     if is_agency_letterhead(cv_text):
-        for key in ("postal_code", "city", "phone"):
+        for key in ("first_name", "last_name", "email", "postal_code", "city", "phone"):
             data[key] = None
     return data
 

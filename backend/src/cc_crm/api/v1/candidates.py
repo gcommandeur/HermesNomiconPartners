@@ -100,6 +100,9 @@ async def preview_cv_fields(file: Annotated[UploadFile, File()]) -> CvExtraction
     cv_text = extract_text_from_bytes(file.filename or "cv.pdf", content)
     extracted = extract_candidate_fields(cv_text)
     return CvExtractionSuggestion(
+        first_name=extracted.get("first_name"),
+        last_name=extracted.get("last_name"),
+        email=extracted.get("email"),
         postal_code=extracted.get("postal_code"),
         city=extracted.get("city"),
         phone=extracted.get("phone"),

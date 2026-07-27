@@ -571,6 +571,9 @@ export interface Note extends Entity {
 }
 
 export interface CvExtractionSuggestion {
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
   postal_code: string | null;
   city: string | null;
   phone: string | null;

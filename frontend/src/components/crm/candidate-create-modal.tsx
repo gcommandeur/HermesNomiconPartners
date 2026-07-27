@@ -17,6 +17,9 @@ import type { BeruflicheStation, Candidate, CvExtractionSuggestion } from "@/lib
 // (source_is_agency_profile bewusst ausgeschlossen: kein Formularfeld, kein string.)
 type CvStringSuggestionField = Exclude<keyof CvExtractionSuggestion, "source_is_agency_profile">;
 const CV_SUGGESTION_TO_FORM_FIELD: Array<[CvStringSuggestionField, keyof typeof emptyForm]> = [
+  ["first_name", "first_name"],
+  ["last_name", "last_name"],
+  ["email", "email"],
   ["postal_code", "postal_code"],
   ["city", "city"],
   ["phone", "phone"],
@@ -24,6 +27,20 @@ const CV_SUGGESTION_TO_FORM_FIELD: Array<[CvStringSuggestionField, keyof typeof 
   ["qualification", "qualification"],
   ["ausbildung_titel", "ausbildung_titel"],
 ];
+
+// Anzeige-Labels fuer das "was wurde uebernommen"-Panel unten - gleiche
+// Reihenfolge/Feldauswahl wie CV_SUGGESTION_TO_FORM_FIELD.
+const CV_FIELD_LABELS: Record<CvStringSuggestionField, string> = {
+  first_name: "Vorname",
+  last_name: "Nachname",
+  email: "E-Mail",
+  postal_code: "PLZ",
+  city: "Ort",
+  phone: "Telefon",
+  job_title: "Rolle",
+  qualification: "Qualifikation",
+  ausbildung_titel: "Ausbildung/Weiterbildung",
+};
 
 const labelClass = "mb-1 block text-xs text-[#94A3B8]";
 const textareaClass = "min-h-20 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
@@ -100,6 +117,10 @@ export function CandidateCreateForm({
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvExtracting, setCvExtracting] = useState(false);
   const [cvError, setCvError] = useState<string | null>(null);
+  // Fuer das sichtbare "was wurde uebernommen"-Panel - Nutzer-Feedback:
+  // "Auslesen klappt nur auf dem Feld, nicht direkt auf dem Bildschirm"
+  // (der einzeilige Hinweistext zuvor war offenbar nicht auffaellig genug).
+  const [cvAppliedFields, setCvAppliedFields] = useState<Array<{ label: string; value: string }>>([]);
   const [dragActive, setDragActive] = useState(false);
   const dragCounter = useRef(0);
   const cvInputRef = useRef<HTMLInputElement>(null);
@@ -116,20 +137,24 @@ export function CandidateCreateForm({
     setCvFile(file);
     setCvExtracting(true);
     setCvError(null);
+    setCvAppliedFields([]);
     try {
       const formData = new FormData();
       formData.append("file", file);
       const suggestion = await apiUpload<CvExtractionSuggestion>("/candidates/cv-preview", formData);
+      const applied: Array<{ label: string; value: string }> = [];
       setForm((current) => {
         const updated = { ...current };
         for (const [suggestionKey, formKey] of CV_SUGGESTION_TO_FORM_FIELD) {
           const value = suggestion[suggestionKey];
           if (value && !current[formKey].trim()) {
             updated[formKey] = value;
+            applied.push({ label: CV_FIELD_LABELS[suggestionKey], value });
           }
         }
         return updated;
       });
+      setCvAppliedFields(applied);
     } catch (exception) {
       // Ausgelesene Felder sind reiner Komfort - schlaegt das Auslesen fehl
       // (z.B. kein Anthropic-Key konfiguriert), bleibt die Datei trotzdem
@@ -266,17 +291,31 @@ export function CandidateCreateForm({
       {!isEdit && (
         <div className="rounded-lg border border-white/10 bg-[#0D1B2E]/75 p-3 text-xs text-[#94A3B8]">
           <div className="flex items-center justify-between gap-3">
-            <span>CV hochladen, um Rolle/Qualifikation/PLZ/Ort/Telefon/Ausbildung automatisch zu befüllen — oder Datei per Drag&Drop auf dieses Fenster ziehen.</span>
+            <span>CV hochladen, um Name/E-Mail/Rolle/Qualifikation/PLZ/Ort/Telefon/Ausbildung automatisch zu befüllen — oder Datei per Drag&Drop auf dieses Fenster ziehen.</span>
             <input ref={cvInputRef} type="file" className="hidden" onChange={handleCvInputChange} />
             <Button type="button" size="sm" variant="outline" onClick={() => cvInputRef.current?.click()} disabled={cvExtracting}>
               <Upload size={14} />
               {cvExtracting ? "Liest aus…" : "CV hochladen"}
             </Button>
           </div>
-          {cvFile && !cvExtracting && (
-            <p className="mt-2 flex items-center gap-1.5 text-[#69A7EA]">
-              <Sparkles size={13} />{cvFile.name} ausgelesen — passende Felder wurden vorbefüllt.
-            </p>
+          {cvFile && !cvExtracting && !cvError && (
+            <div className="mt-3 rounded-md border border-[#1F5FA8]/30 bg-[#102A4C]/50 p-2.5">
+              <p className="flex items-center gap-1.5 font-semibold text-[#69A7EA]">
+                <Sparkles size={13} />{cvFile.name} ausgelesen
+              </p>
+              {cvAppliedFields.length > 0 ? (
+                <div className="mt-2 space-y-1">
+                  {cvAppliedFields.map(({ label, value }) => (
+                    <div key={label} className="flex items-center gap-2">
+                      <span className="w-40 shrink-0 text-[#94A3B8]">{label}</span>
+                      <span className="text-[#D8DADF]">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-1 text-[#94A3B8]">Keine zusätzlichen Felder erkannt.</p>
+              )}
+            </div>
           )}
           {cvError && <p className="mt-2 text-[#F0B429]">{cvError}</p>}
         </div>

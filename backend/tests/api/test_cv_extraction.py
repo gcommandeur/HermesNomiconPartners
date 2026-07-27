@@ -33,6 +33,9 @@ def _mock_generate_text(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_generate_text(*, system_prompt: str, user_message: str, max_tokens: int = 1000) -> str:
         return json.dumps(
             {
+                "first_name": "Erika",
+                "last_name": "Musterfrau",
+                "email": "erika.musterfrau@example.com",
                 "postal_code": "60327",
                 "city": "Frankfurt am Main",
                 "phone": "069 1234567",
@@ -56,6 +59,10 @@ def test_cv_extraction_fills_only_empty_fields(client: TestClient) -> None:
     assert response.status_code == 200
     suggestion = response.json()
 
+    # first_name/last_name bereits gesetzt ("Test"/"Kandidat"), werden nicht ueberschrieben.
+    assert suggestion["first_name"] is None
+    assert suggestion["last_name"] is None
+    assert suggestion["email"] == "erika.musterfrau@example.com"
     assert suggestion["postal_code"] == "60327"
     assert suggestion["city"] is None  # bereits gesetzt, wird nicht ueberschrieben
     assert suggestion["job_title"] == "Steuerberater"
@@ -65,6 +72,8 @@ def test_cv_extraction_fills_only_empty_fields(client: TestClient) -> None:
     # gespeichert sein, keine manuelle Bestaetigung mehr noetig (siehe
     # CandidateService.auto_fill_from_cv).
     candidate = client.get(f"/api/v1/candidates/{candidate_id}").json()
+    assert candidate["first_name"] == "Test"
+    assert candidate["email"] == "erika.musterfrau@example.com"
     assert candidate["postal_code"] == "60327"
     assert candidate["city"] == "Bereits gesetzt"
     assert candidate["job_title"] == "Steuerberater"
@@ -80,6 +89,9 @@ def test_cv_preview_returns_extracted_fields_without_a_candidate(client: TestCli
     assert response.status_code == 200
     suggestion = response.json()
 
+    assert suggestion["first_name"] == "Erika"
+    assert suggestion["last_name"] == "Musterfrau"
+    assert suggestion["email"] == "erika.musterfrau@example.com"
     assert suggestion["postal_code"] == "60327"
     assert suggestion["city"] == "Frankfurt am Main"
     assert suggestion["job_title"] == "Steuerberater"
@@ -92,6 +104,28 @@ def test_cv_preview_rejects_disallowed_file_type(client: TestClient) -> None:
         files={"file": ("cv.txt", b"Lebenslauf", "text/plain")},
     )
     assert response.status_code == 415
+
+
+def test_cv_preview_suppresses_name_and_contact_for_agency_letterhead(client: TestClient) -> None:
+    # Anders als beim Kandidaten-gebundenen Endpoint gibt es hier noch keinen
+    # vorhandenen Namen, der die Unterdrueckung "zufaellig" mit abdecken
+    # wuerde - dieser Test prueft die Briefkopf-Erkennung daher gezielt fuer
+    # first_name/last_name/email am neuen /cv-preview-Endpoint.
+    letterhead = "Commandeur Consulting GmbH, Talstraße 112, 41199 Mönchengladbach"
+    content = f"{letterhead}\n\nKandidatenprofil...".encode()
+    response = client.post(
+        "/api/v1/candidates/cv-preview",
+        files={"file": ("profil.doc", content, "application/msword")},
+    )
+    assert response.status_code == 200
+    suggestion = response.json()
+
+    assert suggestion["source_is_agency_profile"] is True
+    assert suggestion["first_name"] is None
+    assert suggestion["last_name"] is None
+    assert suggestion["email"] is None
+    assert suggestion["postal_code"] is None
+    assert suggestion["job_title"] == "Steuerberater"
 
 
 def test_cv_extraction_suppresses_address_for_agency_letterhead(client: TestClient) -> None:
@@ -109,6 +143,9 @@ def test_cv_extraction_suppresses_address_for_agency_letterhead(client: TestClie
     suggestion = response.json()
 
     assert suggestion["source_is_agency_profile"] is True
+    assert suggestion["first_name"] is None
+    assert suggestion["last_name"] is None
+    assert suggestion["email"] is None
     assert suggestion["postal_code"] is None
     assert suggestion["city"] is None
     assert suggestion["phone"] is None
