@@ -17,7 +17,9 @@ lassen)."""
 
 from __future__ import annotations
 
+import base64
 import json
+import logging
 import re
 from io import BytesIO
 from pathlib import Path
@@ -26,9 +28,18 @@ from typing import Any
 import docx
 from pypdf import PdfReader
 
-from cc_crm.integrations.ai.anthropic_client import generate_text
+from cc_crm.integrations.ai.anthropic_client import generate_text, generate_text_with_image
+
+logger = logging.getLogger("cc_crm.cv_extraction")
 
 AGENCY_LETTERHEAD_MARKER = "Commandeur Consulting GmbH"
+
+# Werden diese Felder trotz Text-Extraktion nicht gefunden, gilt das als
+# Hinweis auf eine defekte Font-Kodierung im PDF (siehe extract_text_from_bytes)
+# und loest den Vision-Fallback aus (siehe extract_candidate_fields) - Nutzer-
+# Vorgabe: "wenn bestimmte Standardinfos: Name, Rolle, Telefon, PLZ nicht
+# gelesen werden, wird es nochmal analysiert".
+_STANDARD_FIELDS_TO_VERIFY = ("first_name", "last_name", "job_title", "phone", "postal_code")
 
 _JSON_FENCE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
@@ -130,20 +141,86 @@ def _parse_json_response(raw: str) -> dict[str, Any]:
     return parsed
 
 
-def extract_candidate_fields(cv_text: str) -> dict[str, Any]:
+def _render_first_pdf_page_png_base64(content: bytes) -> str:
+    """Rendert die erste PDF-Seite als PNG (base64) fuer den Vision-Fallback.
+    scale=2.0 entspricht ca. 150 DPI - fuer Fliesstext gut lesbar, haelt das
+    Bild (und damit die Tokenkosten des Vision-Calls) aber klein. Kontakt-
+    daten stehen bei einem CV praktisch immer auf der ersten Seite, ein
+    Mehrseiten-Rendering waere unnoetiger Mehraufwand."""
+    import pypdfium2 as pdfium  # lazy: nur fuer den seltenen Fallback noetig
+
+    pdf = pdfium.PdfDocument(content)
+    try:
+        page = pdf[0]
+        bitmap = page.render(scale=2.0)
+        pil_image = bitmap.to_pil()
+        buffer = BytesIO()
+        pil_image.save(buffer, format="PNG")
+        return base64.b64encode(buffer.getvalue()).decode("ascii")
+    finally:
+        pdf.close()
+
+
+def _extract_fields_via_vision(content: bytes) -> dict[str, Any]:
+    """Fallback fuer PDFs mit defekter Font-Kodierung (siehe Modul-Docstring
+    zu extract_text_from_bytes): rendert die erste Seite als Bild und liest
+    sie per Vision aus, statt sich weiter auf den (in diesem Fall
+    unzuverlaessigen) Text-Layer zu verlassen. Gleiches Schema/Prompt wie die
+    text-basierte Extraktion, nur mit Bild statt Text als Eingabe."""
+    image_base64 = _render_first_pdf_page_png_base64(content)
+    raw = generate_text_with_image(
+        system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
+        user_message="Lies die Felder aus dem Bild der ersten Lebenslauf-Seite aus.",
+        image_base64=image_base64,
+        max_tokens=400,
+    )
+    return _parse_json_response(raw)
+
+
+def extract_candidate_fields(
+    cv_text: str, *, filename: str | None = None, content: bytes | None = None
+) -> dict[str, Any]:
     """Fuer Punkt 2 (manueller Einzel-Upload): Name/E-Mail/PLZ/Ort/Telefon/
     Rolle/Qualifikation/Ausbildung. Alle personenbezogenen Felder werden
     zusaetzlich zur Prompt-Instruktion hart auf None gesetzt, wenn der
-    Agentur-Briefkopf erkannt wird (siehe Modul-Docstring)."""
+    Agentur-Briefkopf erkannt wird (siehe Modul-Docstring).
+
+    filename/content sind optional und nur fuer den Vision-Fallback noetig:
+    liefert die text-basierte Extraktion einen oder mehrere der Standard-
+    felder (Name/Rolle/Telefon/PLZ) nicht, wird bei PDFs automatisch die
+    erste Seite zusaetzlich per Vision ausgelesen (siehe
+    _extract_fields_via_vision) - das faengt genau den Fall auf, in dem eine
+    defekte Font-Kodierung im PDF den Text-Layer unbrauchbar macht. Ohne
+    filename/content (z.B. in den Batch-Backfill-Skripten) faellt dieser
+    Fallback einfach weg, keine Verhaltensaenderung dort."""
     raw = generate_text(
         system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
         user_message=cv_text[:12000],
         max_tokens=400,
     )
     data = _parse_json_response(raw)
-    if is_agency_letterhead(cv_text):
+    agency_profile = is_agency_letterhead(cv_text)
+    if agency_profile:
         for key in ("first_name", "last_name", "email", "postal_code", "city", "phone"):
             data[key] = None
+
+    is_pdf = filename is not None and Path(filename).suffix.lower() == ".pdf"
+    missing_standard_fields = any(not data.get(field) for field in _STANDARD_FIELDS_TO_VERIFY)
+    if missing_standard_fields and not agency_profile and is_pdf and content is not None:
+        try:
+            vision_data = _extract_fields_via_vision(content)
+        except Exception:
+            # Der Vision-Fallback ist eine Zusatzchance, kein kritischer Pfad -
+            # schlaegt er fehl (z.B. defektes PDF, API-Fehler), bleibt einfach
+            # das Ergebnis der Text-Extraktion stehen statt den ganzen Request
+            # scheitern zu lassen.
+            logger.warning(
+                "CV-Vision-Fallback fehlgeschlagen, behalte Text-Extraktion.", exc_info=True
+            )
+        else:
+            for key, value in vision_data.items():
+                if value and not data.get(key):
+                    data[key] = value
     return data
 
 

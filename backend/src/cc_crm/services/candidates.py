@@ -127,12 +127,20 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         self.session.refresh(candidate)
         return candidate
 
-    def suggest_cv_fields(self, candidate_id: uuid.UUID, cv_text: str) -> CvExtractionSuggestion:
+    def suggest_cv_fields(
+        self,
+        candidate_id: uuid.UUID,
+        cv_text: str,
+        *,
+        filename: str | None = None,
+        content: bytes | None = None,
+    ) -> CvExtractionSuggestion:
         """Phase M, Punkt 2: schlaegt aus einem hochgeladenen CV nur Felder
         vor, die beim Kandidaten aktuell leer sind - ein vorhandener Wert
-        wird nie ueberschrieben, auch nicht als Vorschlag."""
+        wird nie ueberschrieben, auch nicht als Vorschlag. filename/content
+        optional fuer den Vision-Fallback (siehe extract_candidate_fields)."""
         candidate = self.get(candidate_id)
-        extracted = extract_candidate_fields(cv_text)
+        extracted = extract_candidate_fields(cv_text, filename=filename, content=content)
 
         def suggestion_for(field_name: str, current_value: str | None) -> str | None:
             value = extracted.get(field_name)
@@ -151,7 +159,14 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             source_is_agency_profile=is_agency_letterhead(cv_text),
         )
 
-    def auto_fill_from_cv(self, candidate_id: uuid.UUID, cv_text: str) -> CvExtractionSuggestion:
+    def auto_fill_from_cv(
+        self,
+        candidate_id: uuid.UUID,
+        cv_text: str,
+        *,
+        filename: str | None = None,
+        content: bytes | None = None,
+    ) -> CvExtractionSuggestion:
         """Wendet die aus dem CV erkannten Felder (siehe suggest_cv_fields)
         sofort auf den Kandidaten an, statt eine manuelle Bestaetigung pro
         Feld zu verlangen - Nutzer-Vorgabe: Felder sollen "beim Hochladen
@@ -159,7 +174,9 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         bereits vorhandenen Wert (suggest_cv_fields liefert dafuer je Feld
         None). Gibt zurueck, was tatsaechlich uebernommen wurde, damit das
         Frontend das dem Nutzer anzeigen kann."""
-        suggestion = self.suggest_cv_fields(candidate_id, cv_text)
+        suggestion = self.suggest_cv_fields(
+            candidate_id, cv_text, filename=filename, content=content
+        )
         updates = {
             field: value
             for field, value in (

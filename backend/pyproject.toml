@@ -15,8 +15,10 @@ dependencies = [
   "httpx>=0.28,<1",
   "icalendar>=6.1,<7",
   "openpyxl>=3.1,<4",
+  "pillow>=11,<13",
   "psycopg[binary]>=3.2,<4",
   "pypdf>=5.1,<6",
+  "pypdfium2>=4.30,<6",
   "python-docx>=1.1,<2",
   "python-multipart>=0.0.12,<1",
   "pydantic-settings>=2.6,<3",
@@ -58,3 +60,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.12"
 strict = true
 packages = ["cc_crm"]
+
+[[tool.mypy.overrides]]
+module = "pypdfium2"
+ignore_missing_imports = true

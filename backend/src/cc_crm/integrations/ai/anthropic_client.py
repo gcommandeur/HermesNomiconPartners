@@ -1,9 +1,12 @@
 """Thin wrapper around the Anthropic Messages API.
 
 Used by services that need to generate text (e.g. anonymous candidate
-profiles). Keeps all HTTP/auth concerns in one place so services stay
-focused on business logic.
+profiles) or read an image (e.g. the CV-Vision-Fallback in cv_extraction.py).
+Keeps all HTTP/auth concerns in one place so services stay focused on
+business logic.
 """
+
+from typing import Any
 
 import httpx
 
@@ -14,7 +17,9 @@ ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_API_VERSION = "2023-06-01"
 
 
-def generate_text(*, system_prompt: str, user_message: str, max_tokens: int = 1000) -> str:
+def _call_messages_api(
+    *, system_prompt: str, content: str | list[dict[str, Any]], max_tokens: int
+) -> str:
     settings = get_settings()
     if not settings.anthropic_api_key:
         raise AIProviderError(
@@ -48,7 +53,7 @@ def generate_text(*, system_prompt: str, user_message: str, max_tokens: int = 10
                 # their full max_tokens budget for output.
                 "thinking": {"type": "disabled"},
                 "system": system_prompt,
-                "messages": [{"role": "user", "content": user_message}],
+                "messages": [{"role": "user", "content": content}],
             },
             timeout=60.0,
         )
@@ -66,3 +71,34 @@ def generate_text(*, system_prompt: str, user_message: str, max_tokens: int = 10
         if block.get("type") == "text" and block.get("text"):
             return str(block["text"])
     raise AIProviderError("Anthropic-API hat keinen Text-Inhalt zurückgegeben.")
+
+
+def generate_text(*, system_prompt: str, user_message: str, max_tokens: int = 1000) -> str:
+    return _call_messages_api(
+        system_prompt=system_prompt, content=user_message, max_tokens=max_tokens
+    )
+
+
+def generate_text_with_image(
+    *,
+    system_prompt: str,
+    user_message: str,
+    image_base64: str,
+    image_media_type: str = "image/png",
+    max_tokens: int = 1000,
+) -> str:
+    """Wie generate_text, aber mit einem zusaetzlichen Bild im Request - fuer
+    den CV-Vision-Fallback (siehe cv_extraction.py): manche PDFs haben eine
+    defekte Font-Kodierung, bei der der Text-Layer selbst mit korrektem
+    Extraktions-Modus einzelne Zeichen als Ersatzzeichen ("�") liefert. Ein
+    Bild der Seite umgeht das, da das Modell die Glyphen visuell erkennt statt
+    sich auf die (in diesem Fall unzuverlaessige) Zeichen-Kodierung im PDF zu
+    verlassen."""
+    content: list[dict[str, Any]] = [
+        {
+            "type": "image",
+            "source": {"type": "base64", "media_type": image_media_type, "data": image_base64},
+        },
+        {"type": "text", "text": user_message},
+    ]
+    return _call_messages_api(system_prompt=system_prompt, content=content, max_tokens=max_tokens)

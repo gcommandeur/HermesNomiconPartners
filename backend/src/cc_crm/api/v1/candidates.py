@@ -97,8 +97,9 @@ async def preview_cv_fields(file: Annotated[UploadFile, File()]) -> CvExtraction
     _validate_upload_type(file)
     max_bytes = get_settings().max_upload_size_mb * 1024 * 1024
     content = await _read_upload_with_size_limit(file, max_bytes)
-    cv_text = extract_text_from_bytes(file.filename or "cv.pdf", content)
-    extracted = extract_candidate_fields(cv_text)
+    filename = file.filename or "cv.pdf"
+    cv_text = extract_text_from_bytes(filename, content)
+    extracted = extract_candidate_fields(cv_text, filename=filename, content=content)
     return CvExtractionSuggestion(
         first_name=extracted.get("first_name"),
         last_name=extracted.get("last_name"),
@@ -198,4 +199,6 @@ def extract_cv_fields(
     document = DocumentService(session).get(uuid.UUID(payload.document_id))
     content = read_document_bytes(document.storage_key)
     cv_text = extract_text_from_bytes(document.filename, content)
-    return CandidateService(session).auto_fill_from_cv(candidate_id, cv_text)
+    return CandidateService(session).auto_fill_from_cv(
+        candidate_id, cv_text, filename=document.filename, content=content
+    )

@@ -79,6 +79,32 @@ def test_generate_text_raises_when_only_thinking_block_returned(
         anthropic_client.generate_text(system_prompt="sys", user_message="msg")
 
 
+def test_generate_text_with_image_sends_image_and_text_content(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, dict[str, object]] = {}
+
+    def fake_post(
+        url: str, *, headers: dict[str, str], json: dict[str, object], timeout: float
+    ) -> _FakeResponse:
+        captured["json"] = json
+        return _FakeResponse({"content": [{"type": "text", "text": "Antwort"}]})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    result = anthropic_client.generate_text_with_image(
+        system_prompt="sys", user_message="msg", image_base64="AAAA"
+    )
+
+    assert result == "Antwort"
+    content = captured["json"]["messages"][0]["content"]  # type: ignore[index]
+    assert content[0] == {
+        "type": "image",
+        "source": {"type": "base64", "media_type": "image/png", "data": "AAAA"},
+    }
+    assert content[1] == {"type": "text", "text": "msg"}
+
+
 def test_generate_text_without_api_key_raises_clear_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
