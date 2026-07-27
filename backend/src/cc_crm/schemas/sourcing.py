@@ -18,6 +18,9 @@ class SourcingLeadCreate(BaseModel):
     postal_code: str | None = Field(default=None, max_length=20)
     raw_data: dict[str, Any] | None = None
     matched_client_company_id: uuid.UUID | None = None
+    # Freitext ueber die Person (aktuelle Stellenbeschreibung/Werdegang laut
+    # Quelle) - wird bei approve_lead als Note am Kandidaten hinterlegt.
+    notes_text: str | None = None
 
 
 _AREA_SOURCES = (
@@ -100,6 +103,7 @@ class SourcingLeadRead(EntityRead):
     postal_code: str | None
     raw_data: dict[str, Any] | None
     matched_client_company_id: uuid.UUID | None
+    notes_text: str | None
     status: SourcingLeadStatus
     duplicate_of_candidate_id: uuid.UUID | None
     created_candidate_id: uuid.UUID | None

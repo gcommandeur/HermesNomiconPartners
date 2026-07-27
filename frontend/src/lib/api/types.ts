@@ -670,6 +670,10 @@ export interface SourcingLead {
   postal_code: string | null;
   raw_data: Record<string, unknown> | null;
   matched_client_company_id: string | null;
+  // Stellenbeschreibung/Werdegang/weitere Infos laut Quelle - wird bei
+  // "Übernehmen" als Notiz am neuen Kandidaten hinterlegt (siehe Backend
+  // SourcingService.approve_lead).
+  notes_text: string | null;
   status: SourcingLeadStatus;
   duplicate_of_candidate_id: string | null;
   created_candidate_id: string | null;

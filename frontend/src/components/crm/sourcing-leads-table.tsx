@@ -91,6 +91,14 @@ export function SourcingLeadsTable() {
         ) : (
           SOURCE_LABELS[lead.source_type]
         )}
+        {lead.notes_text && (
+          <p
+            title={lead.notes_text}
+            className="mt-1 line-clamp-3 max-w-xs whitespace-pre-line text-[11px] text-[#94A3B8]"
+          >
+            {lead.notes_text}
+          </p>
+        )}
       </td>
       <td className="px-4 py-3.5 text-[#CBD5E1]">{lead.current_employer ?? "—"}</td>
       <td className="px-4 py-3.5 text-[#CBD5E1]">

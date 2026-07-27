@@ -32,6 +32,12 @@ class SourcingLead(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Fachgebiet, Titel, ...) - bewusst schemalos, da jede Quelle andere
     # Zusatzfelder liefert.
     raw_data: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    # Freitext ueber die Person (aktuelle Stellenbeschreibung/Werdegang laut
+    # Quelle, ggf. weitere online gefundene Infos) - wird bei approve_lead 1:1
+    # als Note am neu angelegten Kandidaten hinterlegt (siehe
+    # SourcingService.approve_lead), damit nach der Uebernahme ins CRM
+    # nachvollziehbar bleibt, was die Person macht/gemacht hat.
+    notes_text: Mapped[str | None] = mapped_column(Text)
 
     # Falls die gefundene Kanzlei einer bestehenden Kanzlei im CRM zugeordnet
     # werden konnte (bei Team-Seiten-Scrapes immer gesetzt, da von der

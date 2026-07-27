@@ -27,9 +27,16 @@ from cc_crm.models.enums import SourcingLeadStatus, SourcingRunStatus, SourcingS
 from cc_crm.models.sourcing_lead import SourcingLead
 from cc_crm.models.sourcing_run import SourcingRun
 from cc_crm.schemas.candidate import CandidateCreate
+from cc_crm.schemas.note import NoteCreate
 from cc_crm.schemas.sourcing import SourcingLeadCreate, SourcingRunResult
 from cc_crm.services import kanzlei_team_scrape, steuerberater_verzeichnis, wpk_berufsregister
 from cc_crm.services.candidates import CandidateService
+from cc_crm.services.name_matching import (
+    SIMILARITY_THRESHOLD,
+    name_similarity,
+    normalize_company_name,
+)
+from cc_crm.services.notes import NoteService
 from cc_crm.services.steuerberater_verzeichnis import TooManyResultsError
 
 # Schwelle analog zur Nutzer-Vorgabe (~90 bei rapidfuzz.token_sort_ratio,
@@ -45,6 +52,43 @@ DIRECTORY_REQUEST_PAUSE_SECONDS = 1.5
 # Kurze Pause zwischen zwei Seiten-Abrufen DERSELBEN Kanzlei-Website beim
 # Team-Scrape (Startseite -> Team-Unterseite).
 TEAM_PAGE_FETCH_PAUSE_SECONDS = 0.5
+
+
+def _steuerberater_notes_text(person: steuerberater_verzeichnis.DirectoryPerson) -> str:
+    """Strukturierte Zusammenfassung aus dem amtlichen Verzeichnis (keine
+    freie Bio verfuegbar, nur offizielle Registerdaten) - wird bei approve als
+    Note am Kandidaten hinterlegt, damit nach der Uebernahme nachvollziehbar
+    bleibt, woher die Person stammt und was laut Quelle ihre Rolle ist."""
+    lines = [f"Bestellt als {person.beruf} laut amtlichem Steuerberaterverzeichnis."]
+    if person.akademische_grade:
+        lines.append(f"Akademischer Grad: {person.akademische_grade}")
+    if person.employer:
+        lines.append(f"Kanzlei laut Quelle: {person.employer}")
+    if person.address_lines:
+        lines.append("Adresse laut Quelle: " + ", ".join(person.address_lines))
+    return "\n".join(lines)
+
+
+def _wpk_notes_text(person: wpk_berufsregister.WpkPerson) -> str:
+    """Analog zu _steuerberater_notes_text fuer das WPK-Berufsregister."""
+    lines = [f"Bestellt als {person.beruf} laut WPK-Berufsregister."]
+    if person.akademische_grade:
+        lines.append(f"Akademischer Grad: {person.akademische_grade}")
+    if person.street or person.postal_code or person.city:
+        plz_ort = f"{person.postal_code or ''} {person.city or ''}".strip()
+        address = ", ".join(part for part in (person.street, plz_ort) if part)
+        lines.append(f"Adresse laut Quelle: {address}")
+    if person.registernummer:
+        lines.append(f"Registernummer: {person.registernummer}")
+    return "\n".join(lines)
+
+
+def _team_page_notes_text(member: kanzlei_team_scrape.TeamMember) -> str | None:
+    """Rolle + per LLM extrahierte Stellenbeschreibung/Werdegang von der
+    Team-Seite - None nur, wenn die Seite ueberhaupt nichts ueber die Person
+    hergibt (dann bleibt notes_text leer statt einer leeren Note)."""
+    parts = [part for part in (member.title, member.info_text) if part]
+    return "\n".join(parts) if parts else None
 
 
 def _merge_results(total: "SourcingRunResult", partial: "SourcingRunResult") -> None:
@@ -137,6 +181,7 @@ class SourcingService:
         # erneut - ein Lauf legt leicht hunderte Leads am Stueck an.
         self._candidate_names: list[tuple[uuid.UUID, str]] | None = None
         self._lead_names: dict[SourcingSourceType, set[str]] = {}
+        self._client_company_names: list[tuple[uuid.UUID, str]] | None = None
 
     def start_run(self, source_type: SourcingSourceType, total: int) -> SourcingRun:
         run = SourcingRun(source_type=source_type, status=SourcingRunStatus.RUNNING, total=total)
@@ -237,6 +282,15 @@ class SourcingService:
             return result
         result.found = len(persons)
         for person in persons:
+            matched_company = self._match_client_company(person.employer)
+            # Wenn wir die Kanzlei bereits im CRM kennen, gilt deren
+            # (normalisierte) Adresse als verlaesslicher als die aus dem
+            # Verzeichnis-Freitext geparste - Fallback bleibt die
+            # Verzeichnis-Adresse, falls die Kanzlei keine PLZ/Ort hinterlegt hat.
+            city = (matched_company.city if matched_company else None) or person.city
+            postal_code = (
+                matched_company.postal_code if matched_company else None
+            ) or person.postal_code
             self._record_lead_result(
                 result,
                 SourcingLeadCreate(
@@ -245,8 +299,9 @@ class SourcingService:
                     first_name=person.first_name,
                     last_name=person.last_name,
                     current_employer=person.employer,
-                    city=person.city,
-                    postal_code=person.postal_code,
+                    city=city,
+                    postal_code=postal_code,
+                    matched_client_company_id=matched_company.id if matched_company else None,
                     raw_data={
                         "beruf": person.beruf,
                         "akademische_grade": person.akademische_grade,
@@ -254,6 +309,7 @@ class SourcingService:
                         "address_lines": person.address_lines,
                         "suchbegriff": plz_or_ort,
                     },
+                    notes_text=_steuerberater_notes_text(person),
                 ),
             )
         return result
@@ -286,6 +342,7 @@ class SourcingService:
                         "registernummer": person.registernummer,
                         "suchbegriff": plz_or_ort,
                     },
+                    notes_text=_wpk_notes_text(person),
                 ),
             )
         return result
@@ -362,6 +419,7 @@ class SourcingService:
                         postal_code=client.postal_code,
                         matched_client_company_id=client.id,
                         raw_data={"title": member.title, "team_page": page_url},
+                        notes_text=_team_page_notes_text(member),
                     ),
                 )
             if result.found > 0:
@@ -403,6 +461,14 @@ class SourcingService:
                 owner_user_id=user_id,
             )
         )
+        if lead.notes_text:
+            # Freitext ueber die Person (Stellenbeschreibung/Werdegang/weitere
+            # online gefundene Infos laut Quelle) landet als Note am neuen
+            # Kandidaten - damit bleibt nach der Uebernahme nachvollziehbar,
+            # was die Person macht/gemacht hat (Nutzer-Vorgabe).
+            NoteService(self.session).create(
+                NoteCreate(candidate_id=candidate.id, body=lead.notes_text)
+            )
         lead.status = SourcingLeadStatus.APPROVED
         lead.created_candidate_id = candidate.id
         self._stamp_review(lead, user_id)
@@ -490,3 +556,31 @@ class SourcingService:
                 (row[0], normalize_person_name(row[1], row[2])) for row in rows
             ]
         return self._candidate_names
+
+    def _match_client_company(self, employer: str | None) -> ClientCompany | None:
+        """Ordnet den laut Quelle genannten Arbeitgeber-Freitext einer im CRM
+        bereits erfassten Kanzlei zu (Fuzzy-Namensvergleich, gleiche Logik/
+        Schwelle wie beim Kanzlei-Import, siehe services/name_matching.py).
+        Bei Treffer gilt die CRM-Adresse der Kanzlei als verlaesslicher als
+        die aus dem Quell-Freitext geparste (siehe Aufrufer)."""
+        if not employer:
+            return None
+        normalized = normalize_company_name(employer)
+        if not normalized:
+            return None
+        best_id: uuid.UUID | None = None
+        best_score = 0.0
+        for company_id, company_name in self._client_company_name_index():
+            score = name_similarity(normalized, company_name)
+            if score >= SIMILARITY_THRESHOLD and score > best_score:
+                best_id = company_id
+                best_score = score
+        return self.session.get(ClientCompany, best_id) if best_id is not None else None
+
+    def _client_company_name_index(self) -> list[tuple[uuid.UUID, str]]:
+        if self._client_company_names is None:
+            rows = self.session.execute(select(ClientCompany.id, ClientCompany.name)).all()
+            self._client_company_names = [
+                (row[0], normalize_company_name(row[1])) for row in rows
+            ]
+        return self._client_company_names

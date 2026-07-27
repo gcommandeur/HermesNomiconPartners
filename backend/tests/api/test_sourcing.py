@@ -336,3 +336,74 @@ def test_sourcing_run_rejects_brak_source(client: TestClient) -> None:
         json={"source_type": "brak_anwaltsverzeichnis", "plz_or_ort": ["70173"]},
     )
     assert response.status_code == 422
+
+
+def test_sourcing_run_matches_known_client_company_and_prefers_its_address(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Nutzer-Vorgabe: PLZ/Ort wird von der bekannten Kanzlei uebernommen,
+    wenn der laut Quelle genannte Arbeitgeber einer bestehenden ClientCompany
+    zugeordnet werden kann - auch wenn das Verzeichnis selbst eine
+    (unpraezise/leicht abweichende) Adresse mitliefert."""
+    company = client.post(
+        "/api/v1/clients",
+        json={
+            "name": "Baker Tilly GmbH & Co. KG Wirtschaftsprüfungsgesellschaft",
+            "postal_code": "70173",
+            "city": "Stuttgart",
+        },
+    ).json()
+
+    html = """
+    <a class="link-to-detail" href="details/AA-11/?lang=de">
+      <p class="beruf text-wrap">Steuerberaterin</p>
+      <p class="akademische-grade text-wrap"></p>
+      <p class="name text-wrap">Ursula Augsten</p>
+      <p class="address-display text-wrap">Baker Tilly<br>Steuerberatungsgesellschaft mbH
+        &amp; Co. KG<br>Kronprinzstraße 8<br>70173 Stuttgart</p>
+    </a>
+    """
+    monkeypatch.setattr(
+        "cc_crm.services.steuerberater_verzeichnis.fetch_search_html", lambda plz_or_ort: html
+    )
+
+    client.post(
+        "/api/v1/sourcing/run",
+        json={"source_type": "steuerberaterverzeichnis", "plz_or_ort": ["70173"]},
+    )
+
+    lead = client.get("/api/v1/sourcing/leads").json()["items"][0]
+    assert lead["matched_client_company_id"] == company["id"]
+    assert (lead["postal_code"], lead["city"]) == ("70173", "Stuttgart")
+    assert "Bestellt als Steuerberaterin laut amtlichem Steuerberaterverzeichnis" in (
+        lead["notes_text"] or ""
+    )
+
+
+def test_approve_lead_with_notes_text_creates_note_on_candidate(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
+    with session_factory() as session:
+        lead = SourcingService(session).create_lead(
+            make_lead_payload(notes_text="Seit 2015 Partnerin, Spezialisierung Erbrecht.")
+        )
+        assert lead is not None
+
+    body = client.post(f"/api/v1/sourcing/leads/{lead.id}/approve").json()
+    candidate_id = body["created_candidate_id"]
+
+    notes = client.get(f"/api/v1/notes?candidate_id={candidate_id}").json()
+    assert len(notes) == 1
+    assert notes[0]["body"] == "Seit 2015 Partnerin, Spezialisierung Erbrecht."
+
+
+def test_approve_lead_without_notes_text_creates_no_note(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
+    with session_factory() as session:
+        lead = SourcingService(session).create_lead(make_lead_payload())
+        assert lead is not None
+
+    body = client.post(f"/api/v1/sourcing/leads/{lead.id}/approve").json()
+    notes = client.get(f"/api/v1/notes?candidate_id={body['created_candidate_id']}").json()
+    assert notes == []

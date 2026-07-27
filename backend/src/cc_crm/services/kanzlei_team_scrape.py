@@ -71,7 +71,11 @@ Gib AUSSCHLIESSLICH ein JSON-Array zurück (kein Markdown-Codeblock, keine
 Erklärung), mit einem Objekt pro Person:
 [
   {"first_name": "<Vorname>", "last_name": "<Nachname>",
-   "title": "<Rolle/Titel wie angegeben, oder null>"}
+   "title": "<Rolle/Titel wie angegeben, oder null>",
+   "info_text": "<alles weitere ueber die Person aus dem Text (aktuelle
+     Taetigkeit/Stellenbeschreibung, Fachgebiete/Spezialisierung, Werdegang,
+     seit wann bei der Kanzlei, Ausbildung, ...), zusammengefasst in 1-3
+     Saetzen, oder null falls nichts weiter im Text steht>"}
 ]
 
 REGELN:
@@ -79,6 +83,9 @@ REGELN:
   Berufsträger DIESER Kanzlei genannt sind. Erfinde niemanden.
 - Akademische Titel (Dr., Prof.) NICHT in first_name/last_name aufnehmen,
   sondern in title (z.B. "Dr., Steuerberater, Partner").
+- info_text NUR aus explizit im Text stehenden Angaben zusammenfassen -
+  nichts hinzuerfinden. Titel/Rolle nicht in info_text wiederholen, wenn sie
+  schon in title stehen.
 - Keine Personen aus Referenzen, Testimonials, News-Artikeln oder Impressum-
   Pflichtangaben Dritter.
 - Wenn keine Teammitglieder erkennbar sind, gib [] zurück."""
@@ -89,6 +96,7 @@ class TeamMember:
     first_name: str
     last_name: str
     title: str | None
+    info_text: str | None
 
 
 def _parse_members_json(raw: str) -> list[dict[str, object]]:
@@ -164,10 +172,13 @@ def extract_team_members(page_text: str) -> list[TeamMember]:
     raw = generate_text(
         system_prompt=_TEAM_EXTRACTION_SYSTEM_PROMPT,
         user_message=page_text[:MAX_PAGE_TEXT_CHARS],
-        # Grosse Kanzleien listen 50+ Personen mit langen Titelzeilen - ein
-        # zu knappes Limit schneidet das JSON-Array mitten im Objekt ab
-        # (live passiert bei max_tokens=2000, linngoppold.de/team).
-        max_tokens=8000,
+        # Grosse Kanzleien listen 50+ Personen mit langen Titelzeilen + einem
+        # zusaetzlichen info_text pro Person - ein zu knappes Limit schneidet
+        # das JSON-Array mitten im Objekt ab (live beobachtet bei
+        # max_tokens=2000, linngoppold.de/team, noch ohne info_text).
+        # _parse_members_json rettet trotzdem alle bis dahin vollstaendigen
+        # Objekte, falls es doch mal knapp wird.
+        max_tokens=16000,
     )
     entries = _parse_members_json(raw)
     members: list[TeamMember] = []
@@ -177,11 +188,13 @@ def extract_team_members(page_text: str) -> list[TeamMember]:
         if not first_name or not last_name:
             continue
         title = entry.get("title")
+        info_text = entry.get("info_text")
         members.append(
             TeamMember(
                 first_name=first_name,
                 last_name=last_name,
                 title=str(title).strip() if title else None,
+                info_text=str(info_text).strip() if info_text else None,
             )
         )
     return members

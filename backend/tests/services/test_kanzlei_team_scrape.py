@@ -40,7 +40,8 @@ def test_extract_team_members_parses_llm_json(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(
         "cc_crm.services.kanzlei_team_scrape.generate_text",
         lambda **kwargs: (
-            '[{"first_name": "Eva", "last_name": "Muster", "title": "Dr., Steuerberaterin"},'
+            '[{"first_name": "Eva", "last_name": "Muster", "title": "Dr., Steuerberaterin",'
+            ' "info_text": "Seit 2015 bei der Kanzlei, Spezialisierung Umsatzsteuer."},'
             ' {"first_name": "", "last_name": "Unvollstaendig", "title": null}]'
         ),
     )
@@ -49,6 +50,16 @@ def test_extract_team_members_parses_llm_json(monkeypatch: pytest.MonkeyPatch) -
     assert len(members) == 1
     assert members[0].first_name == "Eva"
     assert members[0].title == "Dr., Steuerberaterin"
+    assert members[0].info_text == "Seit 2015 bei der Kanzlei, Spezialisierung Umsatzsteuer."
+
+
+def test_extract_team_members_info_text_defaults_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "cc_crm.services.kanzlei_team_scrape.generate_text",
+        lambda **kwargs: '[{"first_name": "Max", "last_name": "Beispiel", "title": null}]',
+    )
+    members = extract_team_members("...")
+    assert members[0].info_text is None
 
 
 def test_extract_team_members_salvages_truncated_json(monkeypatch: pytest.MonkeyPatch) -> None:
