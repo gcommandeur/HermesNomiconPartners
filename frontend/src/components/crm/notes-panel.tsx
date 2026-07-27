@@ -11,6 +11,14 @@ import { formatDate } from "@/lib/utils";
 
 const textareaClass = "min-h-24 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
 
+// Vorbereiteter Entwurf fuer ein Quali-Call-Gespraech - fuellt die
+// wichtigsten Eckdaten-Ueberschriften vor, statt mit einem leeren Textfeld
+// zu starten (gleiches Prinzip wie QUALIFICATION_CALL_TEMPLATE in
+// feedback-panel.tsx, dort an den Prozess-Feedback-Eintrag gebunden - hier
+// bewusst als freie Notiz, unabhaengig von einem laufenden Prozess).
+const QUALI_CALL_NOTE_TEMPLATE =
+  "Ort: \nAusbildung: \nGehalt: \nKündigungsfrist/Verfügbarkeit: \n\nErfahrungen: \n\nWechselmotivation: \n\nEDV: ";
+
 /** Freier, nicht prozessgebundener Notizen-Tab am Kandidaten (Phase 1b) -
  * nutzt das bestehende Note-Modell/API mit candidate_submission_id == null
  * (siehe queries.ts::getNotesForCandidate/createNote), anders als die
@@ -21,6 +29,12 @@ export function NotesPanel({ candidateId, initialNotes }: { candidateId: string;
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function handleInsertQualiCallTemplate() {
+    setBody((current) =>
+      current.trim() ? `${current}\n\n${QUALI_CALL_NOTE_TEMPLATE}` : QUALI_CALL_NOTE_TEMPLATE,
+    );
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -53,7 +67,10 @@ export function NotesPanel({ candidateId, initialNotes }: { candidateId: string;
               value={body}
               onChange={(event) => setBody(event.target.value)}
             />
-            <div className="flex justify-end">
+            <div className="flex justify-between gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={handleInsertQualiCallTemplate}>
+                Quali-Call-Entwurf einfügen
+              </Button>
               <Button type="submit" size="sm" disabled={busy}>
                 {busy ? "Speichert…" : "Speichern"}
               </Button>
