@@ -2,9 +2,11 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, File, Query, Response, UploadFile, status
 
 from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
+from cc_crm.api.v1.operational import _read_upload_with_size_limit, _validate_upload_type
+from cc_crm.core.config import get_settings
 from cc_crm.models.enums import CandidateStatus
 from cc_crm.schemas.candidate import (
     CandidateCreate,
@@ -21,7 +23,11 @@ from cc_crm.schemas.submission import (
     CandidateSubmissionRead,
 )
 from cc_crm.services.candidates import CandidateService
-from cc_crm.services.cv_extraction import extract_text_from_bytes
+from cc_crm.services.cv_extraction import (
+    extract_candidate_fields,
+    extract_text_from_bytes,
+    is_agency_letterhead,
+)
 from cc_crm.services.operational import DocumentService
 from cc_crm.services.recruiting import RecruitingProcessService
 from cc_crm.services.storage import read_document_bytes
@@ -77,6 +83,31 @@ def create_candidate(
     if payload.owner_user_id is None:
         payload = payload.model_copy(update={"owner_user_id": current_user.id})
     return CandidateRead.model_validate(CandidateService(session).create(payload))
+
+
+@router.post("/cv-preview", response_model=CvExtractionSuggestion)
+async def preview_cv_fields(file: Annotated[UploadFile, File()]) -> CvExtractionSuggestion:
+    """Liest ein CV aus, BEVOR der Kandidat angelegt ist (Anlegen-Formular,
+    Nutzer-Feedback: "Felder sollen ausgefuellt werden") - anders als
+    /{candidate_id}/cv-extraction gibt es hier noch keinen Kandidaten,
+    gegen den "bereits befuellte Felder" geprueft werden koennten, daher
+    werden alle erkannten Felder zurueckgegeben (das Frontend uebernimmt sie
+    nur in aktuell leere Formularfelder, ueberschreibt also ebenfalls nichts
+    manuell Eingegebenes)."""
+    _validate_upload_type(file)
+    max_bytes = get_settings().max_upload_size_mb * 1024 * 1024
+    content = await _read_upload_with_size_limit(file, max_bytes)
+    cv_text = extract_text_from_bytes(file.filename or "cv.pdf", content)
+    extracted = extract_candidate_fields(cv_text)
+    return CvExtractionSuggestion(
+        postal_code=extracted.get("postal_code"),
+        city=extracted.get("city"),
+        phone=extracted.get("phone"),
+        job_title=extracted.get("job_title"),
+        qualification=extracted.get("qualification"),
+        ausbildung_titel=extracted.get("ausbildung_titel"),
+        source_is_agency_profile=is_agency_letterhead(cv_text),
+    )
 
 
 # Muss vor /{candidate_id} registriert sein, sonst faengt die Path-Param-Route

@@ -70,6 +70,30 @@ def test_cv_extraction_fills_only_empty_fields(client: TestClient) -> None:
     assert candidate["job_title"] == "Steuerberater"
 
 
+def test_cv_preview_returns_extracted_fields_without_a_candidate(client: TestClient) -> None:
+    # Anlegen-Formular: der Kandidat existiert zu diesem Zeitpunkt noch
+    # nicht, das Endpoint braucht daher keine candidate_id.
+    response = client.post(
+        "/api/v1/candidates/cv-preview",
+        files={"file": ("cv.doc", b"Lebenslauf Test Kandidat...", "application/msword")},
+    )
+    assert response.status_code == 200
+    suggestion = response.json()
+
+    assert suggestion["postal_code"] == "60327"
+    assert suggestion["city"] == "Frankfurt am Main"
+    assert suggestion["job_title"] == "Steuerberater"
+    assert suggestion["source_is_agency_profile"] is False
+
+
+def test_cv_preview_rejects_disallowed_file_type(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/candidates/cv-preview",
+        files={"file": ("cv.txt", b"Lebenslauf", "text/plain")},
+    )
+    assert response.status_code == 415
+
+
 def test_cv_extraction_suppresses_address_for_agency_letterhead(client: TestClient) -> None:
     candidate_id = _create_candidate(client)
     letterhead = "Commandeur Consulting GmbH, Talstraße 112, 41199 Mönchengladbach"

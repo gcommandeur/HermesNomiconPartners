@@ -1,15 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { apiPatch, apiPost } from "@/lib/api/client";
+import { apiPatch, apiPost, apiUpload } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { invalidateCandidatesCache, useAssignableUsersCache, useCurrentUser } from "@/lib/api/hooks";
-import type { BeruflicheStation, Candidate } from "@/lib/api/types";
+import type { BeruflicheStation, Candidate, CvExtractionSuggestion } from "@/lib/api/types";
+
+// Ordnet die vom Backend erkannten CV-Felder (siehe
+// cc_crm.services.cv_extraction.extract_candidate_fields) den passenden
+// Formularfeldern zu - nur fuer Felder, die es auch im Anlegen-Formular gibt.
+// (source_is_agency_profile bewusst ausgeschlossen: kein Formularfeld, kein string.)
+type CvStringSuggestionField = Exclude<keyof CvExtractionSuggestion, "source_is_agency_profile">;
+const CV_SUGGESTION_TO_FORM_FIELD: Array<[CvStringSuggestionField, keyof typeof emptyForm]> = [
+  ["postal_code", "postal_code"],
+  ["city", "city"],
+  ["phone", "phone"],
+  ["job_title", "job_title"],
+  ["qualification", "qualification"],
+  ["ausbildung_titel", "ausbildung_titel"],
+];
 
 const labelClass = "mb-1 block text-xs text-[#94A3B8]";
 const textareaClass = "min-h-20 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
@@ -78,12 +92,85 @@ export function CandidateCreateForm({
   // beim Neuanlegen, im Bearbeiten-Modus bleibt der bestehende Owner stehen.
   const ownerUserId = form.owner_user_id || (isEdit ? "" : currentUserData?.data.id ?? "");
 
+  // CV-Upload direkt im Anlegen-Formular (Nutzer-Feedback: "keine Option
+  // einen CV hinzuzufuegen, weder per Upload noch per Drag&Drop") - die
+  // Datei wird hier nur ausgelesen, um leere Felder vorzubefuellen; der
+  // eigentliche Dokument-Upload passiert erst nach erfolgreichem Anlegen
+  // (siehe handleSubmit), da vorher keine candidate_id existiert.
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [cvExtracting, setCvExtracting] = useState(false);
+  const [cvError, setCvError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const dragCounter = useRef(0);
+  const cvInputRef = useRef<HTMLInputElement>(null);
+
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
   function setStation<K extends keyof BeruflicheStation>(index: number, key: K, value: BeruflicheStation[K]) {
     setStations((current) => current.map((station, i) => (i === index ? { ...station, [key]: value } : station)));
+  }
+
+  async function handleCvFile(file: File) {
+    setCvFile(file);
+    setCvExtracting(true);
+    setCvError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const suggestion = await apiUpload<CvExtractionSuggestion>("/candidates/cv-preview", formData);
+      setForm((current) => {
+        const updated = { ...current };
+        for (const [suggestionKey, formKey] of CV_SUGGESTION_TO_FORM_FIELD) {
+          const value = suggestion[suggestionKey];
+          if (value && !current[formKey].trim()) {
+            updated[formKey] = value;
+          }
+        }
+        return updated;
+      });
+    } catch (exception) {
+      // Ausgelesene Felder sind reiner Komfort - schlaegt das Auslesen fehl
+      // (z.B. kein Anthropic-Key konfiguriert), bleibt die Datei trotzdem
+      // fuer den Upload nach dem Anlegen vorgemerkt.
+      setCvError(exception instanceof Error ? exception.message : "CV konnte nicht ausgelesen werden.");
+    } finally {
+      setCvExtracting(false);
+    }
+  }
+
+  function handleCvDragEnter(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    if (!event.dataTransfer.types.includes("Files")) return;
+    dragCounter.current += 1;
+    setDragActive(true);
+  }
+
+  function handleCvDragLeave(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    dragCounter.current = Math.max(0, dragCounter.current - 1);
+    if (dragCounter.current === 0) setDragActive(false);
+  }
+
+  function handleCvDragOver(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+  }
+
+  async function handleCvDrop(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    dragCounter.current = 0;
+    setDragActive(false);
+    const file = event.dataTransfer.files?.[0];
+    if (!file || cvExtracting) return;
+    await handleCvFile(file);
+  }
+
+  async function handleCvInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    await handleCvFile(file);
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -115,6 +202,24 @@ export function CandidateCreateForm({
         setForm(emptyForm);
         setStations([]);
       }
+      // War beim Anlegen bereits ein CV per Button/Drag&Drop ausgewaehlt,
+      // wird es jetzt (erst jetzt existiert eine candidate_id) tatsaechlich
+      // als Dokument hochgeladen - fehlschlagender Upload darf das
+      // erfolgreiche Anlegen des Kandidaten nicht verdecken, daher separat
+      // abgefangen statt den ganzen try-Block scheitern zu lassen.
+      if (!isEdit && cvFile) {
+        try {
+          const uploadData = new FormData();
+          uploadData.append("owner_type", "candidate");
+          uploadData.append("owner_id", result.id);
+          uploadData.append("document_type", "cv");
+          uploadData.append("file", cvFile);
+          await apiUpload("/documents/upload", uploadData);
+        } catch {
+          // Wird im Dokumente-Tab sichtbar sein, falls es doch fehlschlaegt -
+          // der Nutzer landet dort ohnehin direkt danach.
+        }
+      }
       void invalidateCandidatesCache();
       onDone(result);
       if (isEdit) {
@@ -139,8 +244,43 @@ export function CandidateCreateForm({
     }
   }
 
+  // Drag&Drop nur beim Neuanlegen aktiv - beim Bearbeiten gibt es dafuer
+  // bereits den Dokumente-Tab (document-panel.tsx) am Kandidaten selbst.
+  const cvDragHandlers = isEdit
+    ? {}
+    : {
+        onDragEnter: handleCvDragEnter,
+        onDragLeave: handleCvDragLeave,
+        onDragOver: handleCvDragOver,
+        onDrop: handleCvDrop,
+      };
+
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
+    <div className="relative" {...cvDragHandlers}>
+      {dragActive && !isEdit && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-[#1F5FA8] bg-[#0D1B2E]/90 text-sm font-semibold text-[#D8DADF]">
+          CV hier ablegen…
+        </div>
+      )}
+      <form className="space-y-4" onSubmit={handleSubmit}>
+      {!isEdit && (
+        <div className="rounded-lg border border-white/10 bg-[#0D1B2E]/75 p-3 text-xs text-[#94A3B8]">
+          <div className="flex items-center justify-between gap-3">
+            <span>CV hochladen, um Rolle/Qualifikation/PLZ/Ort/Telefon/Ausbildung automatisch zu befüllen — oder Datei per Drag&Drop auf dieses Fenster ziehen.</span>
+            <input ref={cvInputRef} type="file" className="hidden" onChange={handleCvInputChange} />
+            <Button type="button" size="sm" variant="outline" onClick={() => cvInputRef.current?.click()} disabled={cvExtracting}>
+              <Upload size={14} />
+              {cvExtracting ? "Liest aus…" : "CV hochladen"}
+            </Button>
+          </div>
+          {cvFile && !cvExtracting && (
+            <p className="mt-2 flex items-center gap-1.5 text-[#69A7EA]">
+              <Sparkles size={13} />{cvFile.name} ausgelesen — passende Felder wurden vorbefüllt.
+            </p>
+          )}
+          {cvError && <p className="mt-2 text-[#F0B429]">{cvError}</p>}
+        </div>
+      )}
       {isEdit && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelClass}>Kandidatennummer</label><Input value={form.candidate_number} onChange={(e) => set("candidate_number", e.target.value)} /></div>
@@ -252,7 +392,8 @@ export function CandidateCreateForm({
           {busy ? "Speichern…" : isEdit ? "Änderungen speichern" : "Kandidat anlegen"}
         </Button>
       </div>
-    </form>
+      </form>
+    </div>
   );
 }
 
