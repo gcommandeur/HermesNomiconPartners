@@ -115,9 +115,17 @@ export function CandidateCreateForm({
         setForm(emptyForm);
         setStations([]);
       }
-      router.refresh();
       void invalidateCandidatesCache();
       onDone(result);
+      if (isEdit) {
+        router.refresh();
+      } else {
+        // Direkt zum Dokumente-Tab des neu angelegten Kandidaten - ohne
+        // diesen Sprung gab es nach dem Anlegen keinen offensichtlichen
+        // naechsten Schritt, um einen CV hochzuladen (Nutzer-Feedback:
+        // "keine Option einen CV hinzuzufuegen").
+        router.push(`/kandidaten/${result.id}?tab=Dokumente`);
+      }
     } catch (exception) {
       setError(
         exception instanceof Error

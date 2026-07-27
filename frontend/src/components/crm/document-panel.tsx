@@ -151,15 +151,14 @@ export function DocumentPanel({ ownerType, ownerId, documentType, documents }: D
   const [error, setError] = useState<string | null>(null);
   const [previewDocument, setPreviewDocument] = useState<DocumentMeta | null>(null);
   const [cvSuggestion, setCvSuggestion] = useState<CvExtractionSuggestion | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const dragCounter = useRef(0);
 
   function handlePickFile() {
     fileInputRef.current?.click();
   }
 
-  async function handleFileSelected(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
+  async function uploadFile(file: File) {
     setUploading(true);
     setError(null);
     try {
@@ -193,6 +192,44 @@ export function DocumentPanel({ ownerType, ownerId, documentType, documents }: D
     }
   }
 
+  async function handleFileSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    await uploadFile(file);
+  }
+
+  // Drag-Counter statt eines einfachen Booleans: onDragLeave feuert schon
+  // beim Ueberqueren jedes Kind-Elements der Drop-Zone (nicht nur beim
+  // endgueltigen Verlassen), ein simples true/false wuerde die Hervorhebung
+  // dadurch schon beim Drueberziehen ueber ein Kind-Element voreilig
+  // zuruecksetzen.
+  function handleDragEnter(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    if (!event.dataTransfer.types.includes("Files")) return;
+    dragCounter.current += 1;
+    setDragActive(true);
+  }
+
+  function handleDragLeave(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    dragCounter.current = Math.max(0, dragCounter.current - 1);
+    if (dragCounter.current === 0) setDragActive(false);
+  }
+
+  function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+  }
+
+  async function handleDrop(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    dragCounter.current = 0;
+    setDragActive(false);
+    const file = event.dataTransfer.files?.[0];
+    if (!file || uploading) return;
+    await uploadFile(file);
+  }
+
   async function handleDownload(document: DocumentMeta) {
     setDownloadingId(document.id);
     setError(null);
@@ -207,8 +244,18 @@ export function DocumentPanel({ ownerType, ownerId, documentType, documents }: D
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between rounded-lg border border-white/10 bg-[#0D1B2E]/75 p-3 text-xs text-[#94A3B8]">
-        <span>Dateien werden lokal im CRM-Speicher abgelegt.</span>
+      <div
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        className={`flex items-center justify-between rounded-lg border p-3 text-xs transition-colors ${
+          dragActive
+            ? "border-[#1F5FA8] bg-[#1F5FA8]/10 text-[#D8DADF]"
+            : "border-white/10 bg-[#0D1B2E]/75 text-[#94A3B8]"
+        }`}
+      >
+        <span>{dragActive ? "Datei hier ablegen…" : "Dateien werden lokal im CRM-Speicher abgelegt - oder hier ablegen (Drag & Drop)."}</span>
         <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelected} />
         <Button size="sm" variant="outline" onClick={handlePickFile} disabled={uploading}>
           <Upload size={14} />

@@ -33,10 +33,10 @@ export default async function CandidateDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ from?: string }>;
+  searchParams?: Promise<{ from?: string; tab?: string }>;
 }) {
   const { id } = await params;
-  const { from } = (await searchParams) ?? {};
+  const { from, tab } = (await searchParams) ?? {};
   const backLink = from === "prozesse"
     ? { href: "/prozesse", label: "Zurück zu Prozesse" }
     : { href: "/kandidaten", label: "Zur Kandidatenliste" };
@@ -65,6 +65,10 @@ export default async function CandidateDetailPage({
     `Verfügbarkeit: ${candidate.notice_period ?? "nach Absprache"}.`,
   ].join("\n");
   const tabs = ["Übersicht", "Anonymes Profil", "Notizen", "Matching", "CV-Outs", "Timeline", "Aufgaben", "Dokumente"];
+  // Erlaubt einen direkten Link auf einen bestimmten Tab (z.B. "?tab=Dokumente"
+  // nach dem Anlegen eines Kandidaten, siehe candidate-create-modal.tsx) -
+  // faellt auf "Übersicht" zurueck, wenn der Wert fehlt oder ungueltig ist.
+  const initialTab = tab && tabs.includes(tab) ? tab : "Übersicht";
 
   return (
     <>
@@ -104,7 +108,7 @@ export default async function CandidateDetailPage({
         </div>
       )}
 
-      <Tabs defaultValue="Übersicht">
+      <Tabs defaultValue={initialTab}>
         <TabsList className="scrollbar-subtle mb-5 overflow-x-auto">
           {tabs.map((tab) => <TabsTrigger key={tab} value={tab}>{tab}</TabsTrigger>)}
         </TabsList>
