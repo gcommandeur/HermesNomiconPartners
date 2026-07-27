@@ -9,7 +9,7 @@ import { createNote } from "@/lib/api/queries";
 import type { Note } from "@/lib/api/types";
 import { formatDate } from "@/lib/utils";
 
-const textareaClass = "min-h-24 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const textareaClass = "min-h-48 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
 
 // Vorbereiteter Entwurf fuer ein Quali-Call-Gespraech - fuellt die
 // wichtigsten Eckdaten-Ueberschriften vor, statt mit einem leeren Textfeld
