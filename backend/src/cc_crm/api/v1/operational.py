@@ -3,9 +3,12 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile, status
+from sqlalchemy import select
 
 from cc_crm.api.dependencies import DatabaseSession
 from cc_crm.core.config import get_settings
+from cc_crm.models.candidate import Candidate
+from cc_crm.models.operational import Document
 from cc_crm.schemas.operational import (
     CockpitRead,
     DocumentCreate,
@@ -23,7 +26,12 @@ from cc_crm.services.operational import (
     EmailWorkflowService,
     SourcingMetricService,
 )
-from cc_crm.services.storage import read_document_bytes, save_document_bytes
+from cc_crm.services.storage import (
+    plan_new_candidate_document,
+    read_document_bytes,
+    rename_document_bytes,
+    save_document_bytes,
+)
 
 router = APIRouter()
 
@@ -120,6 +128,52 @@ def create_document(payload: DocumentCreate, session: DatabaseSession) -> Docume
     return DocumentRead.model_validate(DocumentService(session).create(payload))
 
 
+def _candidate_upload_naming(
+    session: DatabaseSession, owner_id: uuid.UUID, document_type: str, original_filename: str
+) -> tuple[str | None, dict[uuid.UUID, str]]:
+    """Kandidaten-Nr.-Konvention fuer neue Kandidaten-Dokumente (Nutzer-
+    Vorgabe: "1823.pdf" statt "ddd4ce82_1823_Kroll_Simon.pdf", siehe
+    services/storage.py::plan_new_candidate_document). Gibt (None, {})
+    zurueck, wenn der Kandidat (noch) keine candidate_number hat - der
+    Aufrufer faellt dann auf das alte Zufalls-Namensschema zurueck, statt
+    einen Dateinamen ohne Nummer zu erzeugen."""
+    candidate = session.get(Candidate, owner_id)
+    if candidate is None or not candidate.candidate_number:
+        return None, {}
+
+    existing = list(
+        session.scalars(
+            select(Document).where(
+                Document.owner_type == "candidate", Document.owner_id == owner_id
+            )
+        ).all()
+    )
+    return plan_new_candidate_document(
+        list(existing), candidate.candidate_number, document_type, original_filename
+    )
+
+
+def _apply_sibling_renames(
+    session: DatabaseSession, owner_id: uuid.UUID, sibling_renames: dict[uuid.UUID, str]
+) -> None:
+    """Benennt Geschwister-Dokumente desselben Kandidaten um, falls durch
+    den gerade laufenden Upload aus einem bisherigen Einzeldokument ein
+    Mehrfachfall wird (siehe _candidate_upload_naming) - selten (nur beim
+    Uebergang von 1 auf 2+ Dokumente), aber noetig, um die Konvention
+    konsistent zu halten."""
+    if not sibling_renames:
+        return
+    for document_id, new_filename in sibling_renames.items():
+        document = session.get(Document, document_id)
+        if document is None:
+            continue
+        new_key = f"{document.owner_type}/{owner_id}/{new_filename}"
+        rename_document_bytes(old_storage_key=document.storage_key, new_storage_key=new_key)
+        document.storage_key = new_key
+        document.filename = new_filename
+    session.commit()
+
+
 @router.post("/documents/upload", response_model=DocumentRead, status_code=status.HTTP_201_CREATED)
 async def upload_document(
     session: DatabaseSession,
@@ -132,22 +186,37 @@ async def upload_document(
     _validate_upload_type(file)
     max_bytes = get_settings().max_upload_size_mb * 1024 * 1024
     content = await _read_upload_with_size_limit(file, max_bytes)
+    original_filename = file.filename or "datei"
+
+    upload_filename = original_filename
+    storage_key_override = None
+    sibling_renames: dict[uuid.UUID, str] = {}
+    if owner_type == "candidate":
+        planned_filename, sibling_renames = _candidate_upload_naming(
+            session, owner_id, document_type, original_filename
+        )
+        if planned_filename is not None:
+            upload_filename = planned_filename
+            storage_key_override = f"{owner_type}/{owner_id}/{planned_filename}"
+
     storage_key = save_document_bytes(
         owner_type=owner_type,
         owner_id=owner_id,
-        filename=file.filename or "datei",
+        filename=original_filename,
         content=content,
+        storage_key=storage_key_override,
     )
     payload = DocumentCreate(
         owner_type=owner_type,
         owner_id=owner_id,
         document_type=document_type,
-        filename=file.filename or "datei",
+        filename=upload_filename,
         storage_key=storage_key,
         content_type=file.content_type,
         size_bytes=len(content),
         uploaded_by=uploaded_by,
     )
+    _apply_sibling_renames(session, owner_id, sibling_renames)
     return DocumentRead.model_validate(DocumentService(session).create(payload))
 
 

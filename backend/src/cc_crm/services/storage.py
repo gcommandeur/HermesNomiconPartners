@@ -18,8 +18,10 @@ from __future__ import annotations
 
 import re
 import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 from cc_crm.core.config import get_settings
 
@@ -54,6 +56,115 @@ def _storage_key_for(owner_type: str, owner_id: uuid.UUID, filename: str) -> str
     return f"{owner_type}/{owner_id}/{unique_name}"
 
 
+def _safe_type_segment(document_type: str) -> str:
+    """Nur alphanumerische Zeichen fuer den Dateinamen-Zusatz - document_type
+    ist ein freies String-Feld (siehe models/operational.py), keine
+    Enum-Garantie auf "sichere" Zeichen."""
+    cleaned = "".join(ch if ch.isalnum() else "_" for ch in document_type.lower())
+    return cleaned.strip("_") or "dokument"
+
+
+class _NamedDocument(Protocol):
+    """Strukturelle Typisierung statt eines Imports von models.operational.Document
+    - so kann diese Funktion sowohl mit echten ORM-Objekten (Bulk-Umbenennung,
+    siehe scripts/rename_documents_to_candidate_number.py) als auch mit einem
+    noch nicht in der DB existierenden, synthetischen Eintrag fuer einen
+    GERADE laufenden Upload aufgerufen werden (siehe
+    api/v1/operational.py::upload_document)."""
+
+    id: uuid.UUID
+    document_type: str
+    filename: str
+    created_at: datetime
+
+
+def candidate_document_filenames(
+    documents: list[_NamedDocument], candidate_number: str
+) -> dict[uuid.UUID, str]:
+    """Bestimmt fuer ALLE Dokumente eines Kandidaten (nicht nur eines
+    einzelnen) den Ziel-Dateinamen nach der Kandidaten-Nr.-Konvention (Nutzer-
+    Vorgabe: Dateiname soll nur noch die Kandidaten-Nr. sein, z.B. "1823.pdf"
+    statt "ddd4ce82_1823_Kroll_Simon.pdf" - bei mehreren Dokumenten desselben
+    Kandidaten zusaetzlich ein Dokumenttyp-Zusatz, bei mehreren Dokumenten
+    DESSELBEN Typs zusaetzlich eine fortlaufende Nummer nach Upload-Datum
+    sortiert, um Kollisionen zu vermeiden - live auf Produktion bestaetigter
+    Fall: Kandidat 1823/Simon Kroll hatte durch einen Re-Upload zwei
+    CV-Dokumente).
+
+    Gemeinsam genutzt von der Bulk-Umbenennung bestehender Dokumente
+    (scripts/rename_documents_to_candidate_number.py) UND vom Upload-
+    Endpunkt fuer neue Dokumente, damit beide garantiert dieselbe Konvention
+    anwenden und nicht auseinanderlaufen."""
+    if len(documents) == 1:
+        document = documents[0]
+        ext = Path(document.filename).suffix.lower()
+        return {document.id: f"{candidate_number}{ext}"}
+
+    def _sort_key(document: _NamedDocument) -> datetime:
+        # SQLite gibt fuer DateTime(timezone=True)-Spalten beim Lesen naive
+        # datetimes zurueck (kein echtes tz-aware Storage) - ein frisch per
+        # datetime.now(UTC) gebauter synthetischer Eintrag (siehe
+        # plan_new_candidate_document) ist dagegen tz-aware. Ohne diese
+        # Normalisierung wirft sorted() TypeError beim Vergleich von naiven
+        # und tz-aware datetimes.
+        timestamp = document.created_at
+        return timestamp.replace(tzinfo=None) if timestamp.tzinfo is not None else timestamp
+
+    by_type: dict[str, list[_NamedDocument]] = {}
+    for document in sorted(documents, key=_sort_key):
+        by_type.setdefault(document.document_type, []).append(document)
+
+    result: dict[uuid.UUID, str] = {}
+    for document_type, type_documents in by_type.items():
+        type_segment = _safe_type_segment(document_type)
+        for index, document in enumerate(type_documents, start=1):
+            ext = Path(document.filename).suffix.lower()
+            suffix = "" if index == 1 else f"_{index}"
+            result[document.id] = f"{candidate_number}_{type_segment}{suffix}{ext}"
+    return result
+
+
+@dataclass
+class _VirtualDocument:
+    """Steht fuer ein GERADE hochgeladenes Dokument, das noch keine DB-Zeile
+    (und damit noch keine echte id) hat - siehe plan_new_candidate_document."""
+
+    id: uuid.UUID
+    document_type: str
+    filename: str
+    created_at: datetime
+
+
+def plan_new_candidate_document(
+    existing_documents: list[_NamedDocument],
+    candidate_number: str,
+    document_type: str,
+    filename: str,
+) -> tuple[str, dict[uuid.UUID, str]]:
+    """Bestimmt den Dateinamen fuer ein GERADE hochzuladenes Kandidaten-
+    Dokument nach der Kandidaten-Nr.-Konvention, sowie ggf. noetige
+    Umbenennungen bereits vorhandener Geschwister-Dokumente desselben
+    Kandidaten (nur relevant, wenn aus einem bisherigen Einzeldokument durch
+    diesen Upload ein Mehrfachfall wird - das bisher "nackte"
+    Kandidaten-Nr.-Dokument braucht dann nachtraeglich denselben
+    Typ-Zusatz wie das neue, um konsistent zu bleiben). Gibt
+    (neuer_dateiname_fuer_upload, {bestehendes_document.id: neuer_dateiname})
+    zurueck - das zweite Dict ist im weit ueberwiegenden Normalfall (0 oder
+    bereits >=2 bestehende, schon typ-benannte Dokumente) leer."""
+    new_id = uuid.uuid4()
+    virtual_new = _VirtualDocument(
+        id=new_id, document_type=document_type, filename=filename, created_at=datetime.now(UTC)
+    )
+    names = candidate_document_filenames([*existing_documents, virtual_new], candidate_number)
+    new_filename = names.pop(new_id)
+    sibling_renames = {
+        document.id: names[document.id]
+        for document in existing_documents
+        if names.get(document.id) not in (None, document.filename)
+    }
+    return new_filename, sibling_renames
+
+
 def _s3_configured() -> bool:
     return bool(get_settings().s3_bucket)
 
@@ -78,11 +189,21 @@ def _local_storage_root() -> Path:
 
 
 def save_document_bytes(
-    *, owner_type: str, owner_id: uuid.UUID, filename: str, content: bytes
+    *,
+    owner_type: str,
+    owner_id: uuid.UUID,
+    filename: str,
+    content: bytes,
+    storage_key: str | None = None,
 ) -> str:
-    """Speichert die Bytes und gibt den storage_key zurück (Pfad/Objektschlüssel,
-    unabhängig vom Backend identisch aufgebaut: "owner_type/owner_id/uuid_datei")."""
-    storage_key = _storage_key_for(owner_type, owner_id, filename)
+    """Speichert die Bytes und gibt den storage_key zurück. Ohne `storage_key`
+    (Standardfall) wird ein zufälliger, kollisionssicherer Schlüssel gebaut
+    ("owner_type/owner_id/uuid_datei") - für Kandidaten-Dokumente mit
+    bekannter Kandidaten-Nr. übergibt der Aufrufer stattdessen den bereits
+    nach der Kandidaten-Nr.-Konvention berechneten Ziel-Schlüssel (siehe
+    candidate_document_filenames), damit die Datei direkt unter ihrem
+    endgültigen Namen landet statt über einen Zwischen-Umbenennungsschritt."""
+    storage_key = storage_key or _storage_key_for(owner_type, owner_id, filename)
 
     if _s3_configured():
         settings = get_settings()
@@ -121,6 +242,40 @@ def read_document_bytes(storage_key: str) -> bytes:
         return bytes(response["Body"].read())
 
     return (_local_storage_root() / storage_key).read_bytes()
+
+
+def rename_document_bytes(*, old_storage_key: str, new_storage_key: str) -> None:
+    """Verschiebt ein Objekt auf einen neuen storage_key (Kopie auf den neuen
+    Schlüssel, per document_exists verifiziert, danach das alte Objekt
+    gelöscht) - bei einem Abbruch mittendrin geht dadurch nie eine Datei
+    komplett verloren (im schlimmsten Fall existiert sie kurzzeitig doppelt).
+    Gemeinsam genutzt von der Bulk-Umbenennung (scripts/
+    rename_documents_to_candidate_number.py) und vom Upload-Endpunkt (wenn
+    ein neuer Upload ein bestehendes Geschwister-Dokument umbenennen muss,
+    siehe candidate_document_filenames)."""
+    if old_storage_key == new_storage_key:
+        return
+
+    if _s3_configured():
+        settings = get_settings()
+        assert settings.s3_bucket is not None
+        _s3_client().copy_object(
+            Bucket=settings.s3_bucket,
+            CopySource={"Bucket": settings.s3_bucket, "Key": old_storage_key},
+            Key=new_storage_key,
+        )
+        if not document_exists(new_storage_key):
+            raise RuntimeError(
+                f"Kopie nach copy_object nicht per head_object bestätigt: {new_storage_key}"
+            )
+        delete_document_bytes(old_storage_key)
+        return
+
+    old_path = _local_storage_root() / old_storage_key
+    new_path = _local_storage_root() / new_storage_key
+    new_path.parent.mkdir(parents=True, exist_ok=True)
+    new_path.write_bytes(old_path.read_bytes())
+    old_path.unlink()
 
 
 def delete_document_bytes(storage_key: str) -> None:
