@@ -42,6 +42,7 @@ def _mock_generate_text(monkeypatch: pytest.MonkeyPatch) -> None:
                 "job_title": "Steuerberater",
                 "qualification": "Steuerberaterexamen",
                 "ausbildung_titel": "Diplom-Kaufmann",
+                "fachliche_schwerpunkte": ["Umsatzsteuer", "Konzernsteuerrecht"],
             }
         )
 
@@ -66,6 +67,7 @@ def test_cv_extraction_fills_only_empty_fields(client: TestClient) -> None:
     assert suggestion["postal_code"] == "60327"
     assert suggestion["city"] is None  # bereits gesetzt, wird nicht ueberschrieben
     assert suggestion["job_title"] == "Steuerberater"
+    assert suggestion["fachliche_schwerpunkte"] == ["Umsatzsteuer", "Konzernsteuerrecht"]
     assert suggestion["source_is_agency_profile"] is False
 
     # Regressionsschutz: die erkannten Felder muessen sofort am Kandidaten
@@ -77,6 +79,25 @@ def test_cv_extraction_fills_only_empty_fields(client: TestClient) -> None:
     assert candidate["postal_code"] == "60327"
     assert candidate["city"] == "Bereits gesetzt"
     assert candidate["job_title"] == "Steuerberater"
+    assert candidate["fachliche_schwerpunkte"] == ["Umsatzsteuer", "Konzernsteuerrecht"]
+
+
+def test_cv_extraction_does_not_overwrite_existing_fachliche_schwerpunkte(
+    client: TestClient,
+) -> None:
+    candidate_id = _create_candidate(client, fachliche_schwerpunkte=["Bereits vorhanden"])
+    document_id = _upload_document(client, candidate_id, b"Lebenslauf Test Kandidat...", "cv.doc")
+
+    response = client.post(
+        f"/api/v1/candidates/{candidate_id}/cv-extraction",
+        json={"document_id": document_id},
+    )
+    assert response.status_code == 200
+    suggestion = response.json()
+    assert suggestion["fachliche_schwerpunkte"] is None
+
+    candidate = client.get(f"/api/v1/candidates/{candidate_id}").json()
+    assert candidate["fachliche_schwerpunkte"] == ["Bereits vorhanden"]
 
 
 def test_cv_preview_returns_extracted_fields_without_a_candidate(client: TestClient) -> None:
@@ -95,6 +116,7 @@ def test_cv_preview_returns_extracted_fields_without_a_candidate(client: TestCli
     assert suggestion["postal_code"] == "60327"
     assert suggestion["city"] == "Frankfurt am Main"
     assert suggestion["job_title"] == "Steuerberater"
+    assert suggestion["fachliche_schwerpunkte"] == ["Umsatzsteuer", "Konzernsteuerrecht"]
     assert suggestion["source_is_agency_profile"] is False
 
 

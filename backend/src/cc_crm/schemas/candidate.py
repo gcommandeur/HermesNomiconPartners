@@ -122,4 +122,5 @@ class CvExtractionSuggestion(BaseModel):
     job_title: str | None = None
     qualification: str | None = None
     ausbildung_titel: str | None = None
+    fachliche_schwerpunkte: list[str] | None = None
     source_is_agency_profile: bool = False

@@ -19,6 +19,7 @@ def _make_candidate(session: Session, **overrides: object) -> Candidate:
         "job_title": None,
         "qualification": None,
         "ausbildung_titel": None,
+        "fachliche_schwerpunkte": [],
     }
     defaults.update(overrides)
     candidate = Candidate(**defaults)
@@ -71,7 +72,7 @@ def test_only_empty_fields_are_filled(
         # suggest_cv_fields liefert real nur fuer aktuell leere Felder einen
         # Vorschlag (siehe suggestion_for()-Closure in services/candidates.py)
         # - city ist hier beim Kandidaten bereits gesetzt, daher None.
-        lambda self, candidate_id, cv_text: CvExtractionSuggestion(
+        lambda self, candidate_id, cv_text, **kwargs: CvExtractionSuggestion(
             postal_code="80331",
             city=None,
             phone="0891234567",
@@ -102,7 +103,7 @@ def test_dry_run_does_not_write(
 
     monkeypatch.setattr(
         "cc_crm.services.candidates.CandidateService.suggest_cv_fields",
-        lambda self, candidate_id, cv_text: CvExtractionSuggestion(
+        lambda self, candidate_id, cv_text, **kwargs: CvExtractionSuggestion(
             postal_code="80331",
             city="München",
             phone=None,
@@ -147,12 +148,66 @@ def test_candidate_with_all_fields_already_set_is_not_checked(
             job_title="Steuerberater",
             qualification="StB",
             ausbildung_titel="Diplom",
+            fachliche_schwerpunkte=["Umsatzsteuer"],
         )
         _make_cv_document(session, candidate.id)
 
     stats = backfill_cv_fields.backfill(apply=True)
 
     assert stats == {"candidates_checked": 0, "candidates_updated": 0, "fields_filled": 0}
+
+
+def test_is_empty_treats_empty_list_and_none_as_empty_but_not_populated_list() -> None:
+    # Kernstueck des Bugfixes: fachliche_schwerpunkte hat als DB-Default []
+    # statt None - eine reine "is None"-Pruefung wuerde ein leeres Listenfeld
+    # nie als "zu befuellen" erkennen.
+    assert backfill_cv_fields._is_empty(None) is True
+    assert backfill_cv_fields._is_empty([]) is True
+    assert backfill_cv_fields._is_empty(["Umsatzsteuer"]) is False
+    assert backfill_cv_fields._is_empty("") is False  # kein TARGET_FIELDS-Wert in der Praxis
+    assert backfill_cv_fields._is_empty("Steuerberater") is False
+
+
+def test_empty_fachliche_schwerpunkte_list_is_recognized_as_empty_field(
+    monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
+) -> None:
+    """Regressionsschutz fuer den vom Nutzer explizit benannten Bug: ein
+    Kandidat mit fachliche_schwerpunkte == [] (nicht None) muss trotzdem als
+    "leeres Zielfeld" erkannt und befuellt werden."""
+    _use_session_factory(monkeypatch, session_factory)
+    with session_factory() as session:
+        candidate = _make_candidate(
+            session,
+            postal_code="80331",
+            city="München",
+            phone="0891234567",
+            job_title="Steuerberater",
+            qualification="StB",
+            ausbildung_titel="Diplom",
+            fachliche_schwerpunkte=[],
+        )
+        _make_cv_document(session, candidate.id)
+
+    monkeypatch.setattr(
+        "cc_crm.services.candidates.CandidateService.suggest_cv_fields",
+        lambda self, candidate_id, cv_text, **kwargs: CvExtractionSuggestion(
+            postal_code=None,
+            city=None,
+            phone=None,
+            job_title=None,
+            qualification=None,
+            ausbildung_titel=None,
+            fachliche_schwerpunkte=["Umsatzsteuer", "M&A"],
+        ),
+    )
+
+    stats = backfill_cv_fields.backfill(apply=True)
+
+    assert stats == {"candidates_checked": 1, "candidates_updated": 1, "fields_filled": 1}
+    with session_factory() as session:
+        refreshed = session.get(Candidate, candidate.id)
+        assert refreshed is not None
+        assert refreshed.fachliche_schwerpunkte == ["Umsatzsteuer", "M&A"]
 
 
 def test_extraction_error_is_skipped_without_aborting_run(
@@ -166,7 +221,7 @@ def test_extraction_error_is_skipped_without_aborting_run(
         _make_cv_document(session, healthy_candidate.id)
 
     def _raise_or_suggest(
-        self: object, candidate_id: uuid.UUID, cv_text: str
+        self: object, candidate_id: uuid.UUID, cv_text: str, **kwargs: object
     ) -> CvExtractionSuggestion:
         if candidate_id == broken_candidate.id:
             raise RuntimeError("Anthropic-API hat keinen Text-Inhalt zurückgegeben.")

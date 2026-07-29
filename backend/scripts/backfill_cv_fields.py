@@ -1,6 +1,6 @@
 """Backfill fuer bestehende Kandidaten mit laengst hochgeladenem CV, deren
-Zielfelder (PLZ, Ort, Telefon, Rolle, Qualifikation, Ausbildung) noch leer
-sind.
+Zielfelder (PLZ, Ort, Telefon, Rolle, Qualifikation, Ausbildung, fachliche
+Schwerpunkte) noch leer sind.
 
 CandidateService.suggest_cv_fields() wird bislang nur unmittelbar nach
 einem NEUEN Upload einmalig im Frontend als Vorschlag angezeigt (siehe
@@ -45,7 +45,30 @@ from cc_crm.services.storage import read_document_bytes  # noqa: E402
 
 # Dieselben Felder wie CvExtractionSuggestion (schemas/candidate.py) -
 # ausser source_is_agency_profile, das kein befuellbares Kandidatenfeld ist.
-TARGET_FIELDS = ["postal_code", "city", "phone", "job_title", "qualification", "ausbildung_titel"]
+TARGET_FIELDS = [
+    "postal_code",
+    "city",
+    "phone",
+    "job_title",
+    "qualification",
+    "ausbildung_titel",
+    "fachliche_schwerpunkte",
+]
+
+
+def _is_empty(value: object) -> bool:
+    """Generische "leer"-Pruefung fuer TARGET_FIELDS ueber beide bisher
+    vorkommenden Feldtypen hinweg: String-Felder sind leer, wenn None (ihr
+    DB-Default); Listenfelder wie fachliche_schwerpunkte sind NIE None
+    (DB-Default ist []), sondern leer, wenn die Liste selbst leer ist. Eine
+    reine "is None"-Pruefung wuerde ein leeres Listenfeld also nie als "zu
+    befuellen" erkennen - ein zukuenftiges weiteres Listenfeld braucht dank
+    dieser generischen Pruefung keine eigene Sonderbehandlung mehr."""
+    if value is None:
+        return True
+    if isinstance(value, list):
+        return len(value) == 0
+    return False
 
 
 def _candidates_with_cv_and_empty_fields(session: Session) -> list[Candidate]:
@@ -64,7 +87,7 @@ def _candidates_with_cv_and_empty_fields(session: Session) -> list[Candidate]:
     return [
         candidate
         for candidate in candidates
-        if any(getattr(candidate, field) is None for field in TARGET_FIELDS)
+        if any(_is_empty(getattr(candidate, field)) for field in TARGET_FIELDS)
     ]
 
 
@@ -95,7 +118,9 @@ def backfill(*, apply: bool) -> dict[str, int]:
             try:
                 content = read_document_bytes(document.storage_key)
                 cv_text = extract_text_from_bytes(document.filename, content)
-                suggestion = service.suggest_cv_fields(candidate.id, cv_text)
+                suggestion = service.suggest_cv_fields(
+                    candidate.id, cv_text, filename=document.filename, content=content
+                )
             except Exception as exception:  # noqa: BLE001 - Einzelner Kandidat darf den Lauf nicht abbrechen
                 print(
                     f"  Übersprungen ({candidate.first_name} {candidate.last_name}, "
@@ -106,7 +131,7 @@ def backfill(*, apply: bool) -> dict[str, int]:
             updates = {
                 field: value
                 for field, value in suggestion.model_dump().items()
-                if field in TARGET_FIELDS and value is not None
+                if field in TARGET_FIELDS and not _is_empty(value)
             }
             if not updates:
                 continue

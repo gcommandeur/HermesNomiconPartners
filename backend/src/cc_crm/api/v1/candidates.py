@@ -110,6 +110,7 @@ async def preview_cv_fields(file: Annotated[UploadFile, File()]) -> CvExtraction
         job_title=extracted.get("job_title"),
         qualification=extracted.get("qualification"),
         ausbildung_titel=extracted.get("ausbildung_titel"),
+        fachliche_schwerpunkte=extracted.get("fachliche_schwerpunkte") or None,
         source_is_agency_profile=is_agency_letterhead(cv_text),
     )
 

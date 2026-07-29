@@ -64,7 +64,8 @@ Erklärung davor/danach), mit exakt diesen Schlüsseln:
   "phone": "<Telefonnummer wie im Text, oder null>",
   "job_title": "<aktuelle/letzte Berufsbezeichnung, kurz, oder null>",
   "qualification": "<Qualifikation/Berufsabschluss, kurz z.B. 'Steuerberater', oder null>",
-  "ausbildung_titel": "<Ausbildung/Weiterbildung, kurz, oder null>"
+  "ausbildung_titel": "<Ausbildung/Weiterbildung, kurz, oder null>",
+  "fachliche_schwerpunkte": ["<fachlicher Schwerpunkt 1>", "<fachlicher Schwerpunkt 2>", "..."]
 }
 
 REGELN:
@@ -78,6 +79,14 @@ REGELN:
 - qualification: falls die Person mehrere aktuell gültige Berufsbezeichnungen/
   -abschlüsse hat (z.B. "Steuerberater" UND "Wirtschaftsprüfer"), beide durch
   " / " getrennt angeben.
+- fachliche_schwerpunkte: anders als job_title/qualification aus dem GESAMTEN
+  Lebenslauf (nicht nur der aktuellsten Position) - konkrete, inhaltlich
+  greifbare fachliche Schwerpunkte/Fähigkeiten, z.B. Rechtsgebiete
+  ("Umsatzsteuer", "M&A"), Branchenspezialisierung ("Automotive-Mandanten"),
+  Fachsoftware ("DATEV", "SAP FI"). KEINE generischen Floskeln wie
+  "Teamfähigkeit", "Kommunikationsstärke" oder "selbstständiges Arbeiten" -
+  nur fachlich/inhaltlich verwertbare Stichpunkte, kurz gehalten (2-6 Wörter
+  je Eintrag). Leeres Array, falls nichts Konkretes im Text erkennbar ist.
 - Name/Adresse/Telefon/E-Mail: NIEMALS übernehmen, wenn der Text erkennbar ein
   anonymisiertes, von einer Personalberatung selbst erstelltes Kandidatenprofil
   ist (Briefkopf/Fußzeile mit der Adresse der Beratung statt der Adresse der
@@ -172,7 +181,7 @@ def _extract_fields_via_vision(content: bytes) -> dict[str, Any]:
         system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
         user_message="Lies die Felder aus dem Bild der ersten Lebenslauf-Seite aus.",
         image_base64=image_base64,
-        max_tokens=400,
+        max_tokens=600,
     )
     return _parse_json_response(raw)
 
@@ -196,9 +205,20 @@ def extract_candidate_fields(
     raw = generate_text(
         system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
         user_message=cv_text[:12000],
-        max_tokens=400,
+        # 600 statt vormals 400: fachliche_schwerpunkte liefert zusaetzlich zu
+        # den bisherigen Feldern eine Liste, die je nach CV mehrere Eintraege
+        # haben kann - 400 reichte dafuer teilweise nicht mehr aus.
+        max_tokens=600,
     )
     data = _parse_json_response(raw)
+    # Defensiv: das Modell haelt sich fast immer an das Array-Schema, aber
+    # ohne diese Normalisierung wuerde ein fehlendes/falsch typisiertes Feld
+    # (z.B. null statt []) weiter unten beim Speichern (JSON-Spalte, erwartet
+    # eine Liste) zu einem Fehler fuehren statt einfach als "nichts gefunden"
+    # behandelt zu werden.
+    if not isinstance(data.get("fachliche_schwerpunkte"), list):
+        data["fachliche_schwerpunkte"] = []
+
     agency_profile = is_agency_letterhead(cv_text)
     if agency_profile:
         for key in ("first_name", "last_name", "email", "postal_code", "city", "phone"):

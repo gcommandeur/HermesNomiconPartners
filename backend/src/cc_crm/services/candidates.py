@@ -1,6 +1,7 @@
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -142,7 +143,10 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         candidate = self.get(candidate_id)
         extracted = extract_candidate_fields(cv_text, filename=filename, content=content)
 
-        def suggestion_for(field_name: str, current_value: str | None) -> str | None:
+        # Generisch fuer String- UND Listenfelder (fachliche_schwerpunkte):
+        # Python-Truthiness behandelt sowohl None/"" als auch [] als "leer",
+        # ein bestehender Wert wird also fuer beide Feldtypen nie ueberschrieben.
+        def suggestion_for(field_name: str, current_value: str | list[str] | None) -> Any:
             value = extracted.get(field_name)
             return value if (value and not current_value) else None
 
@@ -156,6 +160,9 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             job_title=suggestion_for("job_title", candidate.job_title),
             qualification=suggestion_for("qualification", candidate.qualification),
             ausbildung_titel=suggestion_for("ausbildung_titel", candidate.ausbildung_titel),
+            fachliche_schwerpunkte=suggestion_for(
+                "fachliche_schwerpunkte", candidate.fachliche_schwerpunkte
+            ),
             source_is_agency_profile=is_agency_letterhead(cv_text),
         )
 
@@ -189,6 +196,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
                 ("job_title", suggestion.job_title),
                 ("qualification", suggestion.qualification),
                 ("ausbildung_titel", suggestion.ausbildung_titel),
+                ("fachliche_schwerpunkte", suggestion.fachliche_schwerpunkte),
             )
             if value
         }
