@@ -1,21 +1,25 @@
 """Backfill fuer bestehende Kandidaten mit laengst hochgeladenem CV, deren
 Zielfelder (PLZ, Ort, Telefon, Rolle, Qualifikation, Ausbildung, fachliche
-Schwerpunkte) noch leer sind.
+Schwerpunkte) noch leer sind. Legt dabei zusaetzlich - falls noch nicht
+vorhanden - eine automatische Profilzusammenfassungs-Notiz an und speichert
+das komplette CV-Extraktionsergebnis (cv_extraction_raw), exakt wie beim
+regulaeren CV-Upload (siehe CandidateService.auto_fill_from_cv).
 
-CandidateService.suggest_cv_fields() wird bislang nur unmittelbar nach
-einem NEUEN Upload einmalig im Frontend als Vorschlag angezeigt (siehe
-document-panel.tsx::handleFileSelected) - nie rueckwirkend fuer die ca.
-2900 bereits bestehenden Kandidaten mit laengst hochgeladenem CV. Dieses
-Skript holt fuer jeden betroffenen Kandidaten das (neueste) CV-Dokument,
-extrahiert den Text und wendet dieselbe Vorschlagslogik an.
+CandidateService.auto_fill_from_cv() wird bislang nur unmittelbar nach einem
+NEUEN Upload angewendet (siehe document-panel.tsx::handleFileSelected) - nie
+rueckwirkend fuer die ca. 2900 bereits bestehenden Kandidaten mit laengst
+hochgeladenem CV. Dieses Skript holt fuer jeden betroffenen Kandidaten das
+(neueste) CV-Dokument, extrahiert den Text und wendet dieselbe Logik an.
 
 Wie beim Master-Excel-Bulk-Import (services/imports.py::
 _candidate_field_updates): NUR aktuell leere Felder werden befuellt, ein
-bereits vorhandener Wert wird nie ueberschrieben - suggest_cv_fields()
-liefert ohnehin nur fuer leere Felder einen Vorschlag zurueck.
+bereits vorhandener Wert wird nie ueberschrieben.
 
-Dry-Run per Default (zeigt nur, was geaendert wuerde, ohne zu schreiben) -
---apply fuer den echten Lauf.
+Dry-Run per Default (zeigt nur, was geaendert wuerde, ohne zu schreiben,
+inkl. ob eine Profilzusammenfassungs-Notiz angelegt wuerde) - --apply fuer
+den echten Lauf (nutzt dafuer denselben Code-Pfad wie ein echter CV-Upload,
+CandidateService.auto_fill_from_cv, statt eigene Persistenz-Logik zu
+duplizieren).
 
 Usage (aus backend/, mit aktiviertem venv):
 
@@ -38,22 +42,16 @@ from sqlalchemy.orm import Session  # noqa: E402
 from cc_crm.infrastructure.database.session import SessionLocal  # noqa: E402
 from cc_crm.models.candidate import Candidate  # noqa: E402
 from cc_crm.models.operational import Document  # noqa: E402
-from cc_crm.schemas.candidate import CandidateUpdate  # noqa: E402
 from cc_crm.services.candidates import CandidateService  # noqa: E402
-from cc_crm.services.cv_extraction import extract_text_from_bytes  # noqa: E402
+from cc_crm.services.cv_extraction import (  # noqa: E402
+    CV_STRUCTURED_FIELDS,
+    extract_text_from_bytes,
+)
 from cc_crm.services.storage import read_document_bytes  # noqa: E402
 
-# Dieselben Felder wie CvExtractionSuggestion (schemas/candidate.py) -
-# ausser source_is_agency_profile, das kein befuellbares Kandidatenfeld ist.
-TARGET_FIELDS = [
-    "postal_code",
-    "city",
-    "phone",
-    "job_title",
-    "qualification",
-    "ausbildung_titel",
-    "fachliche_schwerpunkte",
-]
+# Zentrale Registry aus cv_extraction.py statt einer eigenen, separat
+# gepflegten Liste - siehe Kommentar dort zur Begruendung.
+TARGET_FIELDS = list(CV_STRUCTURED_FIELDS)
 
 
 def _is_empty(value: object) -> bool:
@@ -110,6 +108,7 @@ def backfill(*, apply: bool) -> dict[str, int]:
         service = CandidateService(session)
         candidates_updated = 0
         total_fields_filled = 0
+        notes_created = 0
 
         for candidate in candidates:
             document = _latest_cv_document(session, candidate.id)
@@ -118,9 +117,24 @@ def backfill(*, apply: bool) -> dict[str, int]:
             try:
                 content = read_document_bytes(document.storage_key)
                 cv_text = extract_text_from_bytes(document.filename, content)
-                suggestion = service.suggest_cv_fields(
-                    candidate.id, cv_text, filename=document.filename, content=content
-                )
+                if apply:
+                    # Gleicher Code-Pfad wie ein echter CV-Upload (Felder +
+                    # cv_extraction_raw + ggf. Profilzusammenfassungs-Notiz,
+                    # alles in einem Commit) - keine eigene Persistenz-Logik
+                    # hier im Skript.
+                    notes_before = len(service.notes.filtered(candidate_id=candidate.id))
+                    suggestion = service.auto_fill_from_cv(
+                        candidate.id, cv_text, filename=document.filename, content=content
+                    )
+                    notes_after = len(service.notes.filtered(candidate_id=candidate.id))
+                    note_created = notes_after > notes_before
+                else:
+                    extracted, suggestion = service.preview_cv_extraction(
+                        candidate.id, cv_text, filename=document.filename, content=content
+                    )
+                    note_created = service.would_create_profile_summary_note(
+                        candidate.id, extracted
+                    )
             except Exception as exception:  # noqa: BLE001 - Einzelner Kandidat darf den Lauf nicht abbrechen
                 print(
                     f"  Übersprungen ({candidate.first_name} {candidate.last_name}, "
@@ -133,7 +147,9 @@ def backfill(*, apply: bool) -> dict[str, int]:
                 for field, value in suggestion.model_dump().items()
                 if field in TARGET_FIELDS and not _is_empty(value)
             }
-            if not updates:
+            if note_created:
+                notes_created += 1
+            if not updates and not note_created:
                 continue
 
             candidates_updated += 1
@@ -142,15 +158,14 @@ def backfill(*, apply: bool) -> dict[str, int]:
             label = f"{candidate.first_name} {candidate.last_name}"
             if candidate.candidate_number:
                 label += f" (#{candidate.candidate_number})"
-            print(f"{action}: {label} -> {updates}")
-
-            if apply:
-                service.update(candidate.id, CandidateUpdate.model_validate(updates))
+            note_hint = " + Profilzusammenfassungs-Notiz" if note_created else ""
+            print(f"{action}: {label} -> {updates}{note_hint}")
 
         return {
             "candidates_checked": len(candidates),
             "candidates_updated": candidates_updated,
             "fields_filled": total_fields_filled,
+            "notes_created": notes_created,
         }
 
 
@@ -168,10 +183,12 @@ def main() -> None:
     print("\n=== Zusammenfassung ===")
     checked, updated = stats["candidates_checked"], stats["candidates_updated"]
     print(f"Kandidaten mit CV + mindestens einem leeren Zielfeld geprüft: {checked}")
-    print(f"Kandidaten mit mindestens einem befüllten Feld: {updated}")
+    print(f"Kandidaten mit mindestens einem befüllten Feld oder neuer Notiz: {updated}")
     if updated:
         average = stats["fields_filled"] / updated
         print(f"Felder je betroffenem Kandidat im Schnitt: {average:.1f}")
+    verb = "angelegt" if args.apply else "würden angelegt"
+    print(f"Profilzusammenfassungs-Notizen {verb}: {stats['notes_created']}")
     if not args.apply:
         print("\nDies war ein Dry-Run - nichts wurde geschrieben.")
         print("Mit --apply erneut ausführen, um zu übernehmen.")

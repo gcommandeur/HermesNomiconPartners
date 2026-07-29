@@ -41,6 +41,31 @@ AGENCY_LETTERHEAD_MARKER = "Commandeur Consulting GmbH"
 # gelesen werden, wird es nochmal analysiert".
 _STANDARD_FIELDS_TO_VERIFY = ("first_name", "last_name", "job_title", "phone", "postal_code")
 
+# Zentrale Liste aller Kandidaten-Spalten, die aus einem CV befuellt werden
+# koennen - EINZIGE Stelle, die ein neues strukturiertes Feld kennen muss
+# (CandidateService.suggest_cv_fields/auto_fill_from_cv, der /cv-preview-
+# Endpoint und backfill_cv_fields.py leiten sich alle hieraus ab, statt das
+# Feld an mehreren Stellen einzeln aufzuzaehlen). Feld MUSS als gleichnamiges
+# Attribut sowohl auf Candidate (models/candidate.py) als auch auf
+# CvExtractionSuggestion (schemas/candidate.py) existieren. Freitext-/
+# Analysefelder, die (noch) keine eigene Kandidaten-Spalte haben (z.B.
+# erfahrungen_zusammenfassung, siehe Prompt unten), gehoeren NICHT hierher -
+# die landen ausschliesslich in cv_extraction_raw (siehe
+# CandidateService.auto_fill_from_cv) und stehen darueber trotzdem jeder
+# kuenftigen Funktion zur Verfuegung, ganz ohne neue Spalte/Migration.
+CV_STRUCTURED_FIELDS: tuple[str, ...] = (
+    "first_name",
+    "last_name",
+    "email",
+    "postal_code",
+    "city",
+    "phone",
+    "job_title",
+    "qualification",
+    "ausbildung_titel",
+    "fachliche_schwerpunkte",
+)
+
 _JSON_FENCE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
 _FIELD_EXTRACTION_SYSTEM_PROMPT = """Du extrahierst strukturierte Kontakt- und Rollendaten aus einem
@@ -65,7 +90,8 @@ Erklärung davor/danach), mit exakt diesen Schlüsseln:
   "job_title": "<aktuelle/letzte Berufsbezeichnung, kurz, oder null>",
   "qualification": "<Qualifikation/Berufsabschluss, kurz z.B. 'Steuerberater', oder null>",
   "ausbildung_titel": "<Ausbildung/Weiterbildung, kurz, oder null>",
-  "fachliche_schwerpunkte": ["<fachlicher Schwerpunkt 1>", "<fachlicher Schwerpunkt 2>", "..."]
+  "fachliche_schwerpunkte": ["<fachlicher Schwerpunkt 1>", "<fachlicher Schwerpunkt 2>", "..."],
+  "erfahrungen_zusammenfassung": "<2-3 Saetze Fliesstext zur bisherigen Berufserfahrung, oder null>"
 }
 
 REGELN:
@@ -87,6 +113,10 @@ REGELN:
   "Teamfähigkeit", "Kommunikationsstärke" oder "selbstständiges Arbeiten" -
   nur fachlich/inhaltlich verwertbare Stichpunkte, kurz gehalten (2-6 Wörter
   je Eintrag). Leeres Array, falls nichts Konkretes im Text erkennbar ist.
+- erfahrungen_zusammenfassung: sachlicher Fliesstext-Überblick über die
+  bisherige Berufserfahrung aus dem GESAMTEN Lebenslauf (Stationen, Branchen,
+  ungefähre Dauer), kein Marketing-/Bewerbungssprech, keine Wertung. Dient als
+  kurze Orientierung für jemanden, der das CV noch nicht gelesen hat.
 - Name/Adresse/Telefon/E-Mail: NIEMALS übernehmen, wenn der Text erkennbar ein
   anonymisiertes, von einer Personalberatung selbst erstelltes Kandidatenprofil
   ist (Briefkopf/Fußzeile mit der Adresse der Beratung statt der Adresse der
@@ -181,7 +211,7 @@ def _extract_fields_via_vision(content: bytes) -> dict[str, Any]:
         system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
         user_message="Lies die Felder aus dem Bild der ersten Lebenslauf-Seite aus.",
         image_base64=image_base64,
-        max_tokens=600,
+        max_tokens=750,
     )
     return _parse_json_response(raw)
 
@@ -205,10 +235,10 @@ def extract_candidate_fields(
     raw = generate_text(
         system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
         user_message=cv_text[:12000],
-        # 600 statt vormals 400: fachliche_schwerpunkte liefert zusaetzlich zu
-        # den bisherigen Feldern eine Liste, die je nach CV mehrere Eintraege
-        # haben kann - 400 reichte dafuer teilweise nicht mehr aus.
-        max_tokens=600,
+        # 750 statt urspruenglich 400: fachliche_schwerpunkte (Liste) und
+        # erfahrungen_zusammenfassung (Fliesstext) liefern deutlich mehr
+        # Output als die anfaenglichen reinen Kurzfelder.
+        max_tokens=750,
     )
     data = _parse_json_response(raw)
     # Defensiv: das Modell haelt sich fast immer an das Array-Schema, aber

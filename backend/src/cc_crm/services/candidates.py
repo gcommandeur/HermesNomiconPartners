@@ -11,12 +11,34 @@ from cc_crm.models.candidate import Candidate
 from cc_crm.models.enums import CandidateStatus
 from cc_crm.models.user import User
 from cc_crm.repositories.candidates import CandidateRepository
+from cc_crm.repositories.notes import NoteRepository
 from cc_crm.repositories.operational import DocumentRepository
 from cc_crm.repositories.recruiting import AuditLogRepository
 from cc_crm.schemas.candidate import CandidateCreate, CandidateUpdate, CvExtractionSuggestion
 from cc_crm.services.base import CrudService
-from cc_crm.services.cv_extraction import extract_candidate_fields, is_agency_letterhead
+from cc_crm.services.cv_extraction import (
+    CV_STRUCTURED_FIELDS,
+    extract_candidate_fields,
+    is_agency_letterhead,
+)
 from cc_crm.services.storage import delete_document_bytes
+
+# Gleiche Struktur wie QUALI_CALL_NOTE_TEMPLATE im Frontend (notes-panel.tsx)
+# - bewusst identisch gehalten, damit eine automatisch aus dem CV erstellte
+# Profilzusammenfassung und eine manuell waehrend eines Quali-Calls
+# eingefuegte Notiz gleich aussehen. Gehalt/Kuendigungsfrist/Wechselmotivation
+# stehen nie in einem CV - bleiben hier absichtlich leer, fuer den
+# spaeteren Quali-Call.
+_PROFILE_SUMMARY_NOTE_TEMPLATE = (
+    "Profilzusammenfassung aus CV (automatisch erstellt):\n\n"
+    "Ort: {city}\n"
+    "Ausbildung: {ausbildung_titel}\n"
+    "Gehalt: \n"
+    "Kündigungsfrist/Verfügbarkeit: \n\n"
+    "Erfahrungen: {erfahrungen_zusammenfassung}\n\n"
+    "Wechselmotivation: \n\n"
+    "EDV: {edv}"
+)
 
 # Freitextfelder mit Personenbezug, die bei der Anonymisierung (siehe
 # CandidateService.anonymize) auf None/leer gesetzt werden - bewusst NICHT
@@ -48,6 +70,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         self.candidates = repository
         self.audit_logs = AuditLogRepository(session)
         self.documents = DocumentRepository(session)
+        self.notes = NoteRepository(session)
 
     def delete(self, entity_id: uuid.UUID, current_user: User | None = None) -> None:
         # Loeschung ist sicherheits-/nachvollziehbarkeitsrelevant (Punkt 2 des
@@ -128,6 +151,39 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         self.session.refresh(candidate)
         return candidate
 
+    def _extract_and_suggest(
+        self,
+        candidate: Candidate,
+        cv_text: str,
+        *,
+        filename: str | None,
+        content: bytes | None,
+    ) -> tuple[dict[str, Any], CvExtractionSuggestion]:
+        """Ein einzelner KI-Aufruf pro CV, geteilt zwischen suggest_cv_fields
+        (nur Vorschlag) und auto_fill_from_cv (Vorschlag + Persistierung) -
+        vermeidet, dieselbe Extraktion zweimal anzustossen. Gibt zusaetzlich
+        das komplette Rohergebnis zurueck (siehe Candidate.cv_extraction_raw),
+        damit auch nicht als eigene Spalte gefuehrte Felder (z.B.
+        erfahrungen_zusammenfassung) nicht verloren gehen."""
+        extracted = extract_candidate_fields(cv_text, filename=filename, content=content)
+
+        # CV_STRUCTURED_FIELDS statt Feld-fuer-Feld-Aufzaehlung: die einzige
+        # Stelle, die ein neues strukturiertes Feld kennen muss, ist die
+        # Registry in cv_extraction.py (siehe Kommentar dort). Python-
+        # Truthiness behandelt sowohl None/"" als auch [] als "leer", ein
+        # bestehender Wert wird also fuer String- UND Listenfelder nie
+        # ueberschrieben.
+        suggestions: dict[str, Any] = {}
+        for field in CV_STRUCTURED_FIELDS:
+            value = extracted.get(field)
+            current_value = getattr(candidate, field)
+            suggestions[field] = value if (value and not current_value) else None
+
+        suggestion = CvExtractionSuggestion(
+            **suggestions, source_is_agency_profile=is_agency_letterhead(cv_text)
+        )
+        return extracted, suggestion
+
     def suggest_cv_fields(
         self,
         candidate_id: uuid.UUID,
@@ -141,30 +197,35 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         wird nie ueberschrieben, auch nicht als Vorschlag. filename/content
         optional fuer den Vision-Fallback (siehe extract_candidate_fields)."""
         candidate = self.get(candidate_id)
-        extracted = extract_candidate_fields(cv_text, filename=filename, content=content)
-
-        # Generisch fuer String- UND Listenfelder (fachliche_schwerpunkte):
-        # Python-Truthiness behandelt sowohl None/"" als auch [] als "leer",
-        # ein bestehender Wert wird also fuer beide Feldtypen nie ueberschrieben.
-        def suggestion_for(field_name: str, current_value: str | list[str] | None) -> Any:
-            value = extracted.get(field_name)
-            return value if (value and not current_value) else None
-
-        return CvExtractionSuggestion(
-            first_name=suggestion_for("first_name", candidate.first_name),
-            last_name=suggestion_for("last_name", candidate.last_name),
-            email=suggestion_for("email", candidate.email),
-            postal_code=suggestion_for("postal_code", candidate.postal_code),
-            city=suggestion_for("city", candidate.city),
-            phone=suggestion_for("phone", candidate.phone),
-            job_title=suggestion_for("job_title", candidate.job_title),
-            qualification=suggestion_for("qualification", candidate.qualification),
-            ausbildung_titel=suggestion_for("ausbildung_titel", candidate.ausbildung_titel),
-            fachliche_schwerpunkte=suggestion_for(
-                "fachliche_schwerpunkte", candidate.fachliche_schwerpunkte
-            ),
-            source_is_agency_profile=is_agency_letterhead(cv_text),
+        _, suggestion = self._extract_and_suggest(
+            candidate, cv_text, filename=filename, content=content
         )
+        return suggestion
+
+    def preview_cv_extraction(
+        self,
+        candidate_id: uuid.UUID,
+        cv_text: str,
+        *,
+        filename: str | None = None,
+        content: bytes | None = None,
+    ) -> tuple[dict[str, Any], CvExtractionSuggestion]:
+        """Oeffentliche, rein lesende Variante von suggest_cv_fields, die
+        zusaetzlich das Rohergebnis zurueckgibt - genutzt vom Backfill-Skript
+        fuer einen praezisen Dry-Run-Bericht (inkl. ob eine Profil-
+        zusammenfassungs-Notiz angelegt wuerde, siehe
+        would_create_profile_summary_note), ohne dafuer einen zweiten
+        KI-Aufruf zu brauchen."""
+        candidate = self.get(candidate_id)
+        return self._extract_and_suggest(candidate, cv_text, filename=filename, content=content)
+
+    def would_create_profile_summary_note(
+        self, candidate_id: uuid.UUID, extracted: dict[str, Any]
+    ) -> bool:
+        """Rein lesende Vorschau von _profile_summary_note_is_applicable
+        (siehe dort) - fuer den Dry-Run-Bericht des Backfill-Skripts."""
+        candidate = self.get(candidate_id)
+        return self._profile_summary_note_is_applicable(candidate, extracted)
 
     def auto_fill_from_cv(
         self,
@@ -179,33 +240,66 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         Feld zu verlangen - Nutzer-Vorgabe: Felder sollen "beim Hochladen
         eines Profils sofort entstehen". Ueberschreibt wie zuvor nie einen
         bereits vorhandenen Wert (suggest_cv_fields liefert dafuer je Feld
-        None). Gibt zurueck, was tatsaechlich uebernommen wurde, damit das
+        None). Speichert zusaetzlich das komplette Rohergebnis
+        (cv_extraction_raw) und legt - einmalig, nur wenn der Kandidat noch
+        keine einzige Notiz hat - eine automatische Profilzusammenfassungs-
+        Notiz an. Gibt zurueck, was tatsaechlich uebernommen wurde, damit das
         Frontend das dem Nutzer anzeigen kann."""
-        suggestion = self.suggest_cv_fields(
-            candidate_id, cv_text, filename=filename, content=content
+        candidate = self.get(candidate_id)
+        extracted, suggestion = self._extract_and_suggest(
+            candidate, cv_text, filename=filename, content=content
         )
+
         updates = {
-            field: value
-            for field, value in (
-                ("first_name", suggestion.first_name),
-                ("last_name", suggestion.last_name),
-                ("email", suggestion.email),
-                ("postal_code", suggestion.postal_code),
-                ("city", suggestion.city),
-                ("phone", suggestion.phone),
-                ("job_title", suggestion.job_title),
-                ("qualification", suggestion.qualification),
-                ("ausbildung_titel", suggestion.ausbildung_titel),
-                ("fachliche_schwerpunkte", suggestion.fachliche_schwerpunkte),
-            )
-            if value
+            field: getattr(suggestion, field)
+            for field in CV_STRUCTURED_FIELDS
+            if getattr(suggestion, field)
         }
-        if updates:
-            candidate = self.get(candidate_id)
-            for field, value in updates.items():
-                setattr(candidate, field, value)
-            self.session.commit()
+        for field, value in updates.items():
+            setattr(candidate, field, value)
+        candidate.cv_extraction_raw = extracted
+
+        self._maybe_create_profile_summary_note(candidate, extracted)
+
+        self.session.commit()
         return suggestion
+
+    def _profile_summary_note_is_applicable(
+        self, candidate: Candidate, extracted: dict[str, Any]
+    ) -> bool:
+        """Bedingung fuer die automatische Profilzusammenfassungs-Notiz
+        (Nutzer-Vorgabe: "kann als erste Notiz stehen") - nur wenn (a) der
+        Kandidat noch keine einzige Notiz hat (sonst wuerde jeder erneute
+        CV-Upload eine weitere Zusammenfassung anhaengen) und (b) die
+        Extraktion ueberhaupt etwas Konkretes ergeben hat (sonst waere es nur
+        die leere Vorlage ohne Mehrwert gegenueber dem manuellen "Quali-Call-
+        Entwurf einfuegen"-Button im Notizen-Tab)."""
+        has_content = any(
+            [
+                extracted.get("city"),
+                extracted.get("ausbildung_titel"),
+                extracted.get("erfahrungen_zusammenfassung"),
+                extracted.get("fachliche_schwerpunkte"),
+            ]
+        )
+        if not has_content:
+            return False
+        return not self.notes.filtered(candidate_id=candidate.id, limit=1)
+
+    def _maybe_create_profile_summary_note(
+        self, candidate: Candidate, extracted: dict[str, Any]
+    ) -> None:
+        if not self._profile_summary_note_is_applicable(candidate, extracted):
+            return
+
+        edv = ", ".join(extracted.get("fachliche_schwerpunkte") or [])
+        body = _PROFILE_SUMMARY_NOTE_TEMPLATE.format(
+            city=extracted.get("city") or "",
+            ausbildung_titel=extracted.get("ausbildung_titel") or "",
+            erfahrungen_zusammenfassung=extracted.get("erfahrungen_zusammenfassung") or "",
+            edv=edv,
+        )
+        self.notes.create({"candidate_id": candidate.id, "body": body})
 
     def list_filtered(
         self,

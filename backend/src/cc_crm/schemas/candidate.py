@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -101,6 +102,12 @@ class CandidateRead(CandidateBase, EntityRead):
     # System-gesetzt (siehe CandidateService.update()), nicht ueber
     # Create/Update durch den Nutzer steuerbar - deshalb nur im Read-Schema.
     cv_in_recorded_at: datetime | None = None
+    # Vollstaendiges Roh-Ergebnis der letzten CV-Extraktion (siehe
+    # CandidateService.auto_fill_from_cv) - system-gesetzt, nie ueber
+    # Create/Update durch den Nutzer steuerbar. Kuenftige Funktionen koennen
+    # hierueber bereits ausgelesene CV-Infos wiederverwenden, auch wenn dafuer
+    # (noch) keine eigene Kandidaten-Spalte existiert.
+    cv_extraction_raw: dict[str, Any] | None = None
 
 
 class CvExtractionRequest(BaseModel):

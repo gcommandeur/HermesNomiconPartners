@@ -24,6 +24,7 @@ from cc_crm.schemas.submission import (
 )
 from cc_crm.services.candidates import CandidateService
 from cc_crm.services.cv_extraction import (
+    CV_STRUCTURED_FIELDS,
     extract_candidate_fields,
     extract_text_from_bytes,
     is_agency_letterhead,
@@ -100,19 +101,10 @@ async def preview_cv_fields(file: Annotated[UploadFile, File()]) -> CvExtraction
     filename = file.filename or "cv.pdf"
     cv_text = extract_text_from_bytes(filename, content)
     extracted = extract_candidate_fields(cv_text, filename=filename, content=content)
-    return CvExtractionSuggestion(
-        first_name=extracted.get("first_name"),
-        last_name=extracted.get("last_name"),
-        email=extracted.get("email"),
-        postal_code=extracted.get("postal_code"),
-        city=extracted.get("city"),
-        phone=extracted.get("phone"),
-        job_title=extracted.get("job_title"),
-        qualification=extracted.get("qualification"),
-        ausbildung_titel=extracted.get("ausbildung_titel"),
-        fachliche_schwerpunkte=extracted.get("fachliche_schwerpunkte") or None,
-        source_is_agency_profile=is_agency_letterhead(cv_text),
-    )
+    # CV_STRUCTURED_FIELDS statt Feld-fuer-Feld-Aufzaehlung - siehe Kommentar
+    # dort zur zentralen Registry.
+    values = {field: extracted.get(field) or None for field in CV_STRUCTURED_FIELDS}
+    return CvExtractionSuggestion(**values, source_is_agency_profile=is_agency_letterhead(cv_text))
 
 
 # Muss vor /{candidate_id} registriert sein, sonst faengt die Path-Param-Route

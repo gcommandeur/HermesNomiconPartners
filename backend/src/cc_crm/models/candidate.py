@@ -70,6 +70,17 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     no_gos: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     freitext_notizen: Mapped[str | None] = mapped_column(Text)
 
+    # Vollstaendiges Ergebnis der letzten CV-Extraktion (siehe
+    # services/cv_extraction.py::extract_candidate_fields), unabhaengig
+    # davon, welche der Werte auch als eigene Spalte uebernommen wurden -
+    # damit kuenftige Funktionen (neue Anzeige-Felder, andere CRM-Bereiche)
+    # bereits ausgelesene CV-Informationen wiederverwenden koennen, ohne das
+    # CV erneut per KI auslesen zu muessen. Bewusst nullable ohne Default
+    # (anders als die Listenfelder oben): "noch nie ausgelesen" ist ein
+    # legitimer, haeufiger Zustand (kein CV hochgeladen), keine leere
+    # Datenstruktur.
+    cv_extraction_raw: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+
     # Zustaendiger Mitarbeiter (Komfort-Filter "Meine Kandidaten", KEINE
     # Sichtbarkeitsgrenze - jeder Nutzer sieht weiterhin alle Kandidaten,
     # anders als beim Kalender). Nullable: "nicht zugewiesen" ist ein
