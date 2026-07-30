@@ -117,6 +117,38 @@ SPECIAL_COMPANY_NOTES = {
     ),
 }
 
+# Domains, bei denen der erste Dry-Run (2026-07-30) einen Fuzzy-Namens-Treffer
+# gegen eine UNVERWANDTE Bestandskanzlei gemeldet hat (bloss aehnlich
+# klingender Nachname, kein echtes Duplikat). Per Web-Recherche einzeln
+# gegengeprueft (Adresse/Telefon/Stadt widerspricht jeweils eindeutig):
+#   - oehler-steuerberater.de: echte Firma "Oehler & Partner", Heinrieter
+#     Str. 18, 74074 Heilbronn, Tel. 07131 5977-0. CRM-Treffer "Zoeller
+#     Steuerberatung" verstreut in Nidderau/Bruchkoebel/Muenchen/Dortmund/
+#     Lampertheim, keiner in Heilbronn.
+#   - steinhauser.de: echte Firma "Steinhauser Bornstein Steuerberater",
+#     Bayerstr. 69, 80335 Muenchen, Tel. +49 89 548230-0. CRM-Treffer
+#     "Steinhilber und Steinhilber" sitzt in Moessingen, Tel. 07473 92 24 70.
+#   - rosepartner.de: echte Firma "ROSE & PARTNER" Rechtsanwaelte
+#     Steuerberater, Jungfernstieg 40, 20354 Hamburg, Tel. 040/414 37 59-0.
+#     CRM-Treffer "Steuerberater Roos" sind unabhaengige Kanzleien in
+#     Baltmannsweiler/Hannover/Dortmund/Montabaur.
+#   - schardt-stb.de: echte Firma "Steuerberater Malte J. Schardt",
+#     Osterstr. 63, 20259 Hamburg, Tel. 040 55 57 31 94. CRM-Treffer
+#     "Schmadtke" ist Albrecht Schmadtke in Bonn, Tel. +49 228 559680.
+#   - beckerpartner.de: echte Firma "Becker + Partner / Maerkische
+#     Revision", Sebrathweg 20, 44149 Dortmund, Tel. 0231 9500280.
+#     CRM-Treffer "Becker Kollegen" sind unabhaengige Kanzleien in
+#     Herne/Augsburg/Dresden.
+# Fuer diese Domains wird der Fuzzy-Namensvergleich uebersprungen - nur ein
+# exakter Website-Domain-Match zaehlt noch als Duplikat.
+FUZZY_MATCH_OVERRIDE_NOT_DUPLICATE = {
+    "oehler-steuerberater.de",
+    "steinhauser.de",
+    "rosepartner.de",
+    "schardt-stb.de",
+    "beckerpartner.de",
+}
+
 NEW_COMPANIES_HEADER = [
     "domain",
     "firmenname",
@@ -334,8 +366,15 @@ def apply_new_companies(
         # (z.B. "Elbkanzlei") ist ein Aehnlichkeits-Treffer kein verlaessliches
         # Duplikat-Signal und wuerde z.B. elbkanzlei.com (Punkt 4: MUSS neu
         # angelegt werden) faelschlich als Duplikat einer unverwandten
-        # Kanzlei uebersehen lassen.
-        if existing is None and firmenname:
+        # Kanzlei uebersehen lassen. Zusaetzlich: FUZZY_MATCH_OVERRIDE_NOT_
+        # DUPLICATE fuer Domains, bei denen der erste Dry-Run (2026-07-30)
+        # einen falschen Fuzzy-Treffer produziert hat (siehe Kommentar dort,
+        # Web-Recherche pro Fall dokumentiert).
+        if (
+            existing is None
+            and firmenname
+            and domain not in FUZZY_MATCH_OVERRIDE_NOT_DUPLICATE
+        ):
             fuzzy = matcher.find_by_fuzzy_name(name)
             if fuzzy is not None:
                 existing, score = fuzzy
@@ -346,9 +385,20 @@ def apply_new_companies(
         if existing is not None:
             stats["companies_duplicate"] += 1
             reason = duplicate_reason or "Website-Domain-Match"
+            website_note = ""
+            if not existing.website:
+                # Echtes Duplikat, aber Bestandsdatensatz hat noch keine
+                # Website hinterlegt (sonst waere er schon per Domain-Match
+                # gefunden worden) - Domain ergaenzen, analog Punkt 1, sonst
+                # geht die mühsam recherchierte Domain-Zuordnung verloren.
+                if apply:
+                    existing.website = f"https://{domain}"
+                    website_note = " + Website ergaenzt (war leer)"
+                else:
+                    website_note = " + WUERDE Website ergaenzen (ist leer)"
             details.append(
                 f"KANZLEI UEBERSPRUNGEN (Duplikat, {reason}): {name} ({domain}) "
-                f"-> bestehende ID {existing.id}"
+                f"-> bestehende ID {existing.id}{website_note}"
             )
             company = existing
         else:
