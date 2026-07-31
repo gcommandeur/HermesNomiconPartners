@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response, status
@@ -9,6 +10,8 @@ from cc_crm.core.rate_limit import client_ip, login_rate_limiter
 from cc_crm.schemas.auth import LoginRequest, LoginResponse, UserRead
 from cc_crm.services.auth import AuthService
 
+logger = logging.getLogger("cc_crm.auth")
+
 router = APIRouter(prefix="/auth")
 _bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -19,6 +22,7 @@ def login(payload: LoginRequest, session: DatabaseSession, request: Request) -> 
         request.headers.get("x-forwarded-for"), request.client.host if request.client else None
     )
     if login_rate_limiter.is_blocked(ip):
+        logger.warning("Login blockiert nach zu vielen Fehlversuchen: IP=%s", ip)
         raise RateLimitExceededError(
             "Zu viele fehlgeschlagene Login-Versuche. Bitte in ein paar Minuten erneut versuchen."
         )

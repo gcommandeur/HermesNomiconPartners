@@ -1,6 +1,6 @@
 # API Keys für Agenten und Integrationen
 
-Menschliche Logins (`/api/v1/auth/login`) laufen 14 Tage und sind an eine Person gebunden.
+Menschliche Logins (`/api/v1/auth/login`) laufen 24 Stunden und sind an eine Person gebunden.
 Für Bots, Agenten und Integrationen (Bullhorn-Sync, kuenftige AI-Matching-Agenten, Webhooks)
 gibt es stattdessen langlebige API-Keys, die als eigener Service-Account authentifizieren.
 

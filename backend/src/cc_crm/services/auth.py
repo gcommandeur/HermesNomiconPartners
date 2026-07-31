@@ -9,7 +9,7 @@ from cc_crm.core.time import naive_utc
 from cc_crm.models.auth import AuthSession
 from cc_crm.models.user import User
 
-SESSION_LIFETIME = timedelta(days=14)
+SESSION_LIFETIME = timedelta(hours=24)
 
 
 class AuthService:

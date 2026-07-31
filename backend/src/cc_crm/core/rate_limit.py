@@ -21,7 +21,7 @@ import threading
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 
-MAX_ATTEMPTS = 5
+MAX_ATTEMPTS = 3
 WINDOW = timedelta(minutes=5)
 
 

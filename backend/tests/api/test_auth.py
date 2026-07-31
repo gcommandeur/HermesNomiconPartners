@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from cc_crm.core.rate_limit import login_rate_limiter
+from cc_crm.core.rate_limit import MAX_ATTEMPTS, login_rate_limiter
 from tests.conftest import TEST_USER_EMAIL, TEST_USER_PASSWORD
 
 
@@ -42,7 +42,7 @@ def test_login_is_rate_limited_after_repeated_failures(client: TestClient) -> No
     client.headers.pop("Authorization", None)
     login_rate_limiter.reset()
 
-    for _ in range(5):
+    for _ in range(MAX_ATTEMPTS):
         response = client.post(
             "/api/v1/auth/login",
             json={"email": TEST_USER_EMAIL, "password": "wrong-password"},
