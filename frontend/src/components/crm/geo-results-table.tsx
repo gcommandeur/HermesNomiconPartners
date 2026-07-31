@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MailPlus, MapPin, SlidersHorizontal } from "lucide-react";
 import { FilterBar } from "@/components/crm/filter-bar";
 import { DataTable } from "@/components/crm/data-table";
+import { GeoMapLoader } from "@/components/crm/geo-map-loader";
 import { StatusPill } from "@/components/crm/status-pill";
 import { PaginationControls } from "@/components/crm/pagination-controls";
 import { Button } from "@/components/ui/button";
@@ -195,6 +196,16 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   const candidatePagination = usePagination(candidateResults);
   const clientPagination = usePagination(clientResults);
 
+  // Die Karte zeigt dieselbe gefilterte Menge wie die Tabellen darunter -
+  // vorher bekam sie ungefiltert alle Datensaetze uebergeben (eigene
+  // Komponente in page.tsx mit result.data), wodurch beim Eintippen eines
+  // Orts/einer PLZ die Tabelle korrekt schrumpfte, die Karte aber weiterhin
+  // ausnahmslos alle Pins zeigte.
+  const mapResults = useMemo(
+    () => [...candidateResults, ...clientResults],
+    [candidateResults, clientResults],
+  );
+
   const selectedItems = useMemo(
     () => results.filter((item) => selectedIds.has(item.id)),
     [results, selectedIds],
@@ -289,6 +300,10 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
 
   return (
     <>
+      <Card className="mb-5 min-h-[360px] overflow-hidden p-0">
+        <GeoMapLoader results={mapResults} />
+      </Card>
+
       {/* Gemeinsamer Ort/PLZ-Filter (Phase 6) - echte Adress-/Ortssuche mit
        * Autovervollstaendigung aus den tatsaechlich im CRM vorkommenden
        * Orten/PLZ (siehe placeSuggestions), keine reine Radius-Eingabe mehr.

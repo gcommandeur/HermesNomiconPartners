@@ -1,9 +1,7 @@
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { ExportActions } from "@/components/crm/export-actions";
-import { GeoMapLoader } from "@/components/crm/geo-map-loader";
 import { GeoResultsTable } from "@/components/crm/geo-results-table";
 import { PageHeader } from "@/components/crm/page-header";
-import { Card } from "@/components/ui/card";
 import { getGeoMappingResults } from "@/lib/api/queries";
 
 export const dynamic = "force-dynamic";
@@ -20,15 +18,13 @@ export default async function GeoMappingPage() {
         action={<ExportActions filename="geo-mapping-ergebnisse" rows={rows} />}
       />
       <DemoNotice source={result.source} />
-      {/* Die frueher hier stehende "Filterlogik"-Karte war reiner
-       * Fliesstext ohne Funktion - die echten, funktionierenden Filter
-       * (Rolle/Qualifikation/Kuendigungsfrist/Verfuegbarkeit bei
-       * Kandidaten, AGB-Status/Honorar-Stufe/aktive Vakanzen bei Kanzleien,
-       * Umkreis-Suche per Zentrum+Radius) stehen jetzt direkt ueber der
-       * Ergebnistabelle in GeoResultsTable. */}
-      <Card className="mb-5 min-h-[360px] overflow-hidden p-0">
-        <GeoMapLoader results={result.data} />
-      </Card>
+      {/* Karte und Tabelle teilen sich denselben Filterzustand (Ort/PLZ,
+       * Umkreissuche, Rolle/Qualifikation/... - siehe GeoResultsTable) - die
+       * Karte lebt deshalb in GeoResultsTable selbst statt hier als
+       * getrennte Komponente mit dem ungefilterten result.data, sonst zeigt
+       * sie weiterhin ausnahmslos alle Datensaetze an, waehrend die Tabelle
+       * darunter schon gefiltert ist ("beim Eintippen wird trotzdem alles
+       * angezeigt"-Bug). */}
       <GeoResultsTable results={result.data} />
     </>
   );
