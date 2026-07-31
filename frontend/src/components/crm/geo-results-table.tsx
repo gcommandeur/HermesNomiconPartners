@@ -136,15 +136,22 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
 
   // Gemeinsamer Ort/PLZ- und Umkreis-Filter, unabhaengig von Kandidat/Kanzlei.
   function matchesSharedFilters(item: GeoMappingResult): boolean {
+    // Bei aktiver, erfolgreich aufgeloester Umkreissuche dient placeQuery
+    // NUR als Umkreis-Zentrum - der Substring-Textfilter wuerde sonst
+    // zusaetzlich verlangen, dass location/postal_code exakt den getippten
+    // Text enthalten (z.B. "41199"), was bei den allerwenigsten Treffern im
+    // Radius zutrifft und die Umkreissuche faktisch auf ~0 Ergebnisse
+    // reduziert hat, obwohl es real Hunderte Treffer im Radius gibt.
+    if (radiusEnabled && resolvedCenter) {
+      if (item.latitude == null || item.longitude == null) return false;
+      const radius = Number(radiusKm) || 0;
+      return haversineKm(resolvedCenter.latitude, resolvedCenter.longitude, item.latitude, item.longitude) <= radius;
+    }
+
     const place = placeQuery.trim().toLowerCase();
     if (place) {
       const haystack = `${item.location} ${item.postal_code ?? ""}`.toLowerCase();
       if (!haystack.includes(place)) return false;
-    }
-    if (radiusEnabled && resolvedCenter) {
-      if (item.latitude == null || item.longitude == null) return false;
-      const radius = Number(radiusKm) || 0;
-      if (haversineKm(resolvedCenter.latitude, resolvedCenter.longitude, item.latitude, item.longitude) > radius) return false;
     }
     return true;
   }
