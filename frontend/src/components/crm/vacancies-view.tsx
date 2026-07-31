@@ -1,12 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BrainCircuit, BriefcaseBusiness } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { BriefcaseBusiness, Trash2 } from "lucide-react";
 import { FilterBar } from "@/components/crm/filter-bar";
 import { DataTable } from "@/components/crm/data-table";
 import { StatusPill } from "@/components/crm/status-pill";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import type { Candidate, ClientCompany, Vacancy } from "@/lib/api/types";
+import { apiDelete } from "@/lib/api/client";
+import { VacancyEditModal } from "@/components/crm/vacancy-create-modal";
+import { VacancyMatchingPanel } from "@/components/crm/vacancy-matching-panel";
+import type { ClientCompany, Vacancy } from "@/lib/api/types";
 
 const STATUS_OPTIONS = [
   { value: "open", label: "Offen" },
@@ -23,15 +28,27 @@ function salaryRange(min: number | null, max: number | null): string {
   return `${format((min ?? max) as number)} EUR`;
 }
 
-export function VacanciesView({ vacancies, clients, candidates }: {
+export function VacanciesView({ vacancies, clients }: {
   vacancies: Vacancy[];
   clients: ClientCompany[];
-  candidates: Candidate[];
 }) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const clientName = (id: string | null) => id ? clients.find((client) => client.id === id)?.name ?? "Kanzlei" : "Optional / offen";
-  const matchCount = (qualification: string | null) => candidates.filter((candidate) => `${candidate.summary ?? ""} ${candidate.job_title ?? ""}`.toLowerCase().includes((qualification ?? "tax").split(" ")[0].toLowerCase())).length;
+
+  async function handleDelete(vacancy: Vacancy) {
+    if (!window.confirm(`Vakanz "${vacancy.title}" wirklich löschen?`)) return;
+    setDeletingId(vacancy.id);
+    try {
+      await apiDelete(`/vacancies/${vacancy.id}`);
+      router.refresh();
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -60,11 +77,30 @@ export function VacanciesView({ vacancies, clients, candidates }: {
       <section className="mb-5 grid grid-cols-1 gap-3 lg:grid-cols-3">
         {filtered.map((vacancy) => (
           <Card key={vacancy.id}>
-            <CardHeader><div><div className="flex items-center gap-2"><BriefcaseBusiness size={16} className="text-[#D8DADF]" /><h2 className="font-semibold">{vacancy.title}</h2></div><p className="mt-1 text-xs text-[#94A3B8]">{clientName(vacancy.client_company_id)} · {vacancy.location}</p></div><StatusPill status={vacancy.status} /></CardHeader>
+            <CardHeader>
+              <div>
+                <div className="flex items-center gap-2"><BriefcaseBusiness size={16} className="text-[#D8DADF]" /><h2 className="font-semibold">{vacancy.title}</h2></div>
+                <p className="mt-1 text-xs text-[#94A3B8]">{clientName(vacancy.client_company_id)} · {vacancy.location}</p>
+              </div>
+              <StatusPill status={vacancy.status} />
+            </CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-[#CBD5E1]">{vacancy.description}</p>
               <div className="mt-4 flex flex-wrap gap-1.5">{[...vacancy.must_have, ...vacancy.nice_to_have.slice(0, 2)].map((tag) => <span key={tag} className="rounded bg-[#102A4C]/70 px-2 py-1 text-[10px] text-[#CBD5E1]">{tag}</span>)}</div>
-              <div className="mt-4 rounded-lg border border-[#1F5FA8]/25 bg-[#102A4C]/45 p-3 text-xs text-[#CBD5E1]"><BrainCircuit size={14} className="mb-2 text-[#69A7EA]" />Regelbasiertes Matching vorbereitet: {matchCount(vacancy.qualifications)} mögliche Kandidaten. AI-Begründung folgt mit Agenten-/KI-Anbindung.</div>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => setExpandedId((current) => (current === vacancy.id ? null : vacancy.id))}>
+                  {expandedId === vacancy.id ? "Matching ausblenden" : "Passende Kandidaten anzeigen"}
+                </Button>
+                <VacancyEditModal vacancy={vacancy} clients={clients} />
+                <Button size="sm" variant="outline" disabled={deletingId === vacancy.id} onClick={() => handleDelete(vacancy)}>
+                  <Trash2 size={13} />{deletingId === vacancy.id ? "Lösche…" : "Löschen"}
+                </Button>
+              </div>
+              {expandedId === vacancy.id && (
+                <div className="mt-4">
+                  <VacancyMatchingPanel vacancyId={vacancy.id} />
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

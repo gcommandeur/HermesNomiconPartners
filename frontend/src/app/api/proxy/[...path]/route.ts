@@ -81,12 +81,21 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
       signal: AbortSignal.timeout(timeoutForPath(path.join("/"))),
     });
 
-    const responseBody = await upstream.arrayBuffer();
     const responseHeaders = new Headers();
     const upstreamContentType = upstream.headers.get("content-type");
     if (upstreamContentType) responseHeaders.set("content-type", upstreamContentType);
     const disposition = upstream.headers.get("content-disposition");
     if (disposition) responseHeaders.set("content-disposition", disposition);
+
+    // Null-Body-Status-Codes (204/205/304, z.B. DELETE-Endpoints) verlangen
+    // laut Fetch-Spec einen echten `null`-Body im Response-Konstruktor -
+    // selbst ein leeres ArrayBuffer wirft dort "Response constructor: Cannot
+    // construct a Response with a 204/205/304 status and non-null body".
+    // Das landete zuvor im catch-Block darunter und meldete dem Client
+    // faelschlich "API nicht erreichbar" (502), obwohl die Aktion (z.B. das
+    // Loeschen) im Backend laengst erfolgreich war.
+    const isNullBodyStatus = [204, 205, 304].includes(upstream.status);
+    const responseBody = isNullBodyStatus ? null : await upstream.arrayBuffer();
 
     return new NextResponse(responseBody, { status: upstream.status, headers: responseHeaders });
   } catch (error) {

@@ -184,12 +184,20 @@ export interface Vacancy extends Entity {
   experience: string | null;
   salary_min: number | null;
   salary_max: number | null;
+  fee_percentage: number | null;
   work_model: string | null;
   description: string | null;
   must_have: string[];
   nice_to_have: string[];
   status: "draft" | "open" | "on_hold" | "filled" | "closed";
   priority: "low" | "normal" | "high" | "urgent";
+}
+
+export interface CandidateMatch {
+  candidate: Candidate;
+  score: number;
+  reasons: string[];
+  in_radius: boolean | null;
 }
 
 export interface GeoMappingResult {

@@ -1,4 +1,6 @@
 import hashlib
+import math
+import re
 import uuid
 from collections import Counter
 
@@ -72,6 +74,52 @@ def _coordinates(
         return None, None
     dx, dy = _jitter(seed)
     return round(base[0] + dx, 5), round(base[1] + dy, 5)
+
+
+_DIGITS_RE = re.compile(r"\d+")
+
+
+def resolve_place_query(query: str | None) -> tuple[float | None, float | None]:
+    """Resolves a free-text place query (city name, postal code, or 'PLZ Ort')
+    to approximate lat/lng, using the same static city/PLZ-zone lookup as
+    _coordinates() above. Used both by the /geo-mapping/geocode endpoint (Ort/
+    PLZ-Eingabe als Umkreis-Zentrum, siehe geo-results-table.tsx) and by the
+    Vakanz->Kandidaten-Matching (services/vacancy_matching.py), wo die
+    Vakanz nur ein freies location-Textfeld statt getrennter city/postal_code-
+    Spalten hat.
+
+    Bewusst OHNE den _jitter()-Offset von _coordinates(): der Jitter existiert
+    nur, damit mehrere Kandidaten-/Kanzlei-Pins in derselben Stadt auf der
+    Karte nicht exakt uebereinander liegen - fuer ein Umkreis-Zentrum wuerde
+    er die Suche unnoetig (und nicht nachvollziehbar) vom echten Stadt-
+    Mittelpunkt wegverschieben.
+    """
+    cleaned = (query or "").strip()
+    if not cleaned:
+        return None, None
+    digits = "".join(_DIGITS_RE.findall(cleaned))
+    postal_code = digits if len(digits) >= 5 else None
+    city_part = _DIGITS_RE.sub(" ", cleaned).strip(" ,-")
+    base = CITY_COORDINATES.get(city_part.lower())
+    if base is None and postal_code:
+        base = PLZ_ZONE_COORDINATES.get(postal_code[:1])
+    if base is None:
+        return None, None
+    return round(base[0], 5), round(base[1], 5)
+
+
+def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Grosskreis-Distanz in km zwischen zwei Koordinaten - gleiche Formel wie
+    haversineKm() in frontend/geo-results-table.tsx, hier serverseitig fuer
+    das Vakanz->Kandidaten-Umkreis-Matching (services/vacancy_matching.py)."""
+    earth_radius_km = 6371.0
+    d_lat = math.radians(lat2 - lat1)
+    d_lng = math.radians(lng2 - lng1)
+    a = (
+        math.sin(d_lat / 2) ** 2
+        + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lng / 2) ** 2
+    )
+    return earth_radius_km * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 class GeoMappingService:

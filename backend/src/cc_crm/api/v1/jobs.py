@@ -8,7 +8,9 @@ from cc_crm.api.dependencies import DatabaseSession
 from cc_crm.models.enums import JobStatus
 from cc_crm.schemas.job_mandate import JobMandateCreate, JobMandateRead, JobMandateUpdate
 from cc_crm.schemas.pagination import Page
+from cc_crm.schemas.vacancy_matching import CandidateMatchRead
 from cc_crm.services.jobs import JobMandateService
+from cc_crm.services.vacancy_matching import VacancyMatchingService
 
 router = APIRouter(prefix="/vacancies")
 
@@ -64,3 +66,12 @@ def update_job(
 def delete_job(job_id: uuid.UUID, session: DatabaseSession) -> Response:
     JobMandateService(session).delete(job_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/{job_id}/matches", response_model=list[CandidateMatchRead])
+def match_job_to_candidates(
+    job_id: uuid.UUID,
+    session: DatabaseSession,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> list[CandidateMatchRead]:
+    return VacancyMatchingService(session).find_matches(job_id, limit=limit)

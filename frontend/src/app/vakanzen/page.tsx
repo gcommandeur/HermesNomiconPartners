@@ -1,10 +1,9 @@
-import { Plus } from "lucide-react";
 import { ExportActions } from "@/components/crm/export-actions";
 import { PageHeader } from "@/components/crm/page-header";
 import { VacanciesView } from "@/components/crm/vacancies-view";
+import { VacancyCreateModal } from "@/components/crm/vacancy-create-modal";
 import { DemoNotice } from "@/components/crm/demo-notice";
-import { Button } from "@/components/ui/button";
-import { getCandidates, getClients, getVacancies } from "@/lib/api/queries";
+import { getClients, getVacancies } from "@/lib/api/queries";
 
 function salaryRange(min: number | null, max: number | null): string {
   if (min == null && max == null) return "—";
@@ -16,7 +15,7 @@ function salaryRange(min: number | null, max: number | null): string {
 export const dynamic = "force-dynamic";
 
 export default async function VacanciesPage() {
-  const [vacancies, clients, candidates] = await Promise.all([getVacancies(), getClients(), getCandidates()]);
+  const [vacancies, clients] = await Promise.all([getVacancies(), getClients()]);
   const clientName = (id: string | null) => id ? clients.data.find((client) => client.id === id)?.name ?? "Kanzlei" : "Optional / offen";
   const exportRows = vacancies.data.map((vacancy) => ({
     Titel: vacancy.title,
@@ -32,10 +31,10 @@ export default async function VacanciesPage() {
       <PageHeader
         eyebrow="Rollen und Suchprofile"
         title="Vakanzen"
-        action={<div className="flex flex-wrap gap-2"><ExportActions filename="vakanzen" rows={exportRows} /><Button><Plus size={15} />Vakanz anlegen</Button></div>}
+        action={<div className="flex flex-wrap gap-2"><ExportActions filename="vakanzen" rows={exportRows} /><VacancyCreateModal clients={clients.data} /></div>}
       />
       <DemoNotice source={vacancies.source === "api" && clients.source === "api" ? "api" : "demo"} />
-      <VacanciesView vacancies={vacancies.data} clients={clients.data} candidates={candidates.data} />
+      <VacanciesView vacancies={vacancies.data} clients={clients.data} />
     </>
   );
 }

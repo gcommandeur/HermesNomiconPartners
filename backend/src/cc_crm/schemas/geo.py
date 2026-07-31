@@ -4,6 +4,15 @@ from typing import Literal
 from pydantic import BaseModel
 
 
+class GeocodeResult(BaseModel):
+    """Ergebnis der Ort/PLZ-Aufloesung (services/geo.py::resolve_place_query)
+    fuer die freie Umkreis-Suche - beide Felder None, wenn der Query-String
+    weder als bekannte Stadt noch als PLZ-Zone aufloesbar war."""
+
+    latitude: float | None
+    longitude: float | None
+
+
 class GeoMappingResult(BaseModel):
     id: str
     kind: Literal["candidate", "client"]

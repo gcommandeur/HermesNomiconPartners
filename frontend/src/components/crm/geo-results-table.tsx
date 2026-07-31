@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MailPlus, MapPin, SlidersHorizontal } from "lucide-react";
 import { FilterBar } from "@/components/crm/filter-bar";
 import { DataTable } from "@/components/crm/data-table";
@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { apiPost } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { invalidateMailingGroupsCache } from "@/lib/api/hooks";
+import { geocodePlace } from "@/lib/api/queries";
 import { usePagination } from "@/lib/use-pagination";
 import { termsStatusLabel } from "@/lib/utils";
 import type { GeoMappingResult, MailingGroup, MailingRecipient } from "@/lib/api/types";
@@ -77,8 +78,41 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   // eine andere zurueck).
   const [placeQuery, setPlaceQuery] = useState("");
   const [radiusEnabled, setRadiusEnabled] = useState(false);
-  const [centerId, setCenterId] = useState("");
   const [radiusKm, setRadiusKm] = useState("25");
+  // Der getippte Ort/PLZ-Wert selbst dient als Umkreis-Zentrum (statt der
+  // fruehere "bestehenden Kandidaten/Kanzlei auswaehlen"-Dropdown) - wird
+  // per Backend-Endpunkt (GET /geo-mapping/geocode, gleiche Stadt/PLZ-Zonen-
+  // Logik wie services/geo.py::resolve_place_query) aufgeloest, debounced
+  // damit nicht bei jedem Tastenanschlag ein Request rausgeht.
+  const [resolvedCenter, setResolvedCenter] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [geocoding, setGeocoding] = useState(false);
+
+  useEffect(() => {
+    const query = placeQuery.trim();
+    if (!radiusEnabled || !query) {
+      setResolvedCenter(null);
+      return;
+    }
+    let cancelled = false;
+    setGeocoding(true);
+    const timeout = setTimeout(async () => {
+      try {
+        const result = await geocodePlace(query);
+        if (cancelled) return;
+        setResolvedCenter(
+          result.data.latitude != null && result.data.longitude != null
+            ? { latitude: result.data.latitude, longitude: result.data.longitude }
+            : null,
+        );
+      } finally {
+        if (!cancelled) setGeocoding(false);
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [placeQuery, radiusEnabled]);
 
   // Kandidaten-spezifische Filter.
   const [candidateSearch, setCandidateSearch] = useState("");
@@ -99,8 +133,6 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   const termsStatusOptions = useMemo(() => distinctValues(results, (item) => item.terms_status), [results]);
   const feeTierOptions = useMemo(() => distinctValues(results, (item) => item.fee_tier), [results]);
   const placeOptions = useMemo(() => placeSuggestions(results), [results]);
-  const geocodedResults = useMemo(() => results.filter((item) => item.latitude != null && item.longitude != null), [results]);
-  const center = useMemo(() => geocodedResults.find((item) => item.id === centerId) ?? null, [geocodedResults, centerId]);
 
   // Gemeinsamer Ort/PLZ- und Umkreis-Filter, unabhaengig von Kandidat/Kanzlei.
   function matchesSharedFilters(item: GeoMappingResult): boolean {
@@ -109,10 +141,10 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
       const haystack = `${item.location} ${item.postal_code ?? ""}`.toLowerCase();
       if (!haystack.includes(place)) return false;
     }
-    if (radiusEnabled && center) {
+    if (radiusEnabled && resolvedCenter) {
       if (item.latitude == null || item.longitude == null) return false;
       const radius = Number(radiusKm) || 0;
-      if (haversineKm(center.latitude!, center.longitude!, item.latitude, item.longitude) > radius) return false;
+      if (haversineKm(resolvedCenter.latitude, resolvedCenter.longitude, item.latitude, item.longitude) > radius) return false;
     }
     return true;
   }
@@ -134,7 +166,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [results, candidateSearch, roleFilter, qualificationFilter, noticePeriodFilter, availableOnly, placeQuery, radiusEnabled, center, radiusKm]);
+  }, [results, candidateSearch, roleFilter, qualificationFilter, noticePeriodFilter, availableOnly, placeQuery, radiusEnabled, resolvedCenter, radiusKm]);
 
   const clientResults = useMemo(() => {
     const term = clientSearch.trim().toLowerCase();
@@ -151,7 +183,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [results, clientSearch, termsStatusFilter, feeTierFilter, activeVacanciesOnly, placeQuery, radiusEnabled, center, radiusKm]);
+  }, [results, clientSearch, termsStatusFilter, feeTierFilter, activeVacanciesOnly, placeQuery, radiusEnabled, resolvedCenter, radiusKm]);
 
   const candidatePagination = usePagination(candidateResults);
   const clientPagination = usePagination(clientResults);
@@ -277,22 +309,20 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
                 Umkreissuche aktivieren
               </label>
             </div>
-            {radiusEnabled && (
-              <>
-                <div>
-                  <label className={labelClass}>Umkreis-Zentrum</label>
-                  <select className={selectClass} value={centerId} onChange={(e) => setCenterId(e.target.value)}>
-                    <option value="">Kein Zentrum gewählt</option>
-                    {geocodedResults.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.location})</option>)}
-                  </select>
-                </div>
-                {center && (
-                  <div>
-                    <label className={labelClass}>Radius um Zentrum (km)</label>
-                    <Input type="number" min={1} value={radiusKm} onChange={(e) => setRadiusKm(e.target.value)} />
-                  </div>
-                )}
-              </>
+            {radiusEnabled && resolvedCenter && (
+              <div>
+                <label className={labelClass}>Radius um &quot;{placeQuery.trim()}&quot; (km)</label>
+                <Input type="number" min={1} value={radiusKm} onChange={(e) => setRadiusKm(e.target.value)} />
+              </div>
+            )}
+            {radiusEnabled && !resolvedCenter && (
+              <div className="flex items-end pb-0.5 text-xs text-[#8a9095]">
+                {geocoding
+                  ? "Ort wird aufgelöst…"
+                  : placeQuery.trim()
+                    ? "Ort/PLZ nicht erkannt - Umkreissuche inaktiv."
+                    : "Bitte oben einen Ort oder eine PLZ eingeben."}
+              </div>
             )}
           </div>
         </CardContent>
