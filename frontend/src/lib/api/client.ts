@@ -4,6 +4,11 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_CC_CRM_API_URL?.replace(/\/$/, "");
 const DEMO_MODE = process.env.NEXT_PUBLIC_CC_CRM_DEMO_MODE === "true";
 export const apiBaseUrl = API_BASE_URL;
 export const AUTH_COOKIE_NAME = "cc_crm_token";
+// Muss mit SESSION_LIFETIME in backend/src/cc_crm/services/auth.py
+// uebereinstimmen - der Cookie darf nicht laenger gueltig bleiben als das
+// Backend-Token selbst, sonst haelt der Browser eine Session fuer aktiv, die
+// serverseitig laengst abgelaufen ist.
+export const AUTH_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24;
 
 // Ohne ein explizites Timeout hängt ein server-seitiger fetch() (Server
 // Components/Layout) bei einem falsch konfigurierten/unerreichbaren Backend
