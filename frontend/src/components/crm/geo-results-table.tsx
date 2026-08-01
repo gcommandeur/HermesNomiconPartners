@@ -51,20 +51,6 @@ function distinctValues(results: GeoMappingResult[], pick: (item: GeoMappingResu
   return Array.from(values).sort((a, b) => a.localeCompare(b, "de"));
 }
 
-/** Ort/PLZ-Vorschlaege aus den tatsaechlich im CRM vorkommenden Standorten
- * (nicht aus einer externen Ortsliste) - Basis fuer die Autovervollstaendigung
- * der Ort/PLZ-Suche (Phase 6). Jede Vorschlagszeile traegt sowohl den
- * Ort-Text als auch die PLZ, damit die Suche danach gegen beide Felder
- * matchen kann (bidirektional: "München" findet auch nur-PLZ-Datensaetze). */
-function placeSuggestions(results: GeoMappingResult[]): string[] {
-  const values = new Set<string>();
-  for (const item of results) {
-    if (item.location && item.location !== "Ort unbekannt") values.add(item.location);
-    if (item.postal_code) values.add(item.postal_code);
-  }
-  return Array.from(values).sort((a, b) => a.localeCompare(b, "de"));
-}
-
 export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
@@ -133,7 +119,6 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   const noticePeriodOptions = useMemo(() => distinctValues(results, (item) => item.notice_period), [results]);
   const termsStatusOptions = useMemo(() => distinctValues(results, (item) => item.terms_status), [results]);
   const feeTierOptions = useMemo(() => distinctValues(results, (item) => item.fee_tier), [results]);
-  const placeOptions = useMemo(() => placeSuggestions(results), [results]);
 
   // Gemeinsamer Ort/PLZ- und Umkreis-Filter, unabhaengig von Kandidat/Kanzlei.
   function matchesSharedFilters(item: GeoMappingResult): boolean {
@@ -304,11 +289,14 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
         <GeoMapLoader results={mapResults} />
       </Card>
 
-      {/* Gemeinsamer Ort/PLZ-Filter (Phase 6) - echte Adress-/Ortssuche mit
-       * Autovervollstaendigung aus den tatsaechlich im CRM vorkommenden
-       * Orten/PLZ (siehe placeSuggestions), keine reine Radius-Eingabe mehr.
-       * Die bestehende Umkreissuche bleibt bestehen, ist aber jetzt eine
-       * separat aktivierbare Zusatzoption ("Umkreissuche aktivieren"). */}
+      {/* Gemeinsamer Ort/PLZ-Filter (Phase 6) - echte Freitext-Adress-/
+       * Ortssuche, keine reine Radius-Eingabe mehr. Bewusst OHNE Autocomplete-
+       * Dropdown (fruehere <datalist>-Variante zeigte pro Ort zwei fast
+       * identische Eintraege - "80331" UND "80331, München" - was wie
+       * doppelte/uebermaessige Vorschlaege wirkte; die Karte oben zeigt die
+       * Treffer ohnehin schon visuell). Die Umkreissuche bleibt bestehen,
+       * ist aber eine separat aktivierbare Zusatzoption
+       * ("Umkreissuche aktivieren"). */}
       <Card className="mb-3">
         <CardContent>
           <div className="mb-3 flex items-center gap-2"><MapPin size={15} className="text-[#D8DADF]" /><h2 className="text-sm font-semibold">Ort / PLZ</h2></div>
@@ -316,14 +304,10 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
             <div className="sm:col-span-2">
               <label className={labelClass}>Ort oder PLZ suchen</label>
               <Input
-                list="geo-place-options"
                 placeholder="z.B. München oder 80331"
                 value={placeQuery}
                 onChange={(e) => setPlaceQuery(e.target.value)}
               />
-              <datalist id="geo-place-options">
-                {placeOptions.map((value) => <option key={value} value={value} />)}
-              </datalist>
             </div>
             <div className="flex items-end pb-0.5">
               <label className="flex items-center gap-2 text-xs text-[#CBD5E1]">
