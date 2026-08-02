@@ -6,7 +6,7 @@ from sqlalchemy import JSON, Boolean, Date, DateTime, Enum, ForeignKey, String, 
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cc_crm.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from cc_crm.models.enums import Anrede, CandidateStatus
+from cc_crm.models.enums import Anrede, CandidateStatus, Rolle
 
 
 class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -56,10 +56,33 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # --- Quali-Call-Erweiterung (2026-07) ---
     fachliche_schwerpunkte: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     ausbildung_titel: Mapped[str | None] = mapped_column(String(240))
-    # Liste von Stationen: [{"kanzleityp": str, "kanzleigroesse": str, "dauer_jahre": int}, ...]
+    # Liste von Stationen: [{"kanzleityp": str, "kanzleigroesse": str,
+    # "dauer_jahre": int, "rolle": <Rolle-Wert oder null>}, ...] - "rolle" ist
+    # NEU (CV-Extraktion Neuaufsetzung), aeltere Eintraege ohne diesen Key
+    # sind beim Lesen gueltig (siehe schemas/candidate.py::BeruflicheStation).
     berufliche_stationen: Mapped[list[dict[str, Any]]] = mapped_column(
         JSON, default=list, nullable=False
     )
+    # Normalisierte Rollen-Kategorien (siehe models/enums.py::Rolle) - LISTE,
+    # weil ein Kandidat mehrere gleichzeitig gueltige Rollen tragen kann (z.B.
+    # Rechtsanwalt UND Steuerberater), keine zeitliche Abfolge. job_title
+    # bleibt daneben als Freitext-Originaltitel aus dem CV erhalten - rollen
+    # ist die durchsuchbare, normalisierte Kategorie-Liste dazu (gleiches
+    # Strukturmuster wie fachliche_schwerpunkte). Bewusst weiterhin
+    # sa.JSON() statt JSONB (kein anderes JSON-Feld in diesem Projekt nutzt
+    # JSONB, SQLite-Kompatibilitaet fuer die lokale Entwicklung bleibt damit
+    # erhalten) - falls spaeter ein haeufig genutzter Rollen-Filter auf
+    # Postgres-Array-Containment (@>) entsteht, dann an dieser Stelle auf
+    # JSONB + GIN-Index migrieren.
+    rollen: Mapped[list[Rolle]] = mapped_column(JSON, default=list, nullable=False)
+    # INTERN — niemals in anonyme Profile / ausgehende Dokumente übernehmen
+    # (siehe services/profile_generator.py::_build_quali_call_payload, das
+    # bewusst eine Allowlist statt einer Blockliste ist - dieses Feld taucht
+    # dort schlicht nicht auf). Klarname des aktuellen/letzten Arbeitgebers,
+    # anders als aktuelles_umfeld_kanzleityp/-kanzleigroesse (die bewusst
+    # bereits anonymisiert/kategorial sind und deshalb im Profil verwendet
+    # werden duerfen).
+    current_employer_internal: Mapped[str | None] = mapped_column(String(240))
     aktuelles_umfeld_kanzleityp: Mapped[str | None] = mapped_column(String(160))
     aktuelles_umfeld_kanzleigroesse: Mapped[str | None] = mapped_column(String(160))
     # INTERN — niemals in anonyme Profile / ausgehende Dokumente übernehmen.

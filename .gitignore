@@ -38,6 +38,8 @@ backend/data/imports/
 # gehört nicht ins Repo.
 backend/scripts/*_review.csv
 backend/scripts/*.csv
+backend/scripts/data/
+backend/scripts/*_s3_keys.txt
 
 # Logs
 *.log

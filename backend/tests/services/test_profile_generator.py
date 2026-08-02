@@ -1,3 +1,4 @@
+import json
 import uuid
 
 import pytest
@@ -7,7 +8,11 @@ from cc_crm.core.errors import BusinessRuleError
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.operational import Document
 from cc_crm.services import profile_generator
-from cc_crm.services.profile_generator import ProfileGeneratorService, _has_content
+from cc_crm.services.profile_generator import (
+    ProfileGeneratorService,
+    _build_quali_call_payload,
+    _has_content,
+)
 
 
 def _make_candidate(session: Session, **overrides: object) -> Candidate:
@@ -125,3 +130,23 @@ def test_generate_anonymous_profile_works_with_only_quali_call_data(
 
     assert result.startswith("## Kandidat:in-Nr.")
     assert "Original-CV-Text" not in captured["user_message"]
+
+
+def test_quali_call_payload_never_includes_current_employer_internal(
+    session_factory: sessionmaker[Session],
+) -> None:
+    """current_employer_internal ist INTERN (siehe models/candidate.py) und
+    darf nie an das LLM/in ein ausgehendes Dokument gelangen -
+    _build_quali_call_payload ist eine bewusste Allowlist statt einer
+    Blockliste (wie schon bei wechselgrund/no_gos), dieses Feld darf dort
+    schlicht nie auftauchen. Testet das direkt gegen die Allowlist statt nur
+    auf den Modul-Kommentar zu vertrauen."""
+    with session_factory() as session:
+        candidate = _make_candidate(
+            session, current_employer_internal="Geheime Mandanten-Kanzlei GmbH"
+        )
+        payload = _build_quali_call_payload(candidate)
+
+    assert "Geheime Mandanten-Kanzlei GmbH" not in json.dumps(payload, ensure_ascii=False)
+    assert "current_employer_internal" not in payload
+    assert "currentEmployerInternal" not in payload

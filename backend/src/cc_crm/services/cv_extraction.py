@@ -29,6 +29,7 @@ import docx
 from pypdf import PdfReader
 
 from cc_crm.integrations.ai.anthropic_client import generate_text, generate_text_with_image
+from cc_crm.models.enums import Rolle
 
 logger = logging.getLogger("cc_crm.cv_extraction")
 
@@ -44,15 +45,16 @@ _STANDARD_FIELDS_TO_VERIFY = ("first_name", "last_name", "job_title", "phone", "
 # Zentrale Liste aller Kandidaten-Spalten, die aus einem CV befuellt werden
 # koennen - EINZIGE Stelle, die ein neues strukturiertes Feld kennen muss
 # (CandidateService.suggest_cv_fields/auto_fill_from_cv, der /cv-preview-
-# Endpoint und backfill_cv_fields.py leiten sich alle hieraus ab, statt das
-# Feld an mehreren Stellen einzeln aufzuzaehlen). Feld MUSS als gleichnamiges
-# Attribut sowohl auf Candidate (models/candidate.py) als auch auf
-# CvExtractionSuggestion (schemas/candidate.py) existieren. Freitext-/
-# Analysefelder, die (noch) keine eigene Kandidaten-Spalte haben (z.B.
-# erfahrungen_zusammenfassung, siehe Prompt unten), gehoeren NICHT hierher -
-# die landen ausschliesslich in cv_extraction_raw (siehe
-# CandidateService.auto_fill_from_cv) und stehen darueber trotzdem jeder
-# kuenftigen Funktion zur Verfuegung, ganz ohne neue Spalte/Migration.
+# Endpoint und scripts/backfill_cv_rollen_und_schwerpunkte.py leiten sich
+# alle hieraus ab, statt das Feld an mehreren Stellen einzeln aufzuzaehlen).
+# Feld MUSS als gleichnamiges Attribut sowohl auf Candidate
+# (models/candidate.py) als auch auf CvExtractionSuggestion
+# (schemas/candidate.py) existieren. Freitext-/Analysefelder, die (noch)
+# keine eigene Kandidaten-Spalte haben (z.B. erfahrungen_zusammenfassung,
+# siehe Prompt unten), gehoeren NICHT hierher - die landen ausschliesslich
+# in cv_extraction_raw (siehe CandidateService.auto_fill_from_cv) und stehen
+# darueber trotzdem jeder kuenftigen Funktion zur Verfuegung, ganz ohne neue
+# Spalte/Migration.
 CV_STRUCTURED_FIELDS: tuple[str, ...] = (
     "first_name",
     "last_name",
@@ -64,9 +66,14 @@ CV_STRUCTURED_FIELDS: tuple[str, ...] = (
     "qualification",
     "ausbildung_titel",
     "fachliche_schwerpunkte",
+    "rollen",
+    "current_employer_internal",
+    "berufliche_stationen",
 )
 
 _JSON_FENCE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
+
+_VALID_ROLLEN = {rolle.value for rolle in Rolle}
 
 _FIELD_EXTRACTION_SYSTEM_PROMPT = """Du extrahierst strukturierte Kontakt- und Rollendaten aus einem
 Lebenslauf-Text für ein Recruiting-CRM (Fokus Steuern/Wirtschaftsprüfung/Recht).
@@ -89,7 +96,25 @@ Erklärung davor/danach), mit exakt diesen Schlüsseln:
   "phone": "<Telefonnummer wie im Text, oder null>",
   "job_title": "<aktuelle/letzte Berufsbezeichnung, kurz, oder null>",
   "qualification": "<Qualifikation/Berufsabschluss, kurz z.B. 'Steuerberater', oder null>",
-  "ausbildung_titel": "<Ausbildung/Weiterbildung, kurz, oder null>",
+  "rollen": ["<eine oder mehrere von: steuerfachangestellte, steuerfachwirt,
+    bilanzbuchhalter, steuerberater, partner, pruefungsassistent,
+    pruefungsleiter, wirtschaftspruefer, rechtsfachangestellte,
+    rechtsanwalt, sonstige>"],
+  "current_employer_internal": "<Klarname des aktuellen/letzten Arbeitgebers, oder null>",
+  "berufliche_stationen": [
+    {
+      "rolle": "<GENAU EINER der Werte oben, oder null>",
+      "kanzleityp": "<Art des Arbeitgebers dieser Station, kurz, z.B.
+        'Steuerkanzlei', 'Wirtschaftsprüfungsgesellschaft',
+        'Anwaltskanzlei', 'Big4', 'Unternehmen (interne Steuerabteilung)'>",
+      "kanzleigroesse": "<Größenordnung dieser Station, kurz, z.B.
+        '5-10 Mitarbeitende', 'Big4', 'Einzelkanzlei' - grobe Schätzung
+        reicht, wenn nicht explizit genannt>",
+      "dauer_jahre": <Dauer dieser Station in Jahren als Zahl, geschätzt
+        aus den genannten Zeiträumen>
+    }
+  ],
+  "ausbildung_titel": "<siehe Regeln unten, oder null>",
   "fachliche_schwerpunkte": ["<fachlicher Schwerpunkt 1>", "<fachlicher Schwerpunkt 2>", "..."],
   "erfahrungen_zusammenfassung": "<2-3 Saetze Fliesstext zur bisherigen Berufserfahrung, oder null>"
 }
@@ -104,15 +129,97 @@ REGELN:
 - job_title/qualification: nur die aktuellste/letzte Position, nicht die gesamte Berufshistorie.
 - qualification: falls die Person mehrere aktuell gültige Berufsbezeichnungen/
   -abschlüsse hat (z.B. "Steuerberater" UND "Wirtschaftsprüfer"), beide durch
-  " / " getrennt angeben.
+  " / " getrennt angeben. qualification bleibt ein reines Freitext-Anzeigefeld -
+  die STRUKTURIERTE Mehrfachrollen-Information gehört in "rollen", nicht hierher.
+
+ROLLEN-TAXONOMIE (fuer "rollen" UND fuer "rolle" je Station in
+berufliche_stationen) - typische Aufgaben/Signale je Rolle:
+- steuerfachangestellte: Finanzbuchhaltung, Lohn-/Gehaltsabrechnung,
+  Steuererklärungen (privat/betrieblich), Vorbereitung Jahresabschluss.
+- steuerfachwirt: wie steuerfachangestellte, PLUS eigenständige Monats-/
+  Jahresabschlüsse, Bilanzen, Bank-/Finanzierungsgespräche.
+- bilanzbuchhalter: Jahresabschluss nach HGB (teils IFRS), Rückstellungen,
+  Abgrenzungen, Anlagenbuchhaltung.
+- steuerberater: steuerrechtliche Beratung, Steueroptimierung,
+  Jahresabschlüsse, Vertretung vor Finanzamt/Finanzgericht.
+- partner: KEIN Anzeigen-/Aufgabenprofil - nur über explizite Keyword-
+  Trigger erkennbar: "Partner seit", "Equity Partner", "Sozius", "Partner
+  der Kanzlei". Ohne einen dieser expliziten Begriffe NICHT vergeben, auch
+  wenn die Person sehr senior klingt.
+- pruefungsassistent: Mitwirkung bei Jahres-/Konzernabschlussprüfungen,
+  Prüfungsvorbereitung (Einstiegs-/frühe Senioritätsstufe).
+- pruefungsleiter: Planung/Durchführung von Abschlussprüfungen,
+  Teamführung, Mandatsverantwortung (mittlere Senioritätsstufe, Titel wie
+  "Manager"/"Senior Manager").
+- wirtschaftspruefer: Jahresabschlussprüfung, Bestätigungsvermerke,
+  Rechnungslegung HGB/IFRS - setzt ein bestandenes WP-Examen voraus.
+- rechtsfachangestellte: Mandantenkorrespondenz, Schriftverkehr mit
+  Gerichten/Behörden, Fristenkontrolle, Aktenverwaltung, RVG-Abrechnung.
+- rechtsanwalt: Vertragsgestaltung/-verhandlung, Mandantenvertretung vor
+  Gericht, Zulassung als Rechtsanwalt/-anwältin. Das konkrete Rechtsgebiet
+  (z.B. Arbeitsrecht, Gesellschaftsrecht, Steuerrecht, Familienrecht)
+  gehört NICHT in "rollen", sondern als eigener Eintrag in
+  fachliche_schwerpunkte.
+- sonstige: erkennbar fachfremde oder nicht zuordenbare Rolle.
+
+ABGRENZUNGSREGELN (wichtig gegen Fehlklassifikation):
+- steuerfachangestellte vs. steuerfachwirt vs. bilanzbuchhalter: die
+  Aufgaben überschneiden sich stark - entscheide primär über den im CV
+  genannten FORMALEN ABSCHLUSS/TITEL, nicht nur über die Tätigkeitsbeschreibung.
+- pruefungsassistent -> pruefungsleiter -> wirtschaftspruefer ist eine
+  Seniorität-Leiter, keine 3 unabhängigen Rollen - unterscheide über
+  Berufsjahre/Titel im Text ("Assistent" vs. "Manager"/"Senior Manager" vs.
+  "WP-Examen").
+- partner wird NIEMALS aus einer Aufgabenbeschreibung abgeleitet, nur aus
+  den oben genannten expliziten Keywords.
+
+rollen: LISTE aller AKTUELL gleichzeitig gültigen Rollen (keine zeitliche
+Abfolge!) - erfasse ALLE aktuell gültigen Titel, nicht nur den zuletzt
+genannten. Signale für mehrere gleichzeitige Rollen: "Steuerberater und
+Rechtsanwalt", eine Aufzählung von Titeln direkt unter dem Namen, mehrere
+Kammerzulassungen (z.B. Steuerberaterkammer UND Rechtsanwaltskammer). Leeres
+Array, falls keine der 10 Rollen erkennbar ist (nicht "sonstige" erzwingen,
+wenn wirklich nichts passt).
+
+current_employer_internal: der Klarname des aktuellen/letzten Arbeitgebers
+(wird intern gespeichert, NIE automatisch in ausgehende Dokumente
+übernommen) - falls der Text erkennbar ein anonymisiertes Bewerberprofil
+einer Personalberatung ist (siehe Briefkopf-Regel unten), ist der
+Arbeitgeber dort ohnehin meist schon anonymisiert/generisch beschrieben; in
+diesem Fall diese generische Beschreibung übernehmen, keinen Namen erfinden.
+
+berufliche_stationen: ALLE im CV erkennbaren beruflichen Stationen (nicht
+nur die aktuellste), neueste zuerst. Jede Station braucht kanzleityp UND
+kanzleigroesse (grobe Schätzung reicht) - eine Station ohne diese beiden
+Angaben lieber ganz weglassen, statt sie zu erfinden.
+
+ausbildung_titel: NUR konkrete fachbezogene Ausbildungs-/Prüfungsabschlüsse
+mit Institution/Jahr, wo im Text vorhanden, z.B. "Steuerberaterprüfung
+bestanden 2019", "Bilanzbuchhalter/in IHK", "WP-Examen", "Fachanwalt für
+Arbeitsrecht". NICHT hierher gehören allgemeine Studienabschlüsse ohne
+Fachbezug (z.B. bloßes "Bachelor BWL" ohne weiteren Kontext) oder
+Schulabschlüsse (Abitur etc.) - in diesem Fall null setzen statt eines
+schwachen Treffers.
+
 - fachliche_schwerpunkte: anders als job_title/qualification aus dem GESAMTEN
   Lebenslauf (nicht nur der aktuellsten Position) - konkrete, inhaltlich
-  greifbare fachliche Schwerpunkte/Fähigkeiten, z.B. Rechtsgebiete
-  ("Umsatzsteuer", "M&A"), Branchenspezialisierung ("Automotive-Mandanten"),
-  Fachsoftware ("DATEV", "SAP FI"). KEINE generischen Floskeln wie
-  "Teamfähigkeit", "Kommunikationsstärke" oder "selbstständiges Arbeiten" -
-  nur fachlich/inhaltlich verwertbare Stichpunkte, kurz gehalten (2-6 Wörter
-  je Eintrag). Leeres Array, falls nichts Konkretes im Text erkennbar ist.
+  greifbare fachliche Schwerpunkte/Fähigkeiten. Orientierung je Rolle
+  (Beispiele, keine starre Pflichtliste - reale CV-Inhalte gehen vor):
+  steuerfachangestellte/steuerfachwirt: Finanzbuchhaltung, Lohnbuchhaltung,
+  Steuererklärungen, DATEV, BWA; bilanzbuchhalter: Bilanzierung HGB, IFRS,
+  Anlagenbuchhaltung, Rückstellungen; steuerberater: Umsatzsteuer,
+  Jahresabschluss, Vertretung Finanzamt/Finanzgericht, betriebswirtschaftliche
+  Beratung; partner: Mandatsverantwortung, Akquise/Business Development,
+  Personalverantwortung; prüfungsassistent/-leiter/wirtschaftsprüfer:
+  Abschlussprüfung, Konzernabschluss, Bestätigungsvermerk, HGB, IFRS;
+  rechtsfachangestellte: Fristenkontrolle, RVG-Abrechnung, Aktenverwaltung;
+  rechtsanwalt: Vertragsrecht, Prozessvertretung, PLUS das konkrete
+  Rechtsgebiet als eigener Tag (z.B. "Arbeitsrecht", "Gesellschaftsrecht").
+  DATEV taucht rollenübergreifend als Software-Skill auf. KEINE generischen
+  Floskeln wie "Teamfähigkeit", "Kommunikationsstärke" oder "selbstständiges
+  Arbeiten" - nur fachlich/inhaltlich verwertbare Stichpunkte, kurz gehalten
+  (2-6 Wörter je Eintrag). Leeres Array, falls nichts Konkretes im Text
+  erkennbar ist.
 - erfahrungen_zusammenfassung: sachlicher Fliesstext-Überblick über die
   bisherige Berufserfahrung aus dem GESAMTEN Lebenslauf (Stationen, Branchen,
   ungefähre Dauer), kein Marketing-/Bewerbungssprech, keine Wertung. Dient als
@@ -124,28 +231,6 @@ REGELN:
   last_name, email, postal_code, city und phone auf null setzen, auch wenn im
   Text irgendein Name/eine Adresse steht (das wäre der Name/die Adresse der
   Beratung bzw. eines dortigen Ansprechpartners, nicht der Person)."""
-
-_LAST_ROLE_SYSTEM_PROMPT = """Du extrahierst die aktuellste/letzte berufliche Station aus einem
-Lebenslauf-Text für ein Recruiting-CRM (Fokus Steuern/Wirtschaftsprüfung/Recht).
-
-Gib AUSSCHLIESSLICH ein JSON-Objekt zurück (kein Markdown-Codeblock, keine
-Erklärung davor/danach), mit exakt diesen Schlüsseln:
-{
-  "job_title": "<aktuellste/letzte Berufsbezeichnung, kurz, oder null>",
-  "employer": "<Name des aktuellsten/letzten Arbeitgebers, oder null>",
-  "qualification": "<Qualifikation/Berufsabschluss, kurz z.B. 'Steuerberater', oder null>",
-  "ausbildung_titel": "<Ausbildung/Weiterbildung, kurz, oder null>"
-}
-
-REGELN:
-- Nutze NUR Informationen, die explizit im Text stehen. Erfinde nichts.
-- Falls ein Feld nicht sicher aus dem Text hervorgeht, setze null statt zu raten.
-- Nur die aktuellste/letzte Position, nicht die gesamte Berufshistorie.
-- employer: der Klarname des Arbeitgebers (wird intern gespeichert, nicht
-  automatisch veröffentlicht) - falls der Text ein anonymisiertes
-  Bewerberprofil einer Personalberatung ist (siehe Briefkopf), ist der
-  Arbeitgeber dort ohnehin meist schon anonymisiert/generisch beschrieben;
-  in diesem Fall diese generische Beschreibung übernehmen, keinen Namen erfinden."""
 
 
 def extract_text_from_bytes(filename: str, content: bytes) -> str:
@@ -211,9 +296,66 @@ def _extract_fields_via_vision(content: bytes) -> dict[str, Any]:
         system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
         user_message="Lies die Felder aus dem Bild der ersten Lebenslauf-Seite aus.",
         image_base64=image_base64,
-        max_tokens=750,
+        max_tokens=1500,
     )
     return _parse_json_response(raw)
+
+
+def _normalize_rollen(raw: Any) -> list[str]:
+    """Filtert eine vom Modell gelieferte rollen-Liste auf bekannte
+    Rolle-Enum-Werte (siehe models/enums.py::Rolle) - haelt sich das Modell
+    nicht exakt an die vorgegebenen Werte (z.B. Grossschreibung, ein nicht
+    vorgesehener Freitext-Wert), wird der einzelne Eintrag verworfen statt
+    die gesamte Extraktion an einem Pydantic-Validierungsfehler scheitern zu
+    lassen."""
+    if not isinstance(raw, list):
+        return []
+    normalized: list[str] = []
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        candidate = item.strip().lower()
+        if candidate in _VALID_ROLLEN and candidate not in normalized:
+            normalized.append(candidate)
+    return normalized
+
+
+def _normalize_berufliche_stationen(raw: Any) -> list[dict[str, Any]]:
+    """Validiert/normalisiert die vom Modell gelieferten Stationen. kanzleityp
+    und kanzleigroesse sind in schemas/candidate.py::BeruflicheStation
+    Pflichtfelder (min_length=1) - eine Station ohne diese beiden Angaben
+    wird hier verworfen statt mit erfundenem Platzhaltertext aufgefuellt
+    (Prompt-Regel: nichts erfinden). rolle wird wie bei _normalize_rollen auf
+    bekannte Enum-Werte geprueft, ein unbekannter/fehlender Wert wird null."""
+    if not isinstance(raw, list):
+        return []
+    stations: list[dict[str, Any]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        kanzleityp = item.get("kanzleityp")
+        kanzleigroesse = item.get("kanzleigroesse")
+        if not (isinstance(kanzleityp, str) and kanzleityp.strip()):
+            continue
+        if not (isinstance(kanzleigroesse, str) and kanzleigroesse.strip()):
+            continue
+        try:
+            dauer_jahre = float(item.get("dauer_jahre") or 0)
+        except (TypeError, ValueError):
+            dauer_jahre = 0.0
+        rolle = item.get("rolle")
+        rolle_normalized = rolle.strip().lower() if isinstance(rolle, str) else None
+        if rolle_normalized not in _VALID_ROLLEN:
+            rolle_normalized = None
+        stations.append(
+            {
+                "kanzleityp": kanzleityp.strip(),
+                "kanzleigroesse": kanzleigroesse.strip(),
+                "dauer_jahre": max(dauer_jahre, 0.0),
+                "rolle": rolle_normalized,
+            }
+        )
+    return stations
 
 
 def extract_candidate_fields(
@@ -235,10 +377,11 @@ def extract_candidate_fields(
     raw = generate_text(
         system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
         user_message=cv_text[:12000],
-        # 750 statt urspruenglich 400: fachliche_schwerpunkte (Liste) und
-        # erfahrungen_zusammenfassung (Fliesstext) liefern deutlich mehr
-        # Output als die anfaenglichen reinen Kurzfelder.
-        max_tokens=750,
+        # 1500 statt urspruenglich 750: berufliche_stationen (komplette
+        # Stationshistorie statt nur der aktuellsten Position) und rollen/
+        # current_employer_internal liefern deutlich mehr Output als die
+        # bisherigen reinen Kurzfelder.
+        max_tokens=1500,
     )
     data = _parse_json_response(raw)
     # Defensiv: das Modell haelt sich fast immer an das Array-Schema, aber
@@ -248,6 +391,8 @@ def extract_candidate_fields(
     # behandelt zu werden.
     if not isinstance(data.get("fachliche_schwerpunkte"), list):
         data["fachliche_schwerpunkte"] = []
+    data["rollen"] = _normalize_rollen(data.get("rollen"))
+    data["berufliche_stationen"] = _normalize_berufliche_stationen(data.get("berufliche_stationen"))
 
     agency_profile = is_agency_letterhead(cv_text)
     if agency_profile:
@@ -271,16 +416,11 @@ def extract_candidate_fields(
             for key, value in vision_data.items():
                 if value and not data.get(key):
                     data[key] = value
+            # vision_data durchlief die obige Normalisierung nicht - erneut
+            # anwenden, damit ein von dort gemergter roher rollen-/
+            # berufliche_stationen-Wert nicht ungeprueft durchrutscht.
+            data["rollen"] = _normalize_rollen(data.get("rollen"))
+            data["berufliche_stationen"] = _normalize_berufliche_stationen(
+                data.get("berufliche_stationen")
+            )
     return data
-
-
-def extract_last_role(cv_text: str) -> dict[str, Any]:
-    """Fuer Punkt 4 (Batch-Backfill): nur Rolle/Arbeitgeber/Qualifikation/
-    Ausbildung - keine Adress-/Kontaktfelder noetig, daher kein
-    Agentur-Briefkopf-Ausschluss fuer diese Felder erforderlich."""
-    raw = generate_text(
-        system_prompt=_LAST_ROLE_SYSTEM_PROMPT,
-        user_message=cv_text[:12000],
-        max_tokens=400,
-    )
-    return _parse_json_response(raw)

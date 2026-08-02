@@ -190,6 +190,31 @@ class SourcingRunStatus(StrEnum):
     STOPPED = "stopped"
 
 
+class Rolle(StrEnum):
+    """Normalisierte Berufsrollen-Taxonomie fuer Kandidaten (siehe
+    Candidate.rollen) - feste 10 Zielrollen + SONSTIGE statt Freitext, damit
+    z.B. eine Vakanzsuche nach "Steuerberater" auch Kandidaten findet, die
+    das als EINE von mehreren gleichzeitig gueltigen Rollen tragen (z.B.
+    Steuerberater UND Partner). Deshalb ist Candidate.rollen eine LISTE,
+    kein Einzelwert - Rollen sind hier keine zeitliche Abfolge, sondern
+    gleichzeitig gueltige Titel. Basiert auf einer Recherche zu aktuellen
+    deutschen Stellenanzeigen/Berufsbildern fuer Steuer-/Wirtschaftspruefungs-
+    /Rechtskanzleien (siehe cv_extraction.py-Prompt fuer die vollstaendige
+    Abgrenzung zwischen den Werten)."""
+
+    STEUERFACHANGESTELLTE = "steuerfachangestellte"
+    STEUERFACHWIRT = "steuerfachwirt"
+    BILANZBUCHHALTER = "bilanzbuchhalter"
+    STEUERBERATER = "steuerberater"
+    PARTNER = "partner"
+    PRUEFUNGSASSISTENT = "pruefungsassistent"
+    PRUEFUNGSLEITER = "pruefungsleiter"
+    WIRTSCHAFTSPRUEFER = "wirtschaftspruefer"
+    RECHTSFACHANGESTELLTE = "rechtsfachangestellte"
+    RECHTSANWALT = "rechtsanwalt"
+    SONSTIGE = "sonstige"
+
+
 class WarrantyStatus(StrEnum):
     """Gewährleistungsstatus eines Placements, berechnet aus
     start_date + guarantee_period_months (siehe services/warranty.py)."""

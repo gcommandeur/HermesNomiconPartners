@@ -110,8 +110,9 @@ def test_vision_fallback_not_triggered_for_non_pdf(monkeypatch: pytest.MonkeyPat
 
 
 def test_vision_fallback_not_triggered_without_content(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Batch-Skripte (backfill_cv_fields.py etc.) rufen extract_candidate_fields
-    # bisher ohne filename/content auf - muss weiterhin ohne Fallback funktionieren.
+    # Batch-Skripte (backfill_cv_rollen_und_schwerpunkte.py etc.) rufen
+    # extract_candidate_fields bisher ohne filename/content auf - muss
+    # weiterhin ohne Fallback funktionieren.
     payload = {"first_name": None, "postal_code": None}
     monkeypatch.setattr(cv_extraction, "generate_text", _fake_generate_text(payload))
 
