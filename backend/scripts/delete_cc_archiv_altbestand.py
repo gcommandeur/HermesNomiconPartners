@@ -34,7 +34,20 @@ Das eigentliche --apply-Ausfuehren gegen die Produktions-DB macht
 AUSSCHLIESSLICH Gege selbst ueber die DO-Console - dieses Skript loest
 weder automatisch aus noch macht es selbst ein Backup.
 
+Die Review-CSV liegt lokal (per .gitignore bewusst NICHT im Deploy, siehe
+audit_cc_archiv_deletion_candidates.py-Docstring - personenbezogene Daten).
+Fehlt sie beim Start (Produktions-Container), wird sie stattdessen aus der
+Environment-Variable CC_ARCHIV_REVIEW_CSV_B64 rekonstruiert (gzip+base64-
+codierter Inhalt der reduzierten "wuerde_geloescht=ja"-Zeilen) - siehe
+--emit-env-payload unten, um diesen Wert lokal zu erzeugen.
+
 Usage (aus backend/, mit aktiviertem venv):
+
+    # Einmalig LOKAL: den Wert fuer die DO-Console-Environment-Variable
+    # erzeugen (liest die lokale Review-CSV, gibt gzip+base64 auf stdout
+    # aus - NICHT in Produktion ausfuehren, dort existiert die Review-CSV
+    # ja gerade nicht).
+    python scripts/delete_cc_archiv_altbestand.py --emit-env-payload > payload.b64.txt
 
     # Dry-Run (Standard) - nichts wird geschrieben, nur simuliert + geloggt.
     python scripts/delete_cc_archiv_altbestand.py
@@ -48,7 +61,11 @@ Usage (aus backend/, mit aktiviertem venv):
 from __future__ import annotations
 
 import argparse
+import base64
 import csv
+import gzip
+import io
+import os
 import sys
 from pathlib import Path
 
@@ -81,6 +98,63 @@ LOG_FIELDS = [
     "status",
     "grund",
 ]
+
+# Minimal benoetigte Spalten fuer delete_candidate() - deutlich kleiner als
+# die volle Review-CSV (die zusaetzlich document_storage_keys, alle
+# Zaehlspalten etc. enthaelt, die hier nicht gebraucht werden), damit der
+# Env-Var-Payload so klein wie moeglich bleibt.
+_ENV_PAYLOAD_FIELDS = [
+    "master_csv_id",
+    "csv_first_name",
+    "csv_surname",
+    "db_first_name",
+    "db_last_name",
+    "wuerde_geloescht",
+]
+
+REVIEW_CSV_ENV_VAR = "CC_ARCHIV_REVIEW_CSV_B64"
+
+
+def _build_env_payload(rows: list[dict[str, str]]) -> str:
+    """gzip+base64-codiert die reduzierten wuerde_geloescht=ja-Zeilen - siehe
+    _ENV_PAYLOAD_FIELDS. Reine Funktion (kein Datei-/Env-Zugriff), damit sie
+    isoliert testbar ist."""
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=_ENV_PAYLOAD_FIELDS)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({field: row.get(field, "") for field in _ENV_PAYLOAD_FIELDS})
+    compressed = gzip.compress(buffer.getvalue().encode("utf-8"))
+    return base64.b64encode(compressed).decode("ascii")
+
+
+def _decode_env_payload(encoded: str) -> str:
+    """Kehrt _build_env_payload um - eigene Funktion (statt inline im
+    Fallback), damit der Roundtrip isoliert getestet werden kann."""
+    compressed = base64.b64decode(encoded)
+    return gzip.decompress(compressed).decode("utf-8")
+
+
+def _ensure_review_csv_available() -> None:
+    """In Produktion existiert cc_archiv_deletion_review.csv nicht im
+    Deploy-Image (per .gitignore ausgeschlossen, personenbezogene Daten).
+    Fehlt die lokale Datei, wird sie aus REVIEW_CSV_ENV_VAR rekonstruiert -
+    lokal (Datei vorhanden, z.B. beim Dry-Run-Test) passiert hier nichts."""
+    if REVIEW_CSV.exists():
+        return
+
+    encoded = os.environ.get(REVIEW_CSV_ENV_VAR)
+    if not encoded:
+        raise SystemExit(
+            f"{REVIEW_CSV} nicht gefunden und Environment-Variable "
+            f"{REVIEW_CSV_ENV_VAR} nicht gesetzt - siehe Skript-Docstring fuer "
+            "die Einrichtung dieser Variable in der DO-Console."
+        )
+
+    content = _decode_env_payload(encoded)
+    REVIEW_CSV.parent.mkdir(parents=True, exist_ok=True)
+    REVIEW_CSV.write_text(content, encoding="utf-8")
+    print(f"Review-CSV aus {REVIEW_CSV_ENV_VAR} rekonstruiert: {REVIEW_CSV}")
 
 
 def _load_rows_to_delete() -> list[dict[str, str]]:
@@ -176,6 +250,7 @@ def delete_candidate(
 
 
 def run(*, apply: bool) -> dict[str, int]:
+    _ensure_review_csv_available()
     rows_to_process = _load_rows_to_delete()
     stats = {
         "total": len(rows_to_process),
@@ -213,7 +288,26 @@ def main() -> None:
     parser.add_argument(
         "--apply", action="store_true", help="Tatsaechlich loeschen (Default: Dry-Run)"
     )
+    parser.add_argument(
+        "--emit-env-payload",
+        action="store_true",
+        help=(
+            "Nur lokal (mit vorhandener Review-CSV) ausfuehren: gibt den "
+            "gzip+base64-codierten Payload fuer die Environment-Variable "
+            f"{REVIEW_CSV_ENV_VAR} auf stdout aus und beendet sich danach, "
+            "ohne DB-Zugriff."
+        ),
+    )
     args = parser.parse_args()
+
+    if args.emit_env_payload:
+        if not REVIEW_CSV.exists():
+            raise SystemExit(
+                f"{REVIEW_CSV} nicht gefunden - lokal ausfuehren, nicht in Produktion."
+            )
+        payload = _build_env_payload(_load_rows_to_delete())
+        print(payload)
+        return
 
     if args.apply:
         print(

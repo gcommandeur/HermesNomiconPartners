@@ -160,6 +160,22 @@ sichtbar):
 - `CC_CRM_ANTHROPIC_MODEL=claude-sonnet-5`
 - `CC_CRM_CORS_ORIGINS=["https://hermescrm-v9sle.ondigitalocean.app"]`
 
+### Temporäre Variable für einmalige Skript-Läufe: `CC_ARCHIV_REVIEW_CSV_B64`
+
+`backend/scripts/delete_cc_archiv_altbestand.py` braucht die Review-CSV
+(`cc_archiv_deletion_review.csv`), die per `.gitignore` bewusst NICHT im
+Deploy-Image liegt (personenbezogene Daten). Fehlt die Datei lokal im
+Container, rekonstruiert das Skript sie beim Start aus dieser Variable
+(gzip+base64-codierte, auf die `wuerde_geloescht=ja`-Zeilen reduzierte
+CSV) – Erzeugung lokal via
+`python scripts/delete_cc_archiv_altbestand.py --emit-env-payload`.
+
+- Als **Encrypt** markieren (enthält Namen echter Kandidaten)
+- Nur so lange gesetzt lassen, wie der Löschlauf tatsächlich ansteht –
+  danach aus den Environment Variables wieder entfernen, da sie sonst
+  dauerhaft eine Kopie personenbezogener Daten außerhalb der DB in den
+  App-Platform-Settings hinterlässt
+
 ## Umgebungsvariablen (Frontend-Komponente `hermescrm-frontend`)
 
 - `NEXT_PUBLIC_CC_CRM_API_URL=https://hermescrm-v9sle.ondigitalocean.app/api/v1`

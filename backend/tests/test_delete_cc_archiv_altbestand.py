@@ -180,6 +180,75 @@ def test_dry_run_deletes_nothing(
         assert session.get(Candidate, candidate_id) is not None
 
 
+def test_env_payload_roundtrip_preserves_ja_row_data() -> None:
+    """Kernfall des Produktions-Fallbacks: der gzip+base64-Payload muss nach
+    dem Decode wieder eine per csv.DictReader lesbare CSV mit denselben
+    Werten ergeben - die volle Review-CSV-Struktur (mehr Spalten als
+    _ENV_PAYLOAD_FIELDS) darf dabei kein Problem sein."""
+    full_rows = [
+        {
+            "master_csv_id": "193",
+            "csv_first_name": "Thomas",
+            "csv_surname": "Pollok",
+            "db_first_name": "Thomas",
+            "db_last_name": "Pollok",
+            "document_storage_keys": "candidate/xyz/193_Pollok.pdf",
+            "wuerde_geloescht": "ja",
+        }
+    ]
+
+    payload = delete_script._build_env_payload(full_rows)
+    decoded_csv_text = delete_script._decode_env_payload(payload)
+    reconstructed_rows = list(csv.DictReader(decoded_csv_text.splitlines()))
+
+    assert len(reconstructed_rows) == 1
+    row = reconstructed_rows[0]
+    assert row["master_csv_id"] == "193"
+    assert row["csv_first_name"] == "Thomas"
+    assert row["db_last_name"] == "Pollok"
+    assert row["wuerde_geloescht"] == "ja"
+    # Nicht in _ENV_PAYLOAD_FIELDS enthalten - bewusst nicht mitgenommen,
+    # um den Payload klein zu halten.
+    assert "document_storage_keys" not in row
+
+
+def test_ensure_review_csv_available_reconstructs_from_env_var(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    missing_csv = tmp_path / "cc_archiv_deletion_review.csv"
+    monkeypatch.setattr(delete_script, "REVIEW_CSV", missing_csv)
+    payload = delete_script._build_env_payload(
+        [
+            {
+                "master_csv_id": "700",
+                "csv_first_name": "Wird",
+                "csv_surname": "Rekonstruiert",
+                "db_first_name": "Wird",
+                "db_last_name": "Rekonstruiert",
+                "wuerde_geloescht": "ja",
+            }
+        ]
+    )
+    monkeypatch.setenv(delete_script.REVIEW_CSV_ENV_VAR, payload)
+
+    delete_script._ensure_review_csv_available()
+
+    assert missing_csv.exists()
+    rows = delete_script._load_rows_to_delete()
+    assert len(rows) == 1
+    assert rows[0]["master_csv_id"] == "700"
+
+
+def test_ensure_review_csv_available_raises_without_file_or_env_var(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    monkeypatch.setattr(delete_script, "REVIEW_CSV", tmp_path / "missing.csv")
+    monkeypatch.delenv(delete_script.REVIEW_CSV_ENV_VAR, raising=False)
+
+    with pytest.raises(SystemExit):
+        delete_script._ensure_review_csv_available()
+
+
 def test_run_reads_only_ja_rows_from_review_csv(
     monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
 ) -> None:
