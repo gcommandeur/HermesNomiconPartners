@@ -173,13 +173,26 @@ ABGRENZUNGSREGELN (wichtig gegen Fehlklassifikation):
 - partner wird NIEMALS aus einer Aufgabenbeschreibung abgeleitet, nur aus
   den oben genannten expliziten Keywords.
 
-rollen: LISTE aller AKTUELL gleichzeitig gültigen Rollen (keine zeitliche
-Abfolge!) - erfasse ALLE aktuell gültigen Titel, nicht nur den zuletzt
-genannten. Signale für mehrere gleichzeitige Rollen: "Steuerberater und
-Rechtsanwalt", eine Aufzählung von Titeln direkt unter dem Namen, mehrere
-Kammerzulassungen (z.B. Steuerberaterkammer UND Rechtsanwaltskammer). Leeres
-Array, falls keine der 10 Rollen erkennbar ist (nicht "sonstige" erzwingen,
-wenn wirklich nichts passt).
+rollen: LISTE der zeitlich LETZTEN RELEVANTEN Rolle(n) - nicht zwingend aus
+der allerletzten Station im CV abgeleitet, sondern aus der zeitlich letzten
+Station, bei der eine unserer 10 Zielrollen ausgeübt wurde. Folgt danach noch
+eine fachfremde Station (rolle "sonstige"), bleibt die davor liegende
+relevante Rolle trotzdem in "rollen" stehen - Beispiel: 4,5 Jahre
+Prüfungsassistent, danach kurzzeitig fachfremd gearbeitet -> rollen:
+["pruefungsassistent"], NICHT leer. Waren zum Zeitpunkt dieser letzten
+relevanten Station mehrere Zielrollen gleichzeitig gültig (z.B.
+Rechtsanwalt und Steuerberater am selben Ort/derselben Station), alle in die
+Liste aufnehmen - Signale dafür: "Steuerberater und Rechtsanwalt", eine
+Aufzählung von Titeln direkt unter dem Namen, mehrere Kammerzulassungen
+(z.B. Steuerberaterkammer UND Rechtsanwaltskammer). Rollen aus noch weiter
+zurückliegenden, bereits durch eine SPÄTERE relevante Station abgelösten
+Stationen NICHT zusätzlich aufnehmen (Beispiel: erst Steuerfachangestellte,
+danach Weiterqualifikation zum Bilanzbuchhalter -> rollen:
+["bilanzbuchhalter"], NICHT beide) - nur die zeitlich letzte relevante Rolle
+zählt hier, die vollständige Historie inkl. aller früheren Rollen steht
+ohnehin unverkürzt in berufliche_stationen. Leeres Array nur, wenn in der
+GESAMTEN Historie keine der 10 Rollen erkennbar ist (nicht "sonstige"
+erzwingen, wenn wirklich nichts passt).
 
 current_employer_internal: der Klarname des aktuellen/letzten Arbeitgebers
 (wird intern gespeichert, NIE automatisch in ausgehende Dokumente
@@ -189,9 +202,14 @@ Arbeitgeber dort ohnehin meist schon anonymisiert/generisch beschrieben; in
 diesem Fall diese generische Beschreibung übernehmen, keinen Namen erfinden.
 
 berufliche_stationen: ALLE im CV erkennbaren beruflichen Stationen (nicht
-nur die aktuellste), neueste zuerst. Jede Station braucht kanzleityp UND
-kanzleigroesse (grobe Schätzung reicht) - eine Station ohne diese beiden
-Angaben lieber ganz weglassen, statt sie zu erfinden.
+nur die aktuellste). REIHENFOLGE VERBINDLICH: neueste/aktuellste Station
+zuerst, älteste Station als letzter Listeneintrag - unabhängig davon, in
+welcher Reihenfolge sie im CV-Text auftauchen. Diese feste Reihenfolge ist
+die Grundlage für die Ableitung von "rollen" oben (erste Station in dieser
+Liste mit einer der 10 Zielrollen = die zeitlich letzte relevante Rolle).
+Jede Station braucht kanzleityp UND kanzleigroesse (grobe Schätzung reicht)
+- eine Station ohne diese beiden Angaben lieber ganz weglassen, statt sie zu
+erfinden.
 
 ausbildung_titel: NUR konkrete fachbezogene Ausbildungs-/Prüfungsabschlüsse
 mit Institution/Jahr, wo im Text vorhanden, z.B. "Steuerberaterprüfung
