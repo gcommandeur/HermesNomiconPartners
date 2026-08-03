@@ -99,6 +99,20 @@ CSV_FIELDS = [
 
 
 def _candidates_with_cv(session: Session) -> list[Candidate]:
+    """Kandidaten mit einem eigenen CV-Dokument.
+
+    Sourcing-Agent-Kandidaten (SourcingLead -> approve_lead(), siehe
+    services/sourcing.py) OHNE eigenes CV sind hierdurch bereits
+    strukturell ausgeschlossen: approve_lead() legt beim Anlegen NIE ein
+    Document an (nur ggf. eine Note aus lead.notes_text), also koennen sie
+    per Definition nur dann in candidate_ids_with_cv auftauchen, wenn sie
+    seither ein eigenes CV nachgereicht haben - und genau dann SOLLEN sie
+    regulaer im Backfill bleiben (siehe Auftrag: "nicht ausschliessen, nur
+    die ohne CV"). Ein zusaetzlicher SourcingLead-Join wuerde deshalb hier
+    keine einzige ID mehr entfernen - siehe
+    diagnose_sourcing_candidates_cv_backfill.py fuer die read-only
+    Bestandsaufnahme, wie viele Sourcing-Kandidaten es gibt und wie viele
+    davon (falls ueberhaupt) ein CV haben."""
     candidate_ids_with_cv = set(
         session.scalars(
             select(Document.owner_id).where(
@@ -321,6 +335,17 @@ def main() -> None:
         default=None,
         help="Nur die ersten N Kandidaten (nach candidate_number) verarbeiten",
     )
+    parser.add_argument(
+        "--skip",
+        type=int,
+        default=None,
+        help=(
+            "Die ersten N Kandidaten (nach candidate_number) NICHT verarbeiten - fuer den "
+            "Wiedereinstieg nach einem Abbruch mittendrin (z.B. API-Guthaben zur Neige "
+            "gegangen), damit bereits erfolgreich verarbeitete Kandidaten nicht nochmal "
+            "bezahlt werden. Kombinierbar mit --limit."
+        ),
+    )
     args = parser.parse_args()
 
     if args.apply:
@@ -332,6 +357,8 @@ def main() -> None:
 
     with SessionLocal() as session:
         candidates = _candidates_with_cv(session)
+    if args.skip:
+        candidates = candidates[args.skip :]
     if args.sample:
         candidates = _evenly_spaced_sample(candidates, args.sample)
     elif args.limit:

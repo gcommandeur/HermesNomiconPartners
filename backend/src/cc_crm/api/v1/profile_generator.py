@@ -5,7 +5,7 @@ from fastapi import APIRouter, Response
 from cc_crm.api.dependencies import DatabaseSession
 from cc_crm.schemas.profile import AnonymousProfileResponse
 from cc_crm.services.candidates import CandidateService
-from cc_crm.services.profile_docx_export import generate_profile_docx
+from cc_crm.services.profile_docx_export import build_export_filename, generate_profile_docx
 from cc_crm.services.profile_generator import ProfileGeneratorService
 
 router = APIRouter(prefix="/candidates")
@@ -24,7 +24,7 @@ def generate_anonymous_profile(
 def download_anonymous_profile_docx(candidate_id: uuid.UUID, session: DatabaseSession) -> Response:
     candidate = CandidateService(session).get(candidate_id)
     docx_bytes = generate_profile_docx(candidate)
-    filename = f"Profil_{candidate.candidate_number or candidate.id}.docx"
+    filename = build_export_filename(candidate)
     return Response(
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
