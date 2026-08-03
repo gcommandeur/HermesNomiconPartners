@@ -19,6 +19,14 @@ def _use_session_factory(
     monkeypatch.setattr(backfill_script, "SessionLocal", session_factory)
 
 
+def _use_tmp_output_path(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    """Isoliert Tests von der echten Review-CSV im Repo - ohne das wuerde
+    jeder Testlauf, der backfill()/_write_review_csv aufruft, die reale
+    Datei unter backend/scripts/ anfassen (siehe Vorfall: ein Sanity-Check-
+    Lauf hat genau dort echte, bezahlte Extraktionsergebnisse ueberschrieben)."""
+    monkeypatch.setattr(backfill_script, "OUTPUT_PATH", tmp_path / "cv_rollen_backfill_review.csv")
+
+
 def _make_candidate_with_cv(session: Session, **overrides: object) -> Candidate:
     defaults: dict[str, object] = {"first_name": "Max", "last_name": "Muster"}
     defaults.update(overrides)
@@ -60,12 +68,13 @@ def _stub_extraction(
 
 
 def test_apply_keeps_existing_value_when_field_has_no_new_suggestion(
-    monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
+    monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
 ) -> None:
     """Kernfall des Fixes: nur fachliche_schwerpunkte liefert diesmal einen
     Treffer, rollen kommt leer zurueck - das zuvor gesetzte rollen darf NICHT
     geloescht werden."""
     _use_session_factory(monkeypatch, session_factory)
+    _use_tmp_output_path(monkeypatch, tmp_path)
     with session_factory() as session:
         candidate = _make_candidate_with_cv(
             session,
@@ -90,12 +99,13 @@ def test_apply_keeps_existing_value_when_field_has_no_new_suggestion(
 
 
 def test_apply_overwrites_field_when_new_suggestion_present(
-    monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
+    monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
 ) -> None:
     """Liefert der Re-Parse fuer ein Feld etwas, ist der neue Wert
     autoritativ und ersetzt den alten - auch wenn der alte Wert etwas
     anderes war."""
     _use_session_factory(monkeypatch, session_factory)
+    _use_tmp_output_path(monkeypatch, tmp_path)
     with session_factory() as session:
         candidate = _make_candidate_with_cv(session, rollen=["rechtsanwalt"])
         candidate_id = candidate.id
@@ -112,11 +122,12 @@ def test_apply_overwrites_field_when_new_suggestion_present(
 
 
 def test_review_csv_row_marks_skipped_fields(
-    monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
+    monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
 ) -> None:
     """Die Review-CSV muss pro Kandidat sichtbar machen, welche Felder bei
     --apply erhalten blieben statt Diff gegen die DB fahren zu muessen."""
     _use_session_factory(monkeypatch, session_factory)
+    _use_tmp_output_path(monkeypatch, tmp_path)
     with session_factory() as session:
         candidate = _make_candidate_with_cv(session, rollen=["rechtsanwalt"])
         candidate_id = candidate.id
@@ -142,9 +153,10 @@ def test_review_csv_row_marks_skipped_fields(
 
 
 def test_dry_run_does_not_write_to_db(
-    monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
+    monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
 ) -> None:
     _use_session_factory(monkeypatch, session_factory)
+    _use_tmp_output_path(monkeypatch, tmp_path)
     with session_factory() as session:
         candidate = _make_candidate_with_cv(session, rollen=[])
         candidate_id = candidate.id
@@ -158,3 +170,25 @@ def test_dry_run_does_not_write_to_db(
         session.refresh(refreshed)
 
     assert refreshed.rollen == []
+
+
+def test_write_review_csv_backs_up_existing_file_instead_of_overwriting(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """Regressionsschutz: ein bereits vorhandener Lauf mit echten, bezahlten
+    Extraktionsergebnissen darf nie stillschweigend durch einen kleineren
+    Folgelauf (z.B. einen Sanity-Check mit --limit 2) ersetzt werden - siehe
+    Vorfall, bei dem genau das eine vollstaendige 1124-Zeilen-CSV zerstoert
+    hat, ohne dass irgendwo eine Kopie der bezahlten Ergebnisse blieb."""
+    output_path = tmp_path / "cv_rollen_backfill_review.csv"
+    output_path.write_text("alter,inhalt\nmit,1124zeilen\n", encoding="utf-8-sig")
+    monkeypatch.setattr(backfill_script, "OUTPUT_PATH", output_path)
+
+    backfill_script._write_review_csv([])
+
+    backups = list(tmp_path.glob("cv_rollen_backfill_review_backup_*.csv"))
+    assert len(backups) == 1
+    assert backups[0].read_text(encoding="utf-8-sig") == "alter,inhalt\nmit,1124zeilen\n"
+    # Neue (hier leere) Datei liegt weiterhin unter dem urspruenglichen Pfad.
+    assert output_path.exists()
+    assert "alter,inhalt" not in output_path.read_text(encoding="utf-8-sig")

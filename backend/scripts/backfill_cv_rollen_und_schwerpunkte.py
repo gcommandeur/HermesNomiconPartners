@@ -50,6 +50,7 @@ import json
 import sys
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -311,6 +312,29 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
 
 
 def _write_review_csv(rows: list[dict[str, object]]) -> None:
+    """Schreibt die Review-CSV - sichert eine bereits vorhandene Datei vorher
+    per Umbenennung mit Zeitstempel weg, statt sie stillschweigend zu
+    ueberschreiben. Hintergrund: bei einem echten Lauf stecken in dieser
+    Datei die einzigen Ergebnisse der bereits bezahlten Anthropic-API-Calls -
+    ein kleiner Test-/Sanity-Check-Lauf (z.B. nur 2 Kandidaten) hat hier
+    bereits einmal versehentlich eine vollstaendige 1124-Zeilen-Datei mit
+    echten, bezahlten Ergebnissen ueberschrieben, ohne dass es eine weitere
+    Kopie davon gab. Diese Sicherung soll genau das verhindern."""
+    if OUTPUT_PATH.exists():
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = OUTPUT_PATH.with_name(f"{OUTPUT_PATH.stem}_backup_{timestamp}.csv")
+        suffix = 2
+        # Windows' os.rename (anders als POSIX) schlaegt fehl, wenn das Ziel
+        # schon existiert - z.B. bei zwei Laeufen innerhalb derselben
+        # Sekunde. Statt dann hart abzustuerzen, einen Zaehler anhaengen.
+        while backup_path.exists():
+            backup_path = OUTPUT_PATH.with_name(
+                f"{OUTPUT_PATH.stem}_backup_{timestamp}_{suffix}.csv"
+            )
+            suffix += 1
+        OUTPUT_PATH.rename(backup_path)
+        print(f"Vorhandene Review-CSV gesichert nach: {backup_path}")
+
     with OUTPUT_PATH.open("w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS)
         writer.writeheader()
