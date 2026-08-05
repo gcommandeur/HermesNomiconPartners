@@ -6,10 +6,62 @@ from cc_crm.services import cv_extraction
 
 
 def _fake_generate_text(payload: dict[str, object]):
-    def fake(*, system_prompt: str, user_message: str, max_tokens: int = 1000) -> str:
+    def fake(
+        *, system_prompt: str, user_message: str, max_tokens: int = 1000, timeout: float = 45.0
+    ) -> str:
         return json.dumps(payload)
 
     return fake
+
+
+def test_text_and_vision_call_timeouts_stay_safely_under_gateway_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regressionsschutz fuers eigentliche Problem: /candidates/cv-preview
+    kann bei einem PDF ZWEI sequenzielle Anthropic-Calls ausloesen (Text-
+    Extraktion + Vision-Fallback) - deren Timeouts muessen in SUMME sicher
+    unter dem App-Platform-Gateway-Timeout bleiben (live beobachtet: 504
+    "origin_connection_timed_out", nachdem beide Calls denselben 60s-
+    Standard-Timeout nutzten). 45s Puffer (statt strikt <60s) laesst
+    zusaetzlich Spielraum fuer Netzwerk-/Verarbeitungszeit ausserhalb der
+    reinen API-Calls."""
+    captured: dict[str, float] = {}
+
+    def fake_generate_text(
+        *, system_prompt: str, user_message: str, max_tokens: int = 1000, timeout: float = 45.0
+    ) -> str:
+        captured["text_timeout"] = timeout
+        return json.dumps({"first_name": None, "last_name": None, "postal_code": None})
+
+    def fake_generate_text_with_image(
+        *,
+        system_prompt: str,
+        user_message: str,
+        image_base64: str,
+        image_media_type: str = "image/png",
+        max_tokens: int = 1000,
+        timeout: float = 45.0,
+    ) -> str:
+        captured["vision_timeout"] = timeout
+        return json.dumps({"first_name": "Jana"})
+
+    monkeypatch.setattr(cv_extraction, "generate_text", fake_generate_text)
+    monkeypatch.setattr(
+        cv_extraction, "generate_text_with_image", fake_generate_text_with_image
+    )
+    monkeypatch.setattr(
+        cv_extraction,
+        "_render_first_pdf_page_png_base64",
+        lambda content: "AAAA",
+    )
+
+    cv_extraction.extract_candidate_fields(
+        "irrelevant", filename="cv.pdf", content=b"%PDF-fake-bytes"
+    )
+
+    assert captured["text_timeout"] == 25.0
+    assert captured["vision_timeout"] == 20.0
+    assert captured["text_timeout"] + captured["vision_timeout"] <= 45.0
 
 
 def test_vision_fallback_triggers_when_standard_field_missing(

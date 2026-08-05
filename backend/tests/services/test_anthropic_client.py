@@ -105,6 +105,45 @@ def test_generate_text_with_image_sends_image_and_text_content(
     assert content[1] == {"type": "text", "text": "msg"}
 
 
+def test_generate_text_default_timeout_is_well_under_gateway_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regressionsschutz: der httpx-Timeout stand vorher bei 60.0 - fast
+    exakt am App-Platform-Gateway-Timeout (live beobachtet: 504
+    "origin_connection_timed_out" bei /candidates/cv-preview). Jetzt 45.0
+    als Standard, damit ein einzelner Call mit eigener, klarer Fehlermeldung
+    scheitert statt dass die Plattform die Verbindung zuerst kappt."""
+    captured: dict[str, float] = {}
+
+    def fake_post(
+        url: str, *, headers: dict[str, str], json: dict[str, object], timeout: float
+    ) -> _FakeResponse:
+        captured["timeout"] = timeout
+        return _FakeResponse({"content": [{"type": "text", "text": "Antwort"}]})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    anthropic_client.generate_text(system_prompt="sys", user_message="msg")
+
+    assert captured["timeout"] == 45.0
+
+
+def test_generate_text_accepts_custom_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, float] = {}
+
+    def fake_post(
+        url: str, *, headers: dict[str, str], json: dict[str, object], timeout: float
+    ) -> _FakeResponse:
+        captured["timeout"] = timeout
+        return _FakeResponse({"content": [{"type": "text", "text": "Antwort"}]})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    anthropic_client.generate_text(system_prompt="sys", user_message="msg", timeout=25.0)
+
+    assert captured["timeout"] == 25.0
+
+
 def test_generate_text_without_api_key_raises_clear_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

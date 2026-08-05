@@ -6,7 +6,9 @@ from cc_crm.services import cv_extraction
 
 
 def _fake_generate_text(payload: dict[str, object]):
-    def fake(*, system_prompt: str, user_message: str, max_tokens: int = 1000) -> str:
+    def fake(
+        *, system_prompt: str, user_message: str, max_tokens: int = 1000, timeout: float = 45.0
+    ) -> str:
         return json.dumps(payload)
 
     return fake

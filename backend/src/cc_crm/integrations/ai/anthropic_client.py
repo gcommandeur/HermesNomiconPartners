@@ -18,7 +18,11 @@ ANTHROPIC_API_VERSION = "2023-06-01"
 
 
 def _call_messages_api(
-    *, system_prompt: str, content: str | list[dict[str, Any]], max_tokens: int
+    *,
+    system_prompt: str,
+    content: str | list[dict[str, Any]],
+    max_tokens: int,
+    timeout: float = 45.0,
 ) -> str:
     settings = get_settings()
     if not settings.anthropic_api_key:
@@ -55,7 +59,16 @@ def _call_messages_api(
                 "system": system_prompt,
                 "messages": [{"role": "user", "content": content}],
             },
-            timeout=60.0,
+            # Standard 45s statt vormals 60s - bewusst DEUTLICH unter dem
+            # ueblichen App-Platform-Gateway-Timeout (504 "origin_connection_
+            # timed_out", live beobachtet bei /candidates/cv-preview), damit
+            # ein einzelner haengender Call sauber MIT eigener Fehlermeldung
+            # scheitert statt dass die Plattform die Verbindung zuerst kappt.
+            # Aufrufer mit mehreren SEQUENZIELLEN Calls pro Request (siehe
+            # cv_extraction.py: Text-Extraktion + optionaler Vision-Fallback)
+            # muessen `timeout` zusaetzlich reduzieren, damit die Summe sicher
+            # unter dem Gateway-Timeout bleibt - siehe dortige Aufrufe.
+            timeout=timeout,
         )
         response.raise_for_status()
     except httpx.HTTPStatusError as exception:
@@ -73,9 +86,14 @@ def _call_messages_api(
     raise AIProviderError("Anthropic-API hat keinen Text-Inhalt zurückgegeben.")
 
 
-def generate_text(*, system_prompt: str, user_message: str, max_tokens: int = 1000) -> str:
+def generate_text(
+    *, system_prompt: str, user_message: str, max_tokens: int = 1000, timeout: float = 45.0
+) -> str:
     return _call_messages_api(
-        system_prompt=system_prompt, content=user_message, max_tokens=max_tokens
+        system_prompt=system_prompt,
+        content=user_message,
+        max_tokens=max_tokens,
+        timeout=timeout,
     )
 
 
@@ -86,6 +104,7 @@ def generate_text_with_image(
     image_base64: str,
     image_media_type: str = "image/png",
     max_tokens: int = 1000,
+    timeout: float = 45.0,
 ) -> str:
     """Wie generate_text, aber mit einem zusaetzlichen Bild im Request - fuer
     den CV-Vision-Fallback (siehe cv_extraction.py): manche PDFs haben eine

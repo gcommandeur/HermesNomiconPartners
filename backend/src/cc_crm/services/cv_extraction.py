@@ -308,13 +308,23 @@ def _extract_fields_via_vision(content: bytes) -> dict[str, Any]:
     zu extract_text_from_bytes): rendert die erste Seite als Bild und liest
     sie per Vision aus, statt sich weiter auf den (in diesem Fall
     unzuverlaessigen) Text-Layer zu verlassen. Gleiches Schema/Prompt wie die
-    text-basierte Extraktion, nur mit Bild statt Text als Eingabe."""
+    text-basierte Extraktion, nur mit Bild statt Text als Eingabe.
+
+    timeout=20.0 (statt Standard 45.0): dieser Call laeuft IMMER als
+    ZWEITER, sequenzieller Anthropic-Call innerhalb desselben HTTP-Requests
+    (siehe extract_candidate_fields) - addiert sich also zur Laufzeit des
+    vorausgegangenen Text-Extraktions-Calls. Ohne engeres Timeout hier kann
+    die Summe beider Calls den App-Platform-Gateway-Timeout ueberschreiten
+    (live beobachtet: 504 "origin_connection_timed_out" bei
+    /candidates/cv-preview, nachdem max_tokens fuer beide Calls von 750 auf
+    1500 verdoppelt wurde)."""
     image_base64 = _render_first_pdf_page_png_base64(content)
     raw = generate_text_with_image(
         system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
         user_message="Lies die Felder aus dem Bild der ersten Lebenslauf-Seite aus.",
         image_base64=image_base64,
         max_tokens=1500,
+        timeout=20.0,
     )
     return _parse_json_response(raw)
 
@@ -400,6 +410,12 @@ def extract_candidate_fields(
         # current_employer_internal liefern deutlich mehr Output als die
         # bisherigen reinen Kurzfelder.
         max_tokens=1500,
+        # timeout=25.0 (statt Standard 45.0): dieser Call kann bei PDFs von
+        # einem zweiten, sequenziellen Vision-Fallback-Call gefolgt werden
+        # (siehe unten) - beide zusammen muessen sicher unter dem App-
+        # Platform-Gateway-Timeout bleiben, siehe Kommentar bei
+        # _extract_fields_via_vision.
+        timeout=25.0,
     )
     data = _parse_json_response(raw)
     # Defensiv: das Modell haelt sich fast immer an das Array-Schema, aber

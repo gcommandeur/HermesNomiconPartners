@@ -30,7 +30,9 @@ def _upload_document(client: TestClient, candidate_id: str, content: bytes, file
 
 @pytest.fixture(autouse=True)
 def _mock_generate_text(monkeypatch: pytest.MonkeyPatch) -> None:
-    def fake_generate_text(*, system_prompt: str, user_message: str, max_tokens: int = 1000) -> str:
+    def fake_generate_text(
+        *, system_prompt: str, user_message: str, max_tokens: int = 1000, timeout: float = 45.0
+    ) -> str:
         return json.dumps(
             {
                 "first_name": "Erika",
