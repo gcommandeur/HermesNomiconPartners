@@ -505,11 +505,18 @@ def extract_candidate_fields(
         raw = generate_text(
             system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
             user_message=cv_text[:12000],
-            # 1500 statt urspruenglich 750: berufliche_stationen (komplette
-            # Stationshistorie statt nur der aktuellsten Position) und rollen/
-            # current_employer_internal liefern deutlich mehr Output als die
-            # bisherigen reinen Kurzfelder.
-            max_tokens=1500,
+            # 2500 statt urspruenglich 1500: bei Kandidaten mit langer
+            # Stationshistorie (viele berufliche_stationen-Eintraege) reichte
+            # 1500 gelegentlich nicht - das Modell wurde mitten in der JSON-
+            # Antwort abgeschnitten (stop_reason "max_tokens"), wodurch die
+            # abgeschnittene Antwort mit dem oeffnenden "```json" begann und
+            # json.loads sofort bei Zeichen 0 crashte, statt sauber zu
+            # parsen (live reproduziert und verifiziert: Kandidat #4330,
+            # 8716 Input-Tokens, exakt 1500 Output-Tokens ausgeschoepft).
+            # Landete bisher im selben Fallback-Pfad wie ein echter API-
+            # Fehler, obwohl das Modell fast die komplette, gueltige Antwort
+            # bereits geliefert hatte - unnoetiger Qualitaetsverlust.
+            max_tokens=2500,
             # timeout=25.0 (statt Standard 45.0): dieser Call kann bei PDFs von
             # einem zweiten, sequenziellen Vision-Fallback-Call gefolgt werden
             # (siehe unten) - beide zusammen muessen sicher unter dem App-
