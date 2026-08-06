@@ -267,9 +267,22 @@ def extract_text_from_bytes(filename: str, content: bytes) -> str:
         # spaltige Layouts) zu falsch getrenntem Text fuehrt, z.B. "J a n a
         # G u ß e r" statt "Jana Gußer" - "layout" rekonstruiert stattdessen die
         # sichtbare Seitenposition und haelt zusammengehoerige Woerter zusammen.
-        return "\n".join(
-            page.extract_text(extraction_mode="layout") or "" for page in reader.pages
-        )
+        #
+        # Bekannter pypdf-Bug (bestaetigt anhand von 28 real betroffenen CVs):
+        # bei Seiten mit rotierten Text-Elementen (z.B. quer gedrehte
+        # Seitenrand-Vermerke) liefert "layout" fuer die GANZE Seite einen
+        # leeren String, obwohl der Default-Modus denselben Text problemlos
+        # findet. Seiten, die im Layout-Modus leer bleiben, bekommen daher pro
+        # Seite einen Fallback auf den Default-Modus statt die ganze Seite als
+        # "kein Text vorhanden" zu behandeln.
+        pages_text: list[str] = []
+        for page in reader.pages:
+            layout_text = page.extract_text(extraction_mode="layout") or ""
+            if layout_text.strip():
+                pages_text.append(layout_text)
+            else:
+                pages_text.append(page.extract_text() or "")
+        return "\n".join(pages_text)
     return content.decode("utf-8", errors="ignore")
 
 

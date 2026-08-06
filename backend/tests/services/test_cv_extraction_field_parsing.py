@@ -3,6 +3,7 @@ import json
 import pytest
 
 from cc_crm.services import cv_extraction
+from cc_crm.services.cv_extraction import extract_text_from_bytes
 
 
 def _fake_generate_text(payload: dict[str, object]):
@@ -259,3 +260,69 @@ class TestRegexFallback:
         assert result["phone"] is None
         assert result["postal_code"] is None
         assert result["city"] is None
+
+
+class TestExtractTextFromBytesPdfLayoutFallback:
+    """Regressionsschutz fuer einen bestaetigten pypdf-Bug: bei Seiten mit
+    rotierten Text-Elementen (z.B. quer gedrehte Seitenrand-Vermerke) liefert
+    extraction_mode='layout' fuer die GANZE Seite einen leeren String, obwohl
+    derselbe Text im Default-Modus problemlos gefunden wird - live bestaetigt
+    an 28 von 44 CVs, die per Layout-Modus faelschlich als 'leer/gescannt'
+    klassifiziert wurden (siehe diagnose_arbeitszeugnis_statt_cv.py)."""
+
+    class _FakePage:
+        def __init__(self, layout_text: str, default_text: str) -> None:
+            self._layout_text = layout_text
+            self._default_text = default_text
+
+        def extract_text(self, extraction_mode: str | None = None) -> str:
+            if extraction_mode == "layout":
+                return self._layout_text
+            return self._default_text
+
+    class _FakeReader:
+        def __init__(
+            self, pages: list["TestExtractTextFromBytesPdfLayoutFallback._FakePage"]
+        ) -> None:
+            self.pages = pages
+
+    def test_falls_back_to_default_mode_when_layout_mode_returns_empty(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        page = self._FakePage(layout_text="", default_text="Jana Gußer\nSteuerberaterin seit 2019")
+        monkeypatch.setattr(
+            cv_extraction, "PdfReader", lambda _bytesio: self._FakeReader([page])
+        )
+
+        result = extract_text_from_bytes("cv.pdf", b"%PDF-fake-bytes")
+
+        assert result == "Jana Gußer\nSteuerberaterin seit 2019"
+
+    def test_prefers_layout_mode_when_it_returns_text(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Der Normalfall bleibt unveraendert: liefert der Layout-Modus Text,
+        wird der (i.d.R. besser lesbare) Layout-Text verwendet, nicht der
+        Default-Text."""
+        page = self._FakePage(layout_text="Jana Gußer (layout)", default_text="J a n a  G u ß e r")
+        monkeypatch.setattr(
+            cv_extraction, "PdfReader", lambda _bytesio: self._FakeReader([page])
+        )
+
+        result = extract_text_from_bytes("cv.pdf", b"%PDF-fake-bytes")
+
+        assert result == "Jana Gußer (layout)"
+
+    def test_falls_back_per_page_independently(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Ein mehrseitiges CV, bei dem nur EINE Seite vom Bug betroffen ist -
+        die anderen Seiten sollen weiterhin ihren (besseren) Layout-Text
+        behalten statt pauschal auf den Default-Modus umzuschalten."""
+        page1 = self._FakePage(layout_text="Seite 1 layout", default_text="Seite1default")
+        page2 = self._FakePage(layout_text="", default_text="Seite 2 nur im Default lesbar")
+        monkeypatch.setattr(
+            cv_extraction, "PdfReader", lambda _bytesio: self._FakeReader([page1, page2])
+        )
+
+        result = extract_text_from_bytes("cv.pdf", b"%PDF-fake-bytes")
+
+        assert result == "Seite 1 layout\nSeite 2 nur im Default lesbar"
