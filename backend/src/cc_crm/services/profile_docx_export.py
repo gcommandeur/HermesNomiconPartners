@@ -44,7 +44,11 @@ from cc_crm.models.enums import Anrede, Rolle
 TEMPLATE_PATH = Path(__file__).resolve().parents[3] / "templates" / "anonymes_profil_master.docx"
 
 _HEADING_UEBERBLICK = "Überblick"
-_HEADING_KURZPROFIL = "Über die Person"
+# KORREKTUR: "Über die Person" war ein Fehlschluss aus einem Vergleich mit
+# ALTEN Referenzprofilen (Nr. 3458/3511, Format aus 2025) - die 5 tatsaechlich
+# NEUESTEN Referenzprofile in Desktop\Profile (Nr. 4051/4052/4053/4453/4455,
+# per direktem docx-Vergleich verifiziert) verwenden durchgehend "Kurzprofil".
+_HEADING_KURZPROFIL = "Kurzprofil"
 _HEADING_QUALIFIKATIONEN = "Fachliche Qualifikationen"
 _HEADING_LEBENSLAUF = "Lebenslauf (Auszug)"
 _HEADING_AUSBILDUNG = "Ausbildung & Weiterbildung"

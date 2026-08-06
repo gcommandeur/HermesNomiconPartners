@@ -55,6 +55,11 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.ruff.lint.per-file-ignores]
 "alembic/versions/*.py" = ["E501"]
 "tests/test_convert_linkedin_export.py" = ["E501"]
+# SYSTEM_PROMPT enthaelt woertliche, echte Referenzprofil-Absaetze als
+# Stilvorbild (siehe profile_generator.py) - manuelles Zeilenumbrechen
+# wuerde ungewollte Zeilenumbrueche in den Fliesstext einschleusen, den das
+# LLM als Vorbild fuer EINEN zusammenhaengenden Absatz erhalten soll.
+"src/cc_crm/services/profile_generator.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

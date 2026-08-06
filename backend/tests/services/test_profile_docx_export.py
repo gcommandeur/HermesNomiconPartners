@@ -64,7 +64,7 @@ def test_parse_short_profile_multiple_sprachen_lines_become_separate_entries() -
     mehrere solcher Zeilen als separate weitere_infos-Eintraege ankommen."""
     text = (
         "## Kandidat:in-Nr. 42\n\n"
-        "**Über die Person**\nText.\n\n"
+        "**Kurzprofil**\nText.\n\n"
         "**Weitere Infos**\n"
         "Deutsch: Muttersprache\n"
         "Englisch: Fließend\n"

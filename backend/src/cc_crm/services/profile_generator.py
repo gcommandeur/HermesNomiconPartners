@@ -80,57 +80,79 @@ REGELN:
 - Korrekte deutsche Groß-/Kleinschreibung und Grammatik sind Pflicht (Substantive
   großschreiben, korrekte Kommasetzung) — dieser Text geht direkt an Kanzleien,
   Fehler wirken unprofessionell.
-- Gendern nach dem Feld "anrede":
+- Nebentätigkeiten/Praktika/Aushilfsjobs (z.B. im CV unter "Praktika und
+  Nebentätigkeiten" gefuehrt) gehoeren NICHT ins "Lebenslauf (Auszug)", wenn
+  bereits reguläre Berufserfahrung existiert - auch dann nicht, wenn die
+  Nebentätigkeit zeitlich später liegt als die letzte reguläre Station.
+  Ebenso keine Sprachkurse. Nur fachlich relevante Stationen aufnehmen.
+- Gendern nach dem Feld "anrede" (KEIN Doppelpunkt-Gendern, auch nicht bei
+  "divers"):
   - "frau" → Kopfzeile "Kandidatin-Nr.", im Fließtext "Die Kandidatin", "sie", "ihre"
   - "herr" → Kopfzeile "Kandidat-Nr.", im Fließtext "Der Kandidat", "er", "seine"
   - "divers" oder nicht gesetzt → Kopfzeile "Kandidat:in-Nr.", im Fließtext
     neutral formulieren (z.B. "Die Person", "diese Fachkraft") statt zu raten
 
-AUSGABEFORMAT (exakt dieses Format — 1:1 aus den bestehenden Commandeur-
-Consulting-Kandidatenprofilen übernommen, NICHT davon abweichen):
+AUSGABEFORMAT (exakt dieses Format — 1:1 aus den 5 NEUESTEN echten Commandeur-
+Consulting-Kandidatenprofilen übernommen, NICHT davon abweichen; die drei
+Beispiele am Ende dieses Prompts zeigen den kompletten Stil):
 
 ## [Kandidatin-Nr. / Kandidat-Nr. / Kandidat:in-Nr., je nach anrede] [Kandidatennummer]
 
 **Überblick**
 Wohnort: [zielregion, nur Region z.B. "Raum Reutlingen", keine genaue Adresse]
 Ausbildung/Weiterbildung: [ausbildungTitel]
-Berufserfahrung: [berufserfahrungJahre, gerundet z.B. "15+ Jahre"]
-Gehaltsvorstellung: [gehaltswunsch, gerundet z.B. "ca. 70.000 € p.a."]
-Verfügbarkeit / Kündigungsfrist: [kuendigungsfrist]
+Berufserfahrung: [berufserfahrungJahre, IMMER im Format "X+ Jahre" (z.B. "2+
+Jahre", "6+ Jahre", "15+ Jahre", "20+ Jahre") - keine Kommastellen, kein
+"Über X Jahre".]
+Gehaltsvorstellung: [gehaltswunsch im Format "ca. X €", optional mit " p.a."
+oder einer Stundenangabe bei Teilzeit, z.B. "ca. 100.000 € p.a.",
+"ca. 38.000 € (30h/Woche)" - NICHT "Ab X €" oder Zusatztext wie "Je nach Job".]
+Verfügbarkeit: [Wert, z.B. "Kurzfristig", "Nach Absprache" oder ein Datum -
+NUR wenn keine echte Kündigungsfrist bekannt ist. Ist eine Kündigungsfrist
+bekannt, diese Zeile durch "Verfügbarkeit / Kündigungsfrist: [X Monate zum
+Monatsende]" ERSETZEN statt beide Zeilen zu zeigen.]
 
-**Über die Person**
-[3-5 Sätze Fließtext, ausführlich und konkret (keine Floskeln). ERSTER SATZ
-VERBINDLICH mit fester Eröffnungsformel, passend zu "anrede":
-  - "frau" → "Unsere Kandidatin ist [Rolle/Qualifikation] mit [X Jahre/über X
-    Jahre] Erfahrung in ..."
-  - "herr" → "Unser Kandidat ist [Rolle/Qualifikation] mit [X Jahre/über X
-    Jahre] Erfahrung in ..."
+**Kurzprofil**
+[EIN dichter Absatz, 4-6 Sätze (keine mehreren Absätze). Feste Struktur:
+Satz 1 VERBINDLICH, passend zu "anrede":
+  - "frau" → "Die Kandidatin ist [Rolle/Qualifikation] mit [Erfahrungsangabe]
+    Erfahrung in ..."
+  - "herr" → "Der Kandidat ist [Rolle/Qualifikation] mit [Erfahrungsangabe]
+    Erfahrung in ..."
   - "divers"/nicht gesetzt → neutrale Variante, z.B. "Diese Fachkraft ist
-    [Rolle/Qualifikation] mit [X Jahre/über X Jahre] Erfahrung in ..."
-[Rolle/Qualifikation] aus ausbildungTitel/fachlicheSchwerpunkte/CV-Text ableiten
-(z.B. "Steuerberaterin", "Rechtsanwalt", "angehender Bilanzbuchhalter"),
-Erfahrungsjahre grob aus berufserfahrungJahre runden. Danach in den
-folgenden Sätzen: welche Aufgabenschwerpunkte und Erfahrungstiefe bringt die
-Person mit, was macht sie für eine Kanzlei interessant? Falls freitextNotizen
-oder CV-Text etwas zur Wechselmotivation oder Arbeitsweise hergeben (z.B.
-warum ein Wechsel angestrebt wird, besondere Stärken), darf das in einem
-weiteren Satz ergänzt werden - aber nur wenn es sich anonym formulieren lässt.]
+    [Rolle/Qualifikation] mit [Erfahrungsangabe] Erfahrung in ..."
+[Rolle/Qualifikation] aus ausbildungTitel/fachlicheSchwerpunkte/CV-Text
+ableiten. [Erfahrungsangabe] hier natürlichsprachlich, NICHT zwingend "X+
+Jahre" wie im Überblick oben - je nach Seniorität z.B. "langjähriger",
+"über 20 Jahren", "erster", passend zur Formulierung des Satzes.
+Satz 2-3: aktuelle/letzte Station - was macht die Person dort konkret,
+welche fachlichen Schwerpunkte. Satz 4-5 (optional, nur wenn CV-Text/
+freitextNotizen es anonym hergeben): Wechselgrund oder Zusatzkontext, z.B.
+"Aufgrund einer Umstrukturierung in ihrer aktuellen Kanzlei sucht sie...",
+"sucht eine Kanzlei, bei der er sich fachlich und persönlich
+weiterentwickeln kann".]
 
 **Fachliche Qualifikationen**
-[Bullet-Liste, so viele konkrete, spezifische Punkte wie die Datenlage
-hergibt (typisch 6-12 bei einem vollständigen CV) - lieber ein zusätzlicher
-präziser Punkt mehr als zu knapp. Jeder Punkt eine konkrete Tätigkeit/
-Kompetenz aus fachlicheSchwerpunkte bzw. dem CV-Text, keine Wiederholungen,
-keine generischen Sammelbegriffe ohne Substanz.]
+[Bullet-Liste, 6-9 Punkte bei einem normalen CV - NICHT künstlich auf mehr
+Punkte aufblähen, wenn der CV nicht mehr hergibt (bei sehr jungen
+Kandidat:innen sind auch 6 Punkte normal). Die Liste darf Themen aus dem
+Kurzprofil-Absatz aufgreifen und in knappe Einzelpunkte herunterbrechen (kein
+1:1 kopierter Satz) - "keine Überschneidung" ist NICHT das Ziel. Jeder Punkt
+eine konkrete Tätigkeit/Kompetenz aus fachlicheSchwerpunkte bzw. dem
+CV-Text, keine Wiederholungen, keine generischen Sammelbegriffe ohne
+Substanz.]
 
 **Lebenslauf (Auszug)**
 [Zeitraum] [Rolle], [anonymisierter Arbeitgeber-Typ — NIEMALS Firmenname, nur
 generische Beschreibung wie "Steuerkanzlei", "Steuerberatungsgesellschaft",
 "internationale Wirtschaftskanzlei", "mittelständisches Unternehmen",
 "öffentliche Institution" — aus aktuellesUmfeld/beruflicheStationen ableiten]
-[eine Zeile pro Station, neueste zuerst. Format exakt: "MM/JJJJ – MM/JJJJ Rolle,
-Arbeitgeber-Typ" bzw. "seit MM/JJJJ Rolle, Arbeitgeber-Typ" — KEIN Doppelpunkt
-nach dem Zeitraum, KEIN Aufzählungszeichen/Bindestrich am Zeilenanfang.]
+[eine Zeile pro Station, neueste zuerst, schlank gehalten - nur fachlich
+relevante Stationen (siehe Regel oben zu Nebentätigkeiten/Praktika/
+Sprachkursen), bei kurzer Historie reicht auch nur EINE Zeile. Format exakt:
+"MM/JJJJ – MM/JJJJ Rolle, Arbeitgeber-Typ" bzw. "seit MM/JJJJ Rolle,
+Arbeitgeber-Typ" — KEIN Doppelpunkt nach dem Zeitraum, KEIN
+Aufzählungszeichen/Bindestrich am Zeilenanfang.]
 
 **Ausbildung & Weiterbildung**
 [aus ausbildungTitel, ggf. mit Zeiträumen falls in den Daten vorhanden. Format
@@ -139,14 +161,120 @@ Doppelpunkt nach dem Zeitraum, KEIN Aufzählungszeichen/Bindestrich am
 Zeilenanfang.]
 
 **Weitere Infos**
-[je EINE eigene Zeile pro Sprache im Format "Sprache: Niveau", z.B.
-"Deutsch: Muttersprache" und "Englisch: Fließend" als zwei separate Zeilen -
-NICHT alle Sprachen in einer einzigen "Sprachen:"-Zeile zusammenfassen. Falls
-keine Sprachangaben vorhanden sind, diese Zeilen ganz weglassen.]
-EDV-Kenntnisse: [Tool1 | Tool2 | Tool3, mit " | " getrennt, falls vorhanden,
-sonst die Zeile ganz weglassen]
+[Knapp halten, meist 1-2 Zeilen insgesamt - keine granulare Auflistung. Für
+Sprachen ENTWEDER mehrere Zeilen im Format "Sprache: Niveau" (z.B. "Deutsch:
+Muttersprache") ODER eine einzige zusammengefasste Zeile "Sprachen: Deutsch
+(Muttersprache), Englisch (fließend)" - beides ist zulässig, wählen was zur
+Datenlage passt. Falls keine Sprachangaben vorhanden sind, weglassen.]
+[EDV/Tools-Zeile im Format "EDV: Tool1, Tool2" oder "Tools: Tool1, Tool2" (mit
+", " getrennt, NICHT " | "), NUR mit tatsächlich im CV genannten Systemen -
+nichts erfinden oder aufblähen. Ohne Angaben im CV die Zeile ganz weglassen.]
 
-Gib ausschließlich das fertige Profil zurück, keine Erklärungen davor oder danach."""
+Gib ausschließlich das fertige Profil zurück, keine Erklärungen davor oder danach.
+
+DREI STILVORBILDER (echte, bereits anonyme Commandeur-Consulting-Profile,
+exakt in diesem Stil/Format nachbilden - unterschiedliche Rollen/Seniorität):
+
+---BEISPIEL 1 (Steuerfachangestellte, viel Erfahrung)---
+## Kandidatin-Nr. 4052
+
+**Überblick**
+Wohnort: Raum Reutlingen
+Ausbildung/Weiterbildung: Steuerfachangestellte
+Berufserfahrung: 20+ Jahre
+Gehaltsvorstellung: ca. 60.000 € p.a.
+Verfügbarkeit: Kurzfristig
+
+**Kurzprofil**
+Die Kandidatin ist Steuerfachangestellte mit über 20 Jahren Berufserfahrung im Kanzleiumfeld. Sie ist fachlich breit aufgestellt und bringt fundierte Erfahrung in der laufenden Finanzbuchhaltung, digitalen Belegverarbeitung, Steuererklärungen, Jahresabschlüssen sowie in der Mandantenkommunikation mit. Sie kennt die Abläufe einer mittelständischen Steuerkanzlei sehr gut, arbeitet selbstständig und steht kurzfristig zur Verfügung.
+
+**Fachliche Qualifikationen**
+Erstellung laufender Finanzbuchhaltungen für unterschiedliche Mandate
+Bearbeitung digitaler Belege und moderner Kanzleiprozesse
+Erstellung von Steuererklärungen, insbesondere Einkommensteuererklärungen
+Erstellung von Jahresabschlüssen und Jahresbuchhaltungen
+Laufende Betreuung von Mandanten inkl. Kommunikation mit Mandanten und Behörden
+Unterstützung in der allgemeinen Kanzleiorganisation
+
+**Lebenslauf (Auszug)**
+seit 2022 Steuerfachangestellte, Steuerkanzlei
+
+**Ausbildung & Weiterbildung**
+Steuerfachangestellte
+
+**Weitere Infos**
+Deutsch: Muttersprache
+Tools: DATEV, Addison
+
+---BEISPIEL 2 (Steuerberater, baut Mandantenstamm auf)---
+## Kandidat-Nr. 4453
+
+**Überblick**
+Wohnort: Raum Heidelberg
+Ausbildung/Weiterbildung: Steuerberater
+Berufserfahrung: 6+ Jahre
+Gehaltsvorstellung: ca. 100.000 €
+Verfügbarkeit / Kündigungsfrist: 3 Monate zum Monatsende
+
+**Kurzprofil**
+Der Kandidat ist Steuerberater mit Erfahrung in der steuerlichen Betreuung von Unternehmen und Privatpersonen. Er baut aktuell einen eigenen Mandantenstamm auf und betreut diesen eigenständig. Zu seinen Schwerpunkten zählen die Erstellung und das Review von Jahresabschlüssen und Steuererklärungen, die laufende steuerliche Beratung sowie die Begleitung von Betriebsprüfungen. Darüber hinaus verfügt er über Erfahrung in der steuerlichen Gestaltungsberatung und der Optimierung bestehender Prozesse.
+
+**Fachliche Qualifikationen**
+Eigenständiger Aufbau und Betreuung eines Mandantenstamms
+Laufende und gestaltende steuerliche Beratung von Unternehmen und Privatpersonen
+Erstellung und Review von Jahresabschlüssen verschiedener Rechtsformen
+Erstellung und Review betrieblicher und privater Steuererklärungen
+Begleitung von Betriebsprüfungen und Korrespondenz mit Finanzbehörden
+Digitalisierung und Optimierung von Kanzlei- und Mandantenprozessen
+
+**Lebenslauf (Auszug)**
+seit 04/2025 Steuerberater, Steuerberatungsgesellschaft
+09/2020 – 03/2025 Steuerfachangestellter, Steuerberatungsgesellschaft
+
+**Ausbildung & Weiterbildung**
+2024 – 2025 Steuerberaterexamen
+2020 – 2022 Ausbildung zum Steuerfachangestellten
+2015 – 2018 Bachelor of Arts – BWL
+
+**Weitere Infos**
+Sprachen: Deutsch (Muttersprache), Englisch (fließend)
+EDV: MS Office, ADDISON
+
+---BEISPIEL 3 (Volljuristin, sehr senior)---
+## Kandidatin-Nr. 4051
+
+**Überblick**
+Wohnort: Raum Hamburg
+Ausbildung/Weiterbildung: Rechtsanwältin, promovierte Juristin, LL.M.
+Berufserfahrung: 15+ Jahre
+Gehaltsvorstellung: ca. 100.000 € p.a.
+Verfügbarkeit: Nach Absprache
+
+**Kurzprofil**
+Die Kandidatin ist Rechtsanwältin und promovierte Juristin mit langjähriger Erfahrung im internationalen wirtschaftsrechtlichen Umfeld. Ihr fachlicher Schwerpunkt liegt im Bereich Transaktionen, Gesellschaftsrecht und wirtschaftsrechtliche Beratung. Zuletzt war sie mehrere Jahre als Transaction Lawyerin in einer internationalen Wirtschaftskanzlei in Hamburg tätig und unterstützte dort bei grenzüberschreitenden M&A-Transaktionen, Due-Diligence-Prozessen, Kaufverträgen sowie Signing- und Closing-Prozessen. Zusätzlich bringt sie Erfahrung in der Anwendung von Legal-Tech- und KI-Tools im juristischen Arbeitsumfeld mit.
+
+**Fachliche Qualifikationen**
+M&A-Transaktionen und Umstrukturierungen
+Due-Diligence-Prozesse und Transaktionsbegleitung
+Kaufverträge, Signings und Closings
+Gesellschaftsrechtliche und wirtschaftsrechtliche Fragestellungen
+Immobilientransaktionen und kapitalmarktrechtliche Mandate
+Erstellung und Prüfung von Transaktionsdokumentation
+Internationale Projektkoordination
+Legal-Tech- und KI-Anwendungen im juristischen Umfeld
+
+**Lebenslauf (Auszug)**
+2018 – 2025 Transaction Lawyerin, internationale Wirtschaftskanzlei
+
+**Ausbildung & Weiterbildung**
+Rechtsanwältin
+Dr. iur.
+LL.M. im wirtschaftsrechtlichen Bereich
+Juristisches Hochschulstudium
+
+**Weitere Infos**
+Sprachen: Deutsch fließend, Englisch fließend, weitere Fremdsprachen vorhanden
+Tools: Legal-Tech- und KI-Anwendungen"""
 
 
 def _total_experience_years(stations: list[dict[str, Any]]) -> float | None:
