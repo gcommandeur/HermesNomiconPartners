@@ -174,6 +174,79 @@ def test_cv_structured_fields_includes_new_fields() -> None:
     assert "berufliche_stationen" in cv_extraction.CV_STRUCTURED_FIELDS
 
 
+class TestNebentaetigkeitExclusion:
+    """Regressionsschutz fuer den bestaetigten Bug an Kandidat #2359 (Sedighi):
+    eine spaeter liegende, im CV explizit unter 'Praktika und
+    Nebentaetigkeiten' gefuehrte Position (Lieferdienst) wurde faelschlich als
+    zeitlich letzte Station fuer rollen/current_employer_internal herangezogen
+    - obwohl davor eine reguläre Berufserfahrung (Wirtschaftspruefungsassistent,
+    4,5 Jahre unter 'BERUFSERFAHRUNG') klar erkennbar war. Ergebnis vor dem Fix:
+    rollen=["sonstige"], current_employer_internal="yourdelivery GmbH".
+
+    Da die eigentliche Ableitung ausschliesslich im LLM-Prompt steckt (keine
+    eigene Nachbearbeitungslogik im Code), kann ein Unit-Test nur pruefen,
+    dass (a) die neue Ausschluss-Regel im Prompt-Text vorhanden ist und (b)
+    die Normalisierung eine PROMPT-KONFORME Antwort korrekt durchreicht, ohne
+    sie zu verfaelschen. Ob das Modell der Regel tatsaechlich folgt, wird
+    weiterhin per echtem Testlauf gegen Kandidat #2359 verifiziert (siehe
+    Backfill-Skript-Stichprobe), nicht durch diesen Test."""
+
+    def test_prompt_contains_nebentaetigkeit_exclusion_rule(self) -> None:
+        prompt = cv_extraction._FIELD_EXTRACTION_SYSTEM_PROMPT
+        assert "Nebentätigkeiten" in prompt
+        assert "Praktika" in prompt
+        assert "Aushilfstätigkeit" in prompt
+
+    def test_normalization_preserves_correct_rolle_for_sedighi_like_case(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Simuliert eine PROMPT-KONFORME Modellantwort fuer den Sedighi-Fall
+        (regulaere Berufserfahrung als Pruefungsassistent, gefolgt von einer
+        spaeteren, als Nebentaetigkeit gekennzeichneten Lieferdienst-Station)
+        und prueft, dass extract_candidate_fields() dieses Ergebnis
+        unveraendert durchreicht statt es bei der Normalisierung zu
+        verfaelschen."""
+        monkeypatch.setattr(
+            cv_extraction,
+            "generate_text",
+            _fake_generate_text(
+                {
+                    "first_name": "Amirnader",
+                    "last_name": "Sedighi",
+                    "rollen": ["pruefungsassistent"],
+                    "current_employer_internal": "Wirtschaftsprüfungsgesellschaft, "
+                    "Faranegarhesab khobre",
+                    "berufliche_stationen": [
+                        {
+                            "rolle": None,
+                            "kanzleityp": "Sonstiges (Lieferdienst)",
+                            "kanzleigroesse": "unbekannt",
+                            "dauer_jahre": 2,
+                        },
+                        {
+                            "rolle": "pruefungsassistent",
+                            "kanzleityp": "Wirtschaftsprüfungsgesellschaft",
+                            "kanzleigroesse": "unbekannt",
+                            "dauer_jahre": 4.5,
+                        },
+                    ],
+                    "fachliche_schwerpunkte": ["Jahresabschlussprüfung"],
+                }
+            ),
+        )
+
+        result = cv_extraction.extract_candidate_fields("irrelevanter CV-Text")
+
+        assert result["rollen"] == ["pruefungsassistent"]
+        assert result["current_employer_internal"] == (
+            "Wirtschaftsprüfungsgesellschaft, Faranegarhesab khobre"
+        )
+        # Die Nebentaetigkeit bleibt Teil der vollstaendigen Historie, ist aber
+        # NICHT die Quelle von rollen/current_employer_internal.
+        assert len(result["berufliche_stationen"]) == 2
+        assert result["berufliche_stationen"][0]["rolle"] is None
+
+
 class TestRegexFallback:
     """Regressionsschutz fuer den Notfall-Fallback bei leerem API-Guthaben/
     Netzwerk-Timeout - live beobachtet: das Kandidat-anlegen-Formular

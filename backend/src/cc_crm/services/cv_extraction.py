@@ -195,6 +195,22 @@ ohnehin unverkürzt in berufliche_stationen. Leeres Array nur, wenn in der
 GESAMTEN Historie keine der 10 Rollen erkennbar ist (nicht "sonstige"
 erzwingen, wenn wirklich nichts passt).
 
+NEBENTÄTIGKEITEN NICHT ALS "ZEITLICH LETZTE" STATION ZÄHLEN: steht eine
+Position im CV erkennbar unter einer eigenen Überschrift wie "Praktika",
+"Nebentätigkeiten", "Nebenjob" oder "Aushilfstätigkeit" (bzw. ist sie
+inhaltlich klar als solche gekennzeichnet, z.B. Studentenjob/Aushilfe neben
+Ausbildung/Studium), zählt sie NICHT als reguläre berufliche Station für die
+Ableitung von "rollen" oder current_employer_internal - selbst wenn sie
+zeitlich NACH der letzten regulären Berufserfahrung-Station liegt. Beispiel:
+10/2016-06/2021 Wirtschaftsprüfungsassistent unter "BERUFSERFAHRUNG", danach
+09/2021-08/2023 Speiselieferant unter "Praktika und Nebentätigkeiten" ->
+rollen: ["pruefungsassistent"], current_employer_internal bezieht sich auf
+die Wirtschaftsprüfungsgesellschaft - NICHT auf den Lieferdienst. Diese
+Nebentätigkeiten trotzdem regulär in berufliche_stationen mit aufnehmen
+(vollständige Historie), aber an ihrer tatsächlichen zeitlichen Position -
+sie werden nur bei der "zeitlich letzte relevante Rolle"-Ableitung
+übersprungen.
+
 current_employer_internal: der Klarname des aktuellen/letzten Arbeitgebers
 (wird intern gespeichert, NIE automatisch in ausgehende Dokumente
 übernommen) - falls der Text erkennbar ein anonymisiertes Bewerberprofil
