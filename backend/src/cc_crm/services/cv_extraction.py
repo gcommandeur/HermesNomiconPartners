@@ -28,6 +28,7 @@ from typing import Any
 import docx
 from pypdf import PdfReader
 
+from cc_crm.core.errors import AIProviderError
 from cc_crm.integrations.ai.anthropic_client import generate_text, generate_text_with_image
 from cc_crm.models.enums import Rolle
 
@@ -386,6 +387,66 @@ def _normalize_berufliche_stationen(raw: Any) -> list[dict[str, Any]]:
     return stations
 
 
+_EMPTY_STRUCTURED_FIELDS: dict[str, Any] = {
+    "first_name": None,
+    "last_name": None,
+    "email": None,
+    "postal_code": None,
+    "city": None,
+    "phone": None,
+    "job_title": None,
+    "qualification": None,
+    "ausbildung_titel": None,
+    "fachliche_schwerpunkte": [],
+    "rollen": [],
+    "current_employer_internal": None,
+    "berufliche_stationen": [],
+}
+
+# Nur fuer den regelbasierten Fallback (siehe _extract_contact_fields_via_regex)
+# - bewusst konservativ: nur Felder, die sich ohne Sprachverstaendnis
+# zuverlaessig per Muster erkennen lassen (E-Mail/Telefon/PLZ+Ort). Name
+# NICHT per Regex raten (Risiko falscher Werte, z.B. aus einer Kanzlei-
+# Kopfzeile) - "erfinde nichts" gilt auch hier, nicht nur fuer das LLM.
+_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+# Bewusst " " statt "\s" innerhalb der Zeichenklasse (matcht sonst auch
+# Zeilenumbrueche und "frisst" sich in die naechste Zeile, z.B. in eine
+# direkt folgende PLZ) und eine Obergrenze fuer die Wiederholung, damit der
+# Match nicht ueber die eigentliche Telefonnummer hinaus laeuft.
+_PHONE_RE = re.compile(r"(?:\+49[\d ()/-]{5,17}\d|\b0[\d ()/-]{5,17}\d)")
+_PLZ_CITY_RE = re.compile(
+    r"\b(\d{5})\s+([A-ZÄÖÜ][a-zäöüß]+(?:[- ][A-ZÄÖÜ][a-zäöüß]+)*)"
+)
+
+
+def _extract_contact_fields_via_regex(cv_text: str) -> dict[str, Any]:
+    """Kostenlose, rein regelbasierte Notfall-Extraktion - Fallback, wenn das
+    LLM nicht erreichbar ist (z.B. API-Guthaben leer, siehe
+    extract_candidate_fields). Liefert bewusst NUR die per Muster
+    zuverlaessig erkennbaren Kontaktfelder (E-Mail/Telefon/PLZ+Ort) - Rolle/
+    Qualifikation/fachliche Schwerpunkte/berufliche Stationen brauchen
+    Sprachverstaendnis und bleiben leer, statt geraten zu werden. Ein
+    Kandidat kann darauf trotzdem angelegt und die smarten Felder spaeter
+    manuell oder per erneutem CV-Re-Parse (sobald wieder Guthaben vorhanden
+    ist) ergaenzt werden."""
+    result = dict(_EMPTY_STRUCTURED_FIELDS)
+
+    email_match = _EMAIL_RE.search(cv_text)
+    if email_match:
+        result["email"] = email_match.group(0)
+
+    phone_match = _PHONE_RE.search(cv_text)
+    if phone_match:
+        result["phone"] = phone_match.group(0).strip()
+
+    plz_city_match = _PLZ_CITY_RE.search(cv_text)
+    if plz_city_match:
+        result["postal_code"] = plz_city_match.group(1)
+        result["city"] = plz_city_match.group(2)
+
+    return result
+
+
 def extract_candidate_fields(
     cv_text: str, *, filename: str | None = None, content: bytes | None = None
 ) -> dict[str, Any]:
@@ -401,23 +462,48 @@ def extract_candidate_fields(
     _extract_fields_via_vision) - das faengt genau den Fall auf, in dem eine
     defekte Font-Kodierung im PDF den Text-Layer unbrauchbar macht. Ohne
     filename/content (z.B. in den Batch-Backfill-Skripten) faellt dieser
-    Fallback einfach weg, keine Verhaltensaenderung dort."""
-    raw = generate_text(
-        system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
-        user_message=cv_text[:12000],
-        # 1500 statt urspruenglich 750: berufliche_stationen (komplette
-        # Stationshistorie statt nur der aktuellsten Position) und rollen/
-        # current_employer_internal liefern deutlich mehr Output als die
-        # bisherigen reinen Kurzfelder.
-        max_tokens=1500,
-        # timeout=25.0 (statt Standard 45.0): dieser Call kann bei PDFs von
-        # einem zweiten, sequenziellen Vision-Fallback-Call gefolgt werden
-        # (siehe unten) - beide zusammen muessen sicher unter dem App-
-        # Platform-Gateway-Timeout bleiben, siehe Kommentar bei
-        # _extract_fields_via_vision.
-        timeout=25.0,
-    )
-    data = _parse_json_response(raw)
+    Fallback einfach weg, keine Verhaltensaenderung dort.
+
+    Schlaegt der LLM-Call selbst fehl (z.B. API-Guthaben leer, Netzwerk-
+    Timeout, kaputte JSON-Antwort) wird NICHT die ganze Extraktion (und
+    damit das Kandidat-anlegen-Formular) mit einem Fehler abgebrochen -
+    Nutzer-Vorgabe: lieber ein Kandidat mit nur den per Regex erkennbaren
+    Kontaktfeldern (E-Mail/Telefon/PLZ/Ort) als gar keiner. Die "smarten"
+    Felder (Rolle/Qualifikation/Schwerpunkte/Stationen) bleiben in diesem
+    Fall leer und koennen spaeter per erneutem CV-Re-Parse nachgeliefert
+    werden, sobald wieder Guthaben vorhanden ist."""
+    try:
+        raw = generate_text(
+            system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
+            user_message=cv_text[:12000],
+            # 1500 statt urspruenglich 750: berufliche_stationen (komplette
+            # Stationshistorie statt nur der aktuellsten Position) und rollen/
+            # current_employer_internal liefern deutlich mehr Output als die
+            # bisherigen reinen Kurzfelder.
+            max_tokens=1500,
+            # timeout=25.0 (statt Standard 45.0): dieser Call kann bei PDFs von
+            # einem zweiten, sequenziellen Vision-Fallback-Call gefolgt werden
+            # (siehe unten) - beide zusammen muessen sicher unter dem App-
+            # Platform-Gateway-Timeout bleiben, siehe Kommentar bei
+            # _extract_fields_via_vision.
+            timeout=25.0,
+        )
+        data = _parse_json_response(raw)
+    except (AIProviderError, ValueError):
+        logger.warning(
+            "CV-Extraktion per LLM fehlgeschlagen (z.B. API-Guthaben leer/Timeout) - "
+            "falle auf regelbasierte Kontaktfeld-Extraktion zurueck.",
+            exc_info=True,
+        )
+        fallback_data = _extract_contact_fields_via_regex(cv_text)
+        # Derselbe Schutz wie unten fuer den LLM-Pfad: ein automatisch von
+        # Commandeur selbst erzeugtes anonymes Profil (faelschlich als "CV"
+        # hochgeladen) darf NIE die eigene Kanzlei-Adresse/Telefonnummer als
+        # vermeintliche Kandidatendaten uebernehmen.
+        if is_agency_letterhead(cv_text):
+            for key in ("email", "postal_code", "city", "phone"):
+                fallback_data[key] = None
+        return fallback_data
     # Defensiv: das Modell haelt sich fast immer an das Array-Schema, aber
     # ohne diese Normalisierung wuerde ein fehlendes/falsch typisiertes Feld
     # (z.B. null statt []) weiter unten beim Speichern (JSON-Spalte, erwartet

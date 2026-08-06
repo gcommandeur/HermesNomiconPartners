@@ -171,3 +171,91 @@ def test_cv_structured_fields_includes_new_fields() -> None:
     assert "rollen" in cv_extraction.CV_STRUCTURED_FIELDS
     assert "current_employer_internal" in cv_extraction.CV_STRUCTURED_FIELDS
     assert "berufliche_stationen" in cv_extraction.CV_STRUCTURED_FIELDS
+
+
+class TestRegexFallback:
+    """Regressionsschutz fuer den Notfall-Fallback bei leerem API-Guthaben/
+    Netzwerk-Timeout - live beobachtet: das Kandidat-anlegen-Formular
+    scheiterte komplett (504), wenn der LLM-Call fehlschlug. Statt die
+    Extraktion (und damit das Formular) mit einem Fehler abzubrechen, muss
+    jetzt eine regelbasierte Notfall-Extraktion der Kontaktfelder greifen."""
+
+    def test_falls_back_to_regex_when_llm_raises_ai_provider_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def raise_ai_provider_error(**kwargs: object) -> str:
+            raise cv_extraction.AIProviderError("Guthaben zu niedrig")
+
+        monkeypatch.setattr(cv_extraction, "generate_text", raise_ai_provider_error)
+
+        cv_text = (
+            "Lebenslauf\nMax Mustermann\nmax.mustermann@example.com\n"
+            "Telefon: 0170 1234567\n49191 Belm\n"
+        )
+        result = cv_extraction.extract_candidate_fields(cv_text)
+
+        assert result["email"] == "max.mustermann@example.com"
+        assert result["phone"] == "0170 1234567"
+        assert result["postal_code"] == "49191"
+        assert result["city"] == "Belm"
+        # Name wird NICHT geraten - braucht Sprachverstaendnis, nicht per
+        # Regex zuverlaessig erkennbar.
+        assert result["first_name"] is None
+        assert result["last_name"] is None
+        # Smarte Felder bleiben leer statt zu crashen.
+        assert result["rollen"] == []
+        assert result["fachliche_schwerpunkte"] == []
+        assert result["berufliche_stationen"] == []
+
+    def test_falls_back_to_regex_when_llm_returns_broken_json(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_broken_json(**kwargs: object) -> str:
+            return "das ist kein JSON"
+
+        monkeypatch.setattr(cv_extraction, "generate_text", fake_broken_json)
+
+        result = cv_extraction.extract_candidate_fields("Kontakt: test@example.com")
+
+        assert result["email"] == "test@example.com"
+
+    def test_regex_fallback_never_raises_on_empty_text(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Kernfall aus der Praxis: ein gescanntes PDF ohne Textebene liefert
+        leeren cv_text - der Fallback muss trotzdem ein valides, leeres
+        Ergebnis liefern statt zu crashen (live reproduziert mit einer
+        echten leeren Kandidaten-CV)."""
+
+        def raise_ai_provider_error(**kwargs: object) -> str:
+            raise cv_extraction.AIProviderError("Guthaben zu niedrig")
+
+        monkeypatch.setattr(cv_extraction, "generate_text", raise_ai_provider_error)
+
+        result = cv_extraction.extract_candidate_fields("")
+
+        assert result == dict(cv_extraction._EMPTY_STRUCTURED_FIELDS)
+
+    def test_regex_fallback_suppresses_agency_address_like_llm_path(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Derselbe Schutz wie im LLM-Pfad: ein faelschlich als CV
+        hochgeladenes, von Commandeur selbst erzeugtes anonymes Profil darf
+        auch im Fallback nie die eigene Kanzlei-Adresse als Kandidatendaten
+        liefern."""
+
+        def raise_ai_provider_error(**kwargs: object) -> str:
+            raise cv_extraction.AIProviderError("Guthaben zu niedrig")
+
+        monkeypatch.setattr(cv_extraction, "generate_text", raise_ai_provider_error)
+
+        letterhead_text = (
+            "Commandeur Consulting GmbH, Talstraße 112, 41199 Mönchengladbach\n"
+            "kontakt@commandeur-consulting.de, Tel. 02161 1234567"
+        )
+        result = cv_extraction.extract_candidate_fields(letterhead_text)
+
+        assert result["email"] is None
+        assert result["phone"] is None
+        assert result["postal_code"] is None
+        assert result["city"] is None
