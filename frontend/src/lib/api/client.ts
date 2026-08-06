@@ -23,7 +23,14 @@ function timeoutSignal(): AbortSignal {
 }
 
 /** FastAPI error responses are JSON like {"detail": "..."}; showing that raw
- * in the UI ("{"detail":"..."}") looks broken. Extract just the message. */
+ * in the UI ("{"detail":"..."}") looks broken. Extract just the message.
+ *
+ * Ein Gateway (z.B. DigitalOcean App Platform bei einem 504) antwortet bei
+ * einem Fehler VOR unserem eigenen Backend nicht mit JSON, sondern mit einer
+ * ganzen HTML-Fehlerseite - die landete zuvor 1:1 als Error-Message und wurde
+ * roh im UI angezeigt (live beobachtet: kompletter HTML-Quelltext im
+ * CV-Upload-Hinweis). Nicht-JSON-Antworten bekommen daher immer eine kurze,
+ * generische Meldung statt des rohen Bodies. */
 async function errorMessageFromResponse(response: Response): Promise<string> {
   const raw = await response.text();
   if (!raw) return `API antwortet mit ${response.status}`;
@@ -31,7 +38,9 @@ async function errorMessageFromResponse(response: Response): Promise<string> {
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed.detail === "string") return parsed.detail;
   } catch {
-    // not JSON - fall through to raw text
+    // Kein JSON (z.B. HTML-Fehlerseite eines vorgeschalteten Gateways) - der
+    // rohe Body darf nie in die UI durchgereicht werden.
+    return `Server antwortet nicht wie erwartet (Status ${response.status}). Bitte in ein paar Minuten erneut versuchen.`;
   }
   return raw;
 }
