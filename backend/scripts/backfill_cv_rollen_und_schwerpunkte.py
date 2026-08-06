@@ -40,6 +40,12 @@ Usage (aus backend/, mit aktiviertem venv):
     # DB-Backup (siehe Warnhinweis unten, dieses Skript loest das Backup
     # nicht selbst aus).
     python scripts/backfill_cv_rollen_und_schwerpunkte.py --apply
+
+    # Gezielt nur bestimmte candidate_numbers (z.B. eine handverlesene
+    # Test-Stichprobe vor einem grossen Lauf) - schliesst --sample/--limit
+    # aus, ignoriert --skip.
+    python scripts/backfill_cv_rollen_und_schwerpunkte.py --apply \\
+        --candidate-numbers 3088,4324,4330
 """
 
 from __future__ import annotations
@@ -158,6 +164,27 @@ def _evenly_spaced_sample(candidates: list[Candidate], sample_size: int) -> list
     step = total / sample_size
     indices = {int(i * step) for i in range(sample_size)}
     return [candidates[i] for i in sorted(indices)]
+
+
+def _filter_by_candidate_numbers(
+    candidates: list[Candidate], candidate_numbers: list[str]
+) -> list[Candidate]:
+    """Waehlt genau die uebergebenen candidate_numbers aus (Reihenfolge wie
+    uebergeben) - fuer eine handverlesene Test-Stichprobe statt einer
+    automatischen --sample/--limit-Auswahl. Unbekannte Nummern werden mit
+    einer Warnung uebersprungen statt den Lauf abzubrechen."""
+    by_number = {c.candidate_number: c for c in candidates if c.candidate_number}
+    selected: list[Candidate] = []
+    for number in candidate_numbers:
+        candidate = by_number.get(number)
+        if candidate is None:
+            print(
+                f"WARNUNG: candidate_number {number!r} nicht gefunden (oder ohne "
+                "CV-Dokument) - wird uebersprungen."
+            )
+            continue
+        selected.append(candidate)
+    return selected
 
 
 def _confidence_for(extracted: dict[str, object]) -> str:
@@ -370,7 +397,20 @@ def main() -> None:
             "bezahlt werden. Kombinierbar mit --limit."
         ),
     )
+    parser.add_argument(
+        "--candidate-numbers",
+        type=str,
+        default=None,
+        help=(
+            "Kommagetrennte Liste konkreter candidate_numbers - fuer eine handverlesene "
+            "Test-Stichprobe statt einer automatischen Auswahl. Schliesst --sample/--limit "
+            "aus, ignoriert --skip."
+        ),
+    )
     args = parser.parse_args()
+
+    if args.candidate_numbers and (args.sample or args.limit):
+        parser.error("--candidate-numbers schliesst --sample/--limit aus.")
 
     if args.apply:
         print(
@@ -381,12 +421,16 @@ def main() -> None:
 
     with SessionLocal() as session:
         candidates = _candidates_with_cv(session)
-    if args.skip:
-        candidates = candidates[args.skip :]
-    if args.sample:
-        candidates = _evenly_spaced_sample(candidates, args.sample)
-    elif args.limit:
-        candidates = candidates[: args.limit]
+    if args.candidate_numbers:
+        numbers = [n.strip() for n in args.candidate_numbers.split(",") if n.strip()]
+        candidates = _filter_by_candidate_numbers(candidates, numbers)
+    else:
+        if args.skip:
+            candidates = candidates[args.skip :]
+        if args.sample:
+            candidates = _evenly_spaced_sample(candidates, args.sample)
+        elif args.limit:
+            candidates = candidates[: args.limit]
 
     mode = "APPLY" if args.apply else "DRY-RUN"
     print(f"=== CV-Rollen-/Schwerpunkte-Backfill ({mode}) ===")

@@ -27,6 +27,32 @@ def _use_tmp_output_path(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.setattr(backfill_script, "OUTPUT_PATH", tmp_path / "cv_rollen_backfill_review.csv")
 
 
+class TestFilterByCandidateNumbers:
+    """Regressionsschutz fuers neue --candidate-numbers-Flag: eine
+    handverlesene Test-Stichprobe (z.B. vor einem grossen Produktions-Lauf)
+    muss GENAU diese Kandidaten treffen, in der angegebenen Reihenfolge,
+    und unbekannte Nummern duerfen den Lauf nicht abbrechen."""
+
+    def test_selects_exact_candidates_in_requested_order(self) -> None:
+        c1 = Candidate(candidate_number="100", first_name="A", last_name="A")
+        c2 = Candidate(candidate_number="200", first_name="B", last_name="B")
+        c3 = Candidate(candidate_number="300", first_name="C", last_name="C")
+
+        result = backfill_script._filter_by_candidate_numbers([c1, c2, c3], ["300", "100"])
+
+        assert result == [c3, c1]
+
+    def test_unknown_candidate_number_is_skipped_not_fatal(
+        self, capsys: pytest.CaptureFixture
+    ) -> None:
+        c1 = Candidate(candidate_number="100", first_name="A", last_name="A")
+
+        result = backfill_script._filter_by_candidate_numbers([c1], ["100", "999"])
+
+        assert result == [c1]
+        assert "999" in capsys.readouterr().out
+
+
 def _make_candidate_with_cv(session: Session, **overrides: object) -> Candidate:
     defaults: dict[str, object] = {"first_name": "Max", "last_name": "Muster"}
     defaults.update(overrides)
