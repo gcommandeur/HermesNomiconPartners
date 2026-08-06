@@ -90,7 +90,12 @@ REGELN:
   - "frau" → Kopfzeile "Kandidatin-Nr.", im Fließtext "Die Kandidatin", "sie", "ihre"
   - "herr" → Kopfzeile "Kandidat-Nr.", im Fließtext "Der Kandidat", "er", "seine"
   - "divers" oder nicht gesetzt → Kopfzeile "Kandidat:in-Nr.", im Fließtext
-    neutral formulieren (z.B. "Die Person", "diese Fachkraft") statt zu raten
+    neutral formulieren (z.B. "Die Person", "diese Fachkraft") statt zu raten.
+    Doppelpunkt-Gendern gilt AUCH hier als verboten - das betrifft nicht nur
+    "Kandidat:in", sondern JEDES Substantiv: "Wirtschaftsprüfungsassistent:in"
+    ist falsch, stattdessen umformulieren z.B. "als Wirtschaftsprüfungs-
+    assistenz" oder "im Bereich Wirtschaftsprüfung" - Rollenbezeichnungen
+    immer ohne Doppelpunkt, notfalls die Tätigkeit statt des Titels nennen.
 
 AUSGABEFORMAT (exakt dieses Format — 1:1 aus den 5 NEUESTEN echten Commandeur-
 Consulting-Kandidatenprofilen übernommen, NICHT davon abweichen; die drei
