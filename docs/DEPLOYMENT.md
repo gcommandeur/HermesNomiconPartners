@@ -160,6 +160,29 @@ sichtbar):
 - `CC_CRM_ANTHROPIC_MODEL=claude-sonnet-5`
 - `CC_CRM_CORS_ORIGINS=["https://hermescrm-v9sle.ondigitalocean.app"]`
 
+### Sicherheitswarnungen per E-Mail (Brute-Force-Alarm auf `/auth/login`)
+
+Seit 2026-08-08 verschickt `services/security_alerts.py` eine E-Mail, sobald
+das Login-Rate-Limit (siehe unten) für eine IP auslöst - pro
+Brute-Force-Ausbruch genau einmal, nicht pro weiterem 429. Ohne die folgenden
+Variablen bleibt das Feature inaktiv (nur ein Log-Eintrag, kein Mail-Versand
+- bricht den Login-Flow also nie):
+
+- `CC_CRM_SECURITY_ALERT_EMAIL` – Ziel-Adresse (z.B.
+  `gege.commandeur@gmail.com`)
+- `CC_CRM_SMTP_HOST`, `CC_CRM_SMTP_PORT` (Default 587)
+- `CC_CRM_SMTP_USERNAME`, `CC_CRM_SMTP_PASSWORD` (verschlüsselt) – bei Gmail
+  als Absender-Konto: ein
+  [App-Passwort](https://myaccount.google.com/apppasswords) verwenden, nicht
+  das normale Kontopasswort (Gmail verlangt das für SMTP-Login bei aktivierter
+  2FA)
+- `CC_CRM_SMTP_FROM_EMAIL` (optional, sonst `CC_CRM_SMTP_USERNAME`)
+- `CC_CRM_SMTP_USE_TLS=true` (Default; STARTTLS)
+
+Alle SMTP-Werte (Host/Port/Username/From) unverschlüsselt lassen, nur
+`CC_CRM_SMTP_PASSWORD` als "Encrypt" markieren - analog zu den übrigen
+Secrets oben.
+
 ### Temporäre Variable für einmalige Skript-Läufe: `CC_ARCHIV_REVIEW_CSV_B64`
 
 `backend/scripts/delete_cc_archiv_altbestand.py` braucht die Review-CSV
@@ -247,9 +270,19 @@ neu generieren" invalidieren. Einbindung in Outlook (Desktop oder Web) über
 - API-Dokumentation nur außerhalb Produktion: `/docs`, `/redoc` und
   `/openapi.json` liefern bei `CC_CRM_ENVIRONMENT=production` 404
   (`main.py::create_app`).
-- Rate-Limiting auf dem Login-Endpunkt: nach 5 fehlgeschlagenen
+- Rate-Limiting auf dem Login-Endpunkt: nach 3 fehlgeschlagenen
   Login-Versuchen derselben Client-IP innerhalb von 5 Minuten liefert
-  `/api/v1/auth/login` 429 (`core/rate_limit.py`).
+  `/api/v1/auth/login` 429 (`core/rate_limit.py`, `MAX_ATTEMPTS`/`WINDOW`).
+  Die Client-IP wird primär aus `CF-Connecting-IP` gelesen (von Cloudflare
+  selbst am Edge gesetzt, vom Client nicht fälschbar) - **nicht** mehr aus
+  dem ersten `X-Forwarded-For`-Eintrag: der ist vom Client frei wählbar und
+  erlaubte bis 2026-08-08 eine vollständige Umgehung des Rate-Limits durch
+  einen bei jedem Request neu erfundenen Header-Wert (live auf Produktion
+  bestätigt und seitdem behoben, siehe Git-History `core/rate_limit.py`).
+  Löst das Limit für eine IP aus, geht zusätzlich einmalig eine
+  Sicherheitswarnung per E-Mail raus (siehe
+  "Sicherheitswarnungen per E-Mail" oben) - vorausgesetzt, die SMTP-Variablen
+  sind gesetzt.
 - Datenbank nicht öffentlich erreichbar, nur über Trusted-Source-Bindung zur
   App selbst.
 - GitHub-Zugriff für DigitalOcean auf genau ein Repo beschränkt statt

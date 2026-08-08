@@ -58,6 +58,19 @@ class Settings(BaseSettings):
     s3_access_key_id: str | None = None
     s3_secret_access_key: str | None = None
 
+    # Sicherheitswarnungen (z.B. geblockter Brute-Force-Versuch auf
+    # /auth/login) per E-Mail - siehe services/security_alerts.py. Ohne
+    # gesetzte Ziel-Adresse UND SMTP-Host bleibt das Feature inaktiv (nur ein
+    # Log-Eintrag statt eines Mail-Versands), damit ein fehlendes Setup nie
+    # den eigentlichen Login-Flow beeintraechtigt.
+    security_alert_email: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str | None = None
+    smtp_use_tls: bool = True
+
     @model_validator(mode="after")
     def _strip_bucket_prefix_from_s3_endpoint(self) -> "Settings":
         """Live auf Produktion bestätigt: `S3_ENDPOINT_URL` war auf die

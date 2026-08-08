@@ -43,11 +43,20 @@ class LoginRateLimiter:
             recent = self._prune(key, datetime.now(UTC))
             return len(recent) >= self._max_attempts
 
-    def record_failure(self, key: str) -> None:
+    def record_failure(self, key: str) -> bool:
+        """Zaehlt einen Fehlversuch und gibt True zurueck GENAU auf dem
+        Versuch, der die Sperre neu ausloest (Uebergang von "noch erlaubt" zu
+        "ab jetzt blockiert") - nicht bei jedem weiteren Versuch waehrend eine
+        Sperre bereits aktiv ist. Damit kann der Aufrufer genau einmal pro
+        Brute-Force-Ausbruch eine Sicherheitswarnung verschicken statt bei
+        jedem einzelnen weiteren (ohnehin schon 429-blockierten) Versuch."""
         with self._lock:
             now = datetime.now(UTC)
-            self._prune(key, now)
-            self._failures[key].append(now)
+            recent = self._prune(key, now)
+            was_blocked = len(recent) >= self._max_attempts
+            recent.append(now)
+            self._failures[key] = recent
+            return len(recent) >= self._max_attempts and not was_blocked
 
     def record_success(self, key: str) -> None:
         with self._lock:
@@ -61,15 +70,40 @@ class LoginRateLimiter:
         with self._lock:
             self._failures.clear()
 
+    @property
+    def max_attempts(self) -> int:
+        return self._max_attempts
+
+    @property
+    def window(self) -> timedelta:
+        return self._window
+
 
 login_rate_limiter = LoginRateLimiter()
 
 
-def client_ip(forwarded_for: str | None, direct_host: str | None) -> str:
-    """Bevorzugt X-Forwarded-For (erster Eintrag = urspruenglicher Client),
-    da Railway/Vercel & Co. hinter einem Reverse Proxy laufen - ohne das
-    wuerde jede Anfrage faelschlich als vom Proxy selbst kommend gezaehlt und
-    das Rate-Limit griffe nie pro echtem Client."""
+def client_ip(
+    cf_connecting_ip: str | None, forwarded_for: str | None, direct_host: str | None
+) -> str:
+    """Ermittelt die Client-IP fuer das Rate-Limiting.
+
+    Bevorzugt `CF-Connecting-IP`: die Produktivumgebung laeuft hinter
+    Cloudflare (siehe docs/DEPLOYMENT.md) und Cloudflare setzt diesen Header
+    selbst am Edge auf die tatsaechliche Verbindungs-IP - ein von aussen
+    mitgeschickter Wert wird dabei von Cloudflare ueberschrieben, ist also
+    nicht faelschbar.
+
+    `X-Forwarded-For` dient nur noch als Fallback fuer Umgebungen ohne
+    Cloudflare (lokale Entwicklung/Docker Compose). SICHERHEITSLUECKE, die
+    genau deshalb behoben wurde: der erste Eintrag von X-Forwarded-For ist
+    ein vom Client selbst frei waehlbarer Header-Wert - ein Angreifer konnte
+    das Login-Rate-Limit dadurch mit einem beliebigen, bei jedem Request neu
+    erfundenen X-Forwarded-For-Wert vollstaendig umgehen (live auf Produktion
+    bestaetigt: unbegrenzte Passwort-Versuche trotz aktivem Limiter). Ohne
+    CF-Connecting-IP (z.B. lokal) besteht dieses Risiko weiterhin, dort ist
+    die Umgebung aber nicht oeffentlich exponiert."""
+    if cf_connecting_ip:
+        return cf_connecting_ip.strip()
     if forwarded_for:
         return forwarded_for.split(",")[0].strip()
     return direct_host or "unknown"
