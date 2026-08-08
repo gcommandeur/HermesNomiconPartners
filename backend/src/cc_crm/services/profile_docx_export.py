@@ -39,7 +39,7 @@ from docx.text.run import Run
 
 from cc_crm.core.errors import ConflictError
 from cc_crm.models.candidate import Candidate
-from cc_crm.models.enums import Anrede, Rolle
+from cc_crm.models.enums import Anrede
 
 TEMPLATE_PATH = Path(__file__).resolve().parents[3] / "templates" / "anonymes_profil_master.docx"
 
@@ -54,78 +54,19 @@ _HEADING_LEBENSLAUF = "Lebenslauf (Auszug)"
 _HEADING_AUSBILDUNG = "Ausbildung & Weiterbildung"
 _HEADING_WEITERE_INFOS = "Weitere Infos"
 
-# Gegenderte Anzeige-Labels fuer den Export-Dateinamen (siehe
-# build_export_filename) - Nutzer-Vorgabe nach Abgleich mit den real von Gege
-# geschriebenen Referenzprofilen in Desktop\Profile. "partner" bewusst OHNE
-# Genus-Endung (Referenzdatei "Nr. 4016_Partner.docx" - Sonderfall, kein
-# "Partnerin" beobachtet). Bei anrede=divers/None wird die maskuline Form als
-# neutraler Default verwendet (keine Referenzdatei mit divers vorhanden).
-_ROLE_LABELS: dict[Rolle, str | dict[Anrede, str]] = {
-    Rolle.STEUERFACHANGESTELLTE: {
-        Anrede.FRAU: "Steuerfachangestellte",
-        Anrede.HERR: "Steuerfachangestellter",
-    },
-    Rolle.STEUERFACHWIRT: {Anrede.FRAU: "Steuerfachwirtin", Anrede.HERR: "Steuerfachwirt"},
-    Rolle.BILANZBUCHHALTER: {Anrede.FRAU: "Bilanzbuchhalterin", Anrede.HERR: "Bilanzbuchhalter"},
-    Rolle.STEUERBERATER: {Anrede.FRAU: "Steuerberaterin", Anrede.HERR: "Steuerberater"},
-    Rolle.PARTNER: "Partner",
-    Rolle.PRUEFUNGSASSISTENT: {
-        Anrede.FRAU: "Prüfungsassistentin",
-        Anrede.HERR: "Prüfungsassistent",
-    },
-    Rolle.PRUEFUNGSLEITER: {Anrede.FRAU: "Prüfungsleiterin", Anrede.HERR: "Prüfungsleiter"},
-    Rolle.WIRTSCHAFTSPRUEFER: {
-        Anrede.FRAU: "Wirtschaftsprüferin",
-        Anrede.HERR: "Wirtschaftsprüfer",
-    },
-    Rolle.RECHTSFACHANGESTELLTE: {
-        Anrede.FRAU: "Rechtsfachangestellte",
-        Anrede.HERR: "Rechtsfachangestellter",
-    },
-    Rolle.RECHTSANWALT: {Anrede.FRAU: "Rechtsanwältin", Anrede.HERR: "Rechtsanwalt"},
-}
-
-# Zeichen, die in Windows-Dateinamen verboten sind - nur relevant fuer den
-# job_title-Freitext-Fallback (die Rollen-Labels oben sind bereits sicher).
-_FILENAME_UNSAFE_RE = re.compile(r'[\\/:*?"<>|]')
-
-
-def _role_label(rolle: Rolle, anrede: Anrede | None) -> str | None:
-    entry = _ROLE_LABELS.get(rolle)
-    if entry is None:
-        return None
-    if isinstance(entry, str):
-        return entry
-    return entry.get(anrede or Anrede.HERR, entry[Anrede.HERR])
-
-
 def build_export_filename(candidate: Candidate) -> str:
-    """Nutzer-Namenskonvention (siehe Referenzprofile in Desktop\\Profile,
-    z.B. "Nr. 4024_Rechtsanwältin.docx"): "Nr. {candidate_number}_
-    {Rollenbezeichnung}.docx". Rollenbezeichnung aus der PRIMAEREN (ersten,
-    da candidate.rollen die zeitlich letzte(n) relevante(n) Rolle(n) enthaelt
-    - siehe cv_extraction.py) Rolle, gegendert nach anrede. Ohne rollen (leer
-    oder nur "sonstige"): Fallback auf job_title. Ohne beides: nur die
-    Nummer. Eine UUID im Dateinamen ist in KEINEM Fall akzeptabel (frueher
-    beobachtetes Problem bei Kandidaten ohne candidate_number) - fehlt sogar
-    die candidate_number, gibt es einen generischen Dateinamen ohne jede
-    Kandidaten-Kennung statt der UUID."""
+    """Nutzer-Namenskonvention (siehe Referenzprofile in Desktop\\Profile):
+    Profile heissen AUSSCHLIESSLICH "Nr. {candidate_number}.docx" - KEIN
+    Rollen-/Qualifikations-Suffix mehr (fruehere Version haengte die
+    gegenderte Rollenbezeichnung an, z.B. "Nr. 4024_Rechtsanwältin.docx" -
+    das war eine Fehlinterpretation aelterer Referenzdateien, per explizitem
+    Nutzer-Feedback verworfen). Eine UUID im Dateinamen ist in KEINEM Fall
+    akzeptabel (frueher beobachtetes Problem bei Kandidaten ohne
+    candidate_number) - fehlt die candidate_number, gibt es einen
+    generischen Dateinamen ohne jede Kandidaten-Kennung statt der UUID."""
     if not candidate.candidate_number:
         return "Profil.docx"
-
-    label: str | None = None
-    for rolle in candidate.rollen or []:
-        try:
-            label = _role_label(Rolle(rolle), candidate.anrede)
-        except ValueError:
-            label = None
-        if label:
-            break
-    if not label and candidate.job_title:
-        label = _FILENAME_UNSAFE_RE.sub("_", candidate.job_title.strip()) or None
-    if not label:
-        return f"Nr. {candidate.candidate_number}.docx"
-    return f"Nr. {candidate.candidate_number}_{label}.docx"
+    return f"Nr. {candidate.candidate_number}.docx"
 
 _ZEITRAUM_CV = re.compile(
     r"^[•\-*]?\s*(seit\s+\d{1,2}/\d{4}|\d{1,2}/\d{4}\s*[–-]\s*\d{1,2}/\d{4})[:\s]+(.*)$"

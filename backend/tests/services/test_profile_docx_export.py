@@ -85,64 +85,21 @@ def _make_candidate(**overrides: object) -> Candidate:
     return Candidate(**defaults)
 
 
-def test_build_export_filename_uses_gendered_primary_role() -> None:
+def test_build_export_filename_is_plain_number_only() -> None:
+    """Nutzer-Vorgabe (nach Rueckmeldung): Profile heissen ausschliesslich
+    'Nr. {candidate_number}.docx' - KEIN Rollen-/Qualifikations-Suffix mehr,
+    unabhaengig von rollen/job_title/anrede."""
     candidate = _make_candidate(
         candidate_number="4024", anrede=Anrede.FRAU, rollen=["rechtsanwalt"]
     )
-    assert build_export_filename(candidate) == "Nr. 4024_Rechtsanwältin.docx"
+    assert build_export_filename(candidate) == "Nr. 4024.docx"
 
 
-def test_build_export_filename_male_role_variant() -> None:
-    candidate = _make_candidate(
-        candidate_number="4009", anrede=Anrede.HERR, rollen=["rechtsanwalt"]
-    )
-    assert build_export_filename(candidate) == "Nr. 4009_Rechtsanwalt.docx"
-
-
-def test_build_export_filename_partner_is_ungegendert() -> None:
-    candidate = _make_candidate(
-        candidate_number="4016", anrede=Anrede.FRAU, rollen=["partner"]
-    )
-    assert build_export_filename(candidate) == "Nr. 4016_Partner.docx"
-
-
-def test_build_export_filename_uses_first_relevant_role_when_multiple() -> None:
-    candidate = _make_candidate(
-        candidate_number="100", anrede=Anrede.HERR, rollen=["steuerberater", "partner"]
-    )
-    assert build_export_filename(candidate) == "Nr. 100_Steuerberater.docx"
-
-
-def test_build_export_filename_falls_back_to_job_title_when_rollen_empty() -> None:
+def test_build_export_filename_plain_number_regardless_of_job_title() -> None:
     candidate = _make_candidate(
         candidate_number="200", anrede=Anrede.HERR, rollen=[], job_title="Finance Manager"
     )
-    assert build_export_filename(candidate) == "Nr. 200_Finance Manager.docx"
-
-
-def test_build_export_filename_falls_back_to_job_title_when_rollen_only_sonstige() -> None:
-    candidate = _make_candidate(
-        candidate_number="201",
-        anrede=Anrede.HERR,
-        rollen=["sonstige"],
-        job_title="Konzern-Buchhalter",
-    )
-    assert build_export_filename(candidate) == "Nr. 201_Konzern-Buchhalter.docx"
-
-
-def test_build_export_filename_sanitizes_unsafe_characters_in_job_title_fallback() -> None:
-    candidate = _make_candidate(
-        candidate_number="202", anrede=Anrede.HERR, rollen=[], job_title='Tax: Manager/Advisor'
-    )
-    filename = build_export_filename(candidate)
-    assert filename == "Nr. 202_Tax_ Manager_Advisor.docx"
-
-
-def test_build_export_filename_plain_number_when_rollen_and_job_title_empty() -> None:
-    candidate = _make_candidate(
-        candidate_number="300", anrede=Anrede.HERR, rollen=[], job_title=None
-    )
-    assert build_export_filename(candidate) == "Nr. 300.docx"
+    assert build_export_filename(candidate) == "Nr. 200.docx"
 
 
 def test_build_export_filename_never_contains_uuid_when_candidate_number_missing(

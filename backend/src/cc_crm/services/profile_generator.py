@@ -73,9 +73,19 @@ REGELN:
 - Ton: professionell, sachlich, wie eine Kurzvorstellung — kein Marketing-Sprech.
 - Nutze ausschließlich Informationen aus den gelieferten Daten (Quali-Call-Daten
   und/oder CV-Text). Erfinde nichts hinzu, auch keine plausibel klingenden
-  Details.
+  Details - EINZIGE Ausnahme: die Gehaltsvorstellung darf bei fehlender Angabe
+  realistisch geschätzt werden (siehe eigene Regel im Ausgabeformat unten).
 - Wenn ein Feld leer ist, lasse den entsprechenden Punkt im Profil weg,
-  statt Platzhalter zu erzeugen.
+  statt Platzhalter zu erzeugen - AUSNAHME: Gehaltsvorstellung (siehe eigene
+  Regel unten, dort NIEMALS weglassen).
+- LÄNGE: das gesamte Profil darf NICHT länger als eine DIN-A4-Seite sein
+  (Richtwert: bei Kanzlei-Kandidat:innen mit einer normalen CV-Länge sind das
+  ca. 350-450 Wörter insgesamt über alle Abschnitte). Bei Kandidat:innen mit
+  langer Berufshistorie (10+ Jahre, viele Stationen) NICHT jede einzelne
+  Station auflisten - im "Lebenslauf (Auszug)" nur die 3-5 fachlich
+  relevantesten/aktuellsten Stationen zeigen (ältere, weniger relevante
+  Stationen weglassen), Kurzprofil und Fachliche Qualifikationen bleiben
+  trotzdem an den oben genannten Längenvorgaben (4-6 Sätze bzw. 6-9 Punkte).
 - wechselgrund und noGos NIEMALS in die Ausgabe übernehmen — nur interne Felder.
 - Korrekte deutsche Groß-/Kleinschreibung und Grammatik sind Pflicht (Substantive
   großschreiben, korrekte Kommasetzung) — dieser Text geht direkt an Kanzleien,
@@ -109,9 +119,20 @@ Ausbildung/Weiterbildung: [ausbildungTitel]
 Berufserfahrung: [berufserfahrungJahre, IMMER im Format "X+ Jahre" (z.B. "2+
 Jahre", "6+ Jahre", "15+ Jahre", "20+ Jahre") - keine Kommastellen, kein
 "Über X Jahre".]
-Gehaltsvorstellung: [gehaltswunsch im Format "ca. X €", optional mit " p.a."
-oder einer Stundenangabe bei Teilzeit, z.B. "ca. 100.000 € p.a.",
-"ca. 38.000 € (30h/Woche)" - NICHT "Ab X €" oder Zusatztext wie "Je nach Job".]
+Gehaltsvorstellung: [PFLICHTFELD, NIEMALS weglassen, auch wenn gehaltswunsch
+leer ist. Format "ca. X €", optional mit " p.a." oder einer Stundenangabe bei
+Teilzeit, z.B. "ca. 100.000 € p.a.", "ca. 38.000 € (30h/Woche)" - NICHT
+"Ab X €" oder Zusatztext wie "Je nach Job". Ist gehaltswunsch NICHT gesetzt,
+einen REALISTISCHEN Marktwert schätzen (Rolle/Qualifikation, Berufserfahrung,
+Region aus den vorhandenen Daten) statt die Zeile wegzulassen - grobe
+Orientierung an den üblichen Gehaltsbändern in Steuer-/WP-/Rechtskanzleien:
+Berufseinsteiger Steuerfachangestellte(r) ca. 38.000-48.000 €, erfahrene(r)
+Steuerfachangestellte(r)/Steuerfachwirt(in) ca. 55.000-70.000 €, Bilanz-
+buchhalter(in) ca. 55.000-70.000 €, Steuerberater(in) ca. 80.000-110.000 €,
+Wirtschaftsprüfer(in)/Prüfungsleiter(in) ca. 90.000-130.000 €, Partner(in)
+deutlich höher. Diese Schätzung wird vor dem Versand ohnehin von einem
+Menschen gegengeprüft - lieber ein plausibler Schätzwert als eine leere
+Zeile.]
 Verfügbarkeit: [Wert, z.B. "Kurzfristig", "Nach Absprache" oder ein Datum -
 NUR wenn keine echte Kündigungsfrist bekannt ist. Ist eine Kündigungsfrist
 bekannt, diese Zeile durch "Verfügbarkeit / Kündigungsfrist: [X Monate zum
@@ -180,36 +201,37 @@ Gib ausschließlich das fertige Profil zurück, keine Erklärungen davor oder da
 DREI STILVORBILDER (echte, bereits anonyme Commandeur-Consulting-Profile,
 exakt in diesem Stil/Format nachbilden - unterschiedliche Rollen/Seniorität):
 
----BEISPIEL 1 (Steuerfachangestellte, viel Erfahrung)---
-## Kandidatin-Nr. 4052
+---BEISPIEL 1 (Steuerfachangestellte, viel Erfahrung, Teilzeit-Gehaltsangabe)---
+## Kandidatin-Nr. 4455
 
 **Überblick**
-Wohnort: Raum Reutlingen
+Wohnort: Raum Bonn
 Ausbildung/Weiterbildung: Steuerfachangestellte
-Berufserfahrung: 20+ Jahre
-Gehaltsvorstellung: ca. 60.000 € p.a.
+Berufserfahrung: 11+ Jahre
+Gehaltsvorstellung: ca. 38.000 € (30h/Woche)
 Verfügbarkeit: Kurzfristig
 
 **Kurzprofil**
-Die Kandidatin ist Steuerfachangestellte mit über 20 Jahren Berufserfahrung im Kanzleiumfeld. Sie ist fachlich breit aufgestellt und bringt fundierte Erfahrung in der laufenden Finanzbuchhaltung, digitalen Belegverarbeitung, Steuererklärungen, Jahresabschlüssen sowie in der Mandantenkommunikation mit. Sie kennt die Abläufe einer mittelständischen Steuerkanzlei sehr gut, arbeitet selbstständig und steht kurzfristig zur Verfügung.
+Die Kandidatin ist Steuerfachangestellte mit langjähriger Berufserfahrung im Tagesgeschäft einer Steuerberaterkanzlei. Sie unterstützt Mandate in der laufenden Finanzbuchhaltung sowie in der Kundenberatung und -betreuung. Zuvor sammelte sie mehrjährige Erfahrung in der kaufmännischen Sachbearbeitung und Büroorganisation. Aufgrund einer Umstrukturierung in ihrer aktuellen Kanzlei sucht sie nun nach einer neuen Herausforderung.
 
 **Fachliche Qualifikationen**
-Erstellung laufender Finanzbuchhaltungen für unterschiedliche Mandate
-Bearbeitung digitaler Belege und moderner Kanzleiprozesse
-Erstellung von Steuererklärungen, insbesondere Einkommensteuererklärungen
-Erstellung von Jahresabschlüssen und Jahresbuchhaltungen
-Laufende Betreuung von Mandanten inkl. Kommunikation mit Mandanten und Behörden
-Unterstützung in der allgemeinen Kanzleiorganisation
+Laufende Finanzbuchhaltung
+Erstellung von Steuererklärungen
+Erstellung von Jahresabschlüssen
+Büroorganisation und Sachbearbeitung
+Kundenberatung und -betreuung
+Korrespondenz mit Mandanten und Finanzämtern
+Sicherer Umgang mit MS Office
 
 **Lebenslauf (Auszug)**
-seit 2022 Steuerfachangestellte, Steuerkanzlei
+seit 2015 Steuerfachangestellte, Steuerberaterkanzlei
 
 **Ausbildung & Weiterbildung**
-Steuerfachangestellte
+Umschulung zur Steuerfachangestellten
+Studium der Betriebswirtschaft (Diplom-Betriebswirtin)
 
 **Weitere Infos**
-Deutsch: Muttersprache
-Tools: DATEV, Addison
+EDV: MS Office, DATEV
 
 ---BEISPIEL 2 (Steuerberater, baut Mandantenstamm auf)---
 ## Kandidat-Nr. 4453
@@ -245,41 +267,36 @@ seit 04/2025 Steuerberater, Steuerberatungsgesellschaft
 Sprachen: Deutsch (Muttersprache), Englisch (fließend)
 EDV: MS Office, ADDISON
 
----BEISPIEL 3 (Volljuristin, sehr senior)---
-## Kandidatin-Nr. 4051
+---BEISPIEL 3 (Steuerfachangestellter, Berufseinsteiger, konkretes Verfügbarkeitsdatum)---
+## Kandidat-Nr. 4053
 
 **Überblick**
-Wohnort: Raum Hamburg
-Ausbildung/Weiterbildung: Rechtsanwältin, promovierte Juristin, LL.M.
-Berufserfahrung: 15+ Jahre
-Gehaltsvorstellung: ca. 100.000 € p.a.
-Verfügbarkeit: Nach Absprache
+Wohnort: Raum München
+Ausbildung/Weiterbildung: Steuerfachangestellter
+Berufserfahrung: 2+ Jahre
+Gehaltsvorstellung: ca. 48.000 €
+Verfügbarkeit: 01. September 2026
 
 **Kurzprofil**
-Die Kandidatin ist Rechtsanwältin und promovierte Juristin mit langjähriger Erfahrung im internationalen wirtschaftsrechtlichen Umfeld. Ihr fachlicher Schwerpunkt liegt im Bereich Transaktionen, Gesellschaftsrecht und wirtschaftsrechtliche Beratung. Zuletzt war sie mehrere Jahre als Transaction Lawyerin in einer internationalen Wirtschaftskanzlei in Hamburg tätig und unterstützte dort bei grenzüberschreitenden M&A-Transaktionen, Due-Diligence-Prozessen, Kaufverträgen sowie Signing- und Closing-Prozessen. Zusätzlich bringt sie Erfahrung in der Anwendung von Legal-Tech- und KI-Tools im juristischen Arbeitsumfeld mit.
+Der Kandidat ist Steuerfachangestellter mit erster Berufserfahrung im Tagesgeschäft einer Steuerberatungskanzlei. Er unterstützt Mandate in der laufenden Finanzbuchhaltung, bei der Erstellung von Steuererklärungen sowie bei vorbereitenden Tätigkeiten im Rahmen von Jahresabschlüssen. Aktuell befindet er sich in der Weiterbildung zum Bilanzbuchhalter und sucht eine Kanzlei, bei der er sich fachlich und persönlich weiterentwickeln kann.
 
 **Fachliche Qualifikationen**
-M&A-Transaktionen und Umstrukturierungen
-Due-Diligence-Prozesse und Transaktionsbegleitung
-Kaufverträge, Signings und Closings
-Gesellschaftsrechtliche und wirtschaftsrechtliche Fragestellungen
-Immobilientransaktionen und kapitalmarktrechtliche Mandate
-Erstellung und Prüfung von Transaktionsdokumentation
-Internationale Projektkoordination
-Legal-Tech- und KI-Anwendungen im juristischen Umfeld
+Laufende Finanzbuchhaltung
+Erstellung von Steuererklärungen
+Bearbeitung steuerlicher Bescheide
+Mitwirkung bei der Erstellung von Jahresabschlüssen
+Korrespondenz mit Mandanten, Finanzämtern und Behörden
+Sicherer Umgang mit DATEV und MS Office
 
 **Lebenslauf (Auszug)**
-2018 – 2025 Transaction Lawyerin, internationale Wirtschaftskanzlei
+seit 2024 Steuerfachangestellter, Steuerberatungsgesellschaft
 
 **Ausbildung & Weiterbildung**
-Rechtsanwältin
-Dr. iur.
-LL.M. im wirtschaftsrechtlichen Bereich
-Juristisches Hochschulstudium
+Ausbildung zum Steuerfachangestellten
+Weiterbildung zum Bilanzbuchhalter (laufend)
 
 **Weitere Infos**
-Sprachen: Deutsch fließend, Englisch fließend, weitere Fremdsprachen vorhanden
-Tools: Legal-Tech- und KI-Anwendungen"""
+EDV: digitale Kanzleisysteme, MS Office"""
 
 
 def _total_experience_years(stations: list[dict[str, Any]]) -> float | None:

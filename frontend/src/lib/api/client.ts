@@ -147,10 +147,34 @@ export async function apiFetchBlob(path: string): Promise<Blob> {
   return response.blob();
 }
 
+/** Parses the filename out of a Content-Disposition header
+ * ('attachment; filename="Nr. 4051.docx"'). Backend picks the real,
+ * candidate-specific filename (see profile_docx_export.py::
+ * build_export_filename) - `fallback` below is only a last resort if the
+ * header is missing/unparseable, not the expected normal path. */
+function filenameFromContentDisposition(response: Response, fallback: string): string {
+  const header = response.headers.get("content-disposition");
+  const match = header?.match(/filename="([^"]+)"/);
+  return match ? match[1] : fallback;
+}
+
 /** Downloads a binary response (e.g. a generated .docx) and triggers a browser
- * save-as via a synthetic link click. Not used for JSON endpoints. */
-export async function apiDownload(path: string, filename: string): Promise<void> {
-  const blob = await apiFetchBlob(path);
+ * save-as via a synthetic link click. Not used for JSON endpoints.
+ *
+ * Bug history: this used to ALWAYS save as `fallback`, ignoring the backend's
+ * Content-Disposition filename entirely - a Kandidat-Nr.-basierter Dateiname
+ * (siehe build_export_filename) kam dadurch im Browser nie an, der Download
+ * hiess weiterhin nach der internen UUID. */
+export async function apiDownload(path: string, fallback: string): Promise<void> {
+  const response = await fetch(apiUrl(path), {
+    headers: { ...(await authHeader()) },
+    signal: AbortSignal.timeout(60_000),
+  });
+  if (!response.ok) {
+    throw new Error(await errorMessageFromResponse(response));
+  }
+  const filename = filenameFromContentDisposition(response, fallback);
+  const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
