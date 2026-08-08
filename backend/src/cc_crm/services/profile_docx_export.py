@@ -73,12 +73,33 @@ _ZEITRAUM_CV = re.compile(
 )
 _ZEITRAUM_AUSBILDUNG = re.compile(r"^[•\-*]?\s*(\d{4}\s*[–-]\s*\d{4}|\d{4})[:\s]+(.*)$")
 
-_HEADER_LABELS = {
-    Anrede.FRAU: "Kandidatin-Nr.",
-    Anrede.HERR: "Kandidat-Nr.",
-    Anrede.DIVERS: "Kandidat:in-Nr.",
-    None: "Kandidat:in-Nr.",
-}
+# Kopfzeilen-Label. KEIN Doppelpunkt-Gendern - in KEINEM der Referenzprofile
+# kommt "Kandidat:in-Nr." vor, es gibt ausschliesslich "Kandidat-Nr." und
+# "Kandidatin-Nr." (Nutzer-Vorgabe, per docx-Vergleich verifiziert).
+_HEADER_LABEL_FRAU = "Kandidatin-Nr."
+_HEADER_LABEL_HERR = "Kandidat-Nr."
+
+# Erkennt das vom LLM im Fliesstext gewaehlte Genus, wenn `anrede` am
+# Kandidaten nicht gesetzt ist: das Modell sieht den CV-Rohtext (inkl.
+# Vorname) und leitet daraus "Die Kandidatin"/"Der Kandidat" ab - die
+# Kopfzeile muss dann demselben Genus folgen, statt auf eine
+# Doppelpunkt-Form auszuweichen.
+_FEMALE_TEXT_MARKER = re.compile(r"\bDie Kandidatin\b")
+
+
+def _header_label(candidate: Candidate) -> str:
+    """Waehlt "Kandidatin-Nr." oder "Kandidat-Nr." - nie eine gegenderte
+    Doppelpunkt-Form. Ist `anrede` gesetzt, entscheidet sie; sonst richtet
+    sich das Label nach dem Genus, das das LLM im Kurzprofil-Fliesstext
+    gewaehlt hat (siehe _FEMALE_TEXT_MARKER); als letzter Rueckfall die
+    maskuline Form."""
+    if candidate.anrede == Anrede.FRAU:
+        return _HEADER_LABEL_FRAU
+    if candidate.anrede == Anrede.HERR:
+        return _HEADER_LABEL_HERR
+    if candidate.short_profile and _FEMALE_TEXT_MARKER.search(candidate.short_profile):
+        return _HEADER_LABEL_FRAU
+    return _HEADER_LABEL_HERR
 
 
 class ProfileParseError(ConflictError):
@@ -335,7 +356,7 @@ def generate_profile_docx(candidate: Candidate) -> bytes:
     doc = Document(str(TEMPLATE_PATH))
 
     number = candidate.candidate_number or parsed.get("candidate_number") or str(candidate.id)
-    label = _HEADER_LABELS.get(candidate.anrede, _HEADER_LABELS[None])
+    label = _header_label(candidate)
     _set_header_title(doc, label, number)
 
     headings = [

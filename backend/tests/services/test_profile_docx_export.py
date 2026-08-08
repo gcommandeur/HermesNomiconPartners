@@ -5,6 +5,7 @@ from cc_crm.models.enums import Anrede
 from cc_crm.services.profile_docx_export import (
     _ZEITRAUM_AUSBILDUNG,
     _ZEITRAUM_CV,
+    _header_label,
     _parse_short_profile,
     build_export_filename,
 )
@@ -83,6 +84,47 @@ def _make_candidate(**overrides: object) -> Candidate:
     defaults: dict[str, object] = {"first_name": "Max", "last_name": "Muster"}
     defaults.update(overrides)
     return Candidate(**defaults)
+
+
+class TestHeaderLabel:
+    """Nutzer-Vorgabe (per docx-Vergleich mit allen Referenzprofilen
+    verifiziert): die Kopfzeile heisst AUSSCHLIESSLICH "Kandidat-Nr." oder
+    "Kandidatin-Nr." - "Kandidat:in-Nr." kommt in KEINEM echten Profil vor
+    und war ein Fehler des frueheren Codes bei anrede=divers/None."""
+
+    def test_frau_gets_female_label(self) -> None:
+        assert _header_label(_make_candidate(anrede=Anrede.FRAU)) == "Kandidatin-Nr."
+
+    def test_herr_gets_male_label(self) -> None:
+        assert _header_label(_make_candidate(anrede=Anrede.HERR)) == "Kandidat-Nr."
+
+    def test_missing_anrede_follows_female_wording_in_profile_text(self) -> None:
+        """Ohne gesetzte anrede richtet sich die Kopfzeile nach dem Genus,
+        das das LLM im Fliesstext gewaehlt hat (es sieht den Vornamen im
+        CV-Rohtext) - statt auf eine Doppelpunkt-Form auszuweichen."""
+        candidate = _make_candidate(
+            anrede=None,
+            short_profile="## Kandidatin-Nr. 42\n\n**Kurzprofil**\nDie Kandidatin ist "
+            "Steuerberaterin mit langjähriger Berufserfahrung.",
+        )
+        assert _header_label(candidate) == "Kandidatin-Nr."
+
+    def test_missing_anrede_follows_male_wording_in_profile_text(self) -> None:
+        candidate = _make_candidate(
+            anrede=None,
+            short_profile="## Kandidat-Nr. 42\n\n**Kurzprofil**\nDer Kandidat ist "
+            "Steuerberater mit langjähriger Berufserfahrung.",
+        )
+        assert _header_label(candidate) == "Kandidat-Nr."
+
+    def test_missing_anrede_and_no_profile_text_defaults_to_male_never_colon(self) -> None:
+        label = _header_label(_make_candidate(anrede=None, short_profile=None))
+        assert label == "Kandidat-Nr."
+        assert ":" not in label
+
+    def test_divers_never_produces_colon_form(self) -> None:
+        label = _header_label(_make_candidate(anrede=Anrede.DIVERS, short_profile=None))
+        assert ":" not in label
 
 
 def test_build_export_filename_is_plain_number_only() -> None:

@@ -78,14 +78,18 @@ REGELN:
 - Wenn ein Feld leer ist, lasse den entsprechenden Punkt im Profil weg,
   statt Platzhalter zu erzeugen - AUSNAHME: Gehaltsvorstellung (siehe eigene
   Regel unten, dort NIEMALS weglassen).
-- LÄNGE: das gesamte Profil darf NICHT länger als eine DIN-A4-Seite sein
-  (Richtwert: bei Kanzlei-Kandidat:innen mit einer normalen CV-Länge sind das
-  ca. 350-450 Wörter insgesamt über alle Abschnitte). Bei Kandidat:innen mit
-  langer Berufshistorie (10+ Jahre, viele Stationen) NICHT jede einzelne
-  Station auflisten - im "Lebenslauf (Auszug)" nur die 3-5 fachlich
-  relevantesten/aktuellsten Stationen zeigen (ältere, weniger relevante
-  Stationen weglassen), Kurzprofil und Fachliche Qualifikationen bleiben
-  trotzdem an den oben genannten Längenvorgaben (4-6 Sätze bzw. 6-9 Punkte).
+- LÄNGE - HARTE OBERGRENZE, das Profil MUSS auf eine DIN-A4-Seite passen:
+  das gesamte Profil (alle Abschnitte zusammen, ohne die Überschriften)
+  darf HÖCHSTENS 170 Wörter haben. Zur Orientierung: die echten Profile,
+  an denen du dich orientierst, liegen bei 114-171 Wörtern INSGESAMT -
+  auch die von sehr erfahrenen Kandidaten mit 20+ Jahren Berufserfahrung.
+  Ein längeres Profil ist FALSCH, egal wie viel der CV hergibt. Aufteilung:
+  Kurzprofil höchstens 65 Wörter, Fachliche Qualifikationen 6-9 kurze
+  Stichpunkte (je 2-10 Wörter, KEINE ausformulierten Sätze), Lebenslauf
+  1-5 Zeilen. Bei langer Berufshistorie NICHT jede Station auflisten,
+  sondern nur die 3-5 fachlich relevantesten/aktuellsten - lieber weniger
+  Stationen als ein zu langes Profil. Lieber knapp und dicht als
+  vollständig: der Rest steht im CV.
 - wechselgrund und noGos NIEMALS in die Ausgabe übernehmen — nur interne Felder.
 - Korrekte deutsche Groß-/Kleinschreibung und Grammatik sind Pflicht (Substantive
   großschreiben, korrekte Kommasetzung) — dieser Text geht direkt an Kanzleien,
@@ -95,23 +99,27 @@ REGELN:
   bereits reguläre Berufserfahrung existiert - auch dann nicht, wenn die
   Nebentätigkeit zeitlich später liegt als die letzte reguläre Station.
   Ebenso keine Sprachkurse. Nur fachlich relevante Stationen aufnehmen.
-- Gendern nach dem Feld "anrede" (KEIN Doppelpunkt-Gendern, auch nicht bei
-  "divers"):
-  - "frau" → Kopfzeile "Kandidatin-Nr.", im Fließtext "Die Kandidatin", "sie", "ihre"
-  - "herr" → Kopfzeile "Kandidat-Nr.", im Fließtext "Der Kandidat", "er", "seine"
-  - "divers" oder nicht gesetzt → Kopfzeile "Kandidat:in-Nr.", im Fließtext
-    neutral formulieren (z.B. "Die Person", "diese Fachkraft") statt zu raten.
-    Doppelpunkt-Gendern gilt AUCH hier als verboten - das betrifft nicht nur
-    "Kandidat:in", sondern JEDES Substantiv: "Wirtschaftsprüfungsassistent:in"
-    ist falsch, stattdessen umformulieren z.B. "als Wirtschaftsprüfungs-
-    assistenz" oder "im Bereich Wirtschaftsprüfung" - Rollenbezeichnungen
-    immer ohne Doppelpunkt, notfalls die Tätigkeit statt des Titels nennen.
+- GESCHLECHT: es wird IMMER konkret männlich ODER weiblich geschrieben -
+  niemals geschlechtsneutral, niemals mit Doppelpunkt/Binnen-I/Sternchen:
+  - "frau" → Kopfzeile "Kandidatin-Nr.", im Fließtext "Die Kandidatin",
+    "sie", "ihre", weibliche Rollenbezeichnung ("Steuerberaterin")
+  - "herr" → Kopfzeile "Kandidat-Nr.", im Fließtext "Der Kandidat", "er",
+    "seine", männliche Rollenbezeichnung ("Steuerberater")
+  - "divers" oder NICHT GESETZT → NICHT neutral ausweichen! Leite das
+    Geschlecht aus dem Vornamen bzw. den Formulierungen im CV-Rohtext ab
+    (dort steht der echte Name) und schreibe dann durchgängig männlich oder
+    weiblich wie oben. Ist es auch daraus nicht erkennbar, verwende die
+    männliche Form als Standard.
+  VERBOTEN sind daher: "Diese Fachkraft", "Die Person", "Kandidat:in",
+  "Wirtschaftsprüfungsassistent:in", "Steuerberater/in" und jede andere
+  neutrale oder doppelpunkt-gegenderte Formulierung - in KEINEM der
+  Referenzprofile kommt so etwas vor.
 
 AUSGABEFORMAT (exakt dieses Format — 1:1 aus den 5 NEUESTEN echten Commandeur-
 Consulting-Kandidatenprofilen übernommen, NICHT davon abweichen; die drei
 Beispiele am Ende dieses Prompts zeigen den kompletten Stil):
 
-## [Kandidatin-Nr. / Kandidat-Nr. / Kandidat:in-Nr., je nach anrede] [Kandidatennummer]
+## [Kandidatin-Nr. ODER Kandidat-Nr. - nur diese beiden, NIE "Kandidat:in-Nr."] [Kandidatennummer]
 
 **Überblick**
 Wohnort: [zielregion, nur Region z.B. "Raum Reutlingen", keine genaue Adresse]
@@ -139,33 +147,37 @@ bekannt, diese Zeile durch "Verfügbarkeit / Kündigungsfrist: [X Monate zum
 Monatsende]" ERSETZEN statt beide Zeilen zu zeigen.]
 
 **Kurzprofil**
-[EIN dichter Absatz, 4-6 Sätze (keine mehreren Absätze). Feste Struktur:
-Satz 1 VERBINDLICH, passend zu "anrede":
-  - "frau" → "Die Kandidatin ist [Rolle/Qualifikation] mit [Erfahrungsangabe]
-    Erfahrung in ..."
-  - "herr" → "Der Kandidat ist [Rolle/Qualifikation] mit [Erfahrungsangabe]
-    Erfahrung in ..."
-  - "divers"/nicht gesetzt → neutrale Variante, z.B. "Diese Fachkraft ist
-    [Rolle/Qualifikation] mit [Erfahrungsangabe] Erfahrung in ..."
-[Rolle/Qualifikation] aus ausbildungTitel/fachlicheSchwerpunkte/CV-Text
-ableiten. [Erfahrungsangabe] hier natürlichsprachlich, NICHT zwingend "X+
-Jahre" wie im Überblick oben - je nach Seniorität z.B. "langjähriger",
-"über 20 Jahren", "erster", passend zur Formulierung des Satzes.
+[EIN dichter Absatz, GENAU 3-4 Sätze, HÖCHSTENS 65 Wörter (die echten
+Referenzprofile liegen bei 48-67 Wörtern - auch bei 20+ Jahren Erfahrung).
+Satz 1 VERBINDLICH mit exakt dieser Eröffnung, je nach Geschlecht (siehe
+GESCHLECHT-Regel oben - bei fehlender "anrede" aus dem CV ableiten, NIEMALS
+"Diese Fachkraft" oder eine andere neutrale Formulierung):
+  - weiblich → "Die Kandidatin ist [Rolle] mit [Erfahrungsangabe] ..."
+  - männlich → "Der Kandidat ist [Rolle] mit [Erfahrungsangabe] ..."
+[Rolle] aus ausbildungTitel/fachlicheSchwerpunkte/CV-Text ableiten, im
+korrekten Genus ("Steuerberaterin"/"Steuerberater"). [Erfahrungsangabe]
+natürlichsprachlich, NICHT zwingend "X+ Jahre" wie im Überblick oben - je
+nach Seniorität z.B. "langjähriger Berufserfahrung", "über 20 Jahren
+Berufserfahrung", "erster Berufserfahrung".
 Satz 2-3: aktuelle/letzte Station - was macht die Person dort konkret,
-welche fachlichen Schwerpunkte. Satz 4-5 (optional, nur wenn CV-Text/
+welche fachlichen Schwerpunkte. Satz 4 (optional, nur wenn CV-Text/
 freitextNotizen es anonym hergeben): Wechselgrund oder Zusatzkontext, z.B.
-"Aufgrund einer Umstrukturierung in ihrer aktuellen Kanzlei sucht sie...",
-"sucht eine Kanzlei, bei der er sich fachlich und persönlich
-weiterentwickeln kann".]
+"Aufgrund einer Umstrukturierung in ihrer aktuellen Kanzlei sucht sie nun
+nach einer neuen Herausforderung.", "sucht eine Kanzlei, bei der er sich
+fachlich und persönlich weiterentwickeln kann."
+KEINE Aufzählung von Branchen, Standorten, Teamgrößen, Budgets oder
+Prüfungsstandards im Kurzprofil - solche Details gehören, wenn überhaupt,
+als kurzer Stichpunkt in die Fachlichen Qualifikationen.]
 
 **Fachliche Qualifikationen**
-[Bullet-Liste, 6-9 Punkte bei einem normalen CV - NICHT künstlich auf mehr
-Punkte aufblähen, wenn der CV nicht mehr hergibt (bei sehr jungen
-Kandidat:innen sind auch 6 Punkte normal). Die Liste darf Themen aus dem
-Kurzprofil-Absatz aufgreifen und in knappe Einzelpunkte herunterbrechen (kein
-1:1 kopierter Satz) - "keine Überschneidung" ist NICHT das Ziel. Jeder Punkt
-eine konkrete Tätigkeit/Kompetenz aus fachlicheSchwerpunkte bzw. dem
-CV-Text, keine Wiederholungen, keine generischen Sammelbegriffe ohne
+[Bullet-Liste, 6-9 Punkte. Jeder Punkt ein KURZER Stichpunkt von 2-10
+Wörtern (so wie in den Beispielen unten: "Laufende Finanzbuchhaltung",
+"Begleitung von Betriebsprüfungen") - KEINE ausformulierten Sätze, keine
+Aufzählung mehrerer Themen in einem Punkt. NICHT künstlich aufblähen, wenn
+der CV nicht mehr hergibt (bei jungen Kandidaten sind 6 Punkte normal). Die
+Liste darf Themen aus dem Kurzprofil aufgreifen und in knappe Einzelpunkte
+herunterbrechen (kein 1:1 kopierter Satz) - "keine Überschneidung" ist NICHT
+das Ziel. Keine Wiederholungen, keine generischen Sammelbegriffe ohne
 Substanz.]
 
 **Lebenslauf (Auszug)**
@@ -173,9 +185,11 @@ Substanz.]
 generische Beschreibung wie "Steuerkanzlei", "Steuerberatungsgesellschaft",
 "internationale Wirtschaftskanzlei", "mittelständisches Unternehmen",
 "öffentliche Institution" — aus aktuellesUmfeld/beruflicheStationen ableiten]
-[eine Zeile pro Station, neueste zuerst, schlank gehalten - nur fachlich
+[eine Zeile pro Station, neueste zuerst, HÖCHSTENS 5 Zeilen - nur fachlich
 relevante Stationen (siehe Regel oben zu Nebentätigkeiten/Praktika/
-Sprachkursen), bei kurzer Historie reicht auch nur EINE Zeile. Format exakt:
+Sprachkursen), bei kurzer Historie reicht auch nur EINE Zeile (mehrere
+Referenzprofile haben genau eine). Ältere/weniger relevante Stationen
+ersatzlos weglassen statt die Liste zu verlängern. Format exakt:
 "MM/JJJJ – MM/JJJJ Rolle, Arbeitgeber-Typ" bzw. "seit MM/JJJJ Rolle,
 Arbeitgeber-Typ" — KEIN Doppelpunkt nach dem Zeitraum, KEIN
 Aufzählungszeichen/Bindestrich am Zeilenanfang.]
