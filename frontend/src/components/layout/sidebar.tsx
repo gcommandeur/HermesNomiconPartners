@@ -68,10 +68,23 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
         mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
       )}>
         <div className="flex h-24 items-center border-b border-white/10 px-4">
-          <Link href="/" className={cn("flex items-center", collapsed ? "mx-auto" : "gap-3")} onClick={onMobileClose}>
-            <Image src="/brand/hermes-appicon.svg" alt="Hermes" width={44} height={44} className="h-11 w-11 rounded-xl object-contain" priority />
+          <Link href="/" className={cn("flex min-w-0 items-center", collapsed ? "mx-auto" : "gap-3")} onClick={onMobileClose}>
+            <Image src="/brand/hermes-appicon.svg" alt="Hermes" width={44} height={44} className="h-11 w-11 shrink-0 rounded-xl object-contain" priority />
+            {/* Wortmarke nur im ausgeklappten Zustand - eingeklappt bleibt es
+                bei reinem Icon (Nutzer-Vorgabe). Bildmarke (Icon oben) bleibt
+                unveraendert dieselbe SVG-Datei wie zuvor. */}
+            {!collapsed && (
+              <Image
+                src="/brand/hermes-wordmark.png"
+                alt="Hermes Recruiting OS"
+                width={596}
+                height={198}
+                className="h-10 w-auto object-contain"
+                priority
+              />
+            )}
           </Link>
-          <button className="ml-auto text-white/60 hover:text-white lg:hidden" onClick={onMobileClose}><X size={18} /></button>
+          <button className="ml-auto shrink-0 text-white/60 hover:text-white lg:hidden" onClick={onMobileClose}><X size={18} /></button>
         </div>
 
         <nav className="scrollbar-subtle flex-1 space-y-1 overflow-y-auto px-3 py-5">
