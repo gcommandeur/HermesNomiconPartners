@@ -77,8 +77,8 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
               <Image
                 src="/brand/hermes-wordmark.png"
                 alt="Hermes Recruiting OS"
-                width={596}
-                height={198}
+                width={194}
+                height={72}
                 className="h-10 w-auto object-contain"
                 priority
               />
