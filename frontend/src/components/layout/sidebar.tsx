@@ -69,7 +69,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
       )}>
         <div className="flex h-24 items-center border-b border-white/10 px-4">
           <Link href="/" className={cn("flex items-center", collapsed ? "mx-auto" : "gap-3")} onClick={onMobileClose}>
-            <Image src="/brand/cc-monogram.svg" alt="CC" width={56} height={48} className="h-12 w-14 object-contain" priority />
+            <Image src="/brand/hermes-appicon.svg" alt="Hermes" width={44} height={44} className="h-11 w-11 rounded-xl object-contain" priority />
           </Link>
           <button className="ml-auto text-white/60 hover:text-white lg:hidden" onClick={onMobileClose}><X size={18} /></button>
         </div>
