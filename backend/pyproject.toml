@@ -17,6 +17,10 @@ dependencies = [
   "fastapi>=0.115,<1",
   "httpx>=0.28,<1",
   "icalendar>=6.1,<7",
+  # IMAP-Abruf der verbundenen Postfaecher (siehe services/mail_sync.py).
+  # Duenner Wrapper um die stdlib imaplib - uebernimmt MIME-Dekodierung und
+  # Absender-Parsing, die wir sonst selbst bauen muessten.
+  "imap-tools>=1.5,<2",
   "openpyxl>=3.1,<4",
   "pillow>=11,<13",
   "psycopg[binary]>=3.2,<4",

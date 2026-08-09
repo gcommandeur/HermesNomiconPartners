@@ -9,6 +9,7 @@ import {
   getCalendarEvents,
   getClients,
   getCurrentUser,
+  getMailAccounts,
   getMailingGroups,
   getReactivationCandidates,
   type CalendarEventQuery,
@@ -21,6 +22,7 @@ import type {
   ClientCompany,
   CurrentUserInfo,
   DataResult,
+  MailAccount,
   MailingGroup,
   UserBrief,
 } from "./types";
@@ -116,6 +118,16 @@ export function invalidateCalendarEventsCache() {
  * fuer die Admin-Nutzerverwaltung. */
 export function useAdminUsersCache(enabled: boolean) {
   return useSWR<DataResult<AdminUser[]>>(enabled ? "/users" : null, getAdminUsers, swrConfig);
+}
+
+/** Nur fuer Admins - verbundene Postfaecher (siehe
+ * /einstellungen/postfaecher). */
+export function useMailAccountsCache(enabled: boolean) {
+  return useSWR<DataResult<MailAccount[]>>(enabled ? "/mail-accounts" : null, getMailAccounts, swrConfig);
+}
+
+export function invalidateMailAccountsCache() {
+  return mutate("/mail-accounts");
 }
 
 export function invalidateAdminUsersCache() {

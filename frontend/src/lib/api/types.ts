@@ -708,3 +708,36 @@ export interface SourcingRunStatus {
   started_at: string;
   finished_at: string | null;
 }
+
+/** Verbundenes Postfach (IMAP lesend, SMTP schreibend). Enthaelt bewusst
+ * KEIN Passwort-Feld - das Backend gibt es nie zurueck, auch nicht
+ * maskiert (siehe backend/schemas/mail.py). */
+export interface MailAccount {
+  id: string;
+  address: string;
+  label: string;
+  imap_host: string;
+  imap_port: number;
+  imap_use_ssl: boolean;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_use_ssl: boolean;
+  username: string;
+  is_active: boolean;
+  default_for_cv_out: boolean;
+  last_synced_at: string | null;
+  sync_error: string | null;
+}
+
+/** Ergebnis eines manuellen Abrufs. ok=false kommt mit HTTP 200 zurueck,
+ * damit die Oberflaeche den konkreten Grund anzeigen kann. */
+export interface MailSyncResult {
+  mail_account_id: string;
+  ok: boolean;
+  fetched: number;
+  created_activities: number;
+  pending_review: number;
+  skipped_duplicates: number;
+  failed_messages: number;
+  error: string | null;
+}

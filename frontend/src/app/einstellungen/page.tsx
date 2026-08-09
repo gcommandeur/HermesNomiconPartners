@@ -133,12 +133,15 @@ export default function EinstellungenPage() {
             <CardHeader>
               <div>
                 <h2 className="flex items-center gap-2 font-semibold"><Users size={16} />Administration</h2>
-                <p className="mt-1 text-xs text-[#94A3B8]">Nutzer verwalten (Admin-Recht, Aktivierung).</p>
+                <p className="mt-1 text-xs text-[#94A3B8]">Nutzer, Postfächer und Protokolle verwalten.</p>
               </div>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               <Link href="/einstellungen/nutzer">
                 <Button size="sm" variant="outline">Nutzerverwaltung öffnen</Button>
+              </Link>
+              <Link href="/einstellungen/postfaecher">
+                <Button size="sm" variant="outline">E-Mails &amp; Konten öffnen</Button>
               </Link>
               <Link href="/einstellungen/audit-log">
                 <Button size="sm" variant="outline">Audit-Log öffnen</Button>
