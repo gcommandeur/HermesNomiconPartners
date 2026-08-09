@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     warranty_follow_up_days_before: int = 14
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-5"
+    # Fernet-Schluessel fuer die Postfach-Passwoerter (siehe
+    # models/mail.py::MailAccount.encrypted_password). Ohne gesetzten
+    # Schluessel laesst sich kein Postfach anlegen - bewusst ein harter
+    # Fehler statt eines stillen Klartext-Fallbacks (siehe
+    # services/mail_credentials.py). Erzeugen mit:
+    #   python -c "from cryptography.fernet import Fernet;
+    #              print(Fernet.generate_key().decode())"
+    mail_credentials_encryption_key: str | None = None
     # Lokales Verzeichnis für hochgeladene Dokumente (CVs, Verträge, etc.) -
     # Fallback, wenn kein S3-kompatibler Speicher konfiguriert ist (siehe unten).
     # Relativ zum Backend-Arbeitsverzeichnis, falls kein absoluter Pfad gesetzt ist.

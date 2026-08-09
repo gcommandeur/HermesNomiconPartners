@@ -1,6 +1,7 @@
 import secrets
+import uuid
 
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cc_crm.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -33,6 +34,16 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         unique=True,
         default=lambda: secrets.token_urlsafe(32),
+    )
+    # Persoenliches Standard-Absenderpostfach fuer den Mailversand. Hat
+    # Vorrang vor dem globalen MailAccount.default_for_cv_out, damit jede:r
+    # aus dem eigenen Postfach verschicken kann, ohne die globale
+    # Einstellung fuer alle zu aendern (Nutzer-Vorgabe). Aufloesung beim
+    # Versand: dieser Wert -> globales default_for_cv_out -> sonst muss in
+    # der Versand-Maske manuell gewaehlt werden. SET NULL beim Loeschen des
+    # Postfachs, damit ein entferntes Konto keinen Nutzer blockiert.
+    default_send_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("mail_accounts.id", ondelete="SET NULL")
     )
 
     @property

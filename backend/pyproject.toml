@@ -10,6 +10,9 @@ requires-python = ">=3.12"
 dependencies = [
   "alembic>=1.13,<2",
   "boto3>=1.35,<2",
+  # Fernet-Verschluesselung der IMAP/SMTP-Postfach-Passwoerter
+  # (siehe services/mail_credentials.py).
+  "cryptography>=44,<47",
   "email-validator>=2.2,<3",
   "fastapi>=0.115,<1",
   "httpx>=0.28,<1",

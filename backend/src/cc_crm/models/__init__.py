@@ -7,6 +7,7 @@ from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.contact_person import ContactPerson
 from cc_crm.models.job_mandate import JobMandate
+from cc_crm.models.mail import MailAccount, MailMessage
 from cc_crm.models.mailing_group import MailingGroup
 from cc_crm.models.note import Note
 from cc_crm.models.operational import Document, EmailDraftLog, SourcingMetric
@@ -42,6 +43,8 @@ __all__ = [
     "Fee",
     "Interview",
     "JobMandate",
+    "MailAccount",
+    "MailMessage",
     "MailingGroup",
     "Note",
     "Offer",

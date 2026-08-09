@@ -222,3 +222,30 @@ class WarrantyStatus(StrEnum):
     LAUFEND = "laufend"
     BALD_ABLAUFEND = "bald_ablaufend"
     ABGELAUFEN = "abgelaufen"
+
+
+class MailDirection(StrEnum):
+    """Richtung einer per IMAP eingelesenen bzw. per SMTP verschickten Mail
+    (siehe models/mail.py). OUTBOUND ist noetig, weil der IMAP-Sync auch die
+    eigenen, im Sent-Ordner liegenden Mails sieht - die duerfen NICHT als
+    eingehende Aktivitaet verbucht werden."""
+
+    INBOUND = "inbound"
+    OUTBOUND = "outbound"
+
+
+class MailMatchStatus(StrEnum):
+    """Zuordnungsstand einer eingelesenen Mail zum CRM-Bestand.
+
+    PENDING_REVIEW ist der bewusst haeufige Fall bei LinkedIn-Nachrichten von
+    noch unbekannten Personen: es wird NIE automatisch ein Kandidat angelegt
+    (gleiche Governance wie beim Sourcing-Lead-Review, siehe
+    SourcingLeadStatus) - der Mensch entscheidet. UNMATCHED dagegen sind
+    Mails, zu denen es keine sinnvolle Zuordnung geben kann (z.B.
+    Newsletter): kein Review noetig, nur archiviert.
+    """
+
+    MATCHED = "matched"
+    PENDING_REVIEW = "pending_review"
+    UNMATCHED = "unmatched"
+    IGNORED = "ignored"
