@@ -35,8 +35,10 @@ from cc_crm.models.activity import Activity
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.contact_person import ContactPerson
-from cc_crm.models.enums import MailDirection, MailMatchStatus
+from cc_crm.models.enums import MailDirection, MailMatchStatus, TaskPriority, TaskStatus
 from cc_crm.models.mail import MailAccount, MailMessage
+from cc_crm.models.note import Note
+from cc_crm.models.task import Task
 from cc_crm.schemas.mail import MailSyncResult
 from cc_crm.services.mail_classifier import extract_linkedin_content, is_linkedin_message
 from cc_crm.services.mail_credentials import decrypt_password
@@ -52,9 +54,18 @@ ACTIVITY_TYPE_EMAIL = "email"
 # minutenlang blockieren. Der naechste Abruf macht ab last_seen_uid weiter.
 MAX_MESSAGES_PER_RUN = 200
 
+# Terminierungs-Agent (Task + Auto-Kandidat) greift NUR fuer Mails ab diesem
+# Datum - Nutzer-Vorgabe: die zuerst eingelesenen 200 historischen Mails
+# sollen NICHT rueckwirkend Tasks/Kandidaten erzeugen, nur die bereits
+# vorhandenen 18 Activities bleiben unveraendert stehen. Vergleich erfolgt
+# gegen MailMessage.received_at (Maildatum), NICHT gegen den Abrufzeitpunkt -
+# eine aeltere Mail, die erst spaeter abgerufen wird, loest also weiterhin
+# KEINE Automatik aus.
+AUTOMATION_CUTOFF = datetime(2026, 8, 9, tzinfo=UTC)
+
 # Ergebnis der Verarbeitung EINER Mail - die Zaehler werden erst nach einem
 # erfolgreichen Commit daraus abgeleitet (siehe _process_one).
-_Outcome = Literal["activity", "pending", "unmatched", "outbound"]
+_Outcome = Literal["activity", "auto_candidate", "pending", "unmatched", "outbound"]
 
 
 @dataclass(frozen=True)
@@ -78,6 +89,11 @@ class _Counters:
     pending_review: int = 0
     skipped_duplicates: int = 0
     failed_messages: int = 0
+    # Separat von created_activities: bei einem Auto-Kandidaten entsteht
+    # IMMER auch eine Activity (siehe _process_one), dieser Zaehler macht
+    # zusaetzlich sichtbar, dass dabei ohne menschliche Bestaetigung ein
+    # neuer Datensatz entstanden ist (Nutzer-Vorgabe).
+    auto_created_candidates: int = 0
     highest_uid: str | None = field(default=None)
 
 
@@ -200,6 +216,7 @@ class MailSyncService:
             pending_review=counters.pending_review,
             skipped_duplicates=counters.skipped_duplicates,
             failed_messages=counters.failed_messages,
+            auto_created_candidates=counters.auto_created_candidates,
         )
 
     # --- Verarbeitung einer einzelnen Mail --------------------------------
@@ -248,8 +265,12 @@ class MailSyncService:
         # Aktivitaeten, die durch ein fehlgeschlagenes Commit gar nicht
         # entstanden sind.
         counters.fetched += 1
-        if outcome == "activity":
+        if outcome in ("activity", "auto_candidate"):
+            # Auch bei "auto_candidate" entsteht eine Activity (siehe
+            # _match_linkedin) - beide Zaehler werden daher hochgesetzt.
             counters.created_activities += 1
+            if outcome == "auto_candidate":
+                counters.auto_created_candidates += 1
         elif outcome == "pending":
             counters.pending_review += 1
 
@@ -334,11 +355,25 @@ class MailSyncService:
             if content.candidate_name
             else None
         )
+
+        is_new_candidate = False
         if candidate_id is None:
-            # Bewusst KEIN automatisch angelegter Kandidat - gleiche
-            # Governance wie beim Sourcing-Lead-Review.
-            message.match_status = MailMatchStatus.PENDING_REVIEW
-            return "pending"
+            if message.received_at >= AUTOMATION_CUTOFF and content.candidate_name:
+                # Ab dem Cutoff wird bei fehlendem Fuzzy-Treffer NICHT mehr
+                # zum Review vorgemerkt, sondern automatisch ein minimaler
+                # Kandidat angelegt (Nutzer-Vorgabe) - anders als beim
+                # Sourcing-Lead-Review, wo ein Mensch immer erst bestaetigt.
+                # Ohne erkennbaren Personennamen (content.candidate_name is
+                # None, z.B. generischer "LinkedIn Recruiter"-Absender) bleibt
+                # es beim Review, da es dann nichts anzulegen gaebe.
+                candidate_id = self._auto_create_candidate(content.candidate_name, message)
+                is_new_candidate = True
+            else:
+                # Vor dem Cutoff (oder kein Name erkennbar): unveraendertes
+                # bisheriges Verhalten - gleiche Governance wie beim
+                # Sourcing-Lead-Review, kein automatischer Kandidat.
+                message.match_status = MailMatchStatus.PENDING_REVIEW
+                return "pending"
 
         message.matched_candidate_id = candidate_id
         message.match_status = MailMatchStatus.MATCHED
@@ -349,7 +384,14 @@ class MailSyncService:
             details=content.message_text or message.body_text,
             candidate_id=candidate_id,
         )
-        return "activity"
+        display_name = content.candidate_name or message.from_name or "Unbekannt"
+        self._create_followup_task(
+            message,
+            candidate_id=candidate_id,
+            client_company_id=None,
+            title=f"LinkedIn-Antwort: {display_name}",
+        )
+        return "activity" if not is_new_candidate else "auto_candidate"
 
     def _match_by_address(self, message: MailMessage) -> _Outcome:
         address = (message.from_address or "").strip().casefold()
@@ -391,6 +433,17 @@ class MailSyncService:
             candidate_id=candidate_id,
             client_company_id=activity_company_id,
         )
+        # Analog zu _match_linkedin: fuer bekannte Absender (Kandidat,
+        # Kontaktperson oder Kanzlei) entsteht ab dem Cutoff zusaetzlich ein
+        # Nachfass-Task (Nutzer-Vorgabe: "_match_by_address ... bekommt fuer
+        # Mails ab Cutoff ebenfalls ein Task spendiert, analog").
+        display_name = message.from_name or message.from_address or "Unbekannt"
+        self._create_followup_task(
+            message,
+            candidate_id=candidate_id,
+            client_company_id=activity_company_id,
+            title=f"E-Mail-Antwort: {display_name}",
+        )
         return "activity"
 
     def _scalar_id(
@@ -422,6 +475,57 @@ class MailSyncService:
         self.session.flush()
         message.created_activity_id = activity.id
 
+    # --- Terminierungs-Agent: Auto-Kandidat + Nachfass-Task ----------------
+
+    def _auto_create_candidate(self, full_name: str, message: MailMessage) -> uuid.UUID:
+        """Legt einen minimalen Kandidaten an, wenn eine LinkedIn-Antwort ab
+        AUTOMATION_CUTOFF keinem bestehenden Kandidaten per Fuzzy-Match
+        zugeordnet werden konnte (Nutzer-Vorgabe: kein Review-Umweg mehr,
+        andere Felder werden spaeter ueber den normalen CV-Prozess befuellt).
+        Ohne candidate_number - eine Nummernvergabe ausserhalb von Hermes ist
+        bewusste Entscheidung, siehe Note unten als Herkunftsnachweis statt
+        eines eigenen Schema-Felds (gleiches Muster wie
+        SourcingService.approve_lead)."""
+        first_name, last_name = _split_name(full_name)
+        candidate = Candidate(first_name=first_name, last_name=last_name)
+        self.session.add(candidate)
+        self.session.flush()
+        self.session.add(
+            Note(
+                candidate_id=candidate.id,
+                body=(
+                    "Automatisch angelegt aus einer LinkedIn-Antwort ohne "
+                    f"Namenstreffer im Bestand (Mail vom {message.received_at:%d.%m.%Y}, "
+                    f"Betreff: {message.subject or '-'})."
+                ),
+            )
+        )
+        self.session.flush()
+        return candidate.id
+
+    def _create_followup_task(
+        self,
+        message: MailMessage,
+        *,
+        candidate_id: uuid.UUID | None,
+        client_company_id: uuid.UUID | None,
+        title: str,
+    ) -> None:
+        """Nachfass-Task fuer Mails ab AUTOMATION_CUTOFF - vor dem Cutoff
+        bleibt es beim bisherigen Verhalten (nur Activity, kein Task)."""
+        if message.received_at < AUTOMATION_CUTOFF:
+            return
+        task = Task(
+            candidate_id=candidate_id,
+            client_company_id=client_company_id,
+            title=title[:240],
+            status=TaskStatus.OPEN,
+            priority=TaskPriority.NORMAL,
+            source_mail_message_id=message.id,
+        )
+        self.session.add(task)
+        self.session.flush()
+
     # --- Fuzzy-Namensabgleich (wie beim Sourcing-Lead-Review) -------------
 
     def _find_candidate_by_name(self, full_name: str) -> uuid.UUID | None:
@@ -446,6 +550,19 @@ class MailSyncService:
                 for row in rows
             ]
         return self._candidate_names
+
+
+def _split_name(full_name: str) -> tuple[str, str]:
+    """Zerlegt einen Anzeigenamen in first_name/last_name - gleiche
+    Konvention wie _normalize_full_name: das LETZTE Token ist der Nachname.
+    Ein Name ohne Leerzeichen landet komplett in last_name (first_name bleibt
+    leer) statt verworfen zu werden - first_name/last_name sind NOT NULL."""
+    parts = full_name.split()
+    if not parts:
+        return "", ""
+    if len(parts) == 1:
+        return "", parts[0]
+    return " ".join(parts[:-1]), parts[-1]
 
 
 def _normalize_full_name(full_name: str) -> str:

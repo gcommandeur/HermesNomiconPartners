@@ -89,4 +89,9 @@ class MailSyncResult(BaseModel):
     pending_review: int = 0
     skipped_duplicates: int = 0
     failed_messages: int = 0
+    # Automatisch angelegte Kandidat:innen (nur fuer Mails ab
+    # services/mail_sync.py::AUTOMATION_CUTOFF ohne Fuzzy-Namenstreffer) -
+    # separat ausgewiesen, damit in der Oberflaeche sichtbar ist, dass hier
+    # ohne menschliche Bestaetigung ein neuer Datensatz entstanden ist.
+    auto_created_candidates: int = 0
     error: str | None = None

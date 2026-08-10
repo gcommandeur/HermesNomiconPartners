@@ -1,7 +1,8 @@
 import uuid
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from cc_crm.models.enums import TaskStatus
@@ -48,6 +49,7 @@ class TaskRepository(SQLAlchemyRepository[Task]):
         submission_id: uuid.UUID | None = None,
         task_status: TaskStatus | None = None,
         owner_user_id: uuid.UUID | None = None,
+        exclude_snoozed: bool = False,
         offset: int = 0,
         limit: int = 100,
     ) -> Sequence[Task]:
@@ -62,6 +64,13 @@ class TaskRepository(SQLAlchemyRepository[Task]):
             filters.append(Task.status == task_status)
         if owner_user_id is not None:
             filters.append(Task.owner_user_id == owner_user_id)
+        if exclude_snoozed:
+            # Zurueckgestellte Tasks (snoozed_until in der Zukunft) fliegen
+            # aus der Liste, bis die Frist abgelaufen ist - noch NIE
+            # zurueckgestellte Tasks (NULL) bleiben immer sichtbar.
+            filters.append(
+                or_(Task.snoozed_until.is_(None), Task.snoozed_until <= datetime.now(UTC))
+            )
         statement = (
             select(Task)
             .where(*filters)

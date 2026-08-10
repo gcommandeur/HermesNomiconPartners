@@ -5,7 +5,13 @@ from fastapi import APIRouter, Query, Response, status
 
 from cc_crm.api.dependencies import CurrentUser, DatabaseSession
 from cc_crm.models.enums import TaskStatus
-from cc_crm.schemas.task import TaskCreate, TaskRead, TaskUpdate
+from cc_crm.schemas.task import (
+    TaskCreate,
+    TaskRead,
+    TaskResolveRequest,
+    TaskSnoozeRequest,
+    TaskUpdate,
+)
 from cc_crm.services.tasks import TaskService
 
 router = APIRouter(prefix="/tasks")
@@ -24,12 +30,19 @@ def list_tasks(
 ) -> list[TaskRead]:
     # owner_user_id ist ein reiner Komfort-Filter ("Meine Aufgaben") - ohne
     # ihn sehen weiterhin alle Nutzer alle Aufgaben, keine Sichtbarkeitsgrenze.
+    #
+    # exclude_snoozed nur bei status=open automatisch aktiv (Nutzer-Vorgabe:
+    # "GET /tasks?status=open filtert ... standardmaessig raus") - bei einer
+    # ungefilterten oder anders gefilterten Abfrage (z.B. status=done fuers
+    # Archiv, oder gar kein Status) sollen zurueckgestellte Tasks weiterhin
+    # auffindbar bleiben.
     tasks = TaskService(session).tasks.filtered(
         candidate_id=candidate_id,
         client_company_id=client_company_id,
         submission_id=submission_id,
         task_status=task_status,
         owner_user_id=owner_user_id,
+        exclude_snoozed=task_status == TaskStatus.OPEN,
         offset=offset,
         limit=limit,
     )
@@ -65,3 +78,20 @@ def update_task(
 def delete_task(task_id: uuid.UUID, session: DatabaseSession) -> Response:
     TaskService(session).delete(task_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{task_id}/snooze", response_model=TaskRead)
+def snooze_task(
+    task_id: uuid.UUID, payload: TaskSnoozeRequest, session: DatabaseSession
+) -> TaskRead:
+    return TaskRead.model_validate(TaskService(session).snooze(task_id, payload))
+
+
+@router.post("/{task_id}/resolve", response_model=TaskRead)
+def resolve_task(
+    task_id: uuid.UUID,
+    payload: TaskResolveRequest,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> TaskRead:
+    return TaskRead.model_validate(TaskService(session).resolve(task_id, payload, current_user.id))

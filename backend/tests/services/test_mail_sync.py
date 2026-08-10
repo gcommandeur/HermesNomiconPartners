@@ -15,11 +15,13 @@ from cc_crm.models.activity import Activity
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.contact_person import ContactPerson
-from cc_crm.models.enums import MailDirection, MailMatchStatus
+from cc_crm.models.enums import MailDirection, MailMatchStatus, TaskStatus
 from cc_crm.models.mail import MailAccount, MailMessage
+from cc_crm.models.task import Task
 from cc_crm.services.mail_sync import (
     ACTIVITY_TYPE_EMAIL,
     ACTIVITY_TYPE_LINKEDIN,
+    AUTOMATION_CUTOFF,
     FetchedMail,
     MailSyncService,
     _max_uid,
@@ -375,3 +377,164 @@ class TestSyncBookkeeping:
 
             assert result.failed_messages == 1
             assert result.created_activities == 1
+
+
+_AFTER_CUTOFF = datetime(2026, 8, 10, 9, 0, tzinfo=UTC)
+
+
+class TestTerminierungsAgent:
+    """Task + Auto-Kandidat greifen NUR fuer Mails ab AUTOMATION_CUTOFF -
+    siehe services/mail_sync.py fuer die Begruendung."""
+
+    def test_linkedin_match_at_or_after_cutoff_creates_task(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        with session_factory() as session:
+            account = _make_account(session)
+            candidate = Candidate(first_name="John Paul", last_name="Fürus")
+            session.add(candidate)
+            session.commit()
+            candidate_id = candidate.id
+
+            result = _sync(
+                session,
+                account,
+                [
+                    _mail(
+                        from_name="John Paul Fürus",
+                        from_address="hit-reply@linkedin.com",
+                        subject="Message replied: Steuerberater (m/w/d) gesucht",
+                        received_at=_AFTER_CUTOFF,
+                    )
+                ],
+            )
+
+            assert result.created_activities == 1
+            assert result.auto_created_candidates == 0
+            task = session.query(Task).one()
+            assert task.candidate_id == candidate_id
+            assert task.status == TaskStatus.OPEN
+            assert "John Paul Fürus" in task.title
+            assert task.source_mail_message_id == session.query(MailMessage).one().id
+
+    def test_linkedin_no_match_at_or_after_cutoff_auto_creates_candidate_and_task(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        with session_factory() as session:
+            account = _make_account(session)
+
+            result = _sync(
+                session,
+                account,
+                [
+                    _mail(
+                        from_name="Neue Person",
+                        from_address="hit-reply@linkedin.com",
+                        subject="Message replied: Steuerberater (m/w/d) gesucht",
+                        received_at=_AFTER_CUTOFF,
+                    )
+                ],
+            )
+
+            assert result.created_activities == 1
+            assert result.auto_created_candidates == 1
+            assert result.pending_review == 0
+
+            candidate = session.query(Candidate).one()
+            assert candidate.first_name == "Neue"
+            assert candidate.last_name == "Person"
+
+            message = session.query(MailMessage).one()
+            assert message.match_status == MailMatchStatus.MATCHED
+            assert message.matched_candidate_id == candidate.id
+
+            activity = session.query(Activity).one()
+            assert activity.candidate_id == candidate.id
+
+            task = session.query(Task).one()
+            assert task.candidate_id == candidate.id
+            assert task.status == TaskStatus.OPEN
+
+    def test_linkedin_before_cutoff_keeps_old_behavior(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        """Mails vor dem Cutoff duerfen NICHT automatisch einen Kandidaten
+        anlegen oder ein Task erzeugen - auch nicht bei einem Namenstreffer."""
+        with session_factory() as session:
+            account = _make_account(session)
+            candidate = Candidate(first_name="John Paul", last_name="Fürus")
+            session.add(candidate)
+            session.commit()
+
+            result = _sync(
+                session,
+                account,
+                [
+                    _mail(
+                        from_name="John Paul Fürus",
+                        from_address="hit-reply@linkedin.com",
+                        subject="Message replied: Rolle",
+                        received_at=datetime(2026, 8, 1, tzinfo=UTC),
+                    )
+                ],
+            )
+
+            assert result.created_activities == 1
+            assert result.auto_created_candidates == 0
+            assert session.query(Task).count() == 0
+
+            # Kein Treffer + vor dem Cutoff bleibt beim alten Review-Verhalten.
+            result2 = _sync(
+                session,
+                account,
+                [
+                    _mail(
+                        message_id="unknown@x",
+                        uid="99",
+                        from_name="Wildfremde Person",
+                        from_address="hit-reply@linkedin.com",
+                        subject="Message replied: Andere Rolle",
+                        received_at=datetime(2026, 8, 1, tzinfo=UTC),
+                    )
+                ],
+            )
+            assert result2.pending_review == 1
+            assert result2.auto_created_candidates == 0
+            assert session.query(Candidate).count() == 1
+            assert session.query(Task).count() == 0
+
+    def test_address_match_at_or_after_cutoff_creates_task(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        with session_factory() as session:
+            account = _make_account(session)
+            session.add(
+                Candidate(first_name="Anna", last_name="Müller", email="anna.mueller@example.com")
+            )
+            session.commit()
+
+            result = _sync(session, account, [_mail(received_at=_AFTER_CUTOFF)])
+
+            assert result.created_activities == 1
+            task = session.query(Task).one()
+            assert task.status == TaskStatus.OPEN
+            assert task.source_mail_message_id is not None
+
+    def test_address_match_before_cutoff_creates_no_task(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        with session_factory() as session:
+            account = _make_account(session)
+            session.add(
+                Candidate(first_name="Anna", last_name="Müller", email="anna.mueller@example.com")
+            )
+            session.commit()
+
+            result = _sync(session, account, [_mail()])
+
+            assert result.created_activities == 1
+            assert session.query(Task).count() == 0
+
+    def test_automation_cutoff_constant_value(self) -> None:
+        """Regressionsschutz: der exakte Nutzer-vorgegebene Cutoff-Wert."""
+        assert datetime(2026, 8, 9, tzinfo=UTC) == AUTOMATION_CUTOFF

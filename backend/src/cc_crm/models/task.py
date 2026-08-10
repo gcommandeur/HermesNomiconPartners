@@ -45,3 +45,14 @@ class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True
     )
+
+    # "Spaeter erinnern" (POST /tasks/{id}/snooze) - solange dieser Wert in
+    # der Zukunft liegt, blendet die offene-Aufgaben-Liste den Task aus,
+    # OHNE ihn wie status=DONE endgueltig zu schliessen.
+    snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    # Rueckverweis auf die Mail, aus der dieser Task automatisch entstand
+    # (siehe services/mail_sync.py) - nur fuer automatisch erzeugte Tasks
+    # gesetzt, bei manuell angelegten None.
+    source_mail_message_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("mail_messages.id", ondelete="SET NULL")
+    )

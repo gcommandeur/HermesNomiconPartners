@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -22,7 +23,7 @@ class TaskBase(BaseModel):
 
 
 class TaskCreate(TaskBase):
-    pass
+    source_mail_message_id: uuid.UUID | None = None
 
 
 class TaskUpdate(BaseModel):
@@ -35,4 +36,16 @@ class TaskUpdate(BaseModel):
 
 
 class TaskRead(TaskBase, EntityRead):
-    pass
+    snoozed_until: datetime | None = None
+    source_mail_message_id: uuid.UUID | None = None
+
+
+class TaskSnoozeRequest(BaseModel):
+    days: int = Field(ge=1, le=90)
+
+
+class TaskResolveRequest(BaseModel):
+    outcome: Literal["no_response", "meeting_scheduled"]
+    # NUR bei outcome="meeting_scheduled" Pflicht - siehe TaskService.resolve.
+    scheduled_at: datetime | None = None
+    notes: str | None = None
