@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateMatch, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailAccount, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateMatch, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailAccount, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, TaskResolveOutcome, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -254,6 +254,23 @@ export async function getActivitiesForCandidate(candidateId: string) {
 
 export async function getTasksForCandidate(candidateId: string) {
   return apiGet<Task[]>(`/tasks?candidate_id=${candidateId}`, []);
+}
+
+/** "Spaeter erinnern" - blendet den Task fuer `days` Tage aus GET
+ * /tasks?status=open (und der Dashboard-To-Do-Sektion) aus, ohne ihn zu
+ * schliessen (siehe Backend services/tasks.py::snooze). */
+export async function snoozeTask(taskId: string, days: number) {
+  return apiPost<Task>(`/tasks/${taskId}/snooze`, { days });
+}
+
+/** Reaktion auf ein (i.d.R. automatisch erzeugtes) Task - "no_response"
+ * schliesst es nur, "meeting_scheduled" legt zusaetzlich einen
+ * Quali-Call-Kalendertermin an (siehe Backend services/tasks.py::resolve). */
+export async function resolveTask(
+  taskId: string,
+  payload: { outcome: TaskResolveOutcome; scheduled_at?: string; notes?: string },
+) {
+  return apiPost<Task>(`/tasks/${taskId}/resolve`, payload);
 }
 
 export async function getDocumentsForOwner(ownerType: string, ownerId: string) {

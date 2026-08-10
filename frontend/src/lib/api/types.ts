@@ -468,6 +468,9 @@ export interface CockpitItem {
   client_company_id: string | null;
   submission_id: string | null;
   priority: string;
+  /** Nur bei kind="task" gesetzt - fuer die Dashboard-To-Do-Sektion
+   * (snooze/resolve), siehe Backend schemas/operational.py::CockpitItem. */
+  task_id?: string | null;
 }
 
 export interface SourcingFunnel {
@@ -556,7 +559,16 @@ export interface Task extends Entity {
   /** Zustaendiger Mitarbeiter (Komfort-Filter "Meine Aufgaben", KEINE
    * Sichtbarkeitsgrenze - siehe Backend models/task.py::owner_user_id). */
   owner_user_id?: string | null;
+  /** "Spaeter erinnern" (POST /tasks/{id}/snooze) - solange in der Zukunft,
+   * blendet GET /tasks?status=open (und die Dashboard-To-Do-Sektion) den
+   * Task aus, ohne ihn zu schliessen. */
+  snoozed_until?: string | null;
+  /** Nur bei automatisch aus einer Mail erzeugten Tasks gesetzt (siehe
+   * Backend services/mail_sync.py). */
+  source_mail_message_id?: string | null;
 }
+
+export type TaskResolveOutcome = "no_response" | "meeting_scheduled";
 
 export interface DocumentMeta extends Entity {
   owner_type: "candidate" | "client" | "submission" | "placement" | "fee";

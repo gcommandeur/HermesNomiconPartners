@@ -350,7 +350,14 @@ class CockpitService:
         ]
         period_submissions = [item for item in submissions if naive_utc(item.created_at) >= since]
         due_tasks = [
-            task for task in tasks if task.due_at is None or naive_utc(task.due_at) <= due_soon
+            task
+            for task in tasks
+            if (task.due_at is None or naive_utc(task.due_at) <= due_soon)
+            # Zurueckgestellte Tasks (POST /tasks/{id}/snooze) bleiben bis zum
+            # Ablauf der Frist aus der Dashboard-To-Do-Sektion draussen -
+            # gleiche Regel wie bei GET /tasks?status=open (siehe
+            # repositories/tasks.py::filtered(exclude_snoozed=...)).
+            and (task.snoozed_until is None or naive_utc(task.snoozed_until) <= now)
         ]
         hot_submissions = [item for item in submissions if item.status in self.HOT]
         # Aeltere Task-Zeilen (vor Einfuehrung von candidate_id/client_company_id
@@ -419,6 +426,7 @@ class CockpitService:
                     "client_company_id": task_client_ids[task.id],
                     "submission_id": task.candidate_submission_id,
                     "priority": task.priority.value,
+                    "task_id": task.id,
                 }
             )
         hot = [

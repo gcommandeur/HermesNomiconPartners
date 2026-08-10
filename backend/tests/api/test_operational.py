@@ -88,6 +88,44 @@ def test_cockpit_hot_processes_and_important_include_candidate_and_client_names(
     assert any("Max Mustermann" in detail for detail in important_details)
 
 
+def test_cockpit_important_task_items_carry_task_id_for_dashboard_actions(
+    client: TestClient,
+) -> None:
+    """Die Dashboard-To-Do-Sektion (snooze/resolve) braucht die Task-ID in
+    jedem "important"-Eintrag vom kind="task"."""
+    candidate = client.post(
+        "/api/v1/candidates", json={"first_name": "Erika", "last_name": "Musterfrau"}
+    ).json()
+    task = client.post(
+        "/api/v1/tasks",
+        json={"candidate_id": candidate["id"], "title": "LinkedIn-Antwort: Erika Musterfrau"},
+    ).json()
+
+    cockpit = client.get("/api/v1/cockpit?period=week").json()
+    matching = [item for item in cockpit["important"] if item.get("task_id") == task["id"]]
+    assert len(matching) == 1
+    assert matching[0]["kind"] == "task"
+    assert matching[0]["candidate_id"] == candidate["id"]
+
+
+def test_cockpit_important_excludes_snoozed_tasks(client: TestClient) -> None:
+    candidate = client.post(
+        "/api/v1/candidates", json={"first_name": "Zurueck", "last_name": "Gestellt"}
+    ).json()
+    task = client.post(
+        "/api/v1/tasks",
+        json={"candidate_id": candidate["id"], "title": "LinkedIn-Antwort: Zurueck Gestellt"},
+    ).json()
+
+    before = client.get("/api/v1/cockpit?period=week").json()
+    assert any(item.get("task_id") == task["id"] for item in before["important"])
+
+    client.post(f"/api/v1/tasks/{task['id']}/snooze", json={"days": 3})
+
+    after = client.get("/api/v1/cockpit?period=week").json()
+    assert not any(item.get("task_id") == task["id"] for item in after["important"])
+
+
 def test_cockpit_important_resolves_names_via_submission_when_task_fields_are_null(
     client: TestClient, session_factory: sessionmaker[Session]
 ) -> None:

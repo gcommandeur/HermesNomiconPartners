@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/crm/page-header";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { WeeklyChartLoader } from "@/components/crm/weekly-chart-loader";
+import { DashboardTodo } from "@/components/crm/dashboard-todo";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import type { Cockpit } from "@/lib/api/types";
 
@@ -72,6 +73,8 @@ export function DashboardCockpit({
           </div>
         ))}
       </section>
+
+      <DashboardTodo items={cockpit.important} />
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>

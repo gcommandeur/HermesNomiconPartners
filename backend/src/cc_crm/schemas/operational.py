@@ -77,6 +77,10 @@ class CockpitItem(BaseModel):
     client_company_id: uuid.UUID | None = None
     submission_id: uuid.UUID | None = None
     priority: str = "normal"
+    # Nur bei kind="task" gesetzt (siehe CockpitService.build) - die
+    # Dashboard-To-Do-Sektion braucht die Task-ID fuer die Snooze/Resolve-
+    # Aktionen (POST /tasks/{id}/snooze bzw. /resolve).
+    task_id: uuid.UUID | None = None
 
 
 class CockpitKpis(BaseModel):
