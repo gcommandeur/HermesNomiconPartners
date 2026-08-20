@@ -5,7 +5,7 @@ import { ArrowUpRight, Ghost, Mail, MapPin, Phone, X } from "lucide-react";
 import type { Candidate } from "@/lib/api/types";
 import { StatusPill } from "./status-pill";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/utils";
+import { formatDate, rolleLabel } from "@/lib/utils";
 
 /** Seitliches Kurzprofil-Panel (Bullhorn-artiger "Split View"): öffnet den
  * Kandidaten neben der Prozesse-Liste, ohne die Seite zu verlassen. Nutzt die
@@ -32,6 +32,11 @@ export function CandidateQuickViewDrawer({
             </div>
             <h2 className="text-xl font-semibold tracking-[-.03em]">{candidate.first_name} {candidate.last_name}</h2>
             <p className="mt-1 text-sm text-[#CBD5E1]">{candidate.job_title ?? "Rolle offen"} · {candidate.city ?? candidate.postal_code ?? "Region offen"}</p>
+            {candidate.rollen && candidate.rollen.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {candidate.rollen.map((rolle) => <Badge key={rolle} tone="blue">{rolleLabel(rolle)}</Badge>)}
+              </div>
+            )}
           </div>
           <button
             type="button"

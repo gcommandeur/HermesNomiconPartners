@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Ghost, History, X } from "lucide-react";
+import { ChevronDown, Ghost, History, X } from "lucide-react";
 import { FilterBar } from "@/components/crm/filter-bar";
 import { DataTable } from "@/components/crm/data-table";
 import { StatusPill } from "@/components/crm/status-pill";
@@ -16,13 +16,13 @@ import { PaginationControls } from "@/components/crm/pagination-controls";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { compareValues, type SortDir } from "@/lib/sort";
-import { formatDate } from "@/lib/utils";
+import { formatDate, ROLLE_OPTIONS, rolleLabel } from "@/lib/utils";
 import { usePagination } from "@/lib/use-pagination";
 import { apiPost } from "@/lib/api/client";
 import { useCurrentUser, useReactivationCandidatesCache } from "@/lib/api/hooks";
 import { useServerSearchList } from "@/lib/api/use-server-search";
 import { getCandidatesPage } from "@/lib/api/queries";
-import type { Candidate } from "@/lib/api/types";
+import type { Candidate, Rolle } from "@/lib/api/types";
 
 interface NlSearchResponse {
   items: Candidate[];
@@ -48,6 +48,58 @@ const SORT_ACCESSORS: Record<string, (candidate: Candidate) => unknown> = {
   status: (c) => c.status,
 };
 
+/** Mehrfachauswahl aus den 10 Rollen-Kategorien + Sonstige - eigenstaendig
+ * statt Teil von FilterBar (dessen statusOptions/-Value sind Einzelauswahl
+ * und werden auch von clients-table.tsx/contacts genutzt, hier nicht
+ * anfassen). ODER-verknuepft mit sich selbst, UND-verknuepft mit search
+ * (siehe repositories/candidates.py::filtered). */
+function RollenFilter({ selected, onChange }: { selected: Rolle[]; onChange: (value: Rolle[]) => void }) {
+  const [open, setOpen] = useState(false);
+
+  function toggle(rolle: Rolle) {
+    onChange(selected.includes(rolle) ? selected.filter((r) => r !== rolle) : [...selected, rolle]);
+  }
+
+  return (
+    <div className="relative">
+      <Button variant="outline" onClick={() => setOpen((current) => !current)}>
+        Rollen{selected.length > 0 ? `: ${selected.length}` : ""}
+        <ChevronDown size={14} />
+      </Button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-11 z-40 w-64 rounded-lg border border-white/10 bg-[#0D1B2E] p-1.5 shadow-2xl">
+            {selected.length > 0 && (
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs text-[#94A3B8] hover:bg-white/8"
+                onClick={() => onChange([])}
+              >
+                Auswahl zurücksetzen <X size={12} />
+              </button>
+            )}
+            {ROLLE_OPTIONS.map((rolle) => (
+              <label
+                key={rolle}
+                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-xs text-[#D8DADF] hover:bg-white/8"
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.includes(rolle)}
+                  onChange={() => toggle(rolle)}
+                  className="accent-[#1F5FA8]"
+                />
+                {rolleLabel(rolle)}
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function CandidatesTable() {
   const searchParams = useSearchParams();
   // Erlaubt einen direkten Link auf den Reaktivierungs-Filter (z.B. vom
@@ -56,6 +108,7 @@ export function CandidatesTable() {
     () => searchParams.get("reaktivierung") === "1",
   );
   const [status, setStatus] = useState("");
+  const [selectedRollen, setSelectedRollen] = useState<Rolle[]>([]);
   // "Meine Kandidaten" - reiner Komfort-Filter nach owner_user_id, KEINE
   // Sichtbarkeitsgrenze (Default "Alle" bleibt unveraendert). Siehe
   // Backend models/candidate.py::owner_user_id fuer die Begruendung.
@@ -102,6 +155,7 @@ export function CandidatesTable() {
     retry: retryCandidates,
   } = useServerSearchList<Candidate>("/candidates", getCandidatesPage, {
     status,
+    rollen: selectedRollen,
     ownerUserId: mineOnly ? currentUserId : undefined,
     sortBy: sortKey ?? undefined,
     sortDir,
@@ -152,6 +206,9 @@ export function CandidatesTable() {
     const base = reactivationCandidates.filter((candidate) => {
       if (status && candidate.status !== status) return false;
       if (mineOnly && candidate.owner_user_id !== currentUserId) return false;
+      if (selectedRollen.length > 0 && !selectedRollen.some((r) => candidate.rollen?.includes(r))) {
+        return false;
+      }
       const term = search.trim().toLowerCase();
       if (!term) return true;
       const haystack = [
@@ -164,7 +221,7 @@ export function CandidatesTable() {
     if (!sortKey || !SORT_ACCESSORS[sortKey]) return base;
     const accessor = SORT_ACCESSORS[sortKey];
     return [...base].sort((a, b) => compareValues(accessor(a), accessor(b), sortDir));
-  }, [reactivationCandidates, search, status, mineOnly, currentUserId, sortKey, sortDir]);
+  }, [reactivationCandidates, search, status, selectedRollen, mineOnly, currentUserId, sortKey, sortDir]);
 
   const { pageItems: reactivationPageItems, page: reactivationPage, pageCount: reactivationPageCount, setPage: setReactivationPage } = usePagination(reactivationFiltered);
 
@@ -189,6 +246,7 @@ export function CandidatesTable() {
   const exportRows = useMemo(() => displayedCandidates.map((candidate) => ({
     Name: `${candidate.first_name} ${candidate.last_name}`,
     Rolle: candidate.job_title,
+    Rollen: (candidate.rollen ?? []).map(rolleLabel).join(", "),
     Region: candidate.city ?? candidate.postal_code,
     Gehalt: candidate.salary_expectation,
     Status: candidate.status,
@@ -233,18 +291,37 @@ export function CandidatesTable() {
         </div>
       )}
       <DemoNotice source={reactivationOnly ? "api" : (source ?? "api")} error={reactivationOnly ? undefined : demoError} />
-      <FilterBar
-        placeholder='Nach Name/Rolle/Region suchen, oder z.B. "aktive Steuerberater in Köln mit Umsatzsteuer-Erfahrung" für KI-Suche'
-        value={search}
-        onChange={handleSearchChange}
-        statusOptions={STATUS_OPTIONS}
-        statusValue={status}
-        onStatusChange={setStatus}
-        onSubmit={handleAiSearch}
-        aiSearch={{ loading: aiSearching, onClick: handleAiSearch }}
-        ownerFilter={{ mineOnly, onChange: setMineOnly }}
-        loading={!reactivationOnly && isValidating}
-      />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+        <div className="flex-1">
+          <FilterBar
+            placeholder='Nach Name/Rolle/Region suchen, oder z.B. "aktive Steuerberater in Köln mit Umsatzsteuer-Erfahrung" für KI-Suche'
+            value={search}
+            onChange={handleSearchChange}
+            statusOptions={STATUS_OPTIONS}
+            statusValue={status}
+            onStatusChange={setStatus}
+            onSubmit={handleAiSearch}
+            aiSearch={{ loading: aiSearching, onClick: handleAiSearch }}
+            ownerFilter={{ mineOnly, onChange: setMineOnly }}
+            loading={!reactivationOnly && isValidating}
+          />
+        </div>
+        <div className="mb-4">
+          <RollenFilter selected={selectedRollen} onChange={setSelectedRollen} />
+        </div>
+      </div>
+      {selectedRollen.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {selectedRollen.map((rolle) => (
+            <Badge key={rolle} tone="blue" className="gap-1.5">
+              {rolleLabel(rolle)}
+              <button type="button" onClick={() => setSelectedRollen((current) => current.filter((r) => r !== rolle))} className="hover:text-white">
+                <X size={12} />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
       <ErrorBanner message={aiError} className="mb-3" />
       {aiResults && (
         <div className="mb-3 flex items-center justify-between rounded-lg border border-[#1F5FA8]/30 bg-[#1F5FA8]/10 p-3 text-xs text-[#CBD5E1]">
@@ -265,6 +342,7 @@ export function CandidatesTable() {
           { label: "Nr.", key: "candidate_number" },
           { label: "Name", key: "name" },
           { label: "Rolle / Qualifikation", key: "job_title" },
+          "Rollen",
           { label: "Region", key: "city" },
           { label: "Gehalt", key: "salary_expectation" },
           "Verfügbarkeit",
@@ -281,6 +359,15 @@ export function CandidatesTable() {
             <td className="px-4 py-3.5 text-xs text-[#94A3B8]">{candidate.candidate_number ?? "—"}</td>
             <td className="px-4 py-3.5"><Link href={`/kandidaten/${candidate.id}`} className="font-semibold text-[#D8DADF] hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</Link>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-[#e4aeb4]" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[11px] text-[#94A3B8]">Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</p></td>
             <td className="px-4 py-3.5"><p>{candidate.job_title ?? "—"}</p><p className="mt-1 text-[11px] text-[#94A3B8]">{candidate.qualification ?? "Qualifikation offen"}</p></td>
+            <td className="px-4 py-3.5">
+              {candidate.rollen && candidate.rollen.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {candidate.rollen.map((rolle) => <Badge key={rolle} tone="blue">{rolleLabel(rolle)}</Badge>)}
+                </div>
+              ) : (
+                <span className="text-[#94A3B8]">—</span>
+              )}
+            </td>
             <td className="px-4 py-3.5 text-[#CBD5E1]">{candidate.city ?? candidate.postal_code ?? "—"}</td>
             <td className="px-4 py-3.5">{candidate.salary_expectation ?? "—"}</td>
             <td className="px-4 py-3.5"><p>{candidate.notice_period ?? "—"}</p><p className="mt-1 text-[11px] text-[#94A3B8]">{candidate.available_from ? formatDate(candidate.available_from) : "nach Absprache"}</p></td>

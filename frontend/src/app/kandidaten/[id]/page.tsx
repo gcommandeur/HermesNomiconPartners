@@ -24,7 +24,7 @@ import { NotesPanel } from "@/components/crm/notes-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDate } from "@/lib/utils";
+import { formatDate, rolleLabel } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +87,15 @@ export default async function CandidateDetailPage({
           </div>
           <h1 className="text-3xl font-semibold tracking-[-.035em]">{candidate.first_name} {candidate.last_name}</h1>
           <p className="mt-2 text-sm text-[#CBD5E1]">{candidate.job_title ?? "Rolle offen"} · {candidate.city ?? candidate.postal_code ?? "Region offen"}</p>
+          {/* Normalisierte Rollen-Kategorien (models/enums.py::Rolle) -
+           * durchsuchbare Ergaenzung zu job_title oben (Freitext aus dem
+           * CV), deshalb prominent direkt im Kopfbereich statt versteckt
+           * in einem Tab. */}
+          {candidate.rollen && candidate.rollen.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {candidate.rollen.map((rolle) => <Badge key={rolle} tone="blue">{rolleLabel(rolle)}</Badge>)}
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-4 text-xs text-[#CBD5E1]">
           {candidate.email && <span className="flex items-center gap-1.5"><Mail size={14} />{candidate.email}</span>}

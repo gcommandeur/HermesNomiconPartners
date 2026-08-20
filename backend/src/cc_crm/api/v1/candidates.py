@@ -7,7 +7,7 @@ from fastapi import APIRouter, File, Query, Response, UploadFile, status
 from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
 from cc_crm.api.v1.operational import _read_upload_with_size_limit, _validate_upload_type
 from cc_crm.core.config import get_settings
-from cc_crm.models.enums import CandidateStatus
+from cc_crm.models.enums import CandidateStatus, Rolle
 from cc_crm.schemas.candidate import (
     CandidateCreate,
     CandidateRead,
@@ -42,6 +42,12 @@ def list_candidates(
     session: DatabaseSession,
     candidate_status: Annotated[CandidateStatus | None, Query(alias="status")] = None,
     role: str | None = None,
+    # Mehrfach angebbar (?rollen=steuerberater&rollen=partner) - ODER-
+    # verknuepft, siehe repositories/candidates.py::filtered. Anders als
+    # `role` (Freitext-Filter auf job_title) filtert dies auf die
+    # normalisierte Candidate.rollen-Taxonomie (models/enums.py::Rolle) -
+    # beide Filter sind unabhaengig nutzbar, auch zusammen mit `search`.
+    rollen: Annotated[list[Rolle] | None, Query()] = None,
     region: str | None = None,
     search: str | None = None,
     owner_user_id: uuid.UUID | None = None,
@@ -61,6 +67,7 @@ def list_candidates(
     entities, total = CandidateService(session).list_filtered(
         status=candidate_status,
         role=role,
+        rollen=rollen,
         region=region,
         search=search,
         owner_user_id=owner_user_id,

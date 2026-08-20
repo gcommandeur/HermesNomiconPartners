@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
-import type { DataResult, PageQuery, Paginated } from "./types";
+import type { DataResult, PageQuery, Paginated, Rolle } from "./types";
 
 const DEBOUNCE_MS = 300;
 
@@ -35,6 +35,7 @@ export function useServerSearchList<T>(
   fetcher: (query: PageQuery) => Promise<DataResult<Paginated<T>>>,
   options: {
     status?: string;
+    rollen?: Rolle[];
     ownerUserId?: string;
     pageSize?: number;
     sortBy?: string;
@@ -45,16 +46,20 @@ export function useServerSearchList<T>(
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const debouncedSearch = useDebouncedValue(search.trim(), DEBOUNCE_MS);
+  // Stabiler String fuer Dependency-Array/Cache-Key statt der rollen-Array-
+  // Referenz selbst, die sich bei jedem Render neu bildet, wenn der Aufrufer
+  // sie inline erzeugt (z.B. `rollen: [...selected]`).
+  const rollenKey = (options.rollen ?? []).join(",");
 
   // Zurueck auf Seite 1, wenn sich Suche, Filter oder Sortierung aendern -
   // sonst bliebe man auf einer Seite haengen, die es im neuen (kuerzeren/
   // anders sortierten) Ergebnis vielleicht gar nicht mehr an dieser Stelle gibt.
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, options.status, options.ownerUserId, options.sortBy, options.sortDir]);
+  }, [debouncedSearch, options.status, rollenKey, options.ownerUserId, options.sortBy, options.sortDir]);
 
   const offset = page * pageSize;
-  const swrKey = `${cacheKeyPrefix}?search=${debouncedSearch}&status=${options.status ?? ""}&owner_user_id=${options.ownerUserId ?? ""}&sort_by=${options.sortBy ?? ""}&sort_dir=${options.sortDir ?? ""}&limit=${pageSize}&offset=${offset}`;
+  const swrKey = `${cacheKeyPrefix}?search=${debouncedSearch}&status=${options.status ?? ""}&rollen=${rollenKey}&owner_user_id=${options.ownerUserId ?? ""}&sort_by=${options.sortBy ?? ""}&sort_dir=${options.sortDir ?? ""}&limit=${pageSize}&offset=${offset}`;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<DataResult<Paginated<T>>>(
     swrKey,
@@ -62,6 +67,7 @@ export function useServerSearchList<T>(
       fetcher({
         search: debouncedSearch || undefined,
         status: options.status,
+        rollen: options.rollen,
         ownerUserId: options.ownerUserId,
         sortBy: options.sortBy,
         sortDir: options.sortDir,

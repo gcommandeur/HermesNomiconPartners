@@ -98,3 +98,78 @@ def test_reactivation_list_returns_only_stale_contacts(client: TestClient) -> No
 
     narrow = client.get("/api/v1/candidates/reactivation-list?threshold_months=200")
     assert narrow.json() == []
+
+
+class TestRollenFilter:
+    """GET /candidates?rollen=... - Filter auf die normalisierte
+    Candidate.rollen-Taxonomie (nicht zu verwechseln mit `role`, das auf
+    job_title/Freitext filtert)."""
+
+    def _create(self, client: TestClient, name: str, rollen: list[str]) -> dict:
+        response = client.post(
+            "/api/v1/candidates",
+            json={"first_name": name, "last_name": "Test", "rollen": rollen},
+        )
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    def test_filters_to_candidates_with_the_given_rolle(self, client: TestClient) -> None:
+        steuerberater = self._create(client, "Anna", ["steuerberater"])
+        self._create(client, "Bernd", ["rechtsanwalt"])
+
+        response = client.get("/api/v1/candidates?rollen=steuerberater")
+
+        assert response.status_code == 200
+        ids = [item["id"] for item in response.json()["items"]]
+        assert ids == [steuerberater["id"]]
+
+    def test_multiple_rollen_are_or_combined(self, client: TestClient) -> None:
+        steuerberater = self._create(client, "Anna", ["steuerberater"])
+        anwalt = self._create(client, "Bernd", ["rechtsanwalt"])
+        self._create(client, "Clara", ["partner"])
+
+        response = client.get("/api/v1/candidates?rollen=steuerberater&rollen=rechtsanwalt")
+
+        ids = {item["id"] for item in response.json()["items"]}
+        assert ids == {steuerberater["id"], anwalt["id"]}
+
+    def test_candidate_with_multiple_rollen_matches_any_of_them(self, client: TestClient) -> None:
+        """Ein Kandidat kann mehrere gleichzeitig gueltige Rollen tragen
+        (z.B. Steuerberater UND Partner) - ein Filter auf nur eine davon
+        muss ihn trotzdem finden."""
+        both = self._create(client, "Anna", ["steuerberater", "partner"])
+
+        response = client.get("/api/v1/candidates?rollen=partner")
+
+        ids = [item["id"] for item in response.json()["items"]]
+        assert ids == [both["id"]]
+
+    def test_does_not_false_positive_on_substring_overlap(self, client: TestClient) -> None:
+        """'steuerfachwirt' darf NICHT auf einen Kandidaten mit nur
+        'steuerfachangestellte' matchen, obwohl beide mit 'steuerfach'
+        beginnen - der Substring-Match ist auf den quotierten Vollwert
+        begrenzt."""
+        self._create(client, "Anna", ["steuerfachangestellte"])
+
+        response = client.get("/api/v1/candidates?rollen=steuerfachwirt")
+
+        assert response.json()["items"] == []
+
+    def test_combines_with_free_text_search(self, client: TestClient) -> None:
+        """rollen-Filter und search sollen UND-verknuepft nutzbar sein, nicht
+        sich gegenseitig ausschliessen."""
+        match = self._create(client, "Anna", ["steuerberater"])
+        self._create(client, "Anna", ["rechtsanwalt"])  # gleicher Vorname, andere Rolle
+
+        response = client.get("/api/v1/candidates?rollen=steuerberater&search=Anna")
+
+        ids = [item["id"] for item in response.json()["items"]]
+        assert ids == [match["id"]]
+
+    def test_unset_rollen_filter_returns_everyone(self, client: TestClient) -> None:
+        self._create(client, "Anna", ["steuerberater"])
+        self._create(client, "Bernd", [])
+
+        response = client.get("/api/v1/candidates")
+
+        assert response.json()["total_count"] == 2

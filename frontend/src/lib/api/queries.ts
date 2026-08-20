@@ -56,6 +56,7 @@ function pageQueryString(query: PageQuery): string {
   const params = new URLSearchParams();
   if (query.search?.trim()) params.set("search", query.search.trim());
   if (query.status) params.set("status", query.status);
+  for (const rolle of query.rollen ?? []) params.append("rollen", rolle);
   if (query.ownerUserId) params.set("owner_user_id", query.ownerUserId);
   if (query.sortBy) params.set("sort_by", query.sortBy);
   if (query.sortDir) params.set("sort_dir", query.sortDir);

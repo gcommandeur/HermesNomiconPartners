@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { Contact } from "@/lib/api/types";
+import type { Contact, Rolle } from "@/lib/api/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -55,4 +55,42 @@ const TERMS_STATUS_LABELS: Record<string, string> = {
 export function termsStatusLabel(status?: string | null): string {
   if (!status) return TERMS_STATUS_LABELS.not_sent;
   return TERMS_STATUS_LABELS[status] ?? status;
+}
+
+// Feste 10 Zielrollen + "sonstige" (siehe Backend models/enums.py::Rolle) -
+// ROLLE_OPTIONS haelt die Anzeige-Reihenfolge fest (fachliche Laufbahn-
+// Stufen gruppiert: Steuer-/Bilanzbuchhaltung, dann Wirtschaftspruefung,
+// dann Rechtsberatung, "sonstige" zuletzt), damit Filter-Dropdown und
+// Badge-Listen ueberall gleich sortiert erscheinen statt in Insertions-
+// Reihenfolge der jeweiligen candidate.rollen-Liste.
+export const ROLLE_LABELS: Record<Rolle, string> = {
+  steuerfachangestellte: "Steuerfachangestellte:r",
+  steuerfachwirt: "Steuerfachwirt:in",
+  bilanzbuchhalter: "Bilanzbuchhalter:in",
+  steuerberater: "Steuerberater:in",
+  partner: "Partner:in",
+  pruefungsassistent: "Prüfungsassistent:in",
+  pruefungsleiter: "Prüfungsleiter:in",
+  wirtschaftspruefer: "Wirtschaftsprüfer:in",
+  rechtsfachangestellte: "Rechtsfachangestellte:r",
+  rechtsanwalt: "Rechtsanwält:in",
+  sonstige: "Sonstige",
+};
+
+export const ROLLE_OPTIONS: Rolle[] = [
+  "steuerfachangestellte",
+  "steuerfachwirt",
+  "bilanzbuchhalter",
+  "steuerberater",
+  "partner",
+  "pruefungsassistent",
+  "pruefungsleiter",
+  "wirtschaftspruefer",
+  "rechtsfachangestellte",
+  "rechtsanwalt",
+  "sonstige",
+];
+
+export function rolleLabel(value: Rolle): string {
+  return ROLLE_LABELS[value] ?? value;
 }

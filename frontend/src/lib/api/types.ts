@@ -1,4 +1,20 @@
 export type CandidateStatus = "active" | "passive" | "placed" | "blocked" | "archived";
+/** Normalisierte Berufsrollen-Taxonomie (siehe Backend models/enums.py::
+ * Rolle) - feste 10 Zielrollen + "sonstige" statt Freitext. Candidate.rollen
+ * ist eine LISTE (mehrere gleichzeitig gueltige Rollen moeglich, z.B.
+ * Steuerberater UND Partner), keine zeitliche Abfolge. */
+export type Rolle =
+  | "steuerfachangestellte"
+  | "steuerfachwirt"
+  | "bilanzbuchhalter"
+  | "steuerberater"
+  | "partner"
+  | "pruefungsassistent"
+  | "pruefungsleiter"
+  | "wirtschaftspruefer"
+  | "rechtsfachangestellte"
+  | "rechtsanwalt"
+  | "sonstige";
 export type HonorarStufe = "standard" | "nachlass_1" | "nachlass_2" | "individuell";
 /** Grammatikalisches Geschlecht für die Profilgenerierung (Kandidatin/Kandidat). */
 export type Anrede = "frau" | "herr" | "divers";
@@ -78,6 +94,10 @@ export interface Candidate extends Entity {
   email: string | null;
   phone: string | null;
   job_title: string | null;
+  /** Normalisierte Rollen-Kategorien (Backend models/enums.py::Rolle) -
+   * durchsuchbare, kategoriale Ergaenzung zu job_title (Freitext-
+   * Originaltitel aus dem CV), nicht dessen Ersatz. */
+  rollen?: Rolle[];
   qualification?: string | null;
   postal_code: string | null;
   city: string | null;
@@ -636,6 +656,10 @@ export interface Paginated<T> {
 export interface PageQuery {
   search?: string;
   status?: string;
+  /** Nur fuer Kandidaten (Backend GET /candidates?rollen=...) - Filter auf
+   * die normalisierte Rollen-Taxonomie, unabhaengig von `search` und
+   * miteinander UND-verknuepft nutzbar. */
+  rollen?: Rolle[];
   /** Komfort-Filter "Meine..." - siehe owner_user_id auf Candidate/
    * ClientCompany/CandidateSubmission/Task oben. */
   ownerUserId?: string;

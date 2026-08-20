@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from cc_crm.core.config import get_settings
 from cc_crm.models.candidate import Candidate
-from cc_crm.models.enums import CandidateStatus
+from cc_crm.models.enums import CandidateStatus, Rolle
 from cc_crm.models.user import User
 from cc_crm.repositories.candidates import CandidateRepository
 from cc_crm.repositories.notes import NoteRepository
@@ -306,6 +306,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         *,
         status: CandidateStatus | None = None,
         role: str | None = None,
+        rollen: list[Rolle] | None = None,
         region: str | None = None,
         search: str | None = None,
         owner_user_id: uuid.UUID | None = None,
@@ -319,6 +320,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         entities, total = self.candidates.filtered(
             status=status,
             role=role,
+            rollen=rollen,
             region=region,
             search=search,
             owner_user_id=owner_user_id,

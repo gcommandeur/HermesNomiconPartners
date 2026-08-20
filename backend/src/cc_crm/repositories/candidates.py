@@ -3,11 +3,11 @@ from collections.abc import Sequence
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import ColumnElement, Integer, cast, func, or_, select
+from sqlalchemy import ColumnElement, Integer, String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
 from cc_crm.models.candidate import Candidate
-from cc_crm.models.enums import CandidateStatus, SubmissionCancellationReason
+from cc_crm.models.enums import CandidateStatus, Rolle, SubmissionCancellationReason
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.repositories.base import SQLAlchemyRepository
 
@@ -50,6 +50,7 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
         *,
         status: CandidateStatus | None = None,
         role: str | None = None,
+        rollen: list[Rolle] | None = None,
         region: str | None = None,
         search: str | None = None,
         owner_user_id: uuid.UUID | None = None,
@@ -67,6 +68,20 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
             filters.append(Candidate.owner_user_id == owner_user_id)
         if role:
             filters.append(Candidate.job_title.ilike(f"%{role}%"))
+        if rollen:
+            # Candidate.rollen bleibt bewusst sa.JSON (kein JSONB/GIN, siehe
+            # Kommentar dort) - Containment daher ueber CAST auf Text +
+            # Substring-Match auf den quotierten Wert (z.B. '"partner"'),
+            # damit z.B. "partner" nicht faelschlich "hauptpartner" traefe.
+            # Portabel fuer SQLite (lokale Entwicklung) UND Postgres
+            # (Produktion), da beide JSON als Text serialisieren/casten
+            # koennen - anders als json_contains()/@>, die dialektspezifisch
+            # waeren. Mehrere angegebene Rollen sind ODER-verknuepft (ein
+            # Kandidat mit IRGENDEINER der gewaehlten Rollen matcht).
+            rollen_text = cast(Candidate.rollen, String)
+            filters.append(
+                or_(*(rollen_text.contains(f'"{value.value}"') for value in rollen))
+            )
         if region:
             filters.append(
                 or_(Candidate.city.ilike(f"%{region}%"), Candidate.postal_code.ilike(f"%{region}%"))
