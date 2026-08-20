@@ -11,6 +11,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field
 
+from cc_crm.models.enums import MailMatchStatus
 from cc_crm.schemas.base import EntityRead
 
 
@@ -95,3 +96,31 @@ class MailSyncResult(BaseModel):
     # ohne menschliche Bestaetigung ein neuer Datensatz entstanden ist.
     auto_created_candidates: int = 0
     error: str | None = None
+
+
+class MailMessageRead(BaseModel):
+    """Eine Zeile in der Liste der eingelesenen Mails (Postfaecher-Seite).
+
+    Traegt bewusst die aufgeloesten Namen UND IDs der Zuordnung mit, statt
+    nur die rohen matched_*_id-Spalten: die Oberflaeche braucht beides fuer
+    den direkten Link, ohne dafuer selbst nachzuladen. Eine Kontaktperson hat
+    keine eigene Detailseite - matched_contact_person_client_company_id
+    traegt deshalb zusaetzlich die Kanzlei-ID, zu der verlinkt werden kann."""
+
+    id: uuid.UUID
+    from_name: str | None
+    from_address: str | None
+    subject: str | None
+    received_at: datetime
+    match_status: MailMatchStatus
+    is_linkedin: bool
+
+    matched_candidate_id: uuid.UUID | None
+    matched_candidate_name: str | None
+
+    matched_contact_person_id: uuid.UUID | None
+    matched_contact_person_name: str | None
+    matched_contact_person_client_company_id: uuid.UUID | None
+
+    matched_client_company_id: uuid.UUID | None
+    matched_client_company_name: str | None

@@ -9,12 +9,16 @@ from __future__ import annotations
 import uuid
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from cc_crm.core.errors import BusinessRuleError, EntityNotFoundError
-from cc_crm.models.mail import MailAccount
+from cc_crm.models.candidate import Candidate
+from cc_crm.models.client_company import ClientCompany
+from cc_crm.models.contact_person import ContactPerson
+from cc_crm.models.enums import MailMatchStatus
+from cc_crm.models.mail import MailAccount, MailMessage
 from cc_crm.models.user import User
-from cc_crm.schemas.mail import MailAccountCreate, MailAccountUpdate
+from cc_crm.schemas.mail import MailAccountCreate, MailAccountUpdate, MailMessageRead
 from cc_crm.services.mail_credentials import encrypt_password
 
 
@@ -88,6 +92,62 @@ class MailAccountService:
         for other in others:
             if other.id != account.id:
                 other.default_for_cv_out = False
+
+    def list_messages(
+        self,
+        account_id: uuid.UUID,
+        *,
+        match_status: list[MailMatchStatus] | None = None,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> list[MailMessageRead]:
+        """Liste der ueber diesen Account eingelesenen Mails fuer die
+        Postfaecher-Seite - mit aufgeloesten Namen der Zuordnung, damit die
+        Oberflaeche direkt verlinken kann, ohne selbst nachzuladen (siehe
+        MailMessageRead-Docstring)."""
+        candidate = aliased(Candidate)
+        contact = aliased(ContactPerson)
+        client_company = aliased(ClientCompany)
+
+        statement = (
+            select(MailMessage, candidate, contact, client_company)
+            .outerjoin(candidate, MailMessage.matched_candidate_id == candidate.id)
+            .outerjoin(contact, MailMessage.matched_contact_person_id == contact.id)
+            .outerjoin(client_company, MailMessage.matched_client_company_id == client_company.id)
+            .where(MailMessage.mail_account_id == account_id)
+            .order_by(MailMessage.received_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        if match_status:
+            statement = statement.where(MailMessage.match_status.in_(match_status))
+
+        rows = self.session.execute(statement).all()
+        return [
+            MailMessageRead(
+                id=message.id,
+                from_name=message.from_name,
+                from_address=message.from_address,
+                subject=message.subject,
+                received_at=message.received_at,
+                match_status=message.match_status,
+                is_linkedin=message.is_linkedin,
+                matched_candidate_id=message.matched_candidate_id,
+                matched_candidate_name=(
+                    f"{cand.first_name} {cand.last_name}" if cand is not None else None
+                ),
+                matched_contact_person_id=message.matched_contact_person_id,
+                matched_contact_person_name=(
+                    f"{cont.first_name} {cont.last_name}" if cont is not None else None
+                ),
+                matched_contact_person_client_company_id=(
+                    cont.client_company_id if cont is not None else None
+                ),
+                matched_client_company_id=message.matched_client_company_id,
+                matched_client_company_name=company.name if company is not None else None,
+            )
+            for message, cand, cont, company in rows
+        ]
 
     def resolve_send_account(self, user: User) -> MailAccount | None:
         """Standard-Absenderpostfach fuer einen Nutzer.

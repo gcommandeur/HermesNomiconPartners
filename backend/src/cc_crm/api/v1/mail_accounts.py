@@ -5,14 +5,17 @@ Firmen-Postfaecher, das ist keine Funktion fuer normale Nutzer.
 """
 
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 from cc_crm.api.dependencies import AdminUser, DatabaseSession
+from cc_crm.models.enums import MailMatchStatus
 from cc_crm.schemas.mail import (
     MailAccountCreate,
     MailAccountRead,
     MailAccountUpdate,
+    MailMessageRead,
     MailSyncResult,
 )
 from cc_crm.services.mail_accounts import MailAccountService
@@ -67,3 +70,28 @@ def sync_mail_account(
     """
     account = MailAccountService(session).get(account_id)
     return MailSyncService(session).sync_account(account)
+
+
+@router.get("/{account_id}/messages", response_model=list[MailMessageRead])
+def list_mail_messages(
+    account_id: uuid.UUID,
+    session: DatabaseSession,
+    _admin: AdminUser,
+    # Mehrfach angebbar (?match_status=matched&match_status=pending_review),
+    # damit die Oberflaeche "alles außer Unbekannt" (ihr Default, um die
+    # Liste nicht mit Newslettern/Werbung vollzustopfen) in einer einzigen
+    # Anfrage abbilden kann, statt zwei Seiten zusammenzufuehren.
+    match_status: Annotated[list[MailMatchStatus] | None, Query()] = None,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> list[MailMessageRead]:
+    """Nachvollziehbare Liste der ueber dieses Konto eingelesenen Mails
+    (Postfaecher-Seite) - sortiert nach received_at absteigend, optional
+    nach match_status gefiltert."""
+    # get() wirft EntityNotFoundError bei unbekannter ID, damit ein
+    # falscher/geloeschter Account nicht stillschweigend eine leere Liste
+    # liefert.
+    MailAccountService(session).get(account_id)
+    return MailAccountService(session).list_messages(
+        account_id, match_status=match_status, offset=offset, limit=limit
+    )

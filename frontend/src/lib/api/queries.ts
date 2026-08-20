@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateMatch, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailAccount, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, TaskResolveOutcome, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateMatch, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailAccount, MailMatchStatus, MailMessageListItem, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, TaskResolveOutcome, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -355,6 +355,23 @@ export async function getCurrentUser() {
 /** Admin-only: verbundene Postfaecher (siehe /einstellungen/postfaecher). */
 export async function getMailAccounts() {
   return apiGet<MailAccount[]>("/mail-accounts", []);
+}
+
+/** Admin-only: eingelesene Mails eines Postfachs (siehe
+ * /einstellungen/postfaecher) - kein useSWR-Hook, da paginiert per
+ * "mehr laden" statt einmalig geladen. */
+export async function getMailMessages(
+  accountId: string,
+  options: { matchStatus?: MailMatchStatus[]; offset?: number; limit?: number } = {},
+) {
+  const params = new URLSearchParams();
+  for (const status of options.matchStatus ?? []) params.append("match_status", status);
+  params.set("offset", String(options.offset ?? 0));
+  params.set("limit", String(options.limit ?? 50));
+  return apiGet<MailMessageListItem[]>(
+    `/mail-accounts/${accountId}/messages?${params.toString()}`,
+    [],
+  );
 }
 
 export async function getAdminUsers() {

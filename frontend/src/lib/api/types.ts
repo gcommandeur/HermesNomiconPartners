@@ -751,5 +751,33 @@ export interface MailSyncResult {
   pending_review: number;
   skipped_duplicates: number;
   failed_messages: number;
+  // Nur Mails ab services/mail_sync.py::AUTOMATION_CUTOFF ohne Fuzzy-
+  // Namenstreffer - separat ausgewiesen, weil hier ohne menschliche
+  // Bestaetigung ein neuer Kandidat entstanden ist.
+  auto_created_candidates: number;
   error: string | null;
+}
+
+export type MailMatchStatus = "matched" | "pending_review" | "unmatched";
+
+/** Eine Zeile in der Liste der eingelesenen Mails (Postfaecher-Seite,
+ * GET /mail-accounts/{id}/messages) - siehe backend/schemas/mail.py::
+ * MailMessageRead. Kontaktpersonen haben keine eigene Detailseite, deshalb
+ * traegt matched_contact_person_client_company_id die Kanzlei-ID, zu der
+ * stattdessen verlinkt wird. */
+export interface MailMessageListItem {
+  id: string;
+  from_name: string | null;
+  from_address: string | null;
+  subject: string | null;
+  received_at: string;
+  match_status: MailMatchStatus;
+  is_linkedin: boolean;
+  matched_candidate_id: string | null;
+  matched_candidate_name: string | null;
+  matched_contact_person_id: string | null;
+  matched_contact_person_name: string | null;
+  matched_contact_person_client_company_id: string | null;
+  matched_client_company_id: string | null;
+  matched_client_company_name: string | null;
 }

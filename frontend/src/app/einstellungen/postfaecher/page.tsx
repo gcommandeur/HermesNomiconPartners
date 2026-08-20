@@ -1,19 +1,218 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Mail, Plus, RefreshCw, ShieldOff, Star, Trash2 } from "lucide-react";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  Linkedin,
+  Mail,
+  Plus,
+  RefreshCw,
+  ShieldOff,
+  Star,
+  Trash2,
+} from "lucide-react";
 import { PageHeader } from "@/components/crm/page-header";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { ErrorState } from "@/components/crm/error-state";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api/client";
+import { getMailMessages } from "@/lib/api/queries";
 import {
   invalidateMailAccountsCache,
   useCurrentUser,
   useMailAccountsCache,
 } from "@/lib/api/hooks";
-import type { MailAccount, MailSyncResult } from "@/lib/api/types";
+import type { MailAccount, MailMatchStatus, MailMessageListItem, MailSyncResult } from "@/lib/api/types";
+
+const MESSAGES_PAGE_SIZE = 50;
+
+// "Unbekannt" (UNMATCHED - Newsletter/Werbung o.ae.) ist per Default
+// ausgeblendet, damit die Liste nicht mit irrelevanten Mails vollläuft
+// (Nutzer-Vorgabe) - ueber den Filter weiterhin einsehbar. undefined = kein
+// match_status-Parameter = Backend liefert alle Status.
+const FILTER_OPTIONS: { value: string; label: string; statuses?: MailMatchStatus[] }[] = [
+  { value: "not_unmatched", label: "Alle außer Unbekannt", statuses: ["matched", "pending_review"] },
+  { value: "all", label: "Alle" },
+  { value: "matched", label: "Nur Zugeordnet", statuses: ["matched"] },
+  { value: "pending_review", label: "Nur Zur Prüfung", statuses: ["pending_review"] },
+  { value: "unmatched", label: "Nur Unbekannt", statuses: ["unmatched"] },
+];
+
+const STATUS_LABEL: Record<MailMatchStatus, string> = {
+  matched: "Zugeordnet",
+  pending_review: "Zur Prüfung",
+  unmatched: "Unbekannt",
+};
+
+const STATUS_TONE: Record<MailMatchStatus, "green" | "amber" | "gray"> = {
+  matched: "green",
+  pending_review: "amber",
+  unmatched: "gray",
+};
+
+function formatMessageDate(value: string): string {
+  return new Date(value).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" });
+}
+
+/** Ziel-Link fuer eine zugeordnete Mail - Kontaktpersonen haben keine eigene
+ * Detailseite, deshalb geht der Link dort zur Kanzlei (siehe
+ * MailMessageListItem-Docstring im Backend). */
+function messageLink(message: MailMessageListItem): { href: string; label: string } | null {
+  if (message.matched_candidate_id) {
+    return { href: `/kandidaten/${message.matched_candidate_id}`, label: message.matched_candidate_name ?? "Kandidat:in" };
+  }
+  if (message.matched_contact_person_id && message.matched_contact_person_client_company_id) {
+    return {
+      href: `/kanzleien/${message.matched_contact_person_client_company_id}`,
+      label: message.matched_contact_person_name ?? "Kontaktperson",
+    };
+  }
+  if (message.matched_client_company_id) {
+    return { href: `/kanzleien/${message.matched_client_company_id}`, label: message.matched_client_company_name ?? "Kanzlei" };
+  }
+  return null;
+}
+
+/** Aufklappbare Liste der ueber ein Konto eingelesenen Mails - eigener
+ * State/Fetch pro Konto (nicht ueber useSWR, da paginiert per "mehr laden"
+ * statt einmalig geladen), damit mehrere Konten unabhaengig aufklappbar
+ * sind. */
+function MessageList({ accountId }: { accountId: string }) {
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState(FILTER_OPTIONS[0].value);
+  const [messages, setMessages] = useState<MailMessageListItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+
+  // filterValue explizit statt aus dem filter-State gelesen: bei einem
+  // Filterwechsel wuerde ein setState + direkt anschliessender Aufruf sonst
+  // noch den ALTEN State-Wert sehen (React committet setState asynchron).
+  async function load(filterValue: string, offsetOverride: number) {
+    setLoading(true);
+    setError(null);
+    try {
+      const statuses = FILTER_OPTIONS.find((option) => option.value === filterValue)?.statuses;
+      const { data: page } = await getMailMessages(accountId, {
+        matchStatus: statuses,
+        offset: offsetOverride,
+        limit: MESSAGES_PAGE_SIZE,
+      });
+      setMessages((current) => (offsetOverride === 0 ? page : [...current, ...page]));
+      setHasMore(page.length === MESSAGES_PAGE_SIZE);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Mails konnten nicht geladen werden.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function toggleOpen() {
+    const next = !open;
+    setOpen(next);
+    if (next && messages.length === 0 && !loading) void load(filter, 0);
+  }
+
+  function changeFilter(value: string) {
+    setFilter(value);
+    setMessages([]);
+    setHasMore(true);
+    void load(value, 0);
+  }
+
+  return (
+    <div className="mt-3 border-t border-white/5 pt-3">
+      <button
+        type="button"
+        onClick={toggleOpen}
+        className="flex items-center gap-1.5 text-xs font-medium text-[#94A3B8] hover:text-white"
+      >
+        {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        Eingelesene Mails
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <select
+              value={filter}
+              onChange={(e) => changeFilter(e.target.value)}
+              className="h-8 rounded-md border border-white/10 bg-[#0D1B2E] px-2 text-[11px] text-[#D8DADF] outline-none focus:border-[#1F5FA8]"
+            >
+              {FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <ErrorBanner message={error} />
+
+          {loading && messages.length === 0 && (
+            <div className="space-y-1.5">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="h-10 animate-pulse rounded-md bg-[#0D1B2E]" />
+              ))}
+            </div>
+          )}
+
+          {!loading && messages.length === 0 && !error && (
+            <p className="py-4 text-center text-xs text-[#747C89]">Keine Mails für diesen Filter.</p>
+          )}
+
+          <div className="divide-y divide-white/5 overflow-hidden rounded-md border border-white/5">
+            {messages.map((message) => {
+              const link = messageLink(message);
+              return (
+                <div
+                  key={message.id}
+                  className="flex flex-wrap items-center gap-2 bg-[#071426]/60 px-3 py-2 text-xs"
+                >
+                  <span className="shrink-0 text-[#747C89]">{formatMessageDate(message.received_at)}</span>
+                  {message.is_linkedin && <Linkedin size={12} className="shrink-0 text-[#69A7EA]" />}
+                  <span className="min-w-0 flex-1 truncate text-[#D8DADF]">
+                    <span className="font-medium">{message.from_name ?? message.from_address ?? "Unbekannt"}</span>
+                    {message.subject && <span className="text-[#747C89]"> — {message.subject}</span>}
+                  </span>
+                  <Badge tone={STATUS_TONE[message.match_status]}>{STATUS_LABEL[message.match_status]}</Badge>
+                  {link ? (
+                    <Link href={link.href} className="shrink-0 text-[#69A7EA] hover:underline">
+                      {link.label} →
+                    </Link>
+                  ) : message.match_status === "pending_review" ? (
+                    // Kernfall: LinkedIn-Antwort ohne Namenstreffer - kein
+                    // Link, aber der Name aus der Mail bleibt sichtbar,
+                    // damit klar ist, wer manuelles Eingreifen braucht.
+                    <span className="shrink-0 text-[#F0B429]">
+                      {message.from_name ?? "Name unbekannt"} – kein Treffer
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+
+          {hasMore && messages.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void load(filter, messages.length)}
+              disabled={loading}
+            >
+              {loading ? "Lädt…" : "Mehr laden"}
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const EMPTY_FORM = {
   address: "",
@@ -377,8 +576,12 @@ export default function PostfaecherPage() {
                       angelegt · {result.pending_review} zur Prüfung · {result.skipped_duplicates}{" "}
                       bereits bekannt
                       {result.failed_messages > 0 && ` · ${result.failed_messages} fehlerhaft`}
+                      {result.auto_created_candidates > 0 &&
+                        ` · ${result.auto_created_candidates} Kandidat(en) automatisch angelegt`}
                     </p>
                   )}
+
+                  <MessageList accountId={account.id} />
                 </div>
               );
             })}
