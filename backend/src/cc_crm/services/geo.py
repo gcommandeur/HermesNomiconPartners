@@ -64,9 +64,16 @@ def _jitter(seed: str, spread: float = 0.06) -> tuple[float, float]:
     return dx, dy
 
 
-def _coordinates(
+def candidate_coordinates(
     city: str | None, postal_code: str | None, seed: str
 ) -> tuple[float | None, float | None]:
+    """Oeffentlicher Name fuer die frueher private _coordinates() - wird
+    bereits ausserhalb dieses Moduls gebraucht (services/vacancy_matching.py
+    fuer den Vakanz->Kandidaten-Umkreis-Filter, services/candidates.py fuer
+    den Kandidaten-eigenen PLZ+Umkreis-Filter) und war davor nur per
+    Unterstrich-Konvention-Bruch importiert. Gilt fuer Kandidat UND Kanzlei
+    gleichermassen (city/postal_code/seed sind generisch), der Name betont
+    hier den Hauptverwendungszweck."""
     base = CITY_COORDINATES.get((city or "").strip().lower())
     if base is None and postal_code:
         base = PLZ_ZONE_COORDINATES.get(postal_code[:1])
@@ -82,17 +89,17 @@ _DIGITS_RE = re.compile(r"\d+")
 def resolve_place_query(query: str | None) -> tuple[float | None, float | None]:
     """Resolves a free-text place query (city name, postal code, or 'PLZ Ort')
     to approximate lat/lng, using the same static city/PLZ-zone lookup as
-    _coordinates() above. Used both by the /geo-mapping/geocode endpoint (Ort/
-    PLZ-Eingabe als Umkreis-Zentrum, siehe geo-results-table.tsx) and by the
-    Vakanz->Kandidaten-Matching (services/vacancy_matching.py), wo die
-    Vakanz nur ein freies location-Textfeld statt getrennter city/postal_code-
-    Spalten hat.
+    candidate_coordinates() above. Used both by the /geo-mapping/geocode
+    endpoint (Ort/PLZ-Eingabe als Umkreis-Zentrum, siehe geo-results-table.tsx)
+    and by the Vakanz->Kandidaten-Matching (services/vacancy_matching.py), wo
+    die Vakanz nur ein freies location-Textfeld statt getrennter city/
+    postal_code-Spalten hat.
 
-    Bewusst OHNE den _jitter()-Offset von _coordinates(): der Jitter existiert
-    nur, damit mehrere Kandidaten-/Kanzlei-Pins in derselben Stadt auf der
-    Karte nicht exakt uebereinander liegen - fuer ein Umkreis-Zentrum wuerde
-    er die Suche unnoetig (und nicht nachvollziehbar) vom echten Stadt-
-    Mittelpunkt wegverschieben.
+    Bewusst OHNE den _jitter()-Offset von candidate_coordinates(): der
+    Jitter existiert nur, damit mehrere Kandidaten-/Kanzlei-Pins in derselben
+    Stadt auf der Karte nicht exakt uebereinander liegen - fuer ein Umkreis-
+    Zentrum wuerde er die Suche unnoetig (und nicht nachvollziehbar) vom
+    echten Stadt-Mittelpunkt wegverschieben.
     """
     cleaned = (query or "").strip()
     if not cleaned:
@@ -137,7 +144,9 @@ class GeoMappingService:
                 or "Ort unbekannt"
             )
             tags = [tag for tag in [candidate.qualification, candidate.job_title] if tag]
-            lat, lng = _coordinates(candidate.city, candidate.postal_code, str(candidate.id))
+            lat, lng = candidate_coordinates(
+                candidate.city, candidate.postal_code, str(candidate.id)
+            )
             items.append(
                 GeoMappingResult(
                     id=str(candidate.id),
@@ -184,7 +193,7 @@ class GeoMappingService:
                 "Ort unbekannt"
             )
             tags = [tag for tag in [client.focus, client.region] if tag]
-            lat, lng = _coordinates(client.city, client.postal_code, str(client.id))
+            lat, lng = candidate_coordinates(client.city, client.postal_code, str(client.id))
             items.append(
                 GeoMappingResult(
                     id=str(client.id),

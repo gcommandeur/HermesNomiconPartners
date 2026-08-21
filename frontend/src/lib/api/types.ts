@@ -660,6 +660,13 @@ export interface PageQuery {
    * die normalisierte Rollen-Taxonomie, unabhaengig von `search` und
    * miteinander UND-verknuepft nutzbar. */
   rollen?: Rolle[];
+  /** Nur fuer Kandidaten - echter PLZ+Umkreis-Filter (Backend GET
+   * /candidates?plz_ort=...&radius_km=...), unabhaengig vom bestehenden
+   * `status`-Filter oben und kombinierbar mit `search`/`rollen`. Beide
+   * Werte muessen gesetzt sein, sonst greift kein Umkreis-Filter (siehe
+   * services/candidates.py::list_filtered). */
+  plzOrt?: string;
+  radiusKm?: number;
   /** Komfort-Filter "Meine..." - siehe owner_user_id auf Candidate/
    * ClientCompany/CandidateSubmission/Task oben. */
   ownerUserId?: string;

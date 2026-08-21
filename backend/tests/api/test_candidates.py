@@ -173,3 +173,95 @@ class TestRollenFilter:
         response = client.get("/api/v1/candidates")
 
         assert response.json()["total_count"] == 2
+
+
+class TestRadiusFilter:
+    """GET /candidates?plz_ort=...&radius_km=... - echter Umkreis-Filter
+    (repositories/candidates.py bleibt unberuehrt, siehe services/
+    candidates.py::_list_filtered_by_radius)."""
+
+    def _create(self, client: TestClient, name: str, *, city: str, **overrides: object) -> dict:
+        payload = {"first_name": name, "last_name": "Test", "city": city}
+        payload.update(overrides)
+        response = client.post("/api/v1/candidates", json=payload)
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    def test_only_candidates_within_radius_are_returned(self, client: TestClient) -> None:
+        nearby = self._create(client, "Anna", city="München")
+        far_away = self._create(client, "Bernd", city="Berlin")
+
+        response = client.get("/api/v1/candidates?plz_ort=München&radius_km=50")
+
+        assert response.status_code == 200
+        ids = [item["id"] for item in response.json()["items"]]
+        assert ids == [nearby["id"]]
+        assert far_away["id"] not in ids
+
+    def test_wide_radius_includes_the_far_candidate_too(self, client: TestClient) -> None:
+        nearby = self._create(client, "Anna", city="München")
+        # ~456km von München (haversine_km) - passt in einen weiten, aber
+        # innerhalb des API-Limits (max 500km) bleibenden Radius.
+        far_away = self._create(client, "Bernd", city="Köln")
+
+        response = client.get("/api/v1/candidates?plz_ort=München&radius_km=480")
+
+        ids = {item["id"] for item in response.json()["items"]}
+        assert ids == {nearby["id"], far_away["id"]}
+
+    def test_candidate_without_resolvable_location_is_excluded(self, client: TestClient) -> None:
+        """Kandidaten ohne aufloesbare Koordinaten fallen bei einem AKTIVEN
+        Radius-Filter raus - sonst wirkt der Filter kaputt (Nutzer-Vorgabe)."""
+        self._create(client, "Anna", city="Nirgendwostadt")
+
+        response = client.get("/api/v1/candidates?plz_ort=München&radius_km=500")
+
+        assert response.json()["items"] == []
+        assert response.json()["total_count"] == 0
+
+    def test_unresolvable_center_returns_zero_results_not_everyone(
+        self, client: TestClient
+    ) -> None:
+        self._create(client, "Anna", city="München")
+
+        response = client.get("/api/v1/candidates?plz_ort=Nirgendwostadt&radius_km=50")
+
+        assert response.json()["items"] == []
+        assert response.json()["total_count"] == 0
+
+    def test_combines_with_rollen_and_search(self, client: TestClient) -> None:
+        match = self._create(
+            client, "Anna", city="München", rollen=["steuerberater"]
+        )
+        self._create(client, "Anna", city="München", rollen=["rechtsanwalt"])
+        self._create(client, "Anna", city="Berlin", rollen=["steuerberater"])
+
+        response = client.get(
+            "/api/v1/candidates?plz_ort=München&radius_km=50&rollen=steuerberater&search=Anna"
+        )
+
+        ids = [item["id"] for item in response.json()["items"]]
+        assert ids == [match["id"]]
+
+    def test_region_substring_filter_still_works_unchanged(self, client: TestClient) -> None:
+        """Der bestehende `region`-Parameter (reiner Substring-Match) bleibt
+        unveraendert bestehen, unabhaengig vom neuen echten Umkreis-Filter."""
+        match = self._create(client, "Anna", city="München")
+        self._create(client, "Bernd", city="Berlin")
+
+        response = client.get("/api/v1/candidates?region=münch")
+
+        ids = [item["id"] for item in response.json()["items"]]
+        assert ids == [match["id"]]
+
+    def test_missing_radius_km_does_not_trigger_radius_filtering(
+        self, client: TestClient
+    ) -> None:
+        """plz_ort allein (ohne radius_km) darf NICHT als aktiver Umkreis-
+        Filter gelten - sonst gaebe es kein Radius zum Vergleichen."""
+        self._create(client, "Anna", city="München")
+        self._create(client, "Bernd", city="Berlin")
+
+        response = client.get("/api/v1/candidates?plz_ort=München")
+
+        assert response.json()["total_count"] == 2

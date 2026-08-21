@@ -50,6 +50,12 @@ def list_candidates(
     rollen: Annotated[list[Rolle] | None, Query()] = None,
     region: str | None = None,
     search: str | None = None,
+    # Echter PLZ+Umkreis-Filter (siehe services/candidates.py::
+    # _list_filtered_by_radius) - unabhaengig vom bestehenden `region`
+    # (reiner Substring-Match) und kombinierbar mit search/rollen. Beide
+    # Parameter muessen gesetzt sein, sonst greift kein Umkreis-Filter.
+    plz_ort: str | None = None,
+    radius_km: Annotated[int | None, Query(ge=1, le=500)] = None,
     owner_user_id: uuid.UUID | None = None,
     created_from: datetime | None = None,
     created_to: datetime | None = None,
@@ -69,6 +75,8 @@ def list_candidates(
         role=role,
         rollen=rollen,
         region=region,
+        plz_ort=plz_ort,
+        radius_km=radius_km,
         search=search,
         owner_user_id=owner_user_id,
         created_from=created_from,

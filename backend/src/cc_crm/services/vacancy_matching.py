@@ -6,7 +6,7 @@ Kriterien: Rolle (JobMandate.title vs. Candidate.job_title) und Region
 Kandidaten ausserhalb des Umkreises werden nicht nur abgewertet, sondern ganz
 ausgeschlossen (siehe find_matches) - nur, wenn der Umkreis ueberhaupt
 berechenbar ist (beide Seiten muessen sich auf eine bekannte Stadt/PLZ-Zone
-aufloesen lassen, siehe services/geo.py::resolve_place_query/_coordinates);
+aufloesen lassen, siehe services/geo.py::resolve_place_query/candidate_coordinates);
 ist er nicht berechenbar, bleibt der Kandidat regulaer (ohne Regions-Bonus)
 im Ergebnis, statt ihn wegen fehlender Daten faelschlich auszuschliessen."""
 
@@ -22,7 +22,7 @@ from cc_crm.models.job_mandate import JobMandate
 from cc_crm.schemas.candidate import CandidateRead
 from cc_crm.schemas.vacancy_matching import CandidateMatchRead
 from cc_crm.services.candidates import CandidateService
-from cc_crm.services.geo import _coordinates, haversine_km, resolve_place_query
+from cc_crm.services.geo import candidate_coordinates, haversine_km, resolve_place_query
 from cc_crm.services.jobs import JobMandateService
 from cc_crm.services.matching import _tokens
 
@@ -122,7 +122,7 @@ class VacancyMatchingService:
 
         in_radius: bool | None = None
         if job_lat is not None and job_lng is not None:
-            cand_lat, cand_lng = _coordinates(
+            cand_lat, cand_lng = candidate_coordinates(
                 candidate.city, candidate.postal_code, str(candidate.id)
             )
             if cand_lat is not None and cand_lng is not None:

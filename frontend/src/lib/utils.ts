@@ -94,3 +94,25 @@ export const ROLLE_OPTIONS: Rolle[] = [
 export function rolleLabel(value: Rolle): string {
   return ROLLE_LABELS[value] ?? value;
 }
+
+// Feste Auswahl gaengiger Kuendigungsfrist-Kombinationen (Backend
+// Candidate.notice_period bleibt bewusst String(160) Freitext - siehe
+// models/candidate.py - keine Migration noetig, nur die UI wird
+// eingeschraenkt). "sonstige" ist ein reiner UI-Sentinel-Wert, KEIN
+// gueltiger notice_period-Wert selbst - waehlt der Nutzer ihn, klappt ein
+// Freitextfeld auf, dessen Inhalt (nicht "sonstige") tatsaechlich
+// gespeichert wird. Bestandswerte, die keiner Option hier exakt
+// entsprechen, fallen beim Laden automatisch auf "sonstige" + Originaltext
+// zurueck (siehe NoticePeriodField in candidate-create-modal.tsx) statt
+// stillschweigend ueberschrieben zu werden.
+export const NOTICE_PERIOD_OPTIONS: string[] = [
+  "1 Monat zum Monatsende",
+  "2 Monate zum Monatsende",
+  "3 Monate zum Monatsende",
+  "3 Monate zum Quartalsende",
+  "4 Monate zum Quartalsende",
+  "5 Monate zum Quartalsende",
+  "6 Monate zum Quartalsende",
+];
+
+export const NOTICE_PERIOD_OTHER = "sonstige";

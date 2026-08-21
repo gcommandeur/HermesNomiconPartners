@@ -57,6 +57,10 @@ function pageQueryString(query: PageQuery): string {
   if (query.search?.trim()) params.set("search", query.search.trim());
   if (query.status) params.set("status", query.status);
   for (const rolle of query.rollen ?? []) params.append("rollen", rolle);
+  if (query.plzOrt?.trim() && query.radiusKm) {
+    params.set("plz_ort", query.plzOrt.trim());
+    params.set("radius_km", String(query.radiusKm));
+  }
   if (query.ownerUserId) params.set("owner_user_id", query.ownerUserId);
   if (query.sortBy) params.set("sort_by", query.sortBy);
   if (query.sortDir) params.set("sort_dir", query.sortDir);

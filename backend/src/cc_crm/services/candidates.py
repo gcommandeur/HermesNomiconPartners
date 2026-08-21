@@ -21,7 +21,18 @@ from cc_crm.services.cv_extraction import (
     extract_candidate_fields,
     is_agency_letterhead,
 )
+from cc_crm.services.geo import candidate_coordinates, haversine_km, resolve_place_query
 from cc_crm.services.storage import delete_document_bytes
+
+# Obergrenze fuer den PLZ+Umkreis-Filter (list_filtered mit plz_ort+radius_km):
+# Umkreis-Distanz ist auf den bestehenden Spalten (kein gespeichertes lat/lng)
+# nicht per SQL-WHERE berechenbar, deshalb gleiches Pragma wie
+# VacancyMatchingService.find_matches - bis zu 5000 nach den UEBRIGEN Filtern
+# (status/rollen/search/owner/...) bereits eingeschraenkte Kandidaten laden
+# und serverseitig in Python per haversine_km auf den Radius einschraenken,
+# ERST DANACH paginieren. Der Normalfall OHNE Radius-Filter bleibt komplett
+# unberuehrt (weiterhin echtes SQL OFFSET/LIMIT, keine Verlangsamung).
+MAX_RADIUS_FILTER_CANDIDATES = 5000
 
 # Gleiche Struktur wie QUALI_CALL_NOTE_TEMPLATE im Frontend (notes-panel.tsx)
 # - bewusst identisch gehalten, damit eine automatisch aus dem CV erstellte
@@ -309,6 +320,8 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         rollen: list[Rolle] | None = None,
         region: str | None = None,
         search: str | None = None,
+        plz_ort: str | None = None,
+        radius_km: int | None = None,
         owner_user_id: uuid.UUID | None = None,
         created_from: datetime | None = None,
         created_to: datetime | None = None,
@@ -317,6 +330,27 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         offset: int = 0,
         limit: int = 100,
     ) -> tuple[Sequence[Candidate], int]:
+        # plz_ort+radius_km ist ein ECHTER Umkreis-Filter (siehe
+        # MAX_RADIUS_FILTER_CANDIDATES oben) - beide muessen gesetzt sein,
+        # sonst gaebe es kein Zentrum bzw. keinen Radius zum Filtern.
+        if plz_ort and radius_km:
+            return self._list_filtered_by_radius(
+                status=status,
+                role=role,
+                rollen=rollen,
+                region=region,
+                search=search,
+                plz_ort=plz_ort,
+                radius_km=radius_km,
+                owner_user_id=owner_user_id,
+                created_from=created_from,
+                created_to=created_to,
+                sort_by=sort_by,
+                sort_dir=sort_dir,
+                offset=offset,
+                limit=limit,
+            )
+
         entities, total = self.candidates.filtered(
             status=status,
             role=role,
@@ -333,6 +367,72 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         )
         self._attach_ghosting_flags(entities)
         return entities, total
+
+    def _list_filtered_by_radius(
+        self,
+        *,
+        status: CandidateStatus | None,
+        role: str | None,
+        rollen: list[Rolle] | None,
+        region: str | None,
+        search: str | None,
+        plz_ort: str,
+        radius_km: int,
+        owner_user_id: uuid.UUID | None,
+        created_from: datetime | None,
+        created_to: datetime | None,
+        sort_by: str | None,
+        sort_dir: str,
+        offset: int,
+        limit: int,
+    ) -> tuple[Sequence[Candidate], int]:
+        center_lat, center_lng = resolve_place_query(plz_ort)
+        if center_lat is None or center_lng is None:
+            # Zentrum nicht aufloesbar (unbekannter Ort/PLZ) - 0 Treffer statt
+            # den Filter stillschweigend zu ignorieren, sonst wirkt er kaputt
+            # (Nutzer-Vorgabe) bzw. taeuscht ungefilterte Ergebnisse vor.
+            return [], 0
+
+        # Alle UEBRIGEN Filter (status/rollen/search/owner/...) laufen weiter
+        # als echtes SQL-WHERE - nur die Radius-Einschraenkung selbst ist
+        # Python-seitig, weil dafuer kein gespeichertes lat/lng existiert.
+        # order_by(sort_by/sort_dir) laeuft bereits hier per SQL, die
+        # anschliessende Python-Filterung entfernt nur einzelne Zeilen aus
+        # dieser bereits sortierten Menge, sortiert also NICHT neu.
+        candidates, _ = self.candidates.filtered(
+            status=status,
+            role=role,
+            rollen=rollen,
+            region=region,
+            search=search,
+            owner_user_id=owner_user_id,
+            created_from=created_from,
+            created_to=created_to,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            offset=0,
+            limit=MAX_RADIUS_FILTER_CANDIDATES,
+        )
+
+        in_radius: list[Candidate] = []
+        for candidate in candidates:
+            cand_lat, cand_lng = candidate_coordinates(
+                candidate.city, candidate.postal_code, str(candidate.id)
+            )
+            if cand_lat is None or cand_lng is None:
+                # Kandidat ohne aufloesbare Koordinaten faellt bei einem
+                # AKTIVEN Radius-Filter raus (anders als beim Vakanzen-
+                # Matching, wo das nur ein Bonus-Kriterium ist und
+                # unaufloesbare Kandidaten regulaer mitgezaehlt werden -
+                # hier ist es ein expliziter Filter, sonst wirkt er kaputt).
+                continue
+            if haversine_km(center_lat, center_lng, cand_lat, cand_lng) <= radius_km:
+                in_radius.append(candidate)
+
+        total = len(in_radius)
+        page = list(in_radius[offset : offset + limit])
+        self._attach_ghosting_flags(page)
+        return page, total
 
     def reactivation_candidates(self, threshold_months: int | None = None) -> Sequence[Candidate]:
         months = (

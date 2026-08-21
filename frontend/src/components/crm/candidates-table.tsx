@@ -109,6 +109,11 @@ export function CandidatesTable() {
   );
   const [status, setStatus] = useState("");
   const [selectedRollen, setSelectedRollen] = useState<Rolle[]>([]);
+  // Echter PLZ+Umkreis-Filter (nicht der bestehende `region`-Substring-
+  // Match) - radiusKm bleibt "" (kein Filter aktiv), bis der Nutzer sowohl
+  // einen Ort ALS AUCH einen Radius gewaehlt hat, siehe use-server-search.ts.
+  const [plzOrt, setPlzOrt] = useState("");
+  const [radiusKm, setRadiusKm] = useState("");
   // "Meine Kandidaten" - reiner Komfort-Filter nach owner_user_id, KEINE
   // Sichtbarkeitsgrenze (Default "Alle" bleibt unveraendert). Siehe
   // Backend models/candidate.py::owner_user_id fuer die Begruendung.
@@ -156,6 +161,8 @@ export function CandidatesTable() {
   } = useServerSearchList<Candidate>("/candidates", getCandidatesPage, {
     status,
     rollen: selectedRollen,
+    plzOrt,
+    radiusKm: radiusKm ? Number(radiusKm) : undefined,
     ownerUserId: mineOnly ? currentUserId : undefined,
     sortBy: sortKey ?? undefined,
     sortDir,
@@ -201,7 +208,13 @@ export function CandidatesTable() {
 
   // Reaktivierungsliste ist ein kleiner, vollstaendig geladener Datensatz -
   // Suche/Status/Sortierung bleiben dort clientseitig ueber den gesamten
-  // (kleinen) Bestand, wie vor dieser Umstellung.
+  // (kleinen) Bestand, wie vor dieser Umstellung. Der PLZ+Umkreis-Filter
+  // (plzOrt/radiusKm) wirkt hier BEWUSST NICHT: die Distanzberechnung lebt
+  // serverseitig in services/geo.py (candidate_coordinates/haversine_km),
+  // eine Kandidat-Koordinate steht im Frontend gar nicht zur Verfuegung -
+  // ihn hier zu duplizieren waere ein eigenstaendiges (teureres) Stueck
+  // Scope. Gleiches Muster wie bei aiResults unten: eine Sonder-Datenquelle
+  // bekommt nicht zwangslaeufig jeden Filter.
   const reactivationFiltered = useMemo(() => {
     const base = reactivationCandidates.filter((candidate) => {
       if (status && candidate.status !== status) return false;
@@ -309,8 +322,27 @@ export function CandidatesTable() {
         <div className="mb-4">
           <RollenFilter selected={selectedRollen} onChange={setSelectedRollen} />
         </div>
+        <div className="mb-4 flex gap-2">
+          <input
+            value={plzOrt}
+            onChange={(e) => setPlzOrt(e.target.value)}
+            placeholder="PLZ/Ort"
+            className="h-10 w-32 rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]"
+          />
+          <select
+            value={radiusKm}
+            onChange={(e) => setRadiusKm(e.target.value)}
+            className="h-10 rounded-md border border-white/10 bg-[#0D1B2E] px-2 text-xs text-[#D8DADF] outline-none focus:border-[#1F5FA8]"
+          >
+            <option value="">Umkreis</option>
+            <option value="25">25 km</option>
+            <option value="50">50 km</option>
+            <option value="100">100 km</option>
+            <option value="200">200 km</option>
+          </select>
+        </div>
       </div>
-      {selectedRollen.length > 0 && (
+      {(selectedRollen.length > 0 || (plzOrt.trim() && radiusKm)) && (
         <div className="mb-3 flex flex-wrap gap-1.5">
           {selectedRollen.map((rolle) => (
             <Badge key={rolle} tone="blue" className="gap-1.5">
@@ -320,6 +352,14 @@ export function CandidatesTable() {
               </button>
             </Badge>
           ))}
+          {plzOrt.trim() && radiusKm && (
+            <Badge tone="blue" className="gap-1.5">
+              {radiusKm} km um {plzOrt.trim()}
+              <button type="button" onClick={() => { setPlzOrt(""); setRadiusKm(""); }} className="hover:text-white">
+                <X size={12} />
+              </button>
+            </Badge>
+          )}
         </div>
       )}
       <ErrorBanner message={aiError} className="mb-3" />

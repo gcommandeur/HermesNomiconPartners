@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { apiPatch, apiPost, apiUpload } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { invalidateCandidatesCache, useAssignableUsersCache, useCurrentUser } from "@/lib/api/hooks";
+import { NOTICE_PERIOD_OPTIONS, NOTICE_PERIOD_OTHER } from "@/lib/utils";
 import type { BeruflicheStation, Candidate, CvExtractionSuggestion } from "@/lib/api/types";
 
 // Ordnet die vom Backend erkannten CV-Felder (siehe
@@ -88,6 +89,61 @@ function formFromCandidate(candidate: Candidate): typeof emptyForm {
 }
 
 const emptyStation: BeruflicheStation = { kanzleityp: "", kanzleigroesse: "", dauer_jahre: 0 };
+
+/** Dropdown mit den gaengigen Kuendigungsfrist-Kombinationen + "Sonstige"
+ * (Freitext) statt eines reinen Input - siehe NOTICE_PERIOD_OPTIONS in
+ * lib/utils.ts. `value`/`onChange` binden weiterhin direkt an den
+ * tatsaechlichen notice_period-String (Backend bleibt Freitext) - "Sonstige"
+ * ist nur ein UI-Sentinel, kein gespeicherter Wert. Ein Bestandswert, der
+ * keiner Option exakt entspricht, klappt automatisch das Freitextfeld mit
+ * dem Originaltext auf, statt ihn stillschweigend zu verwerfen. */
+function NoticePeriodField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  // Ein leerer value laesst sich NICHT aus value allein zwischen "keine
+  // Angabe" und "Sonstige frisch gewaehlt, Freitext noch leer" unterscheiden
+  // (value ist in beiden Faellen "") - deshalb zusaetzlich eigener State, nur
+  // fuer den bewussten Wechsel in den Sonstige-Modus. Ein Bestandswert, der
+  // beim Laden schon nicht-leer und keine bekannte Option ist, gilt ueber
+  // isKnownOption unten automatisch als Sonstige, ganz ohne diesen State.
+  const [otherSelected, setOtherSelected] = useState(false);
+  const isKnownOption = NOTICE_PERIOD_OPTIONS.includes(value);
+  const showOther = otherSelected || (!isKnownOption && value !== "");
+  const selectValue = showOther ? NOTICE_PERIOD_OTHER : value;
+
+  return (
+    <div>
+      <select
+        className={selectClass}
+        value={selectValue}
+        onChange={(e) => {
+          const next = e.target.value;
+          if (next === NOTICE_PERIOD_OTHER) {
+            // Freitextfeld startet leer, nicht mit dem vorherigen
+            // Optionstext.
+            setOtherSelected(true);
+            onChange("");
+          } else {
+            setOtherSelected(false);
+            onChange(next);
+          }
+        }}
+      >
+        <option value="">Keine Angabe</option>
+        {NOTICE_PERIOD_OPTIONS.map((option) => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+        <option value={NOTICE_PERIOD_OTHER}>Sonstige</option>
+      </select>
+      {showOther && (
+        <Input
+          className="mt-2"
+          placeholder="Kündigungsfrist frei eingeben"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+    </div>
+  );
+}
 
 export function CandidateCreateForm({
   onDone,
@@ -362,7 +418,7 @@ export function CandidateCreateForm({
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label className={labelClass}>Gehaltswunsch</label><Input value={form.salary_expectation} onChange={(e) => set("salary_expectation", e.target.value)} /></div>
-        <div><label className={labelClass}>Kündigungsfrist</label><Input value={form.notice_period} onChange={(e) => set("notice_period", e.target.value)} /></div>
+        <div><label className={labelClass}>Kündigungsfrist</label><NoticePeriodField value={form.notice_period} onChange={(value) => set("notice_period", value)} /></div>
       </div>
       <div><label className={labelClass}>Empfohlen von</label><Input placeholder="Name der empfehlenden Person" value={form.referred_by} onChange={(e) => set("referred_by", e.target.value)} /></div>
       <div>
