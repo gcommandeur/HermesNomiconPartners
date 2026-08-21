@@ -407,3 +407,129 @@ def test_approve_lead_without_notes_text_creates_no_note(
     body = client.post(f"/api/v1/sourcing/leads/{lead.id}/approve").json()
     notes = client.get(f"/api/v1/notes?candidate_id={body['created_candidate_id']}").json()
     assert notes == []
+
+
+class TestApproveLeadStructuredFields:
+    """approve_lead() uebernimmt current_employer/raw_data zusaetzlich zum
+    Freitext (notes_text oben) strukturiert - siehe services/sourcing.py::
+    _job_title_from_raw_data/_rollen_from_text/_phone_from_raw_data."""
+
+    def test_current_employer_is_copied_1_to_1(
+        self, client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        with session_factory() as session:
+            lead = SourcingService(session).create_lead(
+                make_lead_payload(current_employer="Beispiel & Partner StBG")
+            )
+            assert lead is not None
+
+        body = client.post(f"/api/v1/sourcing/leads/{lead.id}/approve").json()
+        candidate = client.get(f"/api/v1/candidates/{body['created_candidate_id']}").json()
+
+        assert candidate["current_employer_internal"] == "Beispiel & Partner StBG"
+
+    def test_job_title_and_rollen_are_derived_from_raw_data_beruf(
+        self, client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        """Quelle steuerberater_verzeichnis.py/wpk_berufsregister.py legen den
+        Titel unter raw_data['beruf'] ab."""
+        with session_factory() as session:
+            lead = SourcingService(session).create_lead(
+                make_lead_payload(raw_data={"beruf": "Steuerberater(in)"})
+            )
+            assert lead is not None
+
+        body = client.post(f"/api/v1/sourcing/leads/{lead.id}/approve").json()
+        candidate = client.get(f"/api/v1/candidates/{body['created_candidate_id']}").json()
+
+        assert candidate["job_title"] == "Steuerberater(in)"
+        assert candidate["rollen"] == ["steuerberater"]
+
+    def test_job_title_and_rollen_are_derived_from_raw_data_title(
+        self, client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        """Quelle kanzlei_team_scrape.py legt den Titel unter
+        raw_data['title'] ab (anderer Schluessel als bei den Verzeichnissen)."""
+        with session_factory() as session:
+            lead = SourcingService(session).create_lead(
+                make_lead_payload(
+                    source_type=SourcingSourceType.KANZLEI_TEAM_PAGE,
+                    raw_data={"title": "Partner, Wirtschaftsprüfer"},
+                )
+            )
+            assert lead is not None
+
+        body = client.post(f"/api/v1/sourcing/leads/{lead.id}/approve").json()
+        candidate = client.get(f"/api/v1/candidates/{body['created_candidate_id']}").json()
+
+        assert candidate["job_title"] == "Partner, Wirtschaftsprüfer"
+        assert set(candidate["rollen"]) == {"partner", "wirtschaftspruefer"}
+
+    def test_ambiguous_title_derives_no_rolle(
+        self, client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        """WPKs 'vereidigte/r Buchprüfer/in' entspricht keiner der 10
+        Rolle-Kategorien exakt - nur eindeutig zuordenbare Titel werden
+        uebernommen (Nutzer-Vorgabe), kein Rateversuch."""
+        with session_factory() as session:
+            lead = SourcingService(session).create_lead(
+                make_lead_payload(raw_data={"beruf": "vereidigte/r Buchprüfer/in"})
+            )
+            assert lead is not None
+
+        body = client.post(f"/api/v1/sourcing/leads/{lead.id}/approve").json()
+        candidate = client.get(f"/api/v1/candidates/{body['created_candidate_id']}").json()
+
+        assert candidate["job_title"] == "vereidigte/r Buchprüfer/in"
+        assert candidate["rollen"] == []
+
+    def test_phone_is_copied_when_present_in_raw_data(
+        self, client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        with session_factory() as session:
+            lead = SourcingService(session).create_lead(
+                make_lead_payload(raw_data={"phone": "+49 30 1234567"})
+            )
+            assert lead is not None
+
+        body = client.post(f"/api/v1/sourcing/leads/{lead.id}/approve").json()
+        candidate = client.get(f"/api/v1/candidates/{body['created_candidate_id']}").json()
+
+        assert candidate["phone"] == "+49 30 1234567"
+
+    def test_no_raw_data_leaves_job_title_and_rollen_empty(
+        self, client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        with session_factory() as session:
+            lead = SourcingService(session).create_lead(make_lead_payload())
+            assert lead is not None
+
+        body = client.post(f"/api/v1/sourcing/leads/{lead.id}/approve").json()
+        candidate = client.get(f"/api/v1/candidates/{body['created_candidate_id']}").json()
+
+        assert candidate["job_title"] is None
+        assert candidate["rollen"] == []
+        assert candidate["phone"] is None
+
+    def test_notes_text_still_created_alongside_structured_fields(
+        self, client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        """Die strukturierten Felder ersetzen den bestehenden Freitext NICHT,
+        sondern liegen zusaetzlich vor (Nutzer-Vorgabe)."""
+        with session_factory() as session:
+            lead = SourcingService(session).create_lead(
+                make_lead_payload(
+                    raw_data={"beruf": "Steuerberater(in)"},
+                    notes_text="Seit 2015 bei Beispiel & Partner.",
+                )
+            )
+            assert lead is not None
+
+        body = client.post(f"/api/v1/sourcing/leads/{lead.id}/approve").json()
+        candidate_id = body["created_candidate_id"]
+        candidate = client.get(f"/api/v1/candidates/{candidate_id}").json()
+        notes = client.get(f"/api/v1/notes?candidate_id={candidate_id}").json()
+
+        assert candidate["rollen"] == ["steuerberater"]
+        assert len(notes) == 1
+        assert notes[0]["body"] == "Seit 2015 bei Beispiel & Partner."

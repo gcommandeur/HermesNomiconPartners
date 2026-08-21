@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 from cc_crm.core.errors import AIProviderError, BusinessRuleError, EntityNotFoundError
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
-from cc_crm.models.enums import SourcingLeadStatus, SourcingRunStatus, SourcingSourceType
+from cc_crm.models.enums import Rolle, SourcingLeadStatus, SourcingRunStatus, SourcingSourceType
 from cc_crm.models.sourcing_lead import SourcingLead
 from cc_crm.models.sourcing_run import SourcingRun
 from cc_crm.schemas.candidate import CandidateCreate
@@ -81,6 +81,89 @@ def _wpk_notes_text(person: wpk_berufsregister.WpkPerson) -> str:
     if person.registernummer:
         lines.append(f"Registernummer: {person.registernummer}")
     return "\n".join(lines)
+
+
+# Wird beim Approve genutzt, um aus lead.raw_data einen Titel/Fachgebiet-Text
+# zu ziehen - je nach Quelle unter unterschiedlichem Schluessel abgelegt
+# (siehe raw_data= in run_steuerberater_search/run_wpk_search: "beruf";
+# run_kanzlei_team_scrape: "title"). Es gibt bewusst KEINE eigene Spalte
+# "quelle-titel" auf SourcingLead - raw_data ist schemalos, genau dafuer da.
+_JOB_TITLE_RAW_DATA_KEYS = ("beruf", "title")
+
+# Telefonnummer wird nur uebernommen, wenn eine Quelle sie tatsaechlich
+# liefert - Stand jetzt liefert KEINE der drei angebundenen Quellen
+# (steuerberater_verzeichnis.py, wpk_berufsregister.py, kanzlei_team_scrape.py)
+# eine Telefonnummer im raw_data (verifiziert gegen deren aktuelle
+# raw_data=-Aufrufe oben) - dieser generische Schluessel-Check ist bewusst
+# zukunftsoffen fuer eine spaetere Quelle, die das liefert, statt tot Code zu
+# sein: er greift automatisch, sobald raw_data["phone"]/["telefon"] irgendwo
+# gesetzt wird.
+_PHONE_RAW_DATA_KEYS = ("phone", "telefon")
+
+# Schluesselwort -> Rolle, ABSICHTLICH nach Spezifitaet geordnet (laengere/
+# praezisere Begriffe zuerst), damit z.B. "Steuerfachwirt" nicht faelschlich
+# schon am generischeren "Steuerfachangestellte"-Muster hängen bleibt und
+# umgekehrt. Nur Substring-Match auf den kleingeschriebenen Text - bewusst
+# schlicht, da die Quelltexte (WPK-/StBK-Berufsbezeichnung, LLM-erkannter
+# Team-Seiten-Titel) kurze, meist eindeutige Standardformulierungen sind,
+# anders als ein vollstaendiger CV-Fliesstext (dort uebernimmt das LLM diese
+# Zuordnung direkt, siehe cv_extraction.py-Prompt - es gibt dort KEINE
+# separate wiederverwendbare Text-zu-Rolle-Funktion, nur die nachtraegliche
+# Validierung gegen die Enum-Werte in _normalize_rollen()).
+_ROLLE_KEYWORDS: tuple[tuple[str, Rolle], ...] = (
+    ("steuerfachangestellte", Rolle.STEUERFACHANGESTELLTE),
+    ("steuerfachwirt", Rolle.STEUERFACHWIRT),
+    ("bilanzbuchhalter", Rolle.BILANZBUCHHALTER),
+    ("steuerberater", Rolle.STEUERBERATER),
+    ("steuerbevollmächtigt", Rolle.STEUERBERATER),
+    ("partner", Rolle.PARTNER),
+    ("prüfungsassistent", Rolle.PRUEFUNGSASSISTENT),
+    ("prüfungsleiter", Rolle.PRUEFUNGSLEITER),
+    ("wirtschaftsprüfer", Rolle.WIRTSCHAFTSPRUEFER),
+    ("rechtsfachangestellte", Rolle.RECHTSFACHANGESTELLTE),
+    ("rechtsanwalt", Rolle.RECHTSANWALT),
+    ("rechtsanwältin", Rolle.RECHTSANWALT),
+)
+
+
+def _job_title_from_raw_data(raw_data: dict[str, object] | None) -> str | None:
+    """Titel/Fachgebiet aus dem schemalosen raw_data - Schluesselname je nach
+    Quelle unterschiedlich, siehe _JOB_TITLE_RAW_DATA_KEYS."""
+    if not raw_data:
+        return None
+    for key in _JOB_TITLE_RAW_DATA_KEYS:
+        value = raw_data.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _phone_from_raw_data(raw_data: dict[str, object] | None) -> str | None:
+    """Siehe _PHONE_RAW_DATA_KEYS - liefert aktuell bei keiner Quelle einen
+    Treffer, greift aber automatisch, sobald eine Quelle das nachliefert."""
+    if not raw_data:
+        return None
+    for key in _PHONE_RAW_DATA_KEYS:
+        value = raw_data.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _rollen_from_text(text: str | None) -> list[Rolle]:
+    """Leitet Rolle-Kategorien aus einem kurzen Titel-/Fachgebietstext ab, nur
+    wo eindeutig zuordenbar (Nutzer-Vorgabe) - liefert bewusst eine leere
+    Liste statt zu raten, wenn kein Schluesselwort trifft (z.B. WPKs
+    "vereidigte/r Buchprüfer/in", das keiner der 10 Rolle-Kategorien exakt
+    entspricht)."""
+    if not text:
+        return []
+    normalized = text.lower()
+    matches: list[Rolle] = []
+    for keyword, rolle in _ROLLE_KEYWORDS:
+        if keyword in normalized and rolle not in matches:
+            matches.append(rolle)
+    return matches
 
 
 def _team_page_notes_text(member: kanzlei_team_scrape.TeamMember) -> str | None:
@@ -316,7 +399,19 @@ class SourcingService:
 
     def run_wpk_search(self, plz_or_ort: str) -> SourcingRunResult:
         """Analog zu run_steuerberater_search, Quelle WPK-Berufsregister
-        (strukturierte JSON-Antwort statt HTML, siehe wpk_berufsregister.py)."""
+        (strukturierte JSON-Antwort statt HTML, siehe wpk_berufsregister.py).
+
+        Geprueft (Auftrag "WPK-Arbeitgeber-Matching"): OHNE
+        _match_client_company()-Aufruf hier, anders als run_steuerberater_search
+        oben - das WPK-Berufsregister liefert in seiner Antwort schlicht KEINEN
+        Arbeitgeber-/Kanzleinamen (siehe WpkPerson-Dataclass und die am
+        2026-07-23 live verifizierte Fixture in
+        tests/services/test_wpk_berufsregister.py: nur Name, Adresse,
+        Registernummer, Berufsklassifizierung WP/vBP - keine Kanzlei). Es gibt
+        also nichts, das sich gegen ClientCompany fuzzy-matchen liesse, ohne
+        Daten zu erfinden - anders als beim Steuerberaterverzeichnis (liefert
+        person.employer) oder beim Team-Seiten-Scrape (matched_client_company_id
+        ist dort trivialerweise gesetzt, da von der Kanzlei aus gestartet wird)."""
         result = SourcingRunResult()
         try:
             rows = wpk_berufsregister.fetch_search_results(plz_or_ort)
@@ -451,6 +546,11 @@ class SourcingService:
         regulaeren Anlegen - bewusst wiederverwendet statt dupliziert)."""
         lead = self.get_lead(lead_id)
         self._ensure_reviewable(lead)
+        # Zusaetzlich zum bisherigen Freitext (notes_text unten) so viel wie
+        # moeglich strukturiert uebernehmen (Nutzer-Vorgabe) - current_employer
+        # 1:1, job_title/rollen aus raw_data abgeleitet (Feldname je Quelle
+        # unterschiedlich), Telefon nur falls die Quelle es liefert.
+        job_title = _job_title_from_raw_data(lead.raw_data)
         candidate = CandidateService(self.session).create(
             CandidateCreate(
                 first_name=lead.first_name,
@@ -459,6 +559,10 @@ class SourcingService:
                 postal_code=lead.postal_code,
                 summary=self._source_summary(lead),
                 owner_user_id=user_id,
+                current_employer_internal=lead.current_employer,
+                job_title=job_title,
+                rollen=_rollen_from_text(job_title),
+                phone=_phone_from_raw_data(lead.raw_data),
             )
         )
         if lead.notes_text:
