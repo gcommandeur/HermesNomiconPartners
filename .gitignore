@@ -40,6 +40,10 @@ backend/scripts/*_review.csv
 backend/scripts/*.csv
 backend/scripts/data/
 backend/scripts/*_s3_keys.txt
+# Checkpoint/Resume-Datei von backfill_cv_rollen_und_schwerpunkte.py -
+# enthaelt das komplette LLM-Extraktionsergebnis (Name/Rolle/Arbeitgeber/
+# Historie) pro Kandidat, personenbezogen wie die *_review.csv oben.
+backend/scripts/backfill_progress_*.json
 
 # Logs
 *.log

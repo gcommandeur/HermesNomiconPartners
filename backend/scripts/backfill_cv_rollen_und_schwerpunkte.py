@@ -27,6 +27,37 @@ current_employer_internal, vorgeschlagene berufliche_stationen als JSON,
 vorgeschlagene fachliche_schwerpunkte, vorgeschlagener ausbildung_titel,
 confidence/error). --apply fuer den echten Schreibvorgang.
 
+CHECKPOINT/RESUME (siehe PROGRESS_PATH unten): nach JEDEM einzelnen
+Kandidaten wird das vollstaendige LLM-Extraktionsergebnis atomar in
+backfill_progress_cv_rollen.json gesichert - nicht nur "schon dran
+gewesen", sondern das Ergebnis selbst. Ein Neustart des Skripts (egal ob
+durch Strg+C, einen Container-Neustart per Redeploy/Health-Check ohne
+jeden Cleanup-Handler, oder sonst einen harten Kill) verliert dadurch
+hoechstens den GERADE laufenden einzelnen Kandidaten, nie bereits
+abgeschlossene - und fuer die greift beim naechsten Lauf automatisch der
+Cache, OHNE erneuten (bezahlten) LLM-Call, selbst wenn der vorherige Lauf
+nur ein Dry-Run war und diesmal --apply gesetzt ist. Nur ERFOLGREICHE
+Extraktionen werden gecacht; ein Kandidat, bei dem der letzte Versuch
+scheiterte (z.B. Timeout), gilt weiter als unbearbeitet und wird erneut
+versucht. Zum vollstaendigen Zuruecksetzen einfach
+backfill_progress_cv_rollen.json loeschen.
+
+HINTERGRUNDAUSFUEHRUNG (unabhaengig vom Browser-Tab in der DO-App-Platform-
+Console): das Skript selbst kennt kein "im Hintergrund" - dafuer die
+Shell nutzen, in der es gestartet wird:
+
+    nohup python scripts/backfill_cv_rollen_und_schwerpunkte.py --apply \\
+        > backfill.log 2>&1 &
+
+Ein Schliessen/Neuladen des Browser-Tabs beendet dann NICHT mehr den
+Prozess (nur `nohup` allein tut das - schuetzt NICHT vor einem echten
+Container-Neustart, dagegen hilft ausschliesslich das Checkpoint/Resume
+oben). Stand abrufen, ohne selbst etwas zu starten:
+
+    tail -f backfill.log          # laufender Log, Strg+C beendet nur das Verfolgen
+    python -c "import json; print(len(json.load(open('scripts/backfill_progress_cv_rollen.json'))))"
+        # Anzahl bereits erfolgreich verarbeiteter (gecachter) Kandidaten
+
 Usage (aus backend/, mit aktiviertem venv):
 
     # Test-Gruppe: 25 ueber den Bestand verteilte Kandidaten (Diversitaet
@@ -58,6 +89,7 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
@@ -74,6 +106,12 @@ from cc_crm.services.cv_extraction import (  # noqa: E402
 from cc_crm.services.storage import read_document_bytes  # noqa: E402
 
 OUTPUT_PATH = Path(__file__).resolve().parent / "cv_rollen_backfill_review.csv"
+# Checkpoint/Resume - siehe Modul-Docstring. Schluessel = str(candidate.id),
+# Wert = {"extracted": <komplettes extract_candidate_fields()-Ergebnis>,
+# "source_is_agency_profile": bool}. Bewusst NICHT der rohe CV-Text mit
+# drin - nur das bereits daraus abgeleitete Ergebnis, das fuer einen
+# Resume-Lauf gebraucht wird.
+PROGRESS_PATH = Path(__file__).resolve().parent / "backfill_progress_cv_rollen.json"
 
 # Genau die Felder, die dieses Skript liest/schreibt - siehe Modul-Docstring.
 # Einfache Kontaktfelder sind bewusst NICHT hier drin.
@@ -199,7 +237,47 @@ def _confidence_for(extracted: dict[str, object]) -> str:
     return "medium"
 
 
+def _load_progress() -> dict[str, dict[str, Any]]:
+    """Checkpoint/Resume - siehe Modul-Docstring. Eine kaputte/halb
+    geschriebene Datei (z.B. durch manuelle Bearbeitung, oder theoretisch
+    einen Kill exakt zwischen dem atomaren os.replace zweier Dateisysteme -
+    praktisch nicht auf demselben Volume moeglich, aber defensiv trotzdem
+    abgefangen) darf den Lauf nicht blockieren: im Zweifel lieber ohne
+    Cache neu starten als gar nicht starten koennen."""
+    if not PROGRESS_PATH.exists():
+        return {}
+    try:
+        with PROGRESS_PATH.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        print(
+            f"WARNUNG: {PROGRESS_PATH} konnte nicht gelesen werden ({exc}) - "
+            "starte ohne Checkpoint."
+        )
+        return {}
+    if not isinstance(data, dict):
+        print(f"WARNUNG: {PROGRESS_PATH} hat ein unerwartetes Format - starte ohne Checkpoint.")
+        return {}
+    return data
+
+
+def _save_progress(progress: dict[str, dict[str, Any]]) -> None:
+    """Atomarer Schreibvorgang (temp-Datei im selben Verzeichnis + Rename) -
+    ueberlebt auch einen harten Kill mitten im Schreiben: es liegt danach
+    entweder noch die alte, vollstaendige Datei, oder schon die neue,
+    vollstaendige - nie ein halbgeschriebenes JSON. Wird nach JEDEM
+    einzelnen Kandidaten aufgerufen (siehe backfill() unten), nicht
+    batchweise und nicht erst im finally-Block - ein Container-Neustart
+    verliert dadurch hoechstens den GERADE laufenden einzelnen Kandidaten
+    (Nutzer-Vorgabe)."""
+    tmp_path = PROGRESS_PATH.with_suffix(".tmp")
+    with tmp_path.open("w", encoding="utf-8") as handle:
+        json.dump(progress, handle, ensure_ascii=False)
+    tmp_path.replace(PROGRESS_PATH)
+
+
 def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
+    progress = _load_progress()
     with SessionLocal() as session:
         stats = {
             "candidates_checked": len(candidates),
@@ -207,16 +285,20 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
             "skipped_no_cv_document": 0,
             "skipped_unreadable": 0,
             "errors": 0,
+            # Aus dem Checkpoint uebernommen, KEIN erneuter LLM-Call - siehe
+            # Modul-Docstring (Checkpoint/Resume).
+            "resumed_from_cache": 0,
         }
         rows: list[dict[str, object]] = []
 
         for candidate_stub in candidates:
             candidate = session.get(Candidate, candidate_stub.id)
             assert candidate is not None
+            candidate_key = str(candidate.id)
             document = _latest_cv_document(session, candidate.id)
             row: dict[str, object] = {
                 "candidate_number": candidate.candidate_number or "",
-                "candidate_id": str(candidate.id),
+                "candidate_id": candidate_key,
                 "job_title_zur_orientierung": candidate.job_title or "",
                 "rollen_aktuell": ", ".join(candidate.rollen or []),
                 "current_employer_internal_aktuell": candidate.current_employer_internal or "",
@@ -238,24 +320,45 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
                 stats["skipped_no_cv_document"] += 1
                 continue
 
-            try:
-                content = read_document_bytes(document.storage_key)
-                cv_text = extract_text_from_bytes(document.filename, content)
-                if not cv_text.strip():
-                    raise ValueError("CV-Text ist nach der Extraktion leer.")
-                extracted = extract_candidate_fields(
-                    cv_text, filename=document.filename, content=content
+            cached = progress.get(candidate_key)
+            extracted: dict[str, Any]
+            if cached is not None:
+                extracted = cached["extracted"]
+                source_is_agency_profile = bool(cached.get("source_is_agency_profile"))
+                stats["resumed_from_cache"] += 1
+            else:
+                try:
+                    content = read_document_bytes(document.storage_key)
+                    cv_text = extract_text_from_bytes(document.filename, content)
+                    if not cv_text.strip():
+                        raise ValueError("CV-Text ist nach der Extraktion leer.")
+                    extracted = extract_candidate_fields(
+                        cv_text, filename=document.filename, content=content
+                    )
+                except (OSError, ValueError) as exc:
+                    row["error"] = str(exc)[:300]
+                    stats["skipped_unreadable"] += 1
+                    rows.append(row)
+                    continue
+                except Exception as exc:  # noqa: BLE001 - ein Kandidat darf den Lauf nicht abbrechen
+                    row["error"] = str(exc)[:300]
+                    stats["errors"] += 1
+                    rows.append(row)
+                    continue
+
+                source_is_agency_profile = (
+                    bool(extracted.get("source_is_agency_profile"))
+                    or "Commandeur Consulting GmbH" in cv_text
                 )
-            except (OSError, ValueError) as exc:
-                row["error"] = str(exc)[:300]
-                stats["skipped_unreadable"] += 1
-                rows.append(row)
-                continue
-            except Exception as exc:  # noqa: BLE001 - ein Kandidat darf den Lauf nicht abbrechen
-                row["error"] = str(exc)[:300]
-                stats["errors"] += 1
-                rows.append(row)
-                continue
+                # Erfolgreich extrahiert -> SOFORT persistieren, nicht erst
+                # am Ende des Laufs oder im finally-Block (Nutzer-Vorgabe) -
+                # ein Kill direkt danach darf diesen Kandidaten nicht nochmal
+                # kosten.
+                progress[candidate_key] = {
+                    "extracted": extracted,
+                    "source_is_agency_profile": source_is_agency_profile,
+                }
+                _save_progress(progress)
 
             rollen_vorschlag = extracted.get("rollen") or []
             employer_vorschlag = extracted.get("current_employer_internal")
@@ -271,10 +374,7 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
             row["fachliche_schwerpunkte_vorschlag"] = ", ".join(schwerpunkte_vorschlag)
             row["ausbildung_titel_vorschlag"] = ausbildung_vorschlag or ""
             row["confidence"] = _confidence_for(extracted)
-            row["source_is_agency_profile"] = str(
-                bool(extracted.get("source_is_agency_profile"))
-                or "Commandeur Consulting GmbH" in cv_text
-            )
+            row["source_is_agency_profile"] = str(source_is_agency_profile)
 
             # Pro Feld unabhaengig: liefert der Re-Parse fuer ein Feld nichts
             # (leere Liste/None), bleibt der bestehende DB-Wert erhalten statt
@@ -329,10 +429,13 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
                     candidate.ausbildung_titel = ausbildung_vorschlag
                 session.commit()
 
-            # Sanftes Rate-Limiting, kein Sturmlauf auf die Anthropic-API bei
-            # einem vollen Lauf ueber ~2900 Kandidaten (gleiches Muster wie
-            # backfill_job_titles_review.py, siehe Git-Historie).
-            time.sleep(0.2)
+            if cached is None:
+                # Sanftes Rate-Limiting, kein Sturmlauf auf die Anthropic-API
+                # bei einem vollen Lauf ueber ~2900 Kandidaten (gleiches
+                # Muster wie backfill_job_titles_review.py, siehe Git-
+                # Historie). Bei einem Cache-Treffer entfaellt das - es gab
+                # in diesem Durchlauf gar keinen API-Call.
+                time.sleep(0.2)
 
         _write_review_csv(rows)
         return stats
@@ -442,10 +545,15 @@ def main() -> None:
     print(f"Kandidaten geprüft: {stats['candidates_checked']}")
     verb = "aktualisiert" if args.apply else "würden aktualisiert"
     print(f"Kandidaten mit mindestens einer Änderung ({verb}): {stats['candidates_updated']}")
+    print(
+        f"Davon aus Checkpoint übernommen, kein erneuter LLM-Call: "
+        f"{stats['resumed_from_cache']}"
+    )
     print(f"Übersprungen (kein CV-Dokument): {stats['skipped_no_cv_document']}")
     print(f"Übersprungen (CV nicht lesbar/leer): {stats['skipped_unreadable']}")
     print(f"Fehler bei der Extraktion (Kandidat übersprungen): {stats['errors']}")
     print(f"\nReview-CSV: {OUTPUT_PATH}")
+    print(f"Checkpoint-Datei: {PROGRESS_PATH}")
     if not args.apply:
         print("\nDies war ein Dry-Run - nichts wurde geschrieben.")
         print("Review-CSV prüfen, dann mit --apply erneut ausführen, um zu übernehmen.")
