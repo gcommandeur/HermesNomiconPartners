@@ -308,7 +308,10 @@ class TestRegexFallback:
 
         result = cv_extraction.extract_candidate_fields("")
 
-        assert result == dict(cv_extraction._EMPTY_STRUCTURED_FIELDS)
+        assert result == {
+            **dict(cv_extraction._EMPTY_STRUCTURED_FIELDS),
+            "llm_fallback_used": True,
+        }
 
     def test_regex_fallback_suppresses_agency_address_like_llm_path(
         self, monkeypatch: pytest.MonkeyPatch

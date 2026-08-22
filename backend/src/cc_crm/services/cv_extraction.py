@@ -500,7 +500,17 @@ def extract_candidate_fields(
     Kontaktfeldern (E-Mail/Telefon/PLZ/Ort) als gar keiner. Die "smarten"
     Felder (Rolle/Qualifikation/Schwerpunkte/Stationen) bleiben in diesem
     Fall leer und koennen spaeter per erneutem CV-Re-Parse nachgeliefert
-    werden, sobald wieder Guthaben vorhanden ist."""
+    werden, sobald wieder Guthaben vorhanden ist.
+
+    Das Rueckgabe-Dict traegt IMMER den Schluessel "llm_fallback_used"
+    (False im Erfolgsfall, True im Regex-Fallback-Pfad) - Aufrufer, die
+    einen erfolgreichen LLM-Call von einem blossen Fallback-Ergebnis
+    unterscheiden muessen (z.B. Batch-Backfill-Skripte mit Checkpoint/
+    Resume, siehe scripts/backfill_cv_rollen_und_schwerpunkte.py), sollen
+    sich auf dieses Flag stuetzen statt auf "smarte Felder sind leer" zu
+    schliessen - ein echter LLM-Erfolg kann fuer ein bestimmtes CV genauso
+    legitim leere smarte Felder liefern, wenn dort schlicht nichts zu
+    erkennen war."""
     try:
         raw = generate_text(
             system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
@@ -539,6 +549,7 @@ def extract_candidate_fields(
         if is_agency_letterhead(cv_text):
             for key in ("email", "postal_code", "city", "phone"):
                 fallback_data[key] = None
+        fallback_data["llm_fallback_used"] = True
         return fallback_data
     # Defensiv: das Modell haelt sich fast immer an das Array-Schema, aber
     # ohne diese Normalisierung wuerde ein fehlendes/falsch typisiertes Feld
@@ -549,6 +560,7 @@ def extract_candidate_fields(
         data["fachliche_schwerpunkte"] = []
     data["rollen"] = _normalize_rollen(data.get("rollen"))
     data["berufliche_stationen"] = _normalize_berufliche_stationen(data.get("berufliche_stationen"))
+    data["llm_fallback_used"] = False
 
     agency_profile = is_agency_letterhead(cv_text)
     if agency_profile:

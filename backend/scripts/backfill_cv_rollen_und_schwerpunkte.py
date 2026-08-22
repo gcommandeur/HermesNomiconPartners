@@ -36,11 +36,16 @@ jeden Cleanup-Handler, oder sonst einen harten Kill) verliert dadurch
 hoechstens den GERADE laufenden einzelnen Kandidaten, nie bereits
 abgeschlossene - und fuer die greift beim naechsten Lauf automatisch der
 Cache, OHNE erneuten (bezahlten) LLM-Call, selbst wenn der vorherige Lauf
-nur ein Dry-Run war und diesmal --apply gesetzt ist. Nur ERFOLGREICHE
-Extraktionen werden gecacht; ein Kandidat, bei dem der letzte Versuch
-scheiterte (z.B. Timeout), gilt weiter als unbearbeitet und wird erneut
-versucht. Zum vollstaendigen Zuruecksetzen einfach
-backfill_progress_cv_rollen.json loeschen.
+nur ein Dry-Run war und diesmal --apply gesetzt ist. Nur ECHTE LLM-Erfolge
+werden gecacht (siehe _looks_like_regex_fallback) - ein Kandidat, bei dem
+der letzte Versuch scheiterte (z.B. Timeout) ODER auf die regelbasierte
+Notfall-Extraktion zurueckfiel (z.B. "Your credit balance is too low"),
+gilt weiter als unbearbeitet und wird beim naechsten Lauf automatisch
+erneut per echtem LLM-Call versucht - ein leeres Guthaben mitten im Lauf
+darf betroffene Kandidaten NIE als "erledigt" markieren (live aufgetreten
+und gefixt: vorher landete das Fallback-Ergebnis ununterscheidbar von
+einem echten LLM-Erfolg im Cache). Zum vollstaendigen Zuruecksetzen
+einfach backfill_progress_cv_rollen.json loeschen.
 
 HINTERGRUNDAUSFUEHRUNG (unabhaengig vom Browser-Tab in der DO-App-Platform-
 Console): das Skript selbst kennt kein "im Hintergrund" - dafuer die
@@ -276,6 +281,35 @@ def _save_progress(progress: dict[str, dict[str, Any]]) -> None:
     tmp_path.replace(PROGRESS_PATH)
 
 
+def _looks_like_regex_fallback(extracted: dict[str, Any]) -> bool:
+    """Erkennt ein Regex-Fallback-Ergebnis (siehe cv_extraction.py::
+    extract_candidate_fields, Schluessel "llm_fallback_used") - so ein
+    Ergebnis darf NIE als 'erledigt' gecacht werden, sonst wuerde ein
+    Resume-Lauf nach dem Guthaben-Aufladen genau diese Kandidaten faelschlich
+    ueberspringen statt sie mit einem echten LLM-Call neu zu verarbeiten
+    (live aufgetreten: "Your credit balance is too low").
+
+    Rueckwaertskompatibel fuer Cache-Eintraege aus einem Lauf VOR diesem Fix
+    (extracted ohne den Schluessel ueberhaupt) - ein echter Regex-Fallback
+    liefert IMMER ausschliesslich leere smarte Felder (siehe
+    _extract_contact_fields_via_regex), diese Kombination wird bei einem
+    alten Eintrag ohne das Flag sicherheitshalber ebenfalls als vermuteter
+    Fallback behandelt statt ihn ungeprueft zu vertrauen. Ein echter
+    LLM-Erfolg, der zufaellig ebenfalls nichts fand, wird dadurch einmalig
+    unnoetig erneut versucht - das kostet hoechstens einen zusaetzlichen
+    Call, ist aber sicherer als einen echten Fallback durchrutschen zu
+    lassen."""
+    if "llm_fallback_used" in extracted:
+        return bool(extracted["llm_fallback_used"])
+    return not (
+        extracted.get("rollen")
+        or extracted.get("current_employer_internal")
+        or extracted.get("berufliche_stationen")
+        or extracted.get("fachliche_schwerpunkte")
+        or extracted.get("ausbildung_titel")
+    )
+
+
 def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
     progress = _load_progress()
     with SessionLocal() as session:
@@ -288,6 +322,11 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
             # Aus dem Checkpoint uebernommen, KEIN erneuter LLM-Call - siehe
             # Modul-Docstring (Checkpoint/Resume).
             "resumed_from_cache": 0,
+            # LLM-Call ergab ein Fallback-Ergebnis (z.B. Guthaben leer) -
+            # NICHT gecacht, gilt wie ein Fehlschlag und wird beim naechsten
+            # Lauf automatisch erneut versucht (siehe
+            # _looks_like_regex_fallback).
+            "llm_fallback_not_cached": 0,
         }
         rows: list[dict[str, object]] = []
 
@@ -321,12 +360,15 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
                 continue
 
             cached = progress.get(candidate_key)
-            extracted: dict[str, Any]
-            if cached is not None:
+            extracted: dict[str, Any] | None = None
+            cache_used = False
+            if cached is not None and not _looks_like_regex_fallback(cached["extracted"]):
                 extracted = cached["extracted"]
                 source_is_agency_profile = bool(cached.get("source_is_agency_profile"))
                 stats["resumed_from_cache"] += 1
-            else:
+                cache_used = True
+
+            if not cache_used:
                 try:
                     content = read_document_bytes(document.storage_key)
                     cv_text = extract_text_from_bytes(document.filename, content)
@@ -346,6 +388,21 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
                     rows.append(row)
                     continue
 
+                if _looks_like_regex_fallback(extracted):
+                    # KEIN echter LLM-Erfolg (z.B. Guthaben leer/Timeout) -
+                    # darf NIE als "erledigt" gecacht werden, sonst wuerde
+                    # ein spaeterer Resume-Lauf diesen Kandidaten faelschlich
+                    # ueberspringen statt ihn mit echtem LLM neu zu
+                    # verarbeiten. Gilt wie ein Fehlschlag: naechster Lauf
+                    # versucht es automatisch erneut.
+                    row["error"] = (
+                        "LLM-Fallback (z.B. API-Guthaben leer/Timeout) - "
+                        "nicht gecacht, wird beim naechsten Lauf erneut versucht."
+                    )
+                    stats["llm_fallback_not_cached"] += 1
+                    rows.append(row)
+                    continue
+
                 source_is_agency_profile = (
                     bool(extracted.get("source_is_agency_profile"))
                     or "Commandeur Consulting GmbH" in cv_text
@@ -360,6 +417,10 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
                 }
                 _save_progress(progress)
 
+            # An dieser Stelle immer gesetzt: der cache_used-Zweig oben
+            # setzt extracted direkt, der frische Extraktionszweig springt
+            # bei jedem Fehl-/Fallback-Pfad per `continue` vorher raus.
+            assert extracted is not None
             rollen_vorschlag = extracted.get("rollen") or []
             employer_vorschlag = extracted.get("current_employer_internal")
             stationen_vorschlag = extracted.get("berufliche_stationen") or []
@@ -429,7 +490,7 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
                     candidate.ausbildung_titel = ausbildung_vorschlag
                 session.commit()
 
-            if cached is None:
+            if not cache_used:
                 # Sanftes Rate-Limiting, kein Sturmlauf auf die Anthropic-API
                 # bei einem vollen Lauf ueber ~2900 Kandidaten (gleiches
                 # Muster wie backfill_job_titles_review.py, siehe Git-
@@ -552,6 +613,11 @@ def main() -> None:
     print(f"Übersprungen (kein CV-Dokument): {stats['skipped_no_cv_document']}")
     print(f"Übersprungen (CV nicht lesbar/leer): {stats['skipped_unreadable']}")
     print(f"Fehler bei der Extraktion (Kandidat übersprungen): {stats['errors']}")
+    print(
+        f"LLM-Fallback statt echtem Ergebnis (z.B. Guthaben leer/Timeout) - "
+        f"nicht gecacht, wird nächstes Mal automatisch erneut versucht: "
+        f"{stats['llm_fallback_not_cached']}"
+    )
     print(f"\nReview-CSV: {OUTPUT_PATH}")
     print(f"Checkpoint-Datei: {PROGRESS_PATH}")
     if not args.apply:

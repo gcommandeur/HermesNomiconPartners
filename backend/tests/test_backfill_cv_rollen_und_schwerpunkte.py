@@ -358,6 +358,107 @@ class TestCheckpointResume:
         assert second_stats["candidates_updated"] == 1
         assert call_count == 2
 
+    def test_fallback_result_is_not_cached_and_is_retried_with_real_llm_on_resume(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
+    ) -> None:
+        """Kernfall aus der Praxis: mitten im Lauf geht das Anthropic-
+        Guthaben aus, extract_candidate_fields() faellt auf die
+        regelbasierte Notfall-Extraktion zurueck (llm_fallback_used=True,
+        siehe cv_extraction.py) - das darf NICHT als 'erledigt' gecacht
+        werden. Ein Resume-Lauf (z.B. nach dem Aufladen) muss den
+        Kandidaten automatisch mit einem ECHTEN LLM-Call neu versuchen,
+        nicht aus dem Cache uebernehmen."""
+        _use_session_factory(monkeypatch, session_factory)
+        _use_tmp_output_path(monkeypatch, tmp_path)
+        with session_factory() as session:
+            candidate = _make_candidate_with_cv(session)
+            candidate_id = candidate.id
+
+        monkeypatch.setattr(backfill_script, "read_document_bytes", lambda storage_key: b"dummy")
+        monkeypatch.setattr(
+            backfill_script, "extract_text_from_bytes", lambda filename, content: "CV-Inhalt"
+        )
+        call_count = 0
+
+        def _fake_extract(cv_text: str, **kwargs: object) -> dict[str, object]:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                # Wie cv_extraction.py::extract_candidate_fields im
+                # Fallback-Pfad: nur Kontaktfelder, smarte Felder leer,
+                # explizit als Fallback markiert.
+                return {
+                    "rollen": [],
+                    "current_employer_internal": None,
+                    "berufliche_stationen": [],
+                    "fachliche_schwerpunkte": [],
+                    "ausbildung_titel": None,
+                    "llm_fallback_used": True,
+                }
+            return {
+                "rollen": ["steuerberater"],
+                "current_employer_internal": "Kanzlei X",
+                "berufliche_stationen": [],
+                "fachliche_schwerpunkte": [],
+                "ausbildung_titel": None,
+                "llm_fallback_used": False,
+            }
+
+        monkeypatch.setattr(backfill_script, "extract_candidate_fields", _fake_extract)
+
+        with session_factory() as session:
+            first_stats = backfill_script.backfill(
+                apply=True, candidates=[session.get(Candidate, candidate_id)]
+            )
+        assert first_stats["llm_fallback_not_cached"] == 1
+        assert first_stats["candidates_updated"] == 0
+        assert first_stats["errors"] == 0
+        # Kandidat darf NICHT im Checkpoint stehen.
+        assert backfill_script._load_progress() == {}
+
+        with session_factory() as session:
+            second_stats = backfill_script.backfill(
+                apply=True, candidates=[session.get(Candidate, candidate_id)]
+            )
+        assert second_stats["resumed_from_cache"] == 0
+        assert second_stats["llm_fallback_not_cached"] == 0
+        assert second_stats["candidates_updated"] == 1
+        # 2 echte Aufrufe insgesamt: der verworfene Fallback-Versuch UND der
+        # erfolgreiche Resume-Versuch - kein LLM-Call wurde durch einen
+        # faelschlich gecachten Fallback eingespart.
+        assert call_count == 2
+
+        with session_factory() as session:
+            refreshed = session.get(Candidate, candidate_id)
+            assert refreshed.rollen == ["steuerberater"]
+            assert refreshed.current_employer_internal == "Kanzlei X"
+
+    def test_looks_like_regex_fallback_trusts_explicit_flag(self) -> None:
+        assert backfill_script._looks_like_regex_fallback({"llm_fallback_used": True}) is True
+        assert (
+            backfill_script._looks_like_regex_fallback(
+                {"llm_fallback_used": False, "rollen": []}
+            )
+            is False
+        )
+
+    def test_looks_like_regex_fallback_backward_compat_for_old_cache_entries(self) -> None:
+        """Cache-Eintraege aus einem Lauf VOR diesem Fix haben den Schluessel
+        gar nicht - alle smarten Felder leer wird dann sicherheitshalber als
+        vermuteter Fallback behandelt, mindestens ein gefuelltes Feld gilt
+        weiterhin als vertrauenswuerdiger echter Erfolg."""
+        all_empty = {
+            "rollen": [],
+            "current_employer_internal": None,
+            "berufliche_stationen": [],
+            "fachliche_schwerpunkte": [],
+            "ausbildung_titel": None,
+        }
+        assert backfill_script._looks_like_regex_fallback(all_empty) is True
+
+        with_a_result = {**all_empty, "rollen": ["steuerberater"]}
+        assert backfill_script._looks_like_regex_fallback(with_a_result) is False
+
     def test_load_progress_survives_a_corrupted_file(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path
     ) -> None:
