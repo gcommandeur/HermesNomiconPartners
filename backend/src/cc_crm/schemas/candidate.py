@@ -46,6 +46,9 @@ class CandidateBase(BaseModel):
 
     # --- Quali-Call-Erweiterung ---
     fachliche_schwerpunkte: list[str] = Field(default_factory=list)
+    # Software/IT-Tools, getrennt von fachliche_schwerpunkte - siehe
+    # models/candidate.py::edv_kenntnisse.
+    edv_kenntnisse: list[str] = Field(default_factory=list)
     ausbildung_titel: str | None = Field(default=None, max_length=240)
     berufliche_stationen: list[BeruflicheStation] = Field(default_factory=list)
     # Siehe models/candidate.py::rollen - Liste, da mehrere Rollen
@@ -96,6 +99,7 @@ class CandidateUpdate(BaseModel):
     referred_by: str | None = Field(default=None, max_length=240)
 
     fachliche_schwerpunkte: list[str] | None = None
+    edv_kenntnisse: list[str] | None = None
     ausbildung_titel: str | None = Field(default=None, max_length=240)
     berufliche_stationen: list[BeruflicheStation] | None = None
     rollen: list[Rolle] | None = None
@@ -143,6 +147,7 @@ class CvExtractionSuggestion(BaseModel):
     qualification: str | None = None
     ausbildung_titel: str | None = None
     fachliche_schwerpunkte: list[str] | None = None
+    edv_kenntnisse: list[str] | None = None
     rollen: list[Rolle] | None = None
     current_employer_internal: str | None = None
     berufliche_stationen: list[BeruflicheStation] | None = None

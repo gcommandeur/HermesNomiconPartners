@@ -1,81 +1,91 @@
 """Konsolidiertes CV-Re-Parse-Backfill fuer die neu aufgesetzte CV-Extraktion
 (Rollen-Taxonomie, current_employer_internal, vollstaendige
-berufliche_stationen-Historie) - ersetzt die drei alten, nie produktiv
-gelaufenen Skripte backfill_cv_fields.py, backfill_job_titles_review.py und
-das fruehere fachliche_schwerpunkte-Backfill in einem Lauf, da alle drei am
-selben Ort ansetzen (CV-Extraktions-Prompt + ein Re-Parse-Lauf ueber alle
-CVs).
+berufliche_stationen-Historie, edv_kenntnisse) - ersetzt die drei alten, nie
+produktiv gelaufenen Skripte backfill_cv_fields.py, backfill_job_titles_review.py
+und das fruehere fachliche_schwerpunkte-Backfill in einem Lauf, da alle drei am
+selben Ort ansetzen (CV-Extraktions-Prompt + ein Re-Parse-Lauf ueber alle CVs).
 
-WICHTIG - bewusst KEIN reiner "nur leere Felder ergaenzen"-Backfill: fuer
-JEDEN Kandidaten mit CV werden rollen, current_employer_internal,
-berufliche_stationen, fachliche_schwerpunkte und ausbildung_titel NEU
-klassifiziert/extrahiert und ueberschrieben - AUCH wenn dort schon ein Wert
-steht, weil die bisherige Extraktion diese Felder (bzw. deren neue Struktur)
-gar nicht kannte. Einfache Kontaktfelder (Name/E-Mail/PLZ/Ort/Telefon/
-job_title/qualification) werden von diesem Skript NICHT angefasst - weder
-lesend noch schreibend veraendert -, um das Risiko einer unnoetigen
-Ueberschreibung ohne Mehrwert zu vermeiden.
+PERSISTENZ/CHECKPOINT (2026-08-22 neu aufgesetzt, ersetzt die fruehere lokale
+JSON-Checkpoint-Datei): JEDES erfolgreiche LLM-Ergebnis wird SOFORT einzeln
+nach Candidate.cv_extraction_raw geschrieben - UNABHAENGIG von --apply, direkt
+nach dem Call, noch bevor die abgeleiteten Spalten (rollen/
+current_employer_internal/...) ueberhaupt betrachtet werden. cv_extraction_raw
+ist genau fuer diesen Roh-Cache gedacht (kein nutzersichtbares Feld,
+ueberschreibt keine gepflegten Spalten). Die DB ist damit der Checkpoint und
+uebersteht Container-Neustarts - anders als eine lokale JSON-Datei, deren
+Dateisystem bei DigitalOcean App Platform bei jedem Container-Neustart
+zurueckgesetzt wird (live beobachtet: ein Resume-Lauf zeigte "aus Checkpoint
+uebernommen: 0", obwohl der vorherige Lauf hunderte Kandidaten erfolgreich
+verarbeitet hatte - das Checkpoint-File existierte im neuen Container schlicht
+nicht mehr).
 
-Nutzt extract_candidate_fields() direkt (nicht CandidateService.
-suggest_cv_fields/auto_fill_from_cv, die bewusst NUR aktuell leere Felder
-vorschlagen) - genau dieses "immer neu klassifizieren"-Verhalten ist hier
-gewollt, siehe oben.
+--apply steuert NUR NOCH, ob aus cv_extraction_raw zusaetzlich die
+abgeleiteten Spalten (TARGET_FIELDS unten) befuellt werden - das Cachen des
+Rohergebnisses passiert immer, auch im Dry-Run.
 
-Dry-Run per Default: schreibt NICHTS in die DB, sondern eine Review-CSV
+Kandidaten mit bereits gesetztem cv_extraction_raw werden ausnahmslos
+uebersprungen (kein LLM-Call) - das gilt fuer JEDE Quelle eines vorhandenen
+Rohergebnisses: ein frueherer Lauf dieses Skripts, ein manueller CV-Upload
+(CandidateService.auto_fill_from_cv) oder ein Import (siehe
+import_rescued_cv_backfill_csv.py). Das ist eine bewusste Abkehr vom
+frueheren "IMMER neu klassifizieren, auch wenn schon ein Wert steht"-Verhalten
+dieses Skripts (siehe Git-Historie) - das war fuer wiederholte kostenlose
+Testlaeufe gedacht, kollidiert aber mit dem hier gewordenen Ziel (kein
+Kandidat wird zweimal bezahlt verarbeitet).
+
+GUTHABEN-ABBRUCH: erkennt das Skript an der Fallback-Begruendung (siehe
+cv_extraction.py::extract_candidate_fields, Schluessel "llm_fallback_reason"),
+dass ein LLM-Call speziell wegen leerem API-Guthaben ("credit balance is too
+low") fehlschlug, wird der GESAMTE Lauf sofort mit einer klaren Meldung
+abgebrochen - nicht wie bei einem gewoehnlichen Timeout einfach der einzelne
+Kandidat uebersprungen und der Lauf fortgesetzt (das wuerde sich bei leerem
+Guthaben sinnlos durch alle restlichen Kandidaten "durcharbeiten", jeder davon
+ein weiterer kostenloser, aber nutzloser Fallback-Versuch - live beobachtet:
+458 von 1128 Kandidaten liefen so ins Leere). Bereits in DIESEM Lauf
+erfolgreich verarbeitete Kandidaten bleiben trotz Abbruch persistiert (siehe
+Persistenz/Checkpoint oben).
+
+Vor jedem echten Lauf (Dry-Run UND --apply, da Dry-Run ebenfalls echte,
+bezahlte LLM-Calls macht) gibt das Skript die Anzahl zu verarbeitender
+Kandidaten plus eine grobe Kostenschaetzung aus und wartet auf eine
+Bestaetigung - mit --yes ueberspringbar fuer nohup-Laeufe ohne interaktives
+stdin.
+
+Dry-Run per Default: schreibt (ausser dem immer aktiven cv_extraction_raw-
+Cache) NICHTS an den abgeleiteten Spalten in die DB, sondern eine Review-CSV
 (candidate_number, aktuelle/vorgeschlagene rollen, aktueller/vorgeschlagener
 current_employer_internal, vorgeschlagene berufliche_stationen als JSON,
-vorgeschlagene fachliche_schwerpunkte, vorgeschlagener ausbildung_titel,
-confidence/error). --apply fuer den echten Schreibvorgang.
-
-CHECKPOINT/RESUME (siehe PROGRESS_PATH unten): nach JEDEM einzelnen
-Kandidaten wird das vollstaendige LLM-Extraktionsergebnis atomar in
-backfill_progress_cv_rollen.json gesichert - nicht nur "schon dran
-gewesen", sondern das Ergebnis selbst. Ein Neustart des Skripts (egal ob
-durch Strg+C, einen Container-Neustart per Redeploy/Health-Check ohne
-jeden Cleanup-Handler, oder sonst einen harten Kill) verliert dadurch
-hoechstens den GERADE laufenden einzelnen Kandidaten, nie bereits
-abgeschlossene - und fuer die greift beim naechsten Lauf automatisch der
-Cache, OHNE erneuten (bezahlten) LLM-Call, selbst wenn der vorherige Lauf
-nur ein Dry-Run war und diesmal --apply gesetzt ist. Nur ECHTE LLM-Erfolge
-werden gecacht (siehe _looks_like_regex_fallback) - ein Kandidat, bei dem
-der letzte Versuch scheiterte (z.B. Timeout) ODER auf die regelbasierte
-Notfall-Extraktion zurueckfiel (z.B. "Your credit balance is too low"),
-gilt weiter als unbearbeitet und wird beim naechsten Lauf automatisch
-erneut per echtem LLM-Call versucht - ein leeres Guthaben mitten im Lauf
-darf betroffene Kandidaten NIE als "erledigt" markieren (live aufgetreten
-und gefixt: vorher landete das Fallback-Ergebnis ununterscheidbar von
-einem echten LLM-Erfolg im Cache). Zum vollstaendigen Zuruecksetzen
-einfach backfill_progress_cv_rollen.json loeschen.
+vorgeschlagene fachliche_schwerpunkte/edv_kenntnisse, vorgeschlagener
+ausbildung_titel, confidence/error). --apply fuer den echten Schreibvorgang an
+den abgeleiteten Spalten.
 
 HINTERGRUNDAUSFUEHRUNG (unabhaengig vom Browser-Tab in der DO-App-Platform-
-Console): das Skript selbst kennt kein "im Hintergrund" - dafuer die
-Shell nutzen, in der es gestartet wird:
+Console): das Skript selbst kennt kein "im Hintergrund" - dafuer die Shell
+nutzen, in der es gestartet wird:
 
-    nohup python scripts/backfill_cv_rollen_und_schwerpunkte.py --apply \\
+    nohup python scripts/backfill_cv_rollen_und_schwerpunkte.py --apply --yes \\
         > backfill.log 2>&1 &
 
-Ein Schliessen/Neuladen des Browser-Tabs beendet dann NICHT mehr den
-Prozess (nur `nohup` allein tut das - schuetzt NICHT vor einem echten
-Container-Neustart, dagegen hilft ausschliesslich das Checkpoint/Resume
-oben). Stand abrufen, ohne selbst etwas zu starten:
+Stand abrufen, ohne selbst etwas zu starten:
 
     tail -f backfill.log          # laufender Log, Strg+C beendet nur das Verfolgen
-    python -c "import json; print(len(json.load(open('scripts/backfill_progress_cv_rollen.json'))))"
-        # Anzahl bereits erfolgreich verarbeiteter (gecachter) Kandidaten
 
 Usage (aus backend/, mit aktiviertem venv):
 
     # Test-Gruppe: 25 ueber den Bestand verteilte Kandidaten (Diversitaet
-    # statt der ersten 25 nach candidate_number).
+    # statt der ersten 25 nach candidate_number) - nur unter denen OHNE
+    # bereits gesetztes cv_extraction_raw.
     python scripts/backfill_cv_rollen_und_schwerpunkte.py --sample 25
 
-    # Voller Dry-Run gegen alle Kandidaten mit CV.
+    # Voller Dry-Run gegen alle Kandidaten mit CV, die noch kein
+    # cv_extraction_raw haben.
     python scripts/backfill_cv_rollen_und_schwerpunkte.py
 
-    # Echter Schreibvorgang, erst nach manueller CSV-Pruefung UND vorherigem
-    # DB-Backup (siehe Warnhinweis unten, dieses Skript loest das Backup
-    # nicht selbst aus).
-    python scripts/backfill_cv_rollen_und_schwerpunkte.py --apply
+    # Echter Schreibvorgang an den abgeleiteten Spalten, erst nach manueller
+    # CSV-Pruefung UND vorherigem DB-Backup (siehe Warnhinweis unten, dieses
+    # Skript loest das Backup nicht selbst aus). --yes fuer einen
+    # unbeaufsichtigten nohup-Lauf ohne interaktive Bestaetigung.
+    python scripts/backfill_cv_rollen_und_schwerpunkte.py --apply --yes
 
     # Gezielt nur bestimmte candidate_numbers (z.B. eine handverlesene
     # Test-Stichprobe vor einem grossen Lauf) - schliesst --sample/--limit
@@ -94,7 +104,6 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
@@ -111,20 +120,16 @@ from cc_crm.services.cv_extraction import (  # noqa: E402
 from cc_crm.services.storage import read_document_bytes  # noqa: E402
 
 OUTPUT_PATH = Path(__file__).resolve().parent / "cv_rollen_backfill_review.csv"
-# Checkpoint/Resume - siehe Modul-Docstring. Schluessel = str(candidate.id),
-# Wert = {"extracted": <komplettes extract_candidate_fields()-Ergebnis>,
-# "source_is_agency_profile": bool}. Bewusst NICHT der rohe CV-Text mit
-# drin - nur das bereits daraus abgeleitete Ergebnis, das fuer einen
-# Resume-Lauf gebraucht wird.
-PROGRESS_PATH = Path(__file__).resolve().parent / "backfill_progress_cv_rollen.json"
 
-# Genau die Felder, die dieses Skript liest/schreibt - siehe Modul-Docstring.
-# Einfache Kontaktfelder sind bewusst NICHT hier drin.
+# Genau die abgeleiteten Spalten, die dieses Skript (zusaetzlich zu
+# cv_extraction_raw) schreiben kann - siehe Modul-Docstring. Einfache
+# Kontaktfelder sind bewusst NICHT hier drin.
 TARGET_FIELDS = (
     "rollen",
     "current_employer_internal",
     "berufliche_stationen",
     "fachliche_schwerpunkte",
+    "edv_kenntnisse",
     "ausbildung_titel",
 )
 
@@ -139,6 +144,8 @@ CSV_FIELDS = [
     "berufliche_stationen_vorschlag",
     "fachliche_schwerpunkte_aktuell",
     "fachliche_schwerpunkte_vorschlag",
+    "edv_kenntnisse_aktuell",
+    "edv_kenntnisse_vorschlag",
     "ausbildung_titel_aktuell",
     "ausbildung_titel_vorschlag",
     "confidence",
@@ -146,6 +153,28 @@ CSV_FIELDS = [
     "felder_uebersprungen",
     "error",
 ]
+
+# Substring, an dem ein leeres Anthropic-API-Guthaben im Fehlertext erkannt
+# wird (siehe cv_extraction.py::extract_candidate_fields, "llm_fallback_reason") -
+# aus der tatsaechlichen Anthropic-Fehlermeldung "Your credit balance is too
+# low to access the Anthropic API" uebernommen. Case-insensitive Vergleich.
+CREDIT_EXHAUSTED_MARKER = "credit balance"
+
+# Grobe Kostenschaetzung je Kandidat (Sonnet 5, Standardpreise $3/$15 pro 1M
+# Token - bewusst NICHT die guenstigeren Intro-Preise, damit die Schaetzung
+# eher zu hoch als zu niedrig liegt). Angenommen: Systemprompt + CV-Text
+# (bis 12000 Zeichen abgeschnitten) ~6000 Input-Token, typische Antwort
+# ~1000 Output-Token (Obergrenze max_tokens=2500). Reine Groessenordnung,
+# keine Garantie - haengt stark von der CV-Laenge ab. Empirischer Anker: zwei
+# vorherige Laeufe ueber zusammen ~1128 Kandidaten kosteten ca. 20 EUR.
+ESTIMATED_COST_PER_CANDIDATE_EUR = 0.03
+
+
+class CreditExhaustedError(RuntimeError):
+    """Wird geworfen, wenn ein LLM-Call speziell wegen leeren Anthropic-
+    Guthabens scheiterte (siehe CREDIT_EXHAUSTED_MARKER) - der Lauf muss dann
+    komplett abbrechen statt sich sinnlos durch die restlichen Kandidaten zu
+    versuchen, siehe Modul-Docstring."""
 
 
 def _candidates_with_cv(session: Session) -> list[Candidate]:
@@ -181,17 +210,13 @@ def _candidates_with_cv(session: Session) -> list[Candidate]:
     )
 
 
-def _latest_cv_document(session: Session, candidate_id: uuid.UUID) -> Document | None:
-    return session.scalar(
-        select(Document)
-        .where(
-            Document.owner_type == "candidate",
-            Document.owner_id == candidate_id,
-            Document.document_type == "cv",
-        )
-        .order_by(Document.created_at.desc())
-        .limit(1)
-    )
+def _needs_processing(candidates: list[Candidate]) -> list[Candidate]:
+    """Filtert auf Kandidaten OHNE bereits gesetztes cv_extraction_raw -
+    siehe Modul-Docstring (Persistenz/Checkpoint). Bewusst als eigener
+    Schritt VOR --sample/--limit/--candidate-numbers, damit diese Filter nur
+    innerhalb der tatsaechlich noch zu bearbeitenden Menge auswaehlen, nicht
+    aus dem gesamten (groesstenteils schon erledigten) Bestand."""
+    return [c for c in candidates if c.cv_extraction_raw is None]
 
 
 def _evenly_spaced_sample(candidates: list[Candidate], sample_size: int) -> list[Candidate]:
@@ -222,8 +247,8 @@ def _filter_by_candidate_numbers(
         candidate = by_number.get(number)
         if candidate is None:
             print(
-                f"WARNUNG: candidate_number {number!r} nicht gefunden (oder ohne "
-                "CV-Dokument) - wird uebersprungen."
+                f"WARNUNG: candidate_number {number!r} nicht gefunden (oder bereits "
+                "mit cv_extraction_raw versehen) - wird uebersprungen."
             )
             continue
         selected.append(candidate)
@@ -242,76 +267,7 @@ def _confidence_for(extracted: dict[str, object]) -> str:
     return "medium"
 
 
-def _load_progress() -> dict[str, dict[str, Any]]:
-    """Checkpoint/Resume - siehe Modul-Docstring. Eine kaputte/halb
-    geschriebene Datei (z.B. durch manuelle Bearbeitung, oder theoretisch
-    einen Kill exakt zwischen dem atomaren os.replace zweier Dateisysteme -
-    praktisch nicht auf demselben Volume moeglich, aber defensiv trotzdem
-    abgefangen) darf den Lauf nicht blockieren: im Zweifel lieber ohne
-    Cache neu starten als gar nicht starten koennen."""
-    if not PROGRESS_PATH.exists():
-        return {}
-    try:
-        with PROGRESS_PATH.open("r", encoding="utf-8") as handle:
-            data = json.load(handle)
-    except (OSError, json.JSONDecodeError) as exc:
-        print(
-            f"WARNUNG: {PROGRESS_PATH} konnte nicht gelesen werden ({exc}) - "
-            "starte ohne Checkpoint."
-        )
-        return {}
-    if not isinstance(data, dict):
-        print(f"WARNUNG: {PROGRESS_PATH} hat ein unerwartetes Format - starte ohne Checkpoint.")
-        return {}
-    return data
-
-
-def _save_progress(progress: dict[str, dict[str, Any]]) -> None:
-    """Atomarer Schreibvorgang (temp-Datei im selben Verzeichnis + Rename) -
-    ueberlebt auch einen harten Kill mitten im Schreiben: es liegt danach
-    entweder noch die alte, vollstaendige Datei, oder schon die neue,
-    vollstaendige - nie ein halbgeschriebenes JSON. Wird nach JEDEM
-    einzelnen Kandidaten aufgerufen (siehe backfill() unten), nicht
-    batchweise und nicht erst im finally-Block - ein Container-Neustart
-    verliert dadurch hoechstens den GERADE laufenden einzelnen Kandidaten
-    (Nutzer-Vorgabe)."""
-    tmp_path = PROGRESS_PATH.with_suffix(".tmp")
-    with tmp_path.open("w", encoding="utf-8") as handle:
-        json.dump(progress, handle, ensure_ascii=False)
-    tmp_path.replace(PROGRESS_PATH)
-
-
-def _looks_like_regex_fallback(extracted: dict[str, Any]) -> bool:
-    """Erkennt ein Regex-Fallback-Ergebnis (siehe cv_extraction.py::
-    extract_candidate_fields, Schluessel "llm_fallback_used") - so ein
-    Ergebnis darf NIE als 'erledigt' gecacht werden, sonst wuerde ein
-    Resume-Lauf nach dem Guthaben-Aufladen genau diese Kandidaten faelschlich
-    ueberspringen statt sie mit einem echten LLM-Call neu zu verarbeiten
-    (live aufgetreten: "Your credit balance is too low").
-
-    Rueckwaertskompatibel fuer Cache-Eintraege aus einem Lauf VOR diesem Fix
-    (extracted ohne den Schluessel ueberhaupt) - ein echter Regex-Fallback
-    liefert IMMER ausschliesslich leere smarte Felder (siehe
-    _extract_contact_fields_via_regex), diese Kombination wird bei einem
-    alten Eintrag ohne das Flag sicherheitshalber ebenfalls als vermuteter
-    Fallback behandelt statt ihn ungeprueft zu vertrauen. Ein echter
-    LLM-Erfolg, der zufaellig ebenfalls nichts fand, wird dadurch einmalig
-    unnoetig erneut versucht - das kostet hoechstens einen zusaetzlichen
-    Call, ist aber sicherer als einen echten Fallback durchrutschen zu
-    lassen."""
-    if "llm_fallback_used" in extracted:
-        return bool(extracted["llm_fallback_used"])
-    return not (
-        extracted.get("rollen")
-        or extracted.get("current_employer_internal")
-        or extracted.get("berufliche_stationen")
-        or extracted.get("fachliche_schwerpunkte")
-        or extracted.get("ausbildung_titel")
-    )
-
-
 def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
-    progress = _load_progress()
     with SessionLocal() as session:
         stats = {
             "candidates_checked": len(candidates),
@@ -319,13 +275,10 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
             "skipped_no_cv_document": 0,
             "skipped_unreadable": 0,
             "errors": 0,
-            # Aus dem Checkpoint uebernommen, KEIN erneuter LLM-Call - siehe
-            # Modul-Docstring (Checkpoint/Resume).
-            "resumed_from_cache": 0,
-            # LLM-Call ergab ein Fallback-Ergebnis (z.B. Guthaben leer) -
-            # NICHT gecacht, gilt wie ein Fehlschlag und wird beim naechsten
-            # Lauf automatisch erneut versucht (siehe
-            # _looks_like_regex_fallback).
+            # Gewoehnlicher LLM-Fallback (Timeout, kaputte JSON-Antwort, ...) -
+            # NICHT gecacht (kein cv_extraction_raw geschrieben), gilt wie ein
+            # Fehlschlag und wird bei einem spaeteren separaten Lauf
+            # automatisch erneut versucht (cv_extraction_raw bleibt leer).
             "llm_fallback_not_cached": 0,
         }
         rows: list[dict[str, object]] = []
@@ -333,22 +286,23 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
         for candidate_stub in candidates:
             candidate = session.get(Candidate, candidate_stub.id)
             assert candidate is not None
-            candidate_key = str(candidate.id)
             document = _latest_cv_document(session, candidate.id)
             row: dict[str, object] = {
                 "candidate_number": candidate.candidate_number or "",
-                "candidate_id": candidate_key,
+                "candidate_id": str(candidate.id),
                 "job_title_zur_orientierung": candidate.job_title or "",
                 "rollen_aktuell": ", ".join(candidate.rollen or []),
                 "current_employer_internal_aktuell": candidate.current_employer_internal or "",
                 "fachliche_schwerpunkte_aktuell": ", ".join(
                     candidate.fachliche_schwerpunkte or []
                 ),
+                "edv_kenntnisse_aktuell": ", ".join(candidate.edv_kenntnisse or []),
                 "ausbildung_titel_aktuell": candidate.ausbildung_titel or "",
                 "rollen_vorschlag": "",
                 "current_employer_internal_vorschlag": "",
                 "berufliche_stationen_vorschlag": "",
                 "fachliche_schwerpunkte_vorschlag": "",
+                "edv_kenntnisse_vorschlag": "",
                 "ausbildung_titel_vorschlag": "",
                 "confidence": "",
                 "source_is_agency_profile": "",
@@ -359,72 +313,65 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
                 stats["skipped_no_cv_document"] += 1
                 continue
 
-            cached = progress.get(candidate_key)
-            extracted: dict[str, Any] | None = None
-            cache_used = False
-            if cached is not None and not _looks_like_regex_fallback(cached["extracted"]):
-                extracted = cached["extracted"]
-                source_is_agency_profile = bool(cached.get("source_is_agency_profile"))
-                stats["resumed_from_cache"] += 1
-                cache_used = True
-
-            if not cache_used:
-                try:
-                    content = read_document_bytes(document.storage_key)
-                    cv_text = extract_text_from_bytes(document.filename, content)
-                    if not cv_text.strip():
-                        raise ValueError("CV-Text ist nach der Extraktion leer.")
-                    extracted = extract_candidate_fields(
-                        cv_text, filename=document.filename, content=content
-                    )
-                except (OSError, ValueError) as exc:
-                    row["error"] = str(exc)[:300]
-                    stats["skipped_unreadable"] += 1
-                    rows.append(row)
-                    continue
-                except Exception as exc:  # noqa: BLE001 - ein Kandidat darf den Lauf nicht abbrechen
-                    row["error"] = str(exc)[:300]
-                    stats["errors"] += 1
-                    rows.append(row)
-                    continue
-
-                if _looks_like_regex_fallback(extracted):
-                    # KEIN echter LLM-Erfolg (z.B. Guthaben leer/Timeout) -
-                    # darf NIE als "erledigt" gecacht werden, sonst wuerde
-                    # ein spaeterer Resume-Lauf diesen Kandidaten faelschlich
-                    # ueberspringen statt ihn mit echtem LLM neu zu
-                    # verarbeiten. Gilt wie ein Fehlschlag: naechster Lauf
-                    # versucht es automatisch erneut.
-                    row["error"] = (
-                        "LLM-Fallback (z.B. API-Guthaben leer/Timeout) - "
-                        "nicht gecacht, wird beim naechsten Lauf erneut versucht."
-                    )
-                    stats["llm_fallback_not_cached"] += 1
-                    rows.append(row)
-                    continue
-
-                source_is_agency_profile = (
-                    bool(extracted.get("source_is_agency_profile"))
-                    or "Commandeur Consulting GmbH" in cv_text
+            try:
+                content = read_document_bytes(document.storage_key)
+                cv_text = extract_text_from_bytes(document.filename, content)
+                if not cv_text.strip():
+                    raise ValueError("CV-Text ist nach der Extraktion leer.")
+                extracted = extract_candidate_fields(
+                    cv_text, filename=document.filename, content=content
                 )
-                # Erfolgreich extrahiert -> SOFORT persistieren, nicht erst
-                # am Ende des Laufs oder im finally-Block (Nutzer-Vorgabe) -
-                # ein Kill direkt danach darf diesen Kandidaten nicht nochmal
-                # kosten.
-                progress[candidate_key] = {
-                    "extracted": extracted,
-                    "source_is_agency_profile": source_is_agency_profile,
-                }
-                _save_progress(progress)
+            except (OSError, ValueError) as exc:
+                row["error"] = str(exc)[:300]
+                stats["skipped_unreadable"] += 1
+                rows.append(row)
+                continue
+            except Exception as exc:  # noqa: BLE001 - ein Kandidat darf den Lauf nicht abbrechen
+                row["error"] = str(exc)[:300]
+                stats["errors"] += 1
+                rows.append(row)
+                continue
 
-            # An dieser Stelle immer gesetzt: der cache_used-Zweig oben
-            # setzt extracted direkt, der frische Extraktionszweig springt
-            # bei jedem Fehl-/Fallback-Pfad per `continue` vorher raus.
-            assert extracted is not None
+            if extracted.get("llm_fallback_used"):
+                reason = str(extracted.get("llm_fallback_reason") or "")
+                if CREDIT_EXHAUSTED_MARKER in reason.lower():
+                    # Kompletter Abbruch - siehe Modul-Docstring. Bereits in
+                    # DIESEM Lauf erfolgreich verarbeitete Kandidaten sind zu
+                    # diesem Zeitpunkt schon persistiert (siehe unten), gehen
+                    # also nicht verloren.
+                    _write_review_csv(rows)
+                    raise CreditExhaustedError(
+                        f"API-Guthaben erschoepft ({reason}) - Lauf abgebrochen bei "
+                        f"Kandidat {candidate.candidate_number or candidate.id}. "
+                        f"Bereits erfolgreich verarbeitete Kandidaten in diesem Lauf "
+                        f"bleiben gespeichert (cv_extraction_raw), keine Wiederholung "
+                        f"noetig."
+                    )
+                # Gewoehnlicher Fallback (kein Guthaben-Problem) - NICHT
+                # gecacht, gilt wie ein Fehlschlag, naechster Lauf versucht
+                # es automatisch erneut (cv_extraction_raw bleibt leer).
+                row["error"] = f"LLM-Fallback: {reason or 'unbekannter Grund'}"[:300]
+                stats["llm_fallback_not_cached"] += 1
+                rows.append(row)
+                continue
+
+            source_is_agency_profile = (
+                bool(extracted.get("source_is_agency_profile"))
+                or "Commandeur Consulting GmbH" in cv_text
+            )
+            # Erfolgreich extrahiert -> SOFORT nach cv_extraction_raw
+            # persistieren, UNABHAENGIG von --apply und VOR jeder weiteren
+            # Verarbeitung (Nutzer-Vorgabe) - ein Abbruch (Kill, Guthaben-
+            # Ende beim naechsten Kandidaten, ...) direkt danach darf diesen
+            # Kandidaten nicht nochmal kosten.
+            candidate.cv_extraction_raw = extracted
+            session.commit()
+
             rollen_vorschlag = extracted.get("rollen") or []
             employer_vorschlag = extracted.get("current_employer_internal")
             stationen_vorschlag = extracted.get("berufliche_stationen") or []
             schwerpunkte_vorschlag = extracted.get("fachliche_schwerpunkte") or []
+            edv_vorschlag = extracted.get("edv_kenntnisse") or []
             ausbildung_vorschlag = extracted.get("ausbildung_titel")
 
             row["rollen_vorschlag"] = ", ".join(rollen_vorschlag)
@@ -433,6 +380,7 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
                 stationen_vorschlag, ensure_ascii=False
             )
             row["fachliche_schwerpunkte_vorschlag"] = ", ".join(schwerpunkte_vorschlag)
+            row["edv_kenntnisse_vorschlag"] = ", ".join(edv_vorschlag)
             row["ausbildung_titel_vorschlag"] = ausbildung_vorschlag or ""
             row["confidence"] = _confidence_for(extracted)
             row["source_is_agency_profile"] = str(source_is_agency_profile)
@@ -440,7 +388,7 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
             # Pro Feld unabhaengig: liefert der Re-Parse fuer ein Feld nichts
             # (leere Liste/None), bleibt der bestehende DB-Wert erhalten statt
             # geloescht zu werden - sonst wuerde ein Teiltreffer (z.B. nur
-            # fachliche_schwerpunkte liefert etwas) bei jedem der 4 anderen
+            # fachliche_schwerpunkte liefert etwas) bei jedem der anderen
             # Felder einen bereits gesetzten Wert mit leer ueberschreiben.
             skipped_fields = []
             if not rollen_vorschlag:
@@ -451,6 +399,8 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
                 skipped_fields.append("berufliche_stationen")
             if not schwerpunkte_vorschlag:
                 skipped_fields.append("fachliche_schwerpunkte")
+            if not edv_vorschlag:
+                skipped_fields.append("edv_kenntnisse")
             if not ausbildung_vorschlag:
                 skipped_fields.append("ausbildung_titel")
             row["felder_uebersprungen"] = ", ".join(skipped_fields)
@@ -459,6 +409,7 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
                 ("current_employer_internal_vorschlag", employer_vorschlag),
                 ("berufliche_stationen_vorschlag", stationen_vorschlag),
                 ("fachliche_schwerpunkte_vorschlag", schwerpunkte_vorschlag),
+                ("edv_kenntnisse_vorschlag", edv_vorschlag),
                 ("ausbildung_titel_vorschlag", ausbildung_vorschlag),
             ):
                 if not suggestion:
@@ -471,46 +422,58 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
                 or employer_vorschlag
                 or stationen_vorschlag
                 or schwerpunkte_vorschlag
+                or edv_vorschlag
                 or ausbildung_vorschlag
             )
-            if not has_any_suggestion:
-                continue
+            if has_any_suggestion:
+                stats["candidates_updated"] += 1
+                if apply:
+                    if rollen_vorschlag:
+                        candidate.rollen = rollen_vorschlag
+                    if employer_vorschlag:
+                        candidate.current_employer_internal = employer_vorschlag
+                    if stationen_vorschlag:
+                        candidate.berufliche_stationen = stationen_vorschlag
+                    if schwerpunkte_vorschlag:
+                        candidate.fachliche_schwerpunkte = schwerpunkte_vorschlag
+                    if edv_vorschlag:
+                        candidate.edv_kenntnisse = edv_vorschlag
+                    if ausbildung_vorschlag:
+                        candidate.ausbildung_titel = ausbildung_vorschlag
+                    session.commit()
 
-            stats["candidates_updated"] += 1
-            if apply:
-                if rollen_vorschlag:
-                    candidate.rollen = rollen_vorschlag
-                if employer_vorschlag:
-                    candidate.current_employer_internal = employer_vorschlag
-                if stationen_vorschlag:
-                    candidate.berufliche_stationen = stationen_vorschlag
-                if schwerpunkte_vorschlag:
-                    candidate.fachliche_schwerpunkte = schwerpunkte_vorschlag
-                if ausbildung_vorschlag:
-                    candidate.ausbildung_titel = ausbildung_vorschlag
-                session.commit()
-
-            if not cache_used:
-                # Sanftes Rate-Limiting, kein Sturmlauf auf die Anthropic-API
-                # bei einem vollen Lauf ueber ~2900 Kandidaten (gleiches
-                # Muster wie backfill_job_titles_review.py, siehe Git-
-                # Historie). Bei einem Cache-Treffer entfaellt das - es gab
-                # in diesem Durchlauf gar keinen API-Call.
-                time.sleep(0.2)
+            # Sanftes Rate-Limiting, kein Sturmlauf auf die Anthropic-API bei
+            # einem vollen Lauf ueber hunderte Kandidaten (gleiches Muster wie
+            # backfill_job_titles_review.py, siehe Git-Historie).
+            time.sleep(0.2)
 
         _write_review_csv(rows)
         return stats
+
+
+def _latest_cv_document(session: Session, candidate_id: uuid.UUID) -> Document | None:
+    return session.scalar(
+        select(Document)
+        .where(
+            Document.owner_type == "candidate",
+            Document.owner_id == candidate_id,
+            Document.document_type == "cv",
+        )
+        .order_by(Document.created_at.desc())
+        .limit(1)
+    )
 
 
 def _write_review_csv(rows: list[dict[str, object]]) -> None:
     """Schreibt die Review-CSV - sichert eine bereits vorhandene Datei vorher
     per Umbenennung mit Zeitstempel weg, statt sie stillschweigend zu
     ueberschreiben. Hintergrund: bei einem echten Lauf stecken in dieser
-    Datei die einzigen Ergebnisse der bereits bezahlten Anthropic-API-Calls -
-    ein kleiner Test-/Sanity-Check-Lauf (z.B. nur 2 Kandidaten) hat hier
-    bereits einmal versehentlich eine vollstaendige 1124-Zeilen-Datei mit
-    echten, bezahlten Ergebnissen ueberschrieben, ohne dass es eine weitere
-    Kopie davon gab. Diese Sicherung soll genau das verhindern."""
+    Datei die einzigen leicht einsehbaren Ergebnisse des Laufs (das
+    eigentliche Backup ist seit dem Persistenz-Fix cv_extraction_raw in der
+    DB, aber ein kleiner Test-/Sanity-Check-Lauf hat hier schon einmal
+    versehentlich eine vollstaendige Datei mit echten Ergebnissen
+    ueberschrieben, ohne dass es eine weitere Kopie davon gab). Diese
+    Sicherung soll genau das verhindern."""
     if OUTPUT_PATH.exists():
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_path = OUTPUT_PATH.with_name(f"{OUTPUT_PATH.stem}_backup_{timestamp}.csv")
@@ -533,10 +496,37 @@ def _write_review_csv(rows: list[dict[str, object]]) -> None:
             writer.writerow(row)
 
 
+def _confirm_before_running(candidate_count: int, *, skip_confirmation: bool) -> bool:
+    """Gibt Anzahl + grobe Kostenschaetzung aus und wartet auf Bestaetigung -
+    gilt fuer Dry-Run UND --apply gleichermassen, da bereits der Dry-Run
+    echte, bezahlte LLM-Calls macht. Mit --yes uebersprungen (fuer
+    unbeaufsichtigte nohup-Laeufe ohne interaktives stdin)."""
+    if candidate_count == 0:
+        return True
+
+    estimate = candidate_count * ESTIMATED_COST_PER_CANDIDATE_EUR
+    print(f"Zu verarbeitende Kandidaten (echte LLM-Calls): {candidate_count}")
+    print(
+        f"Grobe Kostenschaetzung: ca. {estimate:.2f} EUR "
+        f"(sehr ungefaehr, haengt stark von der CV-Laenge ab)"
+    )
+    if skip_confirmation:
+        print("--yes gesetzt - ueberspringe Bestaetigung.\n")
+        return True
+
+    answer = input("Fortfahren? [j/N]: ").strip().lower()
+    return answer in {"j", "ja", "y", "yes"}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--apply", action="store_true", help="Tatsächlich schreiben (Default: Dry-Run)"
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Bestaetigungsabfrage vor dem Lauf ueberspringen (fuer nohup-Laeufe)",
     )
     parser.add_argument(
         "--sample",
@@ -555,10 +545,9 @@ def main() -> None:
         type=int,
         default=None,
         help=(
-            "Die ersten N Kandidaten (nach candidate_number) NICHT verarbeiten - fuer den "
-            "Wiedereinstieg nach einem Abbruch mittendrin (z.B. API-Guthaben zur Neige "
-            "gegangen), damit bereits erfolgreich verarbeitete Kandidaten nicht nochmal "
-            "bezahlt werden. Kombinierbar mit --limit."
+            "Die ersten N (noch zu verarbeitenden) Kandidaten NICHT verarbeiten - "
+            "Wiedereinstieg passiert normalerweise automatisch ueber cv_extraction_raw, "
+            "dieser Schalter ist nur fuer Sonderfaelle. Kombinierbar mit --limit."
         ),
     )
     parser.add_argument(
@@ -578,13 +567,17 @@ def main() -> None:
 
     if args.apply:
         print(
-            "!!! ACHTUNG: --apply schreibt echt in die Datenbank. Bitte VORHER ein "
-            "Datenbank-Backup ueber die DO-Console ausgefuehrt haben (dieses Skript "
-            "loest kein Backup aus). !!!\n"
+            "!!! ACHTUNG: --apply schreibt echt in die Datenbank (abgeleitete Spalten - "
+            "cv_extraction_raw wird IMMER geschrieben, auch im Dry-Run). Bitte VORHER ein "
+            "Datenbank-Backup ueber die DO-Console ausgefuehrt haben (dieses Skript loest "
+            "kein Backup aus). !!!\n"
         )
 
     with SessionLocal() as session:
-        candidates = _candidates_with_cv(session)
+        all_with_cv = _candidates_with_cv(session)
+    candidates = _needs_processing(all_with_cv)
+    already_cached = len(all_with_cv) - len(candidates)
+
     if args.candidate_numbers:
         numbers = [n.strip() for n in args.candidate_numbers.split(",") if n.strip()]
         candidates = _filter_by_candidate_numbers(candidates, numbers)
@@ -598,30 +591,44 @@ def main() -> None:
 
     mode = "APPLY" if args.apply else "DRY-RUN"
     print(f"=== CV-Rollen-/Schwerpunkte-Backfill ({mode}) ===")
-    print(f"Kandidaten mit CV-Dokument im Lauf: {len(candidates)}\n")
+    print(f"Kandidaten mit CV-Dokument insgesamt: {len(all_with_cv)}")
+    print(
+        f"Davon bereits mit cv_extraction_raw (uebersprungen, kein LLM-Call): "
+        f"{already_cached}"
+    )
+    print()
 
-    stats = backfill(apply=args.apply, candidates=candidates)
+    if not _confirm_before_running(len(candidates), skip_confirmation=args.yes):
+        print("Abgebrochen - keine Kandidaten verarbeitet.")
+        return
+
+    try:
+        stats = backfill(apply=args.apply, candidates=candidates)
+    except CreditExhaustedError as exc:
+        print(f"\n!!! ABBRUCH: {exc} !!!")
+        print(f"Review-CSV (bis zum Abbruch): {OUTPUT_PATH}")
+        sys.exit(2)
 
     print("\n=== Zusammenfassung ===")
     print(f"Kandidaten geprüft: {stats['candidates_checked']}")
     verb = "aktualisiert" if args.apply else "würden aktualisiert"
     print(f"Kandidaten mit mindestens einer Änderung ({verb}): {stats['candidates_updated']}")
-    print(
-        f"Davon aus Checkpoint übernommen, kein erneuter LLM-Call: "
-        f"{stats['resumed_from_cache']}"
-    )
     print(f"Übersprungen (kein CV-Dokument): {stats['skipped_no_cv_document']}")
     print(f"Übersprungen (CV nicht lesbar/leer): {stats['skipped_unreadable']}")
     print(f"Fehler bei der Extraktion (Kandidat übersprungen): {stats['errors']}")
     print(
-        f"LLM-Fallback statt echtem Ergebnis (z.B. Guthaben leer/Timeout) - "
-        f"nicht gecacht, wird nächstes Mal automatisch erneut versucht: "
+        f"LLM-Fallback statt echtem Ergebnis (kein Guthaben-Problem, z.B. Timeout) - "
+        f"nicht gecacht, wird beim nächsten Lauf automatisch erneut versucht: "
         f"{stats['llm_fallback_not_cached']}"
     )
     print(f"\nReview-CSV: {OUTPUT_PATH}")
-    print(f"Checkpoint-Datei: {PROGRESS_PATH}")
     if not args.apply:
-        print("\nDies war ein Dry-Run - nichts wurde geschrieben.")
+        print("\nDies war ein Dry-Run - die abgeleiteten Spalten wurden NICHT geschrieben.")
+        print(
+            "cv_extraction_raw wurde trotzdem fuer jeden erfolgreichen Kandidaten "
+            "gecacht (siehe Modul-Docstring) - ein Re-Lauf mit --apply verarbeitet "
+            "diese Kandidaten daher OHNE erneuten LLM-Call."
+        )
         print("Review-CSV prüfen, dann mit --apply erneut ausführen, um zu übernehmen.")
 
 

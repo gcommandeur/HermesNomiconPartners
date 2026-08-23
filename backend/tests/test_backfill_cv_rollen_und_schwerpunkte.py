@@ -1,9 +1,19 @@
-"""Regressionstests fuer den Ueberschreibungsbug in backfill_cv_rollen_und_
-schwerpunkte.py --apply: die 5 Zielfelder muessen UNABHAENGIG voneinander
-behandelt werden - liefert der Re-Parse fuer ein Feld keinen Vorschlag (leere
-Liste/None), muss der bestehende DB-Wert erhalten bleiben statt mit leer
-ueberschrieben zu werden. Vorher wurde bei JEDEM Treffer (auch nur in einem
-der 5 Felder) alles ausser ausbildung_titel bedingungslos ueberschrieben."""
+"""Tests fuer backfill_cv_rollen_und_schwerpunkte.py.
+
+Schwerpunkte:
+1. Ueberschreibungsbug-Regressionsschutz: die Zielfelder muessen UNABHAENGIG
+   voneinander behandelt werden - liefert der Re-Parse fuer ein Feld keinen
+   Vorschlag (leere Liste/None), muss der bestehende DB-Wert erhalten
+   bleiben statt mit leer ueberschrieben zu werden.
+2. Persistenz-Fix (2026-08-22): cv_extraction_raw wird SOFORT bei jedem
+   erfolgreichen LLM-Ergebnis geschrieben, UNABHAENGIG von --apply - das ist
+   jetzt der Checkpoint (ersetzt die fruehere lokale JSON-Datei, die einen
+   DO-App-Platform-Container-Neustart nicht ueberlebte). Ein Kandidat mit
+   bereits gesetztem cv_extraction_raw wird nie wieder per LLM verarbeitet.
+3. Guthaben-Abbruch: eine Fallback-Begruendung mit "credit balance" bricht
+   den GESAMTEN Lauf ab, statt sich durch alle restlichen Kandidaten zu
+   versuchen; ein gewoehnlicher Fallback (Timeout o.ae.) bricht NICHT ab und
+   wird einfach nicht gecacht."""
 
 import pytest
 from sqlalchemy.orm import Session, sessionmaker
@@ -20,22 +30,18 @@ def _use_session_factory(
 
 
 def _use_tmp_output_path(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
-    """Isoliert Tests von der echten Review-CSV UND der echten Checkpoint-
-    Datei im Repo - ohne das wuerde jeder Testlauf, der backfill()/
-    _write_review_csv aufruft, die realen Dateien unter backend/scripts/
-    anfassen (siehe Vorfall: ein Sanity-Check-Lauf hat genau dort echte,
-    bezahlte Extraktionsergebnisse ueberschrieben)."""
+    """Isoliert Tests von der echten Review-CSV im Repo - ohne das wuerde
+    jeder Testlauf, der backfill()/_write_review_csv aufruft, die reale
+    Datei unter backend/scripts/ anfassen (siehe Vorfall: ein Sanity-Check-
+    Lauf hat genau dort echte, bezahlte Extraktionsergebnisse ueberschrieben)."""
     monkeypatch.setattr(backfill_script, "OUTPUT_PATH", tmp_path / "cv_rollen_backfill_review.csv")
-    monkeypatch.setattr(
-        backfill_script, "PROGRESS_PATH", tmp_path / "backfill_progress_cv_rollen.json"
-    )
 
 
 class TestFilterByCandidateNumbers:
-    """Regressionsschutz fuers neue --candidate-numbers-Flag: eine
-    handverlesene Test-Stichprobe (z.B. vor einem grossen Produktions-Lauf)
-    muss GENAU diese Kandidaten treffen, in der angegebenen Reihenfolge,
-    und unbekannte Nummern duerfen den Lauf nicht abbrechen."""
+    """Regressionsschutz fuers --candidate-numbers-Flag: eine handverlesene
+    Test-Stichprobe (z.B. vor einem grossen Produktions-Lauf) muss GENAU
+    diese Kandidaten treffen, in der angegebenen Reihenfolge, und unbekannte
+    Nummern duerfen den Lauf nicht abbrechen."""
 
     def test_selects_exact_candidates_in_requested_order(self) -> None:
         c1 = Candidate(candidate_number="100", first_name="A", last_name="A")
@@ -55,6 +61,21 @@ class TestFilterByCandidateNumbers:
 
         assert result == [c1]
         assert "999" in capsys.readouterr().out
+
+
+class TestNeedsProcessing:
+    """_needs_processing() ist die neue Checkpoint-Grundlage: nur Kandidaten
+    OHNE cv_extraction_raw gelten als zu bearbeiten."""
+
+    def test_filters_out_candidates_with_existing_raw(self) -> None:
+        already_done = Candidate(
+            first_name="A", last_name="A", cv_extraction_raw={"rollen": ["steuerberater"]}
+        )
+        still_open = Candidate(first_name="B", last_name="B")
+
+        result = backfill_script._needs_processing([already_done, still_open])
+
+        assert result == [still_open]
 
 
 def _make_candidate_with_cv(session: Session, **overrides: object) -> Candidate:
@@ -91,130 +112,159 @@ def _stub_extraction(
             "current_employer_internal": None,
             "berufliche_stationen": [],
             "fachliche_schwerpunkte": [],
+            "edv_kenntnisse": [],
             "ausbildung_titel": None,
+            "llm_fallback_used": False,
             **payload,
         },
     )
 
 
-def test_apply_keeps_existing_value_when_field_has_no_new_suggestion(
-    monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
-) -> None:
-    """Kernfall des Fixes: nur fachliche_schwerpunkte liefert diesmal einen
-    Treffer, rollen kommt leer zurueck - das zuvor gesetzte rollen darf NICHT
-    geloescht werden."""
-    _use_session_factory(monkeypatch, session_factory)
-    _use_tmp_output_path(monkeypatch, tmp_path)
-    with session_factory() as session:
-        candidate = _make_candidate_with_cv(
-            session,
-            rollen=["rechtsanwalt"],
-            current_employer_internal="Alte Kanzlei GmbH",
-            fachliche_schwerpunkte=[],
-        )
-        candidate_id = candidate.id
-        _stub_extraction(monkeypatch, {"fachliche_schwerpunkte": ["Erbrecht"]})
-
-        with session_factory() as inner_session:
-            candidates = [inner_session.get(Candidate, candidate_id)]
-        stats = backfill_script.backfill(apply=True, candidates=candidates)
-
-        refreshed = session.get(Candidate, candidate_id)
-        session.refresh(refreshed)
-
-    assert stats["candidates_updated"] == 1
-    assert refreshed.rollen == ["rechtsanwalt"]
-    assert refreshed.current_employer_internal == "Alte Kanzlei GmbH"
-    assert refreshed.fachliche_schwerpunkte == ["Erbrecht"]
-
-
-def test_apply_overwrites_field_when_new_suggestion_present(
-    monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
-) -> None:
-    """Liefert der Re-Parse fuer ein Feld etwas, ist der neue Wert
-    autoritativ und ersetzt den alten - auch wenn der alte Wert etwas
-    anderes war."""
-    _use_session_factory(monkeypatch, session_factory)
-    _use_tmp_output_path(monkeypatch, tmp_path)
-    with session_factory() as session:
-        candidate = _make_candidate_with_cv(session, rollen=["rechtsanwalt"])
-        candidate_id = candidate.id
-        _stub_extraction(monkeypatch, {"rollen": ["steuerberater", "partner"]})
-
-        with session_factory() as inner_session:
-            candidates = [inner_session.get(Candidate, candidate_id)]
-        backfill_script.backfill(apply=True, candidates=candidates)
-
-        refreshed = session.get(Candidate, candidate_id)
-        session.refresh(refreshed)
-
-    assert refreshed.rollen == ["steuerberater", "partner"]
-
-
-def test_review_csv_row_marks_skipped_fields(
-    monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
-) -> None:
-    """Die Review-CSV muss pro Kandidat sichtbar machen, welche Felder bei
-    --apply erhalten blieben statt Diff gegen die DB fahren zu muessen."""
-    _use_session_factory(monkeypatch, session_factory)
-    _use_tmp_output_path(monkeypatch, tmp_path)
-    with session_factory() as session:
-        candidate = _make_candidate_with_cv(session, rollen=["rechtsanwalt"])
-        candidate_id = candidate.id
-        _stub_extraction(monkeypatch, {"fachliche_schwerpunkte": ["Erbrecht"]})
-
-        with session_factory() as inner_session:
-            candidates = [inner_session.get(Candidate, candidate_id)]
-
-        rows: list[dict[str, object]] = []
-        original_write = backfill_script._write_review_csv
-        monkeypatch.setattr(
-            backfill_script, "_write_review_csv", lambda r: rows.extend(r) or original_write(r)
-        )
-
-        backfill_script.backfill(apply=False, candidates=candidates)
-
-    assert len(rows) == 1
-    row = rows[0]
-    assert "rollen" in row["felder_uebersprungen"]
-    assert "fachliche_schwerpunkte" not in row["felder_uebersprungen"]
-    assert row["rollen_vorschlag"] == "(behalten - kein neuer Vorschlag)"
-    assert row["fachliche_schwerpunkte_vorschlag"] == "Erbrecht"
-
-
-def test_dry_run_does_not_write_to_db(
-    monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
-) -> None:
-    _use_session_factory(monkeypatch, session_factory)
-    _use_tmp_output_path(monkeypatch, tmp_path)
-    with session_factory() as session:
-        candidate = _make_candidate_with_cv(session, rollen=[])
-        candidate_id = candidate.id
-        _stub_extraction(monkeypatch, {"rollen": ["steuerberater"]})
-
-        with session_factory() as inner_session:
-            candidates = [inner_session.get(Candidate, candidate_id)]
-        backfill_script.backfill(apply=False, candidates=candidates)
-
-        refreshed = session.get(Candidate, candidate_id)
-        session.refresh(refreshed)
-
-    assert refreshed.rollen == []
-
-
-class TestCheckpointResume:
-    """Checkpoint/Resume (siehe Modul-Docstring von backfill_cv_rollen_und_
-    schwerpunkte.py): ein Neustart nach einer Unterbrechung darf fuer
-    bereits erfolgreich verarbeitete Kandidaten KEINEN erneuten (bezahlten)
-    LLM-Call ausloesen."""
-
-    def test_second_run_does_not_reextract_already_processed_candidates(
+class TestApplyFieldIndependence:
+    def test_apply_keeps_existing_value_when_field_has_no_new_suggestion(
         self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
     ) -> None:
-        """Simuliert eine Unterbrechung nach 2 von 3 Kandidaten: erster Lauf
-        bekommt nur die ersten 2, zweiter Lauf (nach dem 'Neustart') bekommt
-        alle 3 - der LLM-Stub darf ueber BEIDE Laeufe hinweg nur 3x
-        aufgerufen werden, nicht 2+3=5x."""
+        """Kernfall des Fixes: nur fachliche_schwerpunkte liefert diesmal
+        einen Treffer, rollen kommt leer zurueck - das zuvor gesetzte rollen
+        darf NICHT geloescht werden."""
+        _use_session_factory(monkeypatch, session_factory)
+        _use_tmp_output_path(monkeypatch, tmp_path)
+        with session_factory() as session:
+            candidate = _make_candidate_with_cv(
+                session,
+                rollen=["rechtsanwalt"],
+                current_employer_internal="Alte Kanzlei GmbH",
+                fachliche_schwerpunkte=[],
+                edv_kenntnisse=["DATEV"],
+            )
+            candidate_id = candidate.id
+            _stub_extraction(monkeypatch, {"fachliche_schwerpunkte": ["Erbrecht"]})
+
+            with session_factory() as inner_session:
+                candidates = [inner_session.get(Candidate, candidate_id)]
+            stats = backfill_script.backfill(apply=True, candidates=candidates)
+
+            refreshed = session.get(Candidate, candidate_id)
+            session.refresh(refreshed)
+
+        assert stats["candidates_updated"] == 1
+        assert refreshed.rollen == ["rechtsanwalt"]
+        assert refreshed.current_employer_internal == "Alte Kanzlei GmbH"
+        assert refreshed.fachliche_schwerpunkte == ["Erbrecht"]
+        assert refreshed.edv_kenntnisse == ["DATEV"]
+
+    def test_apply_overwrites_field_when_new_suggestion_present(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
+    ) -> None:
+        """Liefert der Re-Parse fuer ein Feld etwas, ist der neue Wert
+        autoritativ und ersetzt den alten - auch wenn der alte Wert etwas
+        anderes war."""
+        _use_session_factory(monkeypatch, session_factory)
+        _use_tmp_output_path(monkeypatch, tmp_path)
+        with session_factory() as session:
+            candidate = _make_candidate_with_cv(session, rollen=["rechtsanwalt"])
+            candidate_id = candidate.id
+            _stub_extraction(
+                monkeypatch,
+                {"rollen": ["steuerberater", "partner"], "edv_kenntnisse": ["SAP FI/CO"]},
+            )
+
+            with session_factory() as inner_session:
+                candidates = [inner_session.get(Candidate, candidate_id)]
+            backfill_script.backfill(apply=True, candidates=candidates)
+
+            refreshed = session.get(Candidate, candidate_id)
+            session.refresh(refreshed)
+
+        assert refreshed.rollen == ["steuerberater", "partner"]
+        assert refreshed.edv_kenntnisse == ["SAP FI/CO"]
+
+    def test_review_csv_row_marks_skipped_fields(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
+    ) -> None:
+        """Die Review-CSV muss pro Kandidat sichtbar machen, welche Felder
+        bei --apply erhalten blieben statt Diff gegen die DB fahren zu
+        muessen."""
+        _use_session_factory(monkeypatch, session_factory)
+        _use_tmp_output_path(monkeypatch, tmp_path)
+        with session_factory() as session:
+            candidate = _make_candidate_with_cv(session, rollen=["rechtsanwalt"])
+            candidate_id = candidate.id
+            _stub_extraction(monkeypatch, {"fachliche_schwerpunkte": ["Erbrecht"]})
+
+            with session_factory() as inner_session:
+                candidates = [inner_session.get(Candidate, candidate_id)]
+
+            rows: list[dict[str, object]] = []
+            original_write = backfill_script._write_review_csv
+            monkeypatch.setattr(
+                backfill_script, "_write_review_csv", lambda r: rows.extend(r) or original_write(r)
+            )
+
+            backfill_script.backfill(apply=False, candidates=candidates)
+
+        assert len(rows) == 1
+        row = rows[0]
+        assert "rollen" in row["felder_uebersprungen"]
+        assert "edv_kenntnisse" in row["felder_uebersprungen"]
+        assert "fachliche_schwerpunkte" not in row["felder_uebersprungen"]
+        assert row["rollen_vorschlag"] == "(behalten - kein neuer Vorschlag)"
+        assert row["fachliche_schwerpunkte_vorschlag"] == "Erbrecht"
+
+
+class TestPersistenceFix:
+    """cv_extraction_raw ist seit dem Persistenz-Fix der Checkpoint - wird
+    SOFORT bei jedem Erfolg geschrieben, UNABHAENGIG von --apply, und ein
+    Kandidat mit bereits gesetztem cv_extraction_raw wird nie erneut per LLM
+    verarbeitet."""
+
+    def test_cv_extraction_raw_is_persisted_even_in_dry_run(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
+    ) -> None:
+        _use_session_factory(monkeypatch, session_factory)
+        _use_tmp_output_path(monkeypatch, tmp_path)
+        with session_factory() as session:
+            candidate = _make_candidate_with_cv(session, rollen=[])
+            candidate_id = candidate.id
+            _stub_extraction(monkeypatch, {"rollen": ["steuerberater"]})
+
+            with session_factory() as inner_session:
+                candidates = [inner_session.get(Candidate, candidate_id)]
+            backfill_script.backfill(apply=False, candidates=candidates)
+
+            refreshed = session.get(Candidate, candidate_id)
+            session.refresh(refreshed)
+
+        # Abgeleitete Spalte NICHT geschrieben (Dry-Run) ...
+        assert refreshed.rollen == []
+        # ... aber das Rohergebnis SCHON - das ist der eigentliche Checkpoint.
+        assert refreshed.cv_extraction_raw is not None
+        assert refreshed.cv_extraction_raw["rollen"] == ["steuerberater"]
+
+    def test_candidate_with_existing_raw_triggers_no_llm_call(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
+    ) -> None:
+        _use_session_factory(monkeypatch, session_factory)
+        _use_tmp_output_path(monkeypatch, tmp_path)
+        with session_factory() as session:
+            candidate = _make_candidate_with_cv(
+                session, cv_extraction_raw={"rollen": ["steuerberater"]}
+            )
+            all_with_cv = backfill_script._candidates_with_cv(session)
+
+        needs_processing = backfill_script._needs_processing(all_with_cv)
+
+        assert candidate not in needs_processing
+        assert needs_processing == []
+
+    def test_interrupted_run_resumes_via_db_state_not_local_file(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
+    ) -> None:
+        """Simuliert eine Unterbrechung nach 2 von 3 Kandidaten: ein
+        'Neustart' fragt die Kandidatenliste erneut aus der DB ab (wie
+        main() das tut) - die bereits erfolgreichen 2 tauchen dank
+        cv_extraction_raw nicht mehr in der zu bearbeitenden Menge auf,
+        ganz ohne lokale Datei."""
         _use_session_factory(monkeypatch, session_factory)
         _use_tmp_output_path(monkeypatch, tmp_path)
         with session_factory() as session:
@@ -223,13 +273,9 @@ class TestCheckpointResume:
             c3 = _make_candidate_with_cv(session, first_name="C")
             ids = [c1.id, c2.id, c3.id]
 
-        # cv_text pro Kandidat unterschiedlich, damit die Aufrufliste
-        # nachvollziehbar bleibt, WELCHER Kandidat extrahiert wurde.
         monkeypatch.setattr(backfill_script, "read_document_bytes", lambda storage_key: b"dummy")
         monkeypatch.setattr(
-            backfill_script,
-            "extract_text_from_bytes",
-            lambda filename, content: filename,
+            backfill_script, "extract_text_from_bytes", lambda filename, content: filename
         )
         calls: list[str] = []
 
@@ -240,27 +286,31 @@ class TestCheckpointResume:
                 "current_employer_internal": "Kanzlei X",
                 "berufliche_stationen": [],
                 "fachliche_schwerpunkte": [],
+                "edv_kenntnisse": [],
                 "ausbildung_titel": None,
+                "llm_fallback_used": False,
             }
 
         monkeypatch.setattr(backfill_script, "extract_candidate_fields", _fake_extract)
 
+        # "Lauf 1": nur die ersten 2 werden uebergeben (simuliert einen
+        # Container-Neustart, der den Lauf nach 2 Kandidaten unterbricht).
         with session_factory() as session:
             first_run_candidates = [session.get(Candidate, cid) for cid in ids[:2]]
             stats_first = backfill_script.backfill(apply=True, candidates=first_run_candidates)
-
         assert stats_first["candidates_updated"] == 2
         assert len(calls) == 2
 
-        # "Neustart": zweiter backfill()-Aufruf mit ALLEN 3 Kandidaten -
-        # als eigenstaendiger Prozess laedt er den Checkpoint frisch von
-        # der Platte, genau wie nach einem echten Container-Neustart.
+        # "Neustart": komplett neu aus der DB abgefragt, wie main() es tut -
+        # KEINE lokale Datei im Spiel.
         with session_factory() as session:
-            second_run_candidates = [session.get(Candidate, cid) for cid in ids]
+            all_with_cv = backfill_script._candidates_with_cv(session)
+            second_run_candidates = backfill_script._needs_processing(all_with_cv)
+            assert len(second_run_candidates) == 1
+            assert second_run_candidates[0].id == ids[2]
             stats_second = backfill_script.backfill(apply=True, candidates=second_run_candidates)
 
-        assert stats_second["resumed_from_cache"] == 2
-        assert stats_second["candidates_updated"] == 3
+        assert stats_second["candidates_updated"] == 1
         # Insgesamt genau 3 LLM-Aufrufe ueber beide Laeufe - keine Dopplung.
         assert len(calls) == 3
 
@@ -270,52 +320,13 @@ class TestCheckpointResume:
                 assert candidate.rollen == ["steuerberater"]
                 assert candidate.current_employer_internal == "Kanzlei X"
 
-    def test_progress_is_persisted_after_each_candidate_not_only_at_the_end(
+    def test_ordinary_fallback_is_not_persisted_and_is_retried_on_resume(
         self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
     ) -> None:
-        """Der zweite Kandidat scheitert - der ERSTE muss trotzdem schon in
-        der Checkpoint-Datei stehen (synchrones Schreiben nach jedem
-        Kandidaten, nicht erst im finally-Block am Ende des ganzen Laufs)."""
-        _use_session_factory(monkeypatch, session_factory)
-        _use_tmp_output_path(monkeypatch, tmp_path)
-        with session_factory() as session:
-            c1 = _make_candidate_with_cv(session, first_name="A")
-            c2 = _make_candidate_with_cv(session, first_name="B")
-            ids = [c1.id, c2.id]
-
-        monkeypatch.setattr(backfill_script, "read_document_bytes", lambda storage_key: b"dummy")
-        monkeypatch.setattr(
-            backfill_script, "extract_text_from_bytes", lambda filename, content: "CV-Inhalt"
-        )
-        call_count = 0
-
-        def _fake_extract(cv_text: str, **kwargs: object) -> dict[str, object]:
-            nonlocal call_count
-            call_count += 1
-            if call_count == 2:
-                raise RuntimeError("API-Guthaben leer")
-            return {
-                "rollen": ["steuerberater"],
-                "current_employer_internal": None,
-                "berufliche_stationen": [],
-                "fachliche_schwerpunkte": [],
-                "ausbildung_titel": None,
-            }
-
-        monkeypatch.setattr(backfill_script, "extract_candidate_fields", _fake_extract)
-
-        with session_factory() as session:
-            candidates = [session.get(Candidate, cid) for cid in ids]
-            stats = backfill_script.backfill(apply=True, candidates=candidates)
-
-        assert stats["errors"] == 1
-        progress = backfill_script._load_progress()
-        assert str(ids[0]) in progress
-        assert str(ids[1]) not in progress
-
-    def test_failed_candidate_is_retried_on_resume_not_permanently_skipped(
-        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
-    ) -> None:
+        """Ein gewoehnlicher Fallback (Timeout, kein Guthaben-Problem) darf
+        NICHT nach cv_extraction_raw geschrieben werden - der Kandidat bleibt
+        in der 'noch zu bearbeiten'-Menge und wird beim naechsten Lauf
+        automatisch per echtem LLM-Call neu versucht."""
         _use_session_factory(monkeypatch, session_factory)
         _use_tmp_output_path(monkeypatch, tmp_path)
         with session_factory() as session:
@@ -332,74 +343,22 @@ class TestCheckpointResume:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise RuntimeError("Timeout")
-            return {
-                "rollen": ["steuerberater"],
-                "current_employer_internal": None,
-                "berufliche_stationen": [],
-                "fachliche_schwerpunkte": [],
-                "ausbildung_titel": None,
-            }
-
-        monkeypatch.setattr(backfill_script, "extract_candidate_fields", _fake_extract)
-
-        with session_factory() as session:
-            first_stats = backfill_script.backfill(
-                apply=True, candidates=[session.get(Candidate, candidate_id)]
-            )
-        assert first_stats["errors"] == 1
-
-        with session_factory() as session:
-            second_stats = backfill_script.backfill(
-                apply=True, candidates=[session.get(Candidate, candidate_id)]
-            )
-        assert second_stats["errors"] == 0
-        assert second_stats["resumed_from_cache"] == 0
-        assert second_stats["candidates_updated"] == 1
-        assert call_count == 2
-
-    def test_fallback_result_is_not_cached_and_is_retried_with_real_llm_on_resume(
-        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
-    ) -> None:
-        """Kernfall aus der Praxis: mitten im Lauf geht das Anthropic-
-        Guthaben aus, extract_candidate_fields() faellt auf die
-        regelbasierte Notfall-Extraktion zurueck (llm_fallback_used=True,
-        siehe cv_extraction.py) - das darf NICHT als 'erledigt' gecacht
-        werden. Ein Resume-Lauf (z.B. nach dem Aufladen) muss den
-        Kandidaten automatisch mit einem ECHTEN LLM-Call neu versuchen,
-        nicht aus dem Cache uebernehmen."""
-        _use_session_factory(monkeypatch, session_factory)
-        _use_tmp_output_path(monkeypatch, tmp_path)
-        with session_factory() as session:
-            candidate = _make_candidate_with_cv(session)
-            candidate_id = candidate.id
-
-        monkeypatch.setattr(backfill_script, "read_document_bytes", lambda storage_key: b"dummy")
-        monkeypatch.setattr(
-            backfill_script, "extract_text_from_bytes", lambda filename, content: "CV-Inhalt"
-        )
-        call_count = 0
-
-        def _fake_extract(cv_text: str, **kwargs: object) -> dict[str, object]:
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                # Wie cv_extraction.py::extract_candidate_fields im
-                # Fallback-Pfad: nur Kontaktfelder, smarte Felder leer,
-                # explizit als Fallback markiert.
                 return {
                     "rollen": [],
                     "current_employer_internal": None,
                     "berufliche_stationen": [],
                     "fachliche_schwerpunkte": [],
+                    "edv_kenntnisse": [],
                     "ausbildung_titel": None,
                     "llm_fallback_used": True,
+                    "llm_fallback_reason": "Anthropic-API nicht erreichbar: Timeout",
                 }
             return {
                 "rollen": ["steuerberater"],
                 "current_employer_internal": "Kanzlei X",
                 "berufliche_stationen": [],
                 "fachliche_schwerpunkte": [],
+                "edv_kenntnisse": [],
                 "ausbildung_titel": None,
                 "llm_fallback_used": False,
             }
@@ -412,63 +371,93 @@ class TestCheckpointResume:
             )
         assert first_stats["llm_fallback_not_cached"] == 1
         assert first_stats["candidates_updated"] == 0
-        assert first_stats["errors"] == 0
-        # Kandidat darf NICHT im Checkpoint stehen.
-        assert backfill_script._load_progress() == {}
 
         with session_factory() as session:
-            second_stats = backfill_script.backfill(
-                apply=True, candidates=[session.get(Candidate, candidate_id)]
-            )
-        assert second_stats["resumed_from_cache"] == 0
-        assert second_stats["llm_fallback_not_cached"] == 0
+            refreshed = session.get(Candidate, candidate_id)
+            assert refreshed.cv_extraction_raw is None
+            all_with_cv = backfill_script._candidates_with_cv(session)
+            second_run_candidates = backfill_script._needs_processing(all_with_cv)
+            assert len(second_run_candidates) == 1
+            second_stats = backfill_script.backfill(apply=True, candidates=second_run_candidates)
+
         assert second_stats["candidates_updated"] == 1
-        # 2 echte Aufrufe insgesamt: der verworfene Fallback-Versuch UND der
-        # erfolgreiche Resume-Versuch - kein LLM-Call wurde durch einen
-        # faelschlich gecachten Fallback eingespart.
         assert call_count == 2
 
         with session_factory() as session:
             refreshed = session.get(Candidate, candidate_id)
             assert refreshed.rollen == ["steuerberater"]
-            assert refreshed.current_employer_internal == "Kanzlei X"
 
-    def test_looks_like_regex_fallback_trusts_explicit_flag(self) -> None:
-        assert backfill_script._looks_like_regex_fallback({"llm_fallback_used": True}) is True
-        assert (
-            backfill_script._looks_like_regex_fallback(
-                {"llm_fallback_used": False, "rollen": []}
-            )
-            is False
-        )
 
-    def test_looks_like_regex_fallback_backward_compat_for_old_cache_entries(self) -> None:
-        """Cache-Eintraege aus einem Lauf VOR diesem Fix haben den Schluessel
-        gar nicht - alle smarten Felder leer wird dann sicherheitshalber als
-        vermuteter Fallback behandelt, mindestens ein gefuelltes Feld gilt
-        weiterhin als vertrauenswuerdiger echter Erfolg."""
-        all_empty = {
-            "rollen": [],
-            "current_employer_internal": None,
-            "berufliche_stationen": [],
-            "fachliche_schwerpunkte": [],
-            "ausbildung_titel": None,
-        }
-        assert backfill_script._looks_like_regex_fallback(all_empty) is True
-
-        with_a_result = {**all_empty, "rollen": ["steuerberater"]}
-        assert backfill_script._looks_like_regex_fallback(with_a_result) is False
-
-    def test_load_progress_survives_a_corrupted_file(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path
+class TestCreditExhaustedAbort:
+    def test_credit_balance_reason_aborts_entire_run(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
     ) -> None:
-        """Eine kaputte/halb geschriebene Checkpoint-Datei darf den Lauf
-        nicht blockieren - im Zweifel lieber ohne Cache neu starten."""
-        progress_path = tmp_path / "backfill_progress_cv_rollen.json"
-        progress_path.write_text("{not valid json", encoding="utf-8")
-        monkeypatch.setattr(backfill_script, "PROGRESS_PATH", progress_path)
+        """Kernfall aus der Praxis: mitten im Lauf geht das Anthropic-
+        Guthaben aus - der GESAMTE Lauf muss abbrechen, nicht sich durch die
+        restlichen Kandidaten fallback-versuchen."""
+        _use_session_factory(monkeypatch, session_factory)
+        _use_tmp_output_path(monkeypatch, tmp_path)
+        with session_factory() as session:
+            c1 = _make_candidate_with_cv(session, first_name="A")
+            c2 = _make_candidate_with_cv(session, first_name="B")
+            c3 = _make_candidate_with_cv(session, first_name="C")
+            ids = [c1.id, c2.id, c3.id]
 
-        assert backfill_script._load_progress() == {}
+        monkeypatch.setattr(backfill_script, "read_document_bytes", lambda storage_key: b"dummy")
+        monkeypatch.setattr(
+            backfill_script, "extract_text_from_bytes", lambda filename, content: filename
+        )
+        call_count = 0
+
+        def _fake_extract(cv_text: str, **kwargs: object) -> dict[str, object]:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 2:
+                return {
+                    "rollen": [],
+                    "current_employer_internal": None,
+                    "berufliche_stationen": [],
+                    "fachliche_schwerpunkte": [],
+                    "edv_kenntnisse": [],
+                    "ausbildung_titel": None,
+                    "llm_fallback_used": True,
+                    "llm_fallback_reason": (
+                        "Anthropic-API antwortet mit Fehler 400: Your credit balance is "
+                        "too low to access the Anthropic API."
+                    ),
+                }
+            return {
+                "rollen": ["steuerberater"],
+                "current_employer_internal": "Kanzlei X",
+                "berufliche_stationen": [],
+                "fachliche_schwerpunkte": [],
+                "edv_kenntnisse": [],
+                "ausbildung_titel": None,
+                "llm_fallback_used": False,
+            }
+
+        monkeypatch.setattr(backfill_script, "extract_candidate_fields", _fake_extract)
+
+        with session_factory() as session:
+            candidates = [session.get(Candidate, cid) for cid in ids]
+            with pytest.raises(backfill_script.CreditExhaustedError, match="credit balance"):
+                backfill_script.backfill(apply=True, candidates=candidates)
+
+        # Nur der 3. Kandidat wurde ueberhaupt versucht (Lauf bricht ab,
+        # bevor er ihn erreicht) - genau 2 LLM-Aufrufe insgesamt.
+        assert call_count == 2
+
+        with session_factory() as session:
+            # Kandidat 1 (vor dem Abbruch erfolgreich) bleibt persistiert.
+            first = session.get(Candidate, ids[0])
+            assert first.cv_extraction_raw is not None
+            assert first.rollen == ["steuerberater"]
+            # Kandidat 2 (der Guthaben-Fallback) wurde NICHT gecacht.
+            second = session.get(Candidate, ids[1])
+            assert second.cv_extraction_raw is None
+            # Kandidat 3 wurde gar nicht erst versucht.
+            third = session.get(Candidate, ids[2])
+            assert third.cv_extraction_raw is None
 
 
 def test_write_review_csv_backs_up_existing_file_instead_of_overwriting(
@@ -491,3 +480,24 @@ def test_write_review_csv_backs_up_existing_file_instead_of_overwriting(
     # Neue (hier leere) Datei liegt weiterhin unter dem urspruenglichen Pfad.
     assert output_path.exists()
     assert "alter,inhalt" not in output_path.read_text(encoding="utf-8-sig")
+
+
+class TestConfirmBeforeRunning:
+    def test_zero_candidates_skips_confirmation(self, capsys: pytest.CaptureFixture) -> None:
+        assert backfill_script._confirm_before_running(0, skip_confirmation=False) is True
+
+    def test_yes_flag_skips_interactive_prompt(self, capsys: pytest.CaptureFixture) -> None:
+        # Kein input()-Aufruf noetig - wuerde in einem nohup-Lauf ohne
+        # interaktives stdin sonst blockieren/crashen.
+        assert backfill_script._confirm_before_running(5, skip_confirmation=True) is True
+        assert "--yes gesetzt" in capsys.readouterr().out
+
+    def test_declining_returns_false(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+    ) -> None:
+        monkeypatch.setattr("builtins.input", lambda _: "n")
+        assert backfill_script._confirm_before_running(5, skip_confirmation=False) is False
+
+    def test_confirming_returns_true(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("builtins.input", lambda _: "j")
+        assert backfill_script._confirm_before_running(5, skip_confirmation=False) is True

@@ -55,6 +55,12 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     # --- Quali-Call-Erweiterung (2026-07) ---
     fachliche_schwerpunkte: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    # Software/IT-Tools (DATEV, SAP, Lexware, MS Office, ...) - eigenes Feld
+    # statt Teil von fachliche_schwerpunkte (2026-08, CV-Backfill-Neuaufsetzung),
+    # weil der anonyme Profilstil EDV-Kenntnisse granular und getrennt von
+    # den uebrigen fachlichen Schwerpunkten braucht. Gleiches Strukturmuster
+    # wie fachliche_schwerpunkte.
+    edv_kenntnisse: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     ausbildung_titel: Mapped[str | None] = mapped_column(String(240))
     # Liste von Stationen: [{"kanzleityp": str, "kanzleigroesse": str,
     # "dauer_jahre": int, "rolle": <Rolle-Wert oder null>}, ...] - "rolle" ist

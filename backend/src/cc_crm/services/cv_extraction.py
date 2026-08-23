@@ -67,6 +67,7 @@ CV_STRUCTURED_FIELDS: tuple[str, ...] = (
     "qualification",
     "ausbildung_titel",
     "fachliche_schwerpunkte",
+    "edv_kenntnisse",
     "rollen",
     "current_employer_internal",
     "berufliche_stationen",
@@ -117,6 +118,7 @@ Erklärung davor/danach), mit exakt diesen Schlüsseln:
   ],
   "ausbildung_titel": "<siehe Regeln unten, oder null>",
   "fachliche_schwerpunkte": ["<fachlicher Schwerpunkt 1>", "<fachlicher Schwerpunkt 2>", "..."],
+  "edv_kenntnisse": ["<Software/IT-Tool 1>", "<Software/IT-Tool 2>", "..."],
   "erfahrungen_zusammenfassung": "<2-3 Saetze Fliesstext zur bisherigen Berufserfahrung, oder null>"
 }
 
@@ -238,23 +240,32 @@ schwachen Treffers.
 
 - fachliche_schwerpunkte: anders als job_title/qualification aus dem GESAMTEN
   Lebenslauf (nicht nur der aktuellsten Position) - konkrete, inhaltlich
-  greifbare fachliche Schwerpunkte/Fähigkeiten. Orientierung je Rolle
-  (Beispiele, keine starre Pflichtliste - reale CV-Inhalte gehen vor):
-  steuerfachangestellte/steuerfachwirt: Finanzbuchhaltung, Lohnbuchhaltung,
-  Steuererklärungen, DATEV, BWA; bilanzbuchhalter: Bilanzierung HGB, IFRS,
-  Anlagenbuchhaltung, Rückstellungen; steuerberater: Umsatzsteuer,
-  Jahresabschluss, Vertretung Finanzamt/Finanzgericht, betriebswirtschaftliche
-  Beratung; partner: Mandatsverantwortung, Akquise/Business Development,
-  Personalverantwortung; prüfungsassistent/-leiter/wirtschaftsprüfer:
-  Abschlussprüfung, Konzernabschluss, Bestätigungsvermerk, HGB, IFRS;
-  rechtsfachangestellte: Fristenkontrolle, RVG-Abrechnung, Aktenverwaltung;
-  rechtsanwalt: Vertragsrecht, Prozessvertretung, PLUS das konkrete
-  Rechtsgebiet als eigener Tag (z.B. "Arbeitsrecht", "Gesellschaftsrecht").
-  DATEV taucht rollenübergreifend als Software-Skill auf. KEINE generischen
+  greifbare fachliche Schwerpunkte/Fähigkeiten, OHNE Software/IT-Tools (die
+  gehören ausschließlich in "edv_kenntnisse", siehe unten - NICHT doppelt in
+  beiden Feldern nennen). Orientierung je Rolle (Beispiele, keine starre
+  Pflichtliste - reale CV-Inhalte gehen vor): steuerfachangestellte/
+  steuerfachwirt: Finanzbuchhaltung, Lohnbuchhaltung, Steuererklärungen, BWA;
+  bilanzbuchhalter: Bilanzierung HGB, IFRS, Anlagenbuchhaltung,
+  Rückstellungen; steuerberater: Umsatzsteuer, Jahresabschluss, Vertretung
+  Finanzamt/Finanzgericht, betriebswirtschaftliche Beratung; partner:
+  Mandatsverantwortung, Akquise/Business Development, Personalverantwortung;
+  prüfungsassistent/-leiter/wirtschaftsprüfer: Abschlussprüfung,
+  Konzernabschluss, Bestätigungsvermerk, HGB, IFRS; rechtsfachangestellte:
+  Fristenkontrolle, RVG-Abrechnung, Aktenverwaltung; rechtsanwalt:
+  Vertragsrecht, Prozessvertretung, PLUS das konkrete Rechtsgebiet als
+  eigener Tag (z.B. "Arbeitsrecht", "Gesellschaftsrecht"). KEINE generischen
   Floskeln wie "Teamfähigkeit", "Kommunikationsstärke" oder "selbstständiges
   Arbeiten" - nur fachlich/inhaltlich verwertbare Stichpunkte, kurz gehalten
   (2-6 Wörter je Eintrag). Leeres Array, falls nichts Konkretes im Text
   erkennbar ist.
+- edv_kenntnisse: NUR Software/IT-Tools, die im Text explizit genannt werden
+  (z.B. DATEV, SAP, SAP FI/CO, Lexware, Addison, Sage, WISO, Agenda, BMD,
+  Diamant, RA-MICRO, Advoware, ELSTER, MS Office/Microsoft Office, Excel,
+  Word, PowerPoint, Outlook) - getrennt von fachliche_schwerpunkte, damit
+  Software-Kenntnisse fuer den anonymen Profilstil granular und separat
+  verfuegbar sind. Kurze, eigenstaendige Einträge (z.B. "DATEV", "SAP FI/CO",
+  "MS Excel"), keine Sätze. Leeres Array, falls im Text keine Software/Tools
+  genannt werden.
 - erfahrungen_zusammenfassung: sachlicher Fliesstext-Überblick über die
   bisherige Berufserfahrung aus dem GESAMTEN Lebenslauf (Stationen, Branchen,
   ungefähre Dauer), kein Marketing-/Bewerbungssprech, keine Wertung. Dient als
@@ -427,6 +438,7 @@ _EMPTY_STRUCTURED_FIELDS: dict[str, Any] = {
     "qualification": None,
     "ausbildung_titel": None,
     "fachliche_schwerpunkte": [],
+    "edv_kenntnisse": [],
     "rollen": [],
     "current_employer_internal": None,
     "berufliche_stationen": [],
@@ -535,7 +547,7 @@ def extract_candidate_fields(
             timeout=25.0,
         )
         data = _parse_json_response(raw)
-    except (AIProviderError, ValueError):
+    except (AIProviderError, ValueError) as exc:
         logger.warning(
             "CV-Extraktion per LLM fehlgeschlagen (z.B. API-Guthaben leer/Timeout) - "
             "falle auf regelbasierte Kontaktfeld-Extraktion zurueck.",
@@ -550,6 +562,12 @@ def extract_candidate_fields(
             for key in ("email", "postal_code", "city", "phone"):
                 fallback_data[key] = None
         fallback_data["llm_fallback_used"] = True
+        # Grund im Klartext mitgeben - Aufrufer wie das Batch-Backfill-
+        # Skript muessen z.B. ein leeres API-Guthaben ("credit balance is
+        # too low") von einem gewoehnlichen Timeout unterscheiden koennen
+        # (ersteres soll den GESAMTEN Lauf abbrechen statt sich 458x sinnlos
+        # durch weitere Fallbacks zu arbeiten).
+        fallback_data["llm_fallback_reason"] = str(exc)[:500]
         return fallback_data
     # Defensiv: das Modell haelt sich fast immer an das Array-Schema, aber
     # ohne diese Normalisierung wuerde ein fehlendes/falsch typisiertes Feld
@@ -558,6 +576,8 @@ def extract_candidate_fields(
     # behandelt zu werden.
     if not isinstance(data.get("fachliche_schwerpunkte"), list):
         data["fachliche_schwerpunkte"] = []
+    if not isinstance(data.get("edv_kenntnisse"), list):
+        data["edv_kenntnisse"] = []
     data["rollen"] = _normalize_rollen(data.get("rollen"))
     data["berufliche_stationen"] = _normalize_berufliche_stationen(data.get("berufliche_stationen"))
     data["llm_fallback_used"] = False
