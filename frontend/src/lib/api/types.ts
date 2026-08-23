@@ -119,6 +119,9 @@ export interface Candidate extends Entity {
 
   // --- Quali-Call-Erweiterung ---
   fachliche_schwerpunkte?: string[];
+  /** Software/IT-Tools (DATEV, SAP, MS Office, ...) - getrennt von
+   * fachliche_schwerpunkte, siehe Backend models/candidate.py::edv_kenntnisse. */
+  edv_kenntnisse?: string[];
   ausbildung_titel?: string | null;
   berufliche_stationen?: BeruflicheStation[];
   aktuelles_umfeld_kanzleityp?: string | null;

@@ -52,7 +52,7 @@ const emptyForm = {
   candidate_number: "", first_name: "", last_name: "", email: "", phone: "", job_title: "", anrede: "",
   status: "active",
   qualification: "", postal_code: "", city: "", salary_expectation: "", notice_period: "",
-  fachliche_schwerpunkte: "", ausbildung_titel: "",
+  fachliche_schwerpunkte: "", edv_kenntnisse: "", ausbildung_titel: "",
   aktuelles_umfeld_kanzleityp: "", aktuelles_umfeld_kanzleigroesse: "",
   remote_teilzeit_wuensche: "", passender_kanzleityp: "",
   wechselgrund: "", no_gos: "", freitext_notizen: "", referred_by: "",
@@ -75,6 +75,7 @@ function formFromCandidate(candidate: Candidate): typeof emptyForm {
     salary_expectation: candidate.salary_expectation ?? "",
     notice_period: candidate.notice_period ?? "",
     fachliche_schwerpunkte: (candidate.fachliche_schwerpunkte ?? []).join(", "),
+    edv_kenntnisse: (candidate.edv_kenntnisse ?? []).join(", "),
     ausbildung_titel: candidate.ausbildung_titel ?? "",
     aktuelles_umfeld_kanzleityp: candidate.aktuelles_umfeld_kanzleityp ?? "",
     aktuelles_umfeld_kanzleigroesse: candidate.aktuelles_umfeld_kanzleigroesse ?? "",
@@ -273,6 +274,8 @@ export function CandidateCreateForm({
         ...stringFields,
         fachliche_schwerpunkte: form.fachliche_schwerpunkte
           .split(",").map((item) => item.trim()).filter(Boolean),
+        edv_kenntnisse: form.edv_kenntnisse
+          .split(",").map((item) => item.trim()).filter(Boolean),
         no_gos: form.no_gos.split(",").map((item) => item.trim()).filter(Boolean),
         berufliche_stationen: stations.filter((station) => station.kanzleityp.trim() !== ""),
       };
@@ -435,6 +438,7 @@ export function CandidateCreateForm({
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#92979c]">Quali-Call-Details</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelClass}>Fachliche Schwerpunkte (Komma-getrennt)</label><Input placeholder="z.B. Jahresabschluss, Umsatzsteuer, M&A" value={form.fachliche_schwerpunkte} onChange={(e) => set("fachliche_schwerpunkte", e.target.value)} /></div>
+          <div><label className={labelClass}>EDV-Kenntnisse (Komma-getrennt)</label><Input placeholder="z.B. DATEV, SAP FI/CO, MS Excel" value={form.edv_kenntnisse} onChange={(e) => set("edv_kenntnisse", e.target.value)} /></div>
           <div><label className={labelClass}>Ausbildung / Weiterbildung</label><Input value={form.ausbildung_titel} onChange={(e) => set("ausbildung_titel", e.target.value)} /></div>
         </div>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">

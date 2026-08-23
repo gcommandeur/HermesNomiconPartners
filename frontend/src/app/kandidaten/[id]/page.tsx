@@ -138,6 +138,14 @@ export default async function CandidateDetailPage({
                   </div>
                 </div>
               )}
+              {candidate.edv_kenntnisse && candidate.edv_kenntnisse.length > 0 && (
+                <div className="mt-6 border-t border-white/10 pt-5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#92979c]">EDV-Kenntnisse</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {candidate.edv_kenntnisse.map((item) => <span key={item} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-[#D8DADF]">{item}</span>)}
+                  </div>
+                </div>
+              )}
               {candidate.berufliche_stationen && candidate.berufliche_stationen.length > 0 && (
                 <div className="mt-6 border-t border-white/10 pt-5">
                   <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#92979c]">Berufliche Stationen</p>
