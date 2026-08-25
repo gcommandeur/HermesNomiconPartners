@@ -215,6 +215,45 @@ class Rolle(StrEnum):
     SONSTIGE = "sonstige"
 
 
+class Abschlussart(StrEnum):
+    """Strukturierte Abschlussart(en) fuer Candidate.abschluesse - macht
+    ausbildung_titel/qualification (Freitext, siehe cv_extraction.py-Prompt)
+    filterbar (z.B. "alle mit Studium" oder "alle mit Berufsexamen"). Liste,
+    da mehrere Abschlussarten gleichzeitig zutreffen koennen (z.B. Ausbildung
+    UND spaeteres Studium UND Berufsexamen)."""
+
+    AUSBILDUNG = "ausbildung"
+    STUDIUM_BACHELOR = "studium_bachelor"
+    STUDIUM_MASTER = "studium_master"
+    STUDIUM_PROMOTION = "studium_promotion"
+    BERUFSEXAMEN_STB = "berufsexamen_stb"
+    BERUFSEXAMEN_WP = "berufsexamen_wp"
+    BERUFSEXAMEN_RA = "berufsexamen_ra"
+    FORTBILDUNG = "fortbildung"
+    KEIN_ABSCHLUSS_ERKENNBAR = "kein_abschluss_erkennbar"
+
+
+class Rechtsgebiet(StrEnum):
+    """Strukturierte Rechtsgebiete fuer Candidate.rechtsgebiete - bei
+    rechtsanwalt/rechtsfachangestellte reicht Freitext (fachliche_
+    schwerpunkte) nicht zum Filtern. Liste, da mehrere Rechtsgebiete
+    gleichzeitig zutreffen koennen."""
+
+    ARBEITSRECHT = "arbeitsrecht"
+    STEUERRECHT = "steuerrecht"
+    GESELLSCHAFTSRECHT = "gesellschaftsrecht"
+    HANDELSRECHT = "handelsrecht"
+    VERTRAGSRECHT = "vertragsrecht"
+    FAMILIENRECHT = "familienrecht"
+    ERBRECHT = "erbrecht"
+    INSOLVENZRECHT = "insolvenzrecht"
+    IMMOBILIENRECHT = "immobilienrecht"
+    IP_RECHT = "ip_recht"
+    DATENSCHUTZRECHT = "datenschutzrecht"
+    PROZESSRECHT = "prozessrecht"
+    SONSTIGES = "sonstiges"
+
+
 class WarrantyStatus(StrEnum):
     """Gewährleistungsstatus eines Placements, berechnet aus
     start_date + guarantee_period_months (siehe services/warranty.py)."""

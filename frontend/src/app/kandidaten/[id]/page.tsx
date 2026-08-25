@@ -24,7 +24,7 @@ import { NotesPanel } from "@/components/crm/notes-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDate, rolleLabel } from "@/lib/utils";
+import { abschlussartLabel, formatDate, rechtsgebietLabel, rolleLabel } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +96,16 @@ export default async function CandidateDetailPage({
               {candidate.rollen.map((rolle) => <Badge key={rolle} tone="blue">{rolleLabel(rolle)}</Badge>)}
             </div>
           )}
+          {/* Strukturierte Abschlussart(en) (models/enums.py::Abschlussart) -
+           * macht ausbildung_titel (Freitext) filterbar, siehe
+           * abschluesse-Filter in candidates-table.tsx. */}
+          {candidate.abschluesse && candidate.abschluesse.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {candidate.abschluesse.map((abschlussart) => (
+                <Badge key={abschlussart} tone="gray">{abschlussartLabel(abschlussart)}</Badge>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-4 text-xs text-[#CBD5E1]">
           {candidate.email && <span className="flex items-center gap-1.5"><Mail size={14} />{candidate.email}</span>}
@@ -129,7 +139,24 @@ export default async function CandidateDetailPage({
               </div>
               <div className="mt-6 grid grid-cols-1 gap-5 border-t border-white/10 pt-5 sm:grid-cols-2">
                 {[["Ausbildung / Weiterbildung", candidate.ausbildung_titel], ["Aktuelles Umfeld", [candidate.aktuelles_umfeld_kanzleityp, candidate.aktuelles_umfeld_kanzleigroesse].filter(Boolean).join(" · ")], ["Remote-/Teilzeit-Wünsche", candidate.remote_teilzeit_wuensche], ["Passender Kanzleityp", candidate.passender_kanzleityp]].map(([label, value]) => <div key={label}><p className="text-[10px] font-semibold uppercase tracking-wider text-[#92979c]">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
+                {/* Nur bei rechtsanwalt relevant, siehe models/candidate.py::
+                 * examensnoten - wird nur angezeigt, wenn tatsaechlich gesetzt. */}
+                {candidate.examensnoten && (
+                  <div><p className="text-[10px] font-semibold uppercase tracking-wider text-[#92979c]">Examensnote</p><p className="mt-1.5 text-sm">{candidate.examensnoten}</p></div>
+                )}
               </div>
+              {/* Nur bei rechtsanwalt/rechtsfachangestellte inhaltlich
+               * relevant, siehe models/candidate.py::rechtsgebiete. */}
+              {candidate.rechtsgebiete && candidate.rechtsgebiete.length > 0 && (
+                <div className="mt-6 border-t border-white/10 pt-5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#92979c]">Rechtsgebiete</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {candidate.rechtsgebiete.map((rechtsgebiet) => (
+                      <span key={rechtsgebiet} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-[#D8DADF]">{rechtsgebietLabel(rechtsgebiet)}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
               {candidate.fachliche_schwerpunkte && candidate.fachliche_schwerpunkte.length > 0 && (
                 <div className="mt-6 border-t border-white/10 pt-5">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-[#92979c]">Fachliche Schwerpunkte</p>

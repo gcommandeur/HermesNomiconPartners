@@ -7,7 +7,7 @@ from fastapi import APIRouter, File, Query, Response, UploadFile, status
 from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
 from cc_crm.api.v1.operational import _read_upload_with_size_limit, _validate_upload_type
 from cc_crm.core.config import get_settings
-from cc_crm.models.enums import CandidateStatus, Rolle
+from cc_crm.models.enums import Abschlussart, CandidateStatus, Rolle
 from cc_crm.schemas.candidate import (
     CandidateCreate,
     CandidateRead,
@@ -48,6 +48,10 @@ def list_candidates(
     # normalisierte Candidate.rollen-Taxonomie (models/enums.py::Rolle) -
     # beide Filter sind unabhaengig nutzbar, auch zusammen mit `search`.
     rollen: Annotated[list[Rolle] | None, Query()] = None,
+    # Gleiches Muster wie rollen oben (Mehrfachauswahl, ODER-verknuepft) -
+    # filtert auf die strukturierte Abschlussart-Taxonomie (models/enums.py::
+    # Abschlussart), unabhaengig von rollen nutzbar.
+    abschluesse: Annotated[list[Abschlussart] | None, Query()] = None,
     region: str | None = None,
     search: str | None = None,
     # Echter PLZ+Umkreis-Filter (siehe services/candidates.py::
@@ -74,6 +78,7 @@ def list_candidates(
         status=candidate_status,
         role=role,
         rollen=rollen,
+        abschluesse=abschluesse,
         region=region,
         plz_ort=plz_ort,
         radius_km=radius_km,

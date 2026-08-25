@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { Contact, Rolle } from "@/lib/api/types";
+import type { Abschlussart, Contact, Rechtsgebiet, Rolle } from "@/lib/api/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -93,6 +93,59 @@ export const ROLLE_OPTIONS: Rolle[] = [
 
 export function rolleLabel(value: Rolle): string {
   return ROLLE_LABELS[value] ?? value;
+}
+
+// Feste 9 Abschlussarten (siehe Backend models/enums.py::Abschlussart) -
+// gleiches Anzeigemuster wie ROLLE_LABELS/ROLLE_OPTIONS/rolleLabel oben.
+export const ABSCHLUSSART_LABELS: Record<Abschlussart, string> = {
+  ausbildung: "Ausbildung",
+  studium_bachelor: "Studium (Bachelor)",
+  studium_master: "Studium (Master/Diplom)",
+  studium_promotion: "Promotion",
+  berufsexamen_stb: "Berufsexamen Steuerberater:in",
+  berufsexamen_wp: "Berufsexamen Wirtschaftsprüfer:in",
+  berufsexamen_ra: "Berufsexamen Rechtsanwalt/-anwältin",
+  fortbildung: "Fortbildung",
+  kein_abschluss_erkennbar: "Kein Abschluss erkennbar",
+};
+
+export const ABSCHLUSSART_OPTIONS: Abschlussart[] = [
+  "ausbildung",
+  "studium_bachelor",
+  "studium_master",
+  "studium_promotion",
+  "berufsexamen_stb",
+  "berufsexamen_wp",
+  "berufsexamen_ra",
+  "fortbildung",
+  "kein_abschluss_erkennbar",
+];
+
+export function abschlussartLabel(value: Abschlussart): string {
+  return ABSCHLUSSART_LABELS[value] ?? value;
+}
+
+// Feste 13 Rechtsgebiete (siehe Backend models/enums.py::Rechtsgebiet) - nur
+// bei rechtsanwalt/rechtsfachangestellte inhaltlich relevant, aber
+// kandidatenweit gefuehrt.
+export const RECHTSGEBIET_LABELS: Record<Rechtsgebiet, string> = {
+  arbeitsrecht: "Arbeitsrecht",
+  steuerrecht: "Steuerrecht",
+  gesellschaftsrecht: "Gesellschaftsrecht",
+  handelsrecht: "Handelsrecht",
+  vertragsrecht: "Vertragsrecht",
+  familienrecht: "Familienrecht",
+  erbrecht: "Erbrecht",
+  insolvenzrecht: "Insolvenzrecht",
+  immobilienrecht: "Immobilienrecht",
+  ip_recht: "Gewerblicher Rechtsschutz",
+  datenschutzrecht: "Datenschutzrecht",
+  prozessrecht: "Prozessrecht",
+  sonstiges: "Sonstiges",
+};
+
+export function rechtsgebietLabel(value: Rechtsgebiet): string {
+  return RECHTSGEBIET_LABELS[value] ?? value;
 }
 
 // Feste Auswahl gaengiger Kuendigungsfrist-Kombinationen (Backend

@@ -7,7 +7,7 @@ from sqlalchemy import ColumnElement, Integer, String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
 from cc_crm.models.candidate import Candidate
-from cc_crm.models.enums import CandidateStatus, Rolle, SubmissionCancellationReason
+from cc_crm.models.enums import Abschlussart, CandidateStatus, Rolle, SubmissionCancellationReason
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.repositories.base import SQLAlchemyRepository
 
@@ -51,6 +51,7 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
         status: CandidateStatus | None = None,
         role: str | None = None,
         rollen: list[Rolle] | None = None,
+        abschluesse: list[Abschlussart] | None = None,
         region: str | None = None,
         search: str | None = None,
         owner_user_id: uuid.UUID | None = None,
@@ -81,6 +82,14 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
             rollen_text = cast(Candidate.rollen, String)
             filters.append(
                 or_(*(rollen_text.contains(f'"{value.value}"') for value in rollen))
+            )
+        if abschluesse:
+            # Gleiches Muster wie rollen oben (JSON-Liste, kein JSONB/GIN) -
+            # ODER-verknuepft, ein Kandidat mit IRGENDEINER der gewaehlten
+            # Abschlussarten matcht.
+            abschluesse_text = cast(Candidate.abschluesse, String)
+            filters.append(
+                or_(*(abschluesse_text.contains(f'"{value.value}"') for value in abschluesse))
             )
         if region:
             filters.append(

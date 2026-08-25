@@ -53,6 +53,8 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from sqlalchemy.exc import DataError  # noqa: E402
+
 from cc_crm.infrastructure.database.session import SessionLocal  # noqa: E402
 from cc_crm.models.candidate import Candidate  # noqa: E402
 from cc_crm.services.storage import read_document_bytes  # noqa: E402
@@ -119,6 +121,10 @@ def import_rows(*, apply: bool, rows: list[dict[str, str]]) -> dict[str, int]:
             "skipped_row_had_error": 0,
             "skipped_candidate_not_found_or_already_done": 0,
             "failed": 0,
+            # DataError beim Schreiben (z.B. Wert zu lang) - Zeile
+            # uebersprungen per rollback(), Import laeuft mit den restlichen
+            # Zeilen weiter statt abzustuerzen.
+            "skipped_data_error": 0,
         }
         review_rows: list[dict[str, object]] = []
 
@@ -175,7 +181,6 @@ def import_rows(*, apply: bool, rows: list[dict[str, str]]) -> dict[str, int]:
                 review_rows.append(review_row)
                 continue
 
-            review_row["status"] = "importiert" if apply else "wuerde importiert"
             review_row["rollen_importiert"] = ", ".join(rollen)
             review_row["current_employer_internal_importiert"] = employer or ""
             review_row["berufliche_stationen_importiert"] = json.dumps(
@@ -183,10 +188,11 @@ def import_rows(*, apply: bool, rows: list[dict[str, str]]) -> dict[str, int]:
             )
             review_row["fachliche_schwerpunkte_importiert"] = ", ".join(schwerpunkte)
             review_row["ausbildung_titel_importiert"] = ausbildung or ""
-            review_rows.append(review_row)
-            stats["imported"] += 1
 
             if not apply:
+                review_row["status"] = "wuerde importiert"
+                review_rows.append(review_row)
+                stats["imported"] += 1
                 continue
 
             # Rekonstruiertes Rohergebnis - siehe Modul-Docstring, warum es
@@ -213,7 +219,23 @@ def import_rows(*, apply: bool, rows: list[dict[str, str]]) -> dict[str, int]:
                 candidate.fachliche_schwerpunkte = schwerpunkte
             if ausbildung:
                 candidate.ausbildung_titel = ausbildung
-            session.commit()
+            try:
+                session.commit()
+            except DataError as exc:
+                # Ohne rollback() wuerden alle nachfolgenden commits in
+                # dieser Session ebenfalls fehlschlagen und den gesamten
+                # Import abstuerzen lassen - stattdessen nur diese Zeile
+                # ueberspringen und mit der naechsten weitermachen.
+                session.rollback()
+                review_row["status"] = "uebersprungen (DataError beim Schreiben)"
+                review_row["error"] = str(exc)[:300]
+                stats["skipped_data_error"] += 1
+                review_rows.append(review_row)
+                continue
+
+            review_row["status"] = "importiert"
+            review_rows.append(review_row)
+            stats["imported"] += 1
 
         _write_review_csv(review_rows)
         return stats
@@ -279,6 +301,10 @@ def main() -> None:
         f"{stats['skipped_candidate_not_found_or_already_done']}"
     )
     print(f"Fehlgeschlagen (Zeile nicht verarbeitbar): {stats['failed']}")
+    print(
+        f"Übersprungen (DataError beim Schreiben, z.B. Wert zu lang): "
+        f"{stats['skipped_data_error']}"
+    )
     print(f"\nReview-Datei: {OUTPUT_PATH}")
     if not args.apply:
         print("\nDies war ein Dry-Run - nichts wurde geschrieben.")

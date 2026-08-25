@@ -57,6 +57,7 @@ function pageQueryString(query: PageQuery): string {
   if (query.search?.trim()) params.set("search", query.search.trim());
   if (query.status) params.set("status", query.status);
   for (const rolle of query.rollen ?? []) params.append("rollen", rolle);
+  for (const abschlussart of query.abschluesse ?? []) params.append("abschluesse", abschlussart);
   if (query.plzOrt?.trim() && query.radiusKm) {
     params.set("plz_ort", query.plzOrt.trim());
     params.set("radius_km", String(query.radiusKm));

@@ -108,6 +108,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from sqlalchemy import select  # noqa: E402
+from sqlalchemy.exc import DataError  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from cc_crm.infrastructure.database.session import SessionLocal  # noqa: E402
@@ -280,6 +281,12 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
             # Fehlschlag und wird bei einem spaeteren separaten Lauf
             # automatisch erneut versucht (cv_extraction_raw bleibt leer).
             "llm_fallback_not_cached": 0,
+            # DataError o.ae. beim Schreiben (z.B. Wert zu lang fuer eine
+            # Spalte trotz Extraktions-Prompt-Regel und defensiver Truncation)
+            # - Zeile wird per rollback() uebersprungen, der Lauf laeuft mit
+            # den restlichen Kandidaten weiter (siehe Modul-Docstring/Nutzer-
+            # Auftrag: "Row-Level-Fehlerbehandlung reparieren").
+            "skipped_data_error": 0,
         }
         rows: list[dict[str, object]] = []
 
@@ -365,7 +372,20 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
             # Ende beim naechsten Kandidaten, ...) direkt danach darf diesen
             # Kandidaten nicht nochmal kosten.
             candidate.cv_extraction_raw = extracted
-            session.commit()
+            try:
+                session.commit()
+            except DataError as exc:
+                # Session ist nach einem fehlgeschlagenen commit() in einem
+                # ungueltigen Zustand - OHNE rollback() wuerden ALLE
+                # nachfolgenden commits in dieser Session ebenfalls fehl-
+                # schlagen und den kompletten Lauf abstuerzen lassen (genau
+                # das war der gemeldete Absturz). Kandidat wird uebersprungen,
+                # der Lauf laeuft mit dem naechsten Kandidaten weiter.
+                session.rollback()
+                row["error"] = f"DataError beim Schreiben von cv_extraction_raw: {exc}"[:300]
+                stats["skipped_data_error"] += 1
+                rows.append(row)
+                continue
 
             rollen_vorschlag = extracted.get("rollen") or []
             employer_vorschlag = extracted.get("current_employer_internal")
@@ -440,7 +460,18 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
                         candidate.edv_kenntnisse = edv_vorschlag
                     if ausbildung_vorschlag:
                         candidate.ausbildung_titel = ausbildung_vorschlag
-                    session.commit()
+                    try:
+                        session.commit()
+                    except DataError as exc:
+                        # cv_extraction_raw ist zu diesem Zeitpunkt schon
+                        # committet (siehe oben) - nur die abgeleiteten
+                        # Spalten dieses einen Kandidaten gehen hier
+                        # verloren, der Lauf selbst laeuft weiter.
+                        session.rollback()
+                        row["error"] = (
+                            f"DataError beim Schreiben der abgeleiteten Spalten: {exc}"
+                        )[:300]
+                        stats["skipped_data_error"] += 1
 
             # Sanftes Rate-Limiting, kein Sturmlauf auf die Anthropic-API bei
             # einem vollen Lauf ueber hunderte Kandidaten (gleiches Muster wie
@@ -620,6 +651,11 @@ def main() -> None:
         f"LLM-Fallback statt echtem Ergebnis (kein Guthaben-Problem, z.B. Timeout) - "
         f"nicht gecacht, wird beim nächsten Lauf automatisch erneut versucht: "
         f"{stats['llm_fallback_not_cached']}"
+    )
+    print(
+        f"Übersprungen wegen DataError beim Schreiben (z.B. Wert zu lang trotz "
+        f"Kürze-Regel/Truncation) - Zeile übersprungen, Lauf fortgesetzt: "
+        f"{stats['skipped_data_error']}"
     )
     print(f"\nReview-CSV: {OUTPUT_PATH}")
     if not args.apply:

@@ -15,6 +15,38 @@ export type Rolle =
   | "rechtsfachangestellte"
   | "rechtsanwalt"
   | "sonstige";
+/** Strukturierte Abschlussart(en) (Backend models/enums.py::Abschlussart) -
+ * macht ausbildung_titel/qualification (Freitext) filterbar. Candidate.
+ * abschluesse ist eine LISTE (mehrere Abschlussarten gleichzeitig moeglich,
+ * z.B. Ausbildung UND spaeteres Berufsexamen). */
+export type Abschlussart =
+  | "ausbildung"
+  | "studium_bachelor"
+  | "studium_master"
+  | "studium_promotion"
+  | "berufsexamen_stb"
+  | "berufsexamen_wp"
+  | "berufsexamen_ra"
+  | "fortbildung"
+  | "kein_abschluss_erkennbar";
+/** Strukturierte Rechtsgebiete (Backend models/enums.py::Rechtsgebiet) -
+ * nur bei rechtsanwalt/rechtsfachangestellte inhaltlich relevant, aber
+ * kandidatenweit gefuehrt. LISTE, da mehrere Rechtsgebiete gleichzeitig
+ * moeglich. */
+export type Rechtsgebiet =
+  | "arbeitsrecht"
+  | "steuerrecht"
+  | "gesellschaftsrecht"
+  | "handelsrecht"
+  | "vertragsrecht"
+  | "familienrecht"
+  | "erbrecht"
+  | "insolvenzrecht"
+  | "immobilienrecht"
+  | "ip_recht"
+  | "datenschutzrecht"
+  | "prozessrecht"
+  | "sonstiges";
 export type HonorarStufe = "standard" | "nachlass_1" | "nachlass_2" | "individuell";
 /** Grammatikalisches Geschlecht für die Profilgenerierung (Kandidatin/Kandidat). */
 export type Anrede = "frau" | "herr" | "divers";
@@ -123,6 +155,17 @@ export interface Candidate extends Entity {
    * fachliche_schwerpunkte, siehe Backend models/candidate.py::edv_kenntnisse. */
   edv_kenntnisse?: string[];
   ausbildung_titel?: string | null;
+  /** Strukturierte Abschlussart(en) aus festem Vokabular - macht
+   * ausbildung_titel/qualification (Freitext) filterbar, siehe Backend
+   * models/candidate.py::abschluesse. */
+  abschluesse?: Abschlussart[];
+  /** Nur bei rechtsanwalt/rechtsfachangestellte inhaltlich relevant, siehe
+   * Backend models/candidate.py::rechtsgebiete. */
+  rechtsgebiete?: Rechtsgebiet[];
+  /** Nur bei rechtsanwalt relevant, kurzer Freitext (z.B. "1. Staatsexamen:
+   * befriedigend (7,5 Punkte)") - siehe Backend models/candidate.py::
+   * examensnoten. */
+  examensnoten?: string | null;
   berufliche_stationen?: BeruflicheStation[];
   aktuelles_umfeld_kanzleityp?: string | null;
   aktuelles_umfeld_kanzleigroesse?: string | null;
@@ -663,6 +706,11 @@ export interface PageQuery {
    * die normalisierte Rollen-Taxonomie, unabhaengig von `search` und
    * miteinander UND-verknuepft nutzbar. */
   rollen?: Rolle[];
+  /** Nur fuer Kandidaten (Backend GET /candidates?abschluesse=...) - Filter
+   * auf die strukturierte Abschlussart-Taxonomie, gleiches Muster wie
+   * `rollen` (Mehrfachauswahl, ODER-verknuepft, unabhaengig von `rollen`
+   * nutzbar). */
+  abschluesse?: Abschlussart[];
   /** Nur fuer Kandidaten - echter PLZ+Umkreis-Filter (Backend GET
    * /candidates?plz_ort=...&radius_km=...), unabhaengig vom bestehenden
    * `status`-Filter oben und kombinierbar mit `search`/`rollen`. Beide

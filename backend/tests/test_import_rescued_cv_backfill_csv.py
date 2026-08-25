@@ -235,6 +235,53 @@ class TestImportRows:
             assert good_refreshed.rollen == ["steuerberater"]
 
 
+class TestRowLevelDataErrorHandling:
+    """Punkt 4 des Konsolidierten Auftrags 'Fehlerbehebung Import': ein
+    DataError beim Schreiben EINER Zeile (z.B. Wert zu lang) darf den Import
+    der restlichen Zeilen nicht abbrechen - erfordert session.rollback(),
+    sonst schlagen alle nachfolgenden commits in derselben Session ebenfalls
+    fehl."""
+
+    def test_data_error_on_one_row_does_not_abort_remaining_rows(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
+    ) -> None:
+        _use_session_factory(monkeypatch, session_factory)
+        _use_tmp_output_path(monkeypatch, tmp_path)
+        with session_factory() as session:
+            broken = Candidate(candidate_number="1", first_name="Broken", last_name="Row")
+            good = Candidate(candidate_number="2", first_name="Good", last_name="Row")
+            session.add_all([broken, good])
+            session.commit()
+            broken_id, good_id = broken.id, good.id
+
+        from sqlalchemy.exc import DataError
+        from sqlalchemy.orm import Session as SASession
+
+        original_commit = SASession.commit
+        calls = {"n": 0}
+
+        def flaky_commit(self: SASession) -> None:
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise DataError("UPDATE", {}, Exception("value too long"))
+            original_commit(self)
+
+        monkeypatch.setattr(SASession, "commit", flaky_commit)
+
+        stats = import_script.import_rows(
+            apply=True, rows=[_row(str(broken_id)), _row(str(good_id))]
+        )
+
+        assert stats["skipped_data_error"] == 1
+        assert stats["imported"] == 1
+        with session_factory() as session:
+            broken_refreshed = session.get(Candidate, broken_id)
+            good_refreshed = session.get(Candidate, good_id)
+        assert broken_refreshed.cv_extraction_raw is None
+        assert good_refreshed.cv_extraction_raw is not None
+        assert good_refreshed.rollen == ["steuerberater"]
+
+
 def test_write_review_csv_backs_up_existing_file(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:

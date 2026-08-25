@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
-import type { DataResult, PageQuery, Paginated, Rolle } from "./types";
+import type { Abschlussart, DataResult, PageQuery, Paginated, Rolle } from "./types";
 
 const DEBOUNCE_MS = 300;
 
@@ -36,6 +36,7 @@ export function useServerSearchList<T>(
   options: {
     status?: string;
     rollen?: Rolle[];
+    abschluesse?: Abschlussart[];
     plzOrt?: string;
     radiusKm?: number;
     ownerUserId?: string;
@@ -56,6 +57,7 @@ export function useServerSearchList<T>(
   // Referenz selbst, die sich bei jedem Render neu bildet, wenn der Aufrufer
   // sie inline erzeugt (z.B. `rollen: [...selected]`).
   const rollenKey = (options.rollen ?? []).join(",");
+  const abschluesseKey = (options.abschluesse ?? []).join(",");
   // Nur ein aktiver Umkreis-Filter, wenn BEIDE Werte gesetzt sind (siehe
   // services/candidates.py::list_filtered) - ein Radius allein ohne Zentrum
   // (oder umgekehrt) darf keinen Request/Cache-Key-Wechsel ausloesen.
@@ -70,6 +72,7 @@ export function useServerSearchList<T>(
     debouncedSearch,
     options.status,
     rollenKey,
+    abschluesseKey,
     debouncedPlzOrt,
     options.radiusKm,
     options.ownerUserId,
@@ -78,7 +81,7 @@ export function useServerSearchList<T>(
   ]);
 
   const offset = page * pageSize;
-  const swrKey = `${cacheKeyPrefix}?search=${debouncedSearch}&status=${options.status ?? ""}&rollen=${rollenKey}&plz_ort=${radiusActive ? debouncedPlzOrt : ""}&radius_km=${radiusActive ? options.radiusKm : ""}&owner_user_id=${options.ownerUserId ?? ""}&sort_by=${options.sortBy ?? ""}&sort_dir=${options.sortDir ?? ""}&limit=${pageSize}&offset=${offset}`;
+  const swrKey = `${cacheKeyPrefix}?search=${debouncedSearch}&status=${options.status ?? ""}&rollen=${rollenKey}&abschluesse=${abschluesseKey}&plz_ort=${radiusActive ? debouncedPlzOrt : ""}&radius_km=${radiusActive ? options.radiusKm : ""}&owner_user_id=${options.ownerUserId ?? ""}&sort_by=${options.sortBy ?? ""}&sort_dir=${options.sortDir ?? ""}&limit=${pageSize}&offset=${offset}`;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<DataResult<Paginated<T>>>(
     swrKey,
@@ -87,6 +90,7 @@ export function useServerSearchList<T>(
         search: debouncedSearch || undefined,
         status: options.status,
         rollen: options.rollen,
+        abschluesse: options.abschluesse,
         plzOrt: radiusActive ? debouncedPlzOrt : undefined,
         radiusKm: radiusActive ? options.radiusKm : undefined,
         ownerUserId: options.ownerUserId,

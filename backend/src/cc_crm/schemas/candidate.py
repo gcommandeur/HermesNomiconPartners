@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
 
-from cc_crm.models.enums import Anrede, CandidateStatus, Rolle
+from cc_crm.models.enums import Abschlussart, Anrede, CandidateStatus, Rechtsgebiet, Rolle
 from cc_crm.schemas.base import EntityRead
 
 
@@ -54,8 +54,14 @@ class CandidateBase(BaseModel):
     # Siehe models/candidate.py::rollen - Liste, da mehrere Rollen
     # gleichzeitig gueltig sein koennen (z.B. Steuerberater + Partner).
     rollen: list[Rolle] = Field(default_factory=list)
+    # Strukturierte Abschlussart(en) - siehe models/candidate.py::abschluesse.
+    abschluesse: list[Abschlussart] = Field(default_factory=list)
+    # Strukturierte Rechtsgebiete - siehe models/candidate.py::rechtsgebiete.
+    rechtsgebiete: list[Rechtsgebiet] = Field(default_factory=list)
+    examensnoten: str | None = Field(default=None, max_length=240)
     # INTERN — niemals in anonyme Profile / ausgehende Dokumente übernehmen.
-    current_employer_internal: str | None = Field(default=None, max_length=240)
+    # Text statt max_length-Feld - siehe models/candidate.py.
+    current_employer_internal: str | None = None
     aktuelles_umfeld_kanzleityp: str | None = Field(default=None, max_length=160)
     aktuelles_umfeld_kanzleigroesse: str | None = Field(default=None, max_length=160)
     # INTERN — niemals in anonyme Profile / ausgehende Dokumente übernehmen.
@@ -103,7 +109,10 @@ class CandidateUpdate(BaseModel):
     ausbildung_titel: str | None = Field(default=None, max_length=240)
     berufliche_stationen: list[BeruflicheStation] | None = None
     rollen: list[Rolle] | None = None
-    current_employer_internal: str | None = Field(default=None, max_length=240)
+    abschluesse: list[Abschlussart] | None = None
+    rechtsgebiete: list[Rechtsgebiet] | None = None
+    examensnoten: str | None = Field(default=None, max_length=240)
+    current_employer_internal: str | None = None
     aktuelles_umfeld_kanzleityp: str | None = Field(default=None, max_length=160)
     aktuelles_umfeld_kanzleigroesse: str | None = Field(default=None, max_length=160)
     wechselgrund: str | None = None
@@ -149,6 +158,9 @@ class CvExtractionSuggestion(BaseModel):
     fachliche_schwerpunkte: list[str] | None = None
     edv_kenntnisse: list[str] | None = None
     rollen: list[Rolle] | None = None
+    abschluesse: list[Abschlussart] | None = None
+    rechtsgebiete: list[Rechtsgebiet] | None = None
+    examensnoten: str | None = None
     current_employer_internal: str | None = None
     berufliche_stationen: list[BeruflicheStation] | None = None
     source_is_agency_profile: bool = False

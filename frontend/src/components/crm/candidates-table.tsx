@@ -16,13 +16,13 @@ import { PaginationControls } from "@/components/crm/pagination-controls";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { compareValues, type SortDir } from "@/lib/sort";
-import { formatDate, ROLLE_OPTIONS, rolleLabel } from "@/lib/utils";
+import { ABSCHLUSSART_OPTIONS, abschlussartLabel, formatDate, ROLLE_OPTIONS, rolleLabel } from "@/lib/utils";
 import { usePagination } from "@/lib/use-pagination";
 import { apiPost } from "@/lib/api/client";
 import { useCurrentUser, useReactivationCandidatesCache } from "@/lib/api/hooks";
 import { useServerSearchList } from "@/lib/api/use-server-search";
 import { getCandidatesPage } from "@/lib/api/queries";
-import type { Candidate, Rolle } from "@/lib/api/types";
+import type { Abschlussart, Candidate, Rolle } from "@/lib/api/types";
 
 interface NlSearchResponse {
   items: Candidate[];
@@ -100,6 +100,69 @@ function RollenFilter({ selected, onChange }: { selected: Rolle[]; onChange: (va
   );
 }
 
+/** Mehrfachauswahl aus den 9 Abschlussarten - exakt gleiche Mechanik wie
+ * RollenFilter oben (Punkt 7a des Konsolidierten Auftrags "Fehlerbehebung
+ * Import + Erweiterung Extraktionsschema": "analog zum bestehenden
+ * rollen-Filter, gleiche Mechanik"). ODER-verknuepft mit sich selbst,
+ * UND-verknuepft mit rollen/search (siehe repositories/candidates.py::
+ * filtered). */
+function AbschluesseFilter({
+  selected,
+  onChange,
+}: {
+  selected: Abschlussart[];
+  onChange: (value: Abschlussart[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  function toggle(abschlussart: Abschlussart) {
+    onChange(
+      selected.includes(abschlussart)
+        ? selected.filter((a) => a !== abschlussart)
+        : [...selected, abschlussart],
+    );
+  }
+
+  return (
+    <div className="relative">
+      <Button variant="outline" onClick={() => setOpen((current) => !current)}>
+        Abschlüsse{selected.length > 0 ? `: ${selected.length}` : ""}
+        <ChevronDown size={14} />
+      </Button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-11 z-40 w-64 rounded-lg border border-white/10 bg-[#0D1B2E] p-1.5 shadow-2xl">
+            {selected.length > 0 && (
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs text-[#94A3B8] hover:bg-white/8"
+                onClick={() => onChange([])}
+              >
+                Auswahl zurücksetzen <X size={12} />
+              </button>
+            )}
+            {ABSCHLUSSART_OPTIONS.map((abschlussart) => (
+              <label
+                key={abschlussart}
+                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-xs text-[#D8DADF] hover:bg-white/8"
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.includes(abschlussart)}
+                  onChange={() => toggle(abschlussart)}
+                  className="accent-[#1F5FA8]"
+                />
+                {abschlussartLabel(abschlussart)}
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function CandidatesTable() {
   const searchParams = useSearchParams();
   // Erlaubt einen direkten Link auf den Reaktivierungs-Filter (z.B. vom
@@ -109,6 +172,7 @@ export function CandidatesTable() {
   );
   const [status, setStatus] = useState("");
   const [selectedRollen, setSelectedRollen] = useState<Rolle[]>([]);
+  const [selectedAbschluesse, setSelectedAbschluesse] = useState<Abschlussart[]>([]);
   // Echter PLZ+Umkreis-Filter (nicht der bestehende `region`-Substring-
   // Match) - radiusKm bleibt "" (kein Filter aktiv), bis der Nutzer sowohl
   // einen Ort ALS AUCH einen Radius gewaehlt hat, siehe use-server-search.ts.
@@ -161,6 +225,7 @@ export function CandidatesTable() {
   } = useServerSearchList<Candidate>("/candidates", getCandidatesPage, {
     status,
     rollen: selectedRollen,
+    abschluesse: selectedAbschluesse,
     plzOrt,
     radiusKm: radiusKm ? Number(radiusKm) : undefined,
     ownerUserId: mineOnly ? currentUserId : undefined,
@@ -222,6 +287,12 @@ export function CandidatesTable() {
       if (selectedRollen.length > 0 && !selectedRollen.some((r) => candidate.rollen?.includes(r))) {
         return false;
       }
+      if (
+        selectedAbschluesse.length > 0 &&
+        !selectedAbschluesse.some((a) => candidate.abschluesse?.includes(a))
+      ) {
+        return false;
+      }
       const term = search.trim().toLowerCase();
       if (!term) return true;
       const haystack = [
@@ -234,7 +305,17 @@ export function CandidatesTable() {
     if (!sortKey || !SORT_ACCESSORS[sortKey]) return base;
     const accessor = SORT_ACCESSORS[sortKey];
     return [...base].sort((a, b) => compareValues(accessor(a), accessor(b), sortDir));
-  }, [reactivationCandidates, search, status, selectedRollen, mineOnly, currentUserId, sortKey, sortDir]);
+  }, [
+    reactivationCandidates,
+    search,
+    status,
+    selectedRollen,
+    selectedAbschluesse,
+    mineOnly,
+    currentUserId,
+    sortKey,
+    sortDir,
+  ]);
 
   const { pageItems: reactivationPageItems, page: reactivationPage, pageCount: reactivationPageCount, setPage: setReactivationPage } = usePagination(reactivationFiltered);
 
@@ -260,6 +341,7 @@ export function CandidatesTable() {
     Name: `${candidate.first_name} ${candidate.last_name}`,
     Rolle: candidate.job_title,
     Rollen: (candidate.rollen ?? []).map(rolleLabel).join(", "),
+    Abschluesse: (candidate.abschluesse ?? []).map(abschlussartLabel).join(", "),
     Region: candidate.city ?? candidate.postal_code,
     Gehalt: candidate.salary_expectation,
     Status: candidate.status,
@@ -322,6 +404,9 @@ export function CandidatesTable() {
         <div className="mb-4">
           <RollenFilter selected={selectedRollen} onChange={setSelectedRollen} />
         </div>
+        <div className="mb-4">
+          <AbschluesseFilter selected={selectedAbschluesse} onChange={setSelectedAbschluesse} />
+        </div>
         <div className="mb-4 flex gap-2">
           <input
             value={plzOrt}
@@ -342,12 +427,26 @@ export function CandidatesTable() {
           </select>
         </div>
       </div>
-      {(selectedRollen.length > 0 || (plzOrt.trim() && radiusKm)) && (
+      {(selectedRollen.length > 0 || selectedAbschluesse.length > 0 || (plzOrt.trim() && radiusKm)) && (
         <div className="mb-3 flex flex-wrap gap-1.5">
           {selectedRollen.map((rolle) => (
             <Badge key={rolle} tone="blue" className="gap-1.5">
               {rolleLabel(rolle)}
               <button type="button" onClick={() => setSelectedRollen((current) => current.filter((r) => r !== rolle))} className="hover:text-white">
+                <X size={12} />
+              </button>
+            </Badge>
+          ))}
+          {selectedAbschluesse.map((abschlussart) => (
+            <Badge key={abschlussart} tone="blue" className="gap-1.5">
+              {abschlussartLabel(abschlussart)}
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedAbschluesse((current) => current.filter((a) => a !== abschlussart))
+                }
+                className="hover:text-white"
+              >
                 <X size={12} />
               </button>
             </Badge>

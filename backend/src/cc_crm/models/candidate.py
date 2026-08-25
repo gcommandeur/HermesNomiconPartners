@@ -6,7 +6,7 @@ from sqlalchemy import JSON, Boolean, Date, DateTime, Enum, ForeignKey, String, 
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cc_crm.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from cc_crm.models.enums import Anrede, CandidateStatus, Rolle
+from cc_crm.models.enums import Abschlussart, Anrede, CandidateStatus, Rechtsgebiet, Rolle
 
 
 class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -62,6 +62,20 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # wie fachliche_schwerpunkte.
     edv_kenntnisse: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     ausbildung_titel: Mapped[str | None] = mapped_column(String(240))
+    # Strukturierte Abschlussart(en) aus festem Vokabular (siehe
+    # models/enums.py::Abschlussart) - ausbildung_titel/qualification bleiben
+    # als Freitext fuer die Anzeige, sind aber nicht filterbar. Liste, weil
+    # z.B. Ausbildung UND Studium UND Berufsexamen gleichzeitig zutreffen
+    # koennen (2026-08, gleiches Strukturmuster wie rollen).
+    abschluesse: Mapped[list[Abschlussart]] = mapped_column(JSON, default=list, nullable=False)
+    # Nur bei rechtsanwalt/rechtsfachangestellte inhaltlich relevant, aber
+    # kandidatenweit gefuehrt - festes Vokabular (siehe models/enums.py::
+    # Rechtsgebiet), Liste da mehrere Rechtsgebiete gleichzeitig moeglich.
+    rechtsgebiete: Mapped[list[Rechtsgebiet]] = mapped_column(JSON, default=list, nullable=False)
+    # Nur bei rechtsanwalt relevant, kurzer Freitext (z.B. "1. Staatsexamen:
+    # befriedigend (7,5 Punkte)") - NUR uebernehmen, wenn im CV explizit
+    # genannt, nie schaetzen (siehe cv_extraction.py-Prompt).
+    examensnoten: Mapped[str | None] = mapped_column(String(240))
     # Liste von Stationen: [{"kanzleityp": str, "kanzleigroesse": str,
     # "dauer_jahre": int, "rolle": <Rolle-Wert oder null>}, ...] - "rolle" ist
     # NEU (CV-Extraktion Neuaufsetzung), aeltere Eintraege ohne diesen Key
@@ -87,8 +101,12 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # dort schlicht nicht auf). Klarname des aktuellen/letzten Arbeitgebers,
     # anders als aktuelles_umfeld_kanzleityp/-kanzleigroesse (die bewusst
     # bereits anonymisiert/kategorial sind und deshalb im Profil verwendet
-    # werden duerfen).
-    current_employer_internal: Mapped[str | None] = mapped_column(String(240))
+    # werden duerfen). Text statt String(240) (2026-08): lange, legitime
+    # Werte sind hier normal (voller Firmenname inkl. Rechtsform, teils
+    # mehrere Gesellschaften/Standorte) - anders als z.B. ausbildung_titel,
+    # das bewusst kurz gehalten wird (siehe cv_extraction.py-Prompt), gibt
+    # es hier keine Kuerze-Vorgabe, die eine Laengenbegrenzung rechtfertigt.
+    current_employer_internal: Mapped[str | None] = mapped_column(Text)
     aktuelles_umfeld_kanzleityp: Mapped[str | None] = mapped_column(String(160))
     aktuelles_umfeld_kanzleigroesse: Mapped[str | None] = mapped_column(String(160))
     # INTERN — niemals in anonyme Profile / ausgehende Dokumente übernehmen.

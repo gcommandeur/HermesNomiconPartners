@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from cc_crm.core.config import get_settings
 from cc_crm.models.candidate import Candidate
-from cc_crm.models.enums import CandidateStatus, Rolle
+from cc_crm.models.enums import Abschlussart, CandidateStatus, Rolle
 from cc_crm.models.user import User
 from cc_crm.repositories.candidates import CandidateRepository
 from cc_crm.repositories.notes import NoteRepository
@@ -318,6 +318,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         status: CandidateStatus | None = None,
         role: str | None = None,
         rollen: list[Rolle] | None = None,
+        abschluesse: list[Abschlussart] | None = None,
         region: str | None = None,
         search: str | None = None,
         plz_ort: str | None = None,
@@ -338,6 +339,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
                 status=status,
                 role=role,
                 rollen=rollen,
+                abschluesse=abschluesse,
                 region=region,
                 search=search,
                 plz_ort=plz_ort,
@@ -355,6 +357,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             status=status,
             role=role,
             rollen=rollen,
+            abschluesse=abschluesse,
             region=region,
             search=search,
             owner_user_id=owner_user_id,
@@ -374,6 +377,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         status: CandidateStatus | None,
         role: str | None,
         rollen: list[Rolle] | None,
+        abschluesse: list[Abschlussart] | None,
         region: str | None,
         search: str | None,
         plz_ort: str,
@@ -403,6 +407,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             status=status,
             role=role,
             rollen=rollen,
+            abschluesse=abschluesse,
             region=region,
             search=search,
             owner_user_id=owner_user_id,

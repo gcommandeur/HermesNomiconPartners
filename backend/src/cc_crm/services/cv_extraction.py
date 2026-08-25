@@ -30,7 +30,8 @@ from pypdf import PdfReader
 
 from cc_crm.core.errors import AIProviderError
 from cc_crm.integrations.ai.anthropic_client import generate_text, generate_text_with_image
-from cc_crm.models.enums import Rolle
+from cc_crm.models.enums import Abschlussart, Rechtsgebiet, Rolle
+from cc_crm.services.synonyms import normalize_terms
 
 logger = logging.getLogger("cc_crm.cv_extraction")
 
@@ -69,13 +70,52 @@ CV_STRUCTURED_FIELDS: tuple[str, ...] = (
     "fachliche_schwerpunkte",
     "edv_kenntnisse",
     "rollen",
+    "abschluesse",
+    "rechtsgebiete",
+    "examensnoten",
     "current_employer_internal",
     "berufliche_stationen",
 )
 
+# Maximale Laenge fuer Candidate.job_title/qualification/ausbildung_titel/
+# examensnoten (siehe models/candidate.py) - defensiv angewandt NACH dem
+# Prompt (der ohnehin auf Kuerze zielt, siehe unten), falls das Modell sich
+# trotzdem nicht daran haelt. Verhindert einen DataError beim Schreiben
+# ("value too long for type character varying(240)") - live aufgetreten bei
+# einem ausbildung_titel mit Datums-/Klammerzusaetzen statt der gewuenschten
+# Kurzform. current_employer_internal ist bewusst NICHT hier drin (siehe
+# models/candidate.py - dort inzwischen Text ohne Laengenbegrenzung, lange
+# Firmennamen sind dort legitim).
+_MAX_FIELD_LENGTHS: dict[str, int] = {
+    "job_title": 180,
+    "qualification": 240,
+    "ausbildung_titel": 240,
+    "examensnoten": 240,
+}
+
+
+def _truncate_field(field_name: str, value: Any) -> Any:
+    """Kuerzt einen String-Wert auf die DB-Spaltenlaenge (siehe
+    _MAX_FIELD_LENGTHS) und protokolliert das - lieber ein sauber
+    gekuerzter Wert als ein abgestuerzter Lauf. Nicht-String-Werte (None,
+    Listen) bleiben unveraendert."""
+    max_length = _MAX_FIELD_LENGTHS.get(field_name)
+    if max_length is None or not isinstance(value, str) or len(value) <= max_length:
+        return value
+    logger.warning(
+        "CV-Extraktion: %s ist %d Zeichen lang (Limit %d) - wird gekuerzt. Wert: %r",
+        field_name,
+        len(value),
+        max_length,
+        value,
+    )
+    return value[:max_length]
+
 _JSON_FENCE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
 _VALID_ROLLEN = {rolle.value for rolle in Rolle}
+_VALID_ABSCHLUSSARTEN = {wert.value for wert in Abschlussart}
+_VALID_RECHTSGEBIETE = {wert.value for wert in Rechtsgebiet}
 
 _FIELD_EXTRACTION_SYSTEM_PROMPT = """Du extrahierst strukturierte Kontakt- und Rollendaten aus einem
 Lebenslauf-Text für ein Recruiting-CRM (Fokus Steuern/Wirtschaftsprüfung/Recht).
@@ -97,11 +137,25 @@ Erklärung davor/danach), mit exakt diesen Schlüsseln:
   "city": "<Ort, oder null>",
   "phone": "<Telefonnummer wie im Text, oder null>",
   "job_title": "<aktuelle/letzte Berufsbezeichnung, kurz, oder null>",
-  "qualification": "<Qualifikation/Berufsabschluss, kurz z.B. 'Steuerberater', oder null>",
+  "qualification": "<Qualifikation/Berufsabschluss, KNAPP, siehe Kuerze-Regel
+    unten, z.B. 'Steuerberater', oder null>",
   "rollen": ["<eine oder mehrere von: steuerfachangestellte, steuerfachwirt,
     bilanzbuchhalter, steuerberater, partner, pruefungsassistent,
     pruefungsleiter, wirtschaftspruefer, rechtsfachangestellte,
-    rechtsanwalt, sonstige>"],
+    rechtsanwalt, sonstige - siehe TITELSCHUTZ-REGEL unten fuer
+    steuerberater/wirtschaftspruefer/rechtsanwalt>"],
+  "abschluesse": ["<eine oder mehrere von: ausbildung, studium_bachelor,
+    studium_master, studium_promotion, berufsexamen_stb, berufsexamen_wp,
+    berufsexamen_ra, fortbildung, kein_abschluss_erkennbar - siehe
+    ABSCHLUSSART-REGELN unten>"],
+  "rechtsgebiete": ["<nur falls rechtsanwalt/rechtsfachangestellte relevant,
+    eine oder mehrere von: arbeitsrecht, steuerrecht, gesellschaftsrecht,
+    handelsrecht, vertragsrecht, familienrecht, erbrecht, insolvenzrecht,
+    immobilienrecht, ip_recht, datenschutzrecht, prozessrecht, sonstiges -
+    sonst leeres Array>"],
+  "examensnoten": "<NUR bei rechtsanwalt, NUR wenn im Text explizit genannt,
+    z.B. '1. Staatsexamen: befriedigend (7,5 Punkte)', sonst null - nichts
+    schaetzen>",
   "current_employer_internal": "<Klarname des aktuellen/letzten Arbeitgebers, oder null>",
   "berufliche_stationen": [
     {
@@ -134,6 +188,26 @@ REGELN:
   -abschlüsse hat (z.B. "Steuerberater" UND "Wirtschaftsprüfer"), beide durch
   " / " getrennt angeben. qualification bleibt ein reines Freitext-Anzeigefeld -
   die STRUKTURIERTE Mehrfachrollen-Information gehört in "rollen", nicht hierher.
+  KNAPP HALTEN (siehe ausbildung_titel-Kürze-Regel unten - dieselbe Regel gilt
+  hier): nur die Titel selbst, KEINE Jahreszahlen/Daten, KEINE
+  Bestellungsnummern, KEINE Klammerzusätze.
+
+TITELSCHUTZ-REGEL fuer steuerberater/wirtschaftspruefer/rechtsanwalt (sowohl
+in "rollen" als auch in "qualification"/job_title): dies sind in Deutschland
+gesetzlich geschuetzte Berufsbezeichnungen. Ein englischer oder branchen-
+ueblicher Jobtitel ALLEIN ("Tax Manager", "Tax Consultant", "Head of Tax",
+"Auditor", "Senior Accountant" etc.) ist KEIN Nachweis fuer den geschuetzten
+deutschen Titel und darf NICHT automatisch zu steuerberater/
+wirtschaftspruefer/rechtsanwalt fuehren - genau wie bei "partner" oben gilt:
+nur bei EXPLIZITEM Nachweis im Text vergeben, z.B. "Steuerberaterin seit
+2014", "Bestellung 05/2009", "Steuerberaterprüfung bestanden", "WP-Examen
+2018", "Zulassung als Rechtsanwalt", "Rechtsanwältin seit ...". Ohne einen
+solchen expliziten Beleg: der englische/branchenübliche Titel geht
+unveraendert in "job_title", und die Rolle wird nach der TATSAECHLICH
+AUSGEUEBTEN TAETIGKEIT vergeben (z.B. "bilanzbuchhalter" bei Jahresabschluss-
+/Buchhaltungstaetigkeiten, oder "sonstige" wenn nichts passt) - NIEMALS
+steuerberater/wirtschaftspruefer/rechtsanwalt allein aus der Seniorität oder
+einem englischen Jobtitel ableiten.
 
 ROLLEN-TAXONOMIE (fuer "rollen" UND fuer "rolle" je Station in
 berufliche_stationen) - typische Aufgaben/Signale je Rolle:
@@ -162,7 +236,8 @@ berufliche_stationen) - typische Aufgaben/Signale je Rolle:
   Gericht, Zulassung als Rechtsanwalt/-anwältin. Das konkrete Rechtsgebiet
   (z.B. Arbeitsrecht, Gesellschaftsrecht, Steuerrecht, Familienrecht)
   gehört NICHT in "rollen", sondern als eigener Eintrag in
-  fachliche_schwerpunkte.
+  fachliche_schwerpunkte UND, gemappt auf das feste Vokabular, in
+  "rechtsgebiete" (siehe RECHTSGEBIETE-REGEL unten).
 - sonstige: erkennbar fachfremde oder nicht zuordenbare Rolle.
 
 ABGRENZUNGSREGELN (wichtig gegen Fehlklassifikation):
@@ -230,13 +305,67 @@ Jede Station braucht kanzleityp UND kanzleigroesse (grobe Schätzung reicht)
 - eine Station ohne diese beiden Angaben lieber ganz weglassen, statt sie zu
 erfinden.
 
-ausbildung_titel: NUR konkrete fachbezogene Ausbildungs-/Prüfungsabschlüsse
-mit Institution/Jahr, wo im Text vorhanden, z.B. "Steuerberaterprüfung
-bestanden 2019", "Bilanzbuchhalter/in IHK", "WP-Examen", "Fachanwalt für
-Arbeitsrecht". NICHT hierher gehören allgemeine Studienabschlüsse ohne
-Fachbezug (z.B. bloßes "Bachelor BWL" ohne weiteren Kontext) oder
-Schulabschlüsse (Abitur etc.) - in diesem Fall null setzen statt eines
-schwachen Treffers.
+ausbildung_titel: NUR die formalen Abschluss-/Titelnamen selbst, KNAPP
+GEHALTEN - dieses Feld ist eine kurze Anzeige-Zeile, kein Lebenslauf-Auszug.
+STRIKTE KÜRZE-REGEL:
+- Maximal 3-4 Einträge, getrennt durch "; ".
+- NUR der Titel/Abschlussname selbst - KEINE Jahreszahlen/Daten, KEINE
+  Klammerzusätze (Bestellungsnummern, Prüfungsdaten, Institution/Ort etc.),
+  KEINE laufenden/geplanten/"in Vorbereitung"-Prüfungen, KEINE kleineren
+  Zusatzzertifikate (z.B. einzelne Fortbildungsbescheinigungen).
+- Nur konkrete fachbezogene Ausbildungs-/Prüfungsabschlüsse, z.B.
+  "Steuerberaterin", "Fachberaterin Internationales Steuerrecht",
+  "Ausbildung Steuerfachangestellte", "Bilanzbuchhalter/in IHK", "WP-Examen",
+  "Fachanwalt für Arbeitsrecht". NICHT hierher gehören allgemeine
+  Studienabschlüsse ohne Fachbezug (z.B. bloßes "Bachelor BWL" ohne weiteren
+  Kontext) oder Schulabschlüsse (Abitur etc.) - in diesem Fall null setzen
+  statt eines schwachen Treffers.
+- Beispiel fuer die gewuenschte Kürze: aus einem CV mit "Steuerberaterin
+  (Bestellung 19.05.2009); Fachberaterin Internationales Steuerrecht (2012);
+  Certified Tax Compliance Officer (TCO, 2021); Ausbildung zur
+  Steuerfachangestellten (2000); Wirtschaftsprüferexamen in Vorbereitung
+  (voraussichtlich 12/2025)" wird: "Steuerberaterin; Fachberaterin
+  Internationales Steuerrecht; Ausbildung Steuerfachangestellte" - das kleine
+  Zusatzzertifikat (TCO) UND das noch laufende Examen entfallen.
+
+ABSCHLUSSART-REGEL (fuer "abschluesse", festes Vokabular, mehrere Werte
+moeglich): aus ausbildung_titel/qualification/berufliche_stationen ableiten,
+NICHT als eigenes Freitext-Feld behandeln.
+- ausbildung: Berufsausbildung (z.B. Steuerfachangestellte/r,
+  Rechtsanwalts-/Notarfachangestellte/r).
+- studium_bachelor: Bachelor-Abschluss.
+- studium_master: Master-Abschluss, inkl. Diplom/Magister (ältere
+  gleichwertige Abschlüsse).
+- studium_promotion: Promotion/Doktortitel.
+- berufsexamen_stb: bestandenes Steuerberaterexamen/-bestellung.
+- berufsexamen_wp: bestandenes WP-Examen/-bestellung.
+- berufsexamen_ra: Zulassung als Rechtsanwalt/-anwältin.
+- fortbildung: sonstige anerkannte Fortbildungsabschlüsse (z.B.
+  Bilanzbuchhalter/in IHK, Steuerfachwirt/in, Fachberater/in,
+  Fachanwalt/-anwältin).
+- kein_abschluss_erkennbar: im Text kein Abschluss erkennbar - Array bleibt
+  dann NICHT leer, sondern enthaelt genau diesen einen Wert.
+Mehrfachnennung normal (z.B. Ausbildung UND spaeteres Berufsexamen). Die
+TITELSCHUTZ-REGEL oben gilt hier ebenso: berufsexamen_stb/berufsexamen_wp/
+berufsexamen_ra NUR bei explizitem Nachweis (Examen bestanden/Bestellung/
+Zulassung), nicht allein aus einem englischen Jobtitel ableiten.
+
+RECHTSGEBIETE-REGEL (fuer "rechtsgebiete", festes Vokabular, nur relevant bei
+rechtsanwalt/rechtsfachangestellte, sonst leeres Array): aus den im Text
+genannten Fach-/Taetigkeitsschwerpunkten mappen - arbeitsrecht,
+steuerrecht, gesellschaftsrecht, handelsrecht, vertragsrecht,
+familienrecht, erbrecht, insolvenzrecht, immobilienrecht, ip_recht
+(gewerblicher Rechtsschutz/geistiges Eigentum), datenschutzrecht,
+prozessrecht, sonstiges (erkennbares Rechtsgebiet, das in keine der
+anderen Kategorien passt). Mehrfachnennung normal (z.B. Fachanwalt fuer
+Arbeitsrecht UND Schwerpunkt Gesellschaftsrecht). Der Originalwortlaut bleibt
+zusaetzlich unveraendert in fachliche_schwerpunkte erhalten.
+
+EXAMENSNOTEN-REGEL (fuer "examensnoten", NUR bei rechtsanwalt relevant): NUR
+uebernehmen, wenn eine juristische Examensnote EXPLIZIT im Text genannt ist,
+z.B. "1. Staatsexamen: befriedigend (7,5 Punkte)", "2. Staatsexamen:
+vollbefriedigend", "Prädikatsexamen" - kurz und wortnah uebernehmen, NIEMALS
+schaetzen oder aus der Berufserfahrung ableiten. Sonst null.
 
 - fachliche_schwerpunkte: anders als job_title/qualification aus dem GESAMTEN
   Lebenslauf (nicht nur der aktuellsten Position) - konkrete, inhaltlich
@@ -370,13 +499,14 @@ def _extract_fields_via_vision(content: bytes) -> dict[str, Any]:
     return _parse_json_response(raw)
 
 
-def _normalize_rollen(raw: Any) -> list[str]:
-    """Filtert eine vom Modell gelieferte rollen-Liste auf bekannte
-    Rolle-Enum-Werte (siehe models/enums.py::Rolle) - haelt sich das Modell
-    nicht exakt an die vorgegebenen Werte (z.B. Grossschreibung, ein nicht
-    vorgesehener Freitext-Wert), wird der einzelne Eintrag verworfen statt
-    die gesamte Extraktion an einem Pydantic-Validierungsfehler scheitern zu
-    lassen."""
+def _normalize_enum_list(raw: Any, valid_values: set[str]) -> list[str]:
+    """Filtert eine vom Modell gelieferte Liste auf bekannte Enum-Werte -
+    haelt sich das Modell nicht exakt an die vorgegebenen Werte (z.B.
+    Grossschreibung, ein nicht vorgesehener Freitext-Wert), wird der
+    einzelne Eintrag verworfen statt die gesamte Extraktion an einem
+    Pydantic-Validierungsfehler scheitern zu lassen. Gemeinsame Grundlage
+    fuer rollen/abschluesse/rechtsgebiete (alle drei: festes Vokabular,
+    Liste statt Einzelwert, gleiche Fehlertoleranz)."""
     if not isinstance(raw, list):
         return []
     normalized: list[str] = []
@@ -384,9 +514,202 @@ def _normalize_rollen(raw: Any) -> list[str]:
         if not isinstance(item, str):
             continue
         candidate = item.strip().lower()
-        if candidate in _VALID_ROLLEN and candidate not in normalized:
+        if candidate in valid_values and candidate not in normalized:
             normalized.append(candidate)
     return normalized
+
+
+def _normalize_rollen(raw: Any) -> list[str]:
+    return _normalize_enum_list(raw, _VALID_ROLLEN)
+
+
+def _normalize_abschluesse(raw: Any) -> list[str]:
+    return _normalize_enum_list(raw, _VALID_ABSCHLUSSARTEN)
+
+
+def _normalize_rechtsgebiete(raw: Any) -> list[str]:
+    return _normalize_enum_list(raw, _VALID_RECHTSGEBIETE)
+
+
+# --- Rueckwirkende, rein regelbasierte Ableitungen fuer bereits verarbeitete
+# Kandidaten (Konsolidierter Auftrag "Fehlerbehebung Import + Erweiterung
+# Extraktionsschema", Punkte 6/7b/8a) - KEIN LLM-Call, arbeitet nur auf dem
+# bereits vorhandenen ausbildung_titel/qualification/fachliche_schwerpunkte
+# (aus cv_extraction_raw oder der DB-Spalte selbst). Bewusst als eigene,
+# public (ohne Unterstrich) benannte Funktionen, damit die Retrofit-Skripte
+# sie direkt importieren koennen, statt die Logik zu duplizieren.
+
+# Marker fuer noch laufende/geplante Pruefungen - solche Eintraege werden
+# beim Kuerzen komplett entfernt statt nur die Klammer/Jahreszahl zu strippen.
+_IN_PROGRESS_MARKERS = (
+    "in vorbereitung",
+    "geplant",
+    "voraussichtlich",
+    "angestrebt",
+    "in progress",
+)
+
+
+def shorten_ausbildung_freitext(value: str | None) -> str | None:
+    """Kuerzt einen bereits extrahierten ausbildung_titel/qualification-Wert
+    NACHTRAEGLICH auf die Kuerze-Regel aus dem Extraktions-Prompt (siehe
+    _FIELD_EXTRACTION_SYSTEM_PROMPT oben) - fuer Kandidaten, die VOR der
+    Prompt-Verschaerfung verarbeitet wurden. Rein regelbasiert (Regex), KEIN
+    LLM-Call: Klammerzusaetze entfernen, Jahreszahlen/Datumsangaben entfernen,
+    laufende/geplante Pruefungen komplett verwerfen, auf maximal 4 Eintraege
+    kappen."""
+    if not value or not value.strip():
+        return value
+    entries = [entry.strip() for entry in value.split(";") if entry.strip()]
+    cleaned: list[str] = []
+    for entry in entries:
+        if any(marker in entry.lower() for marker in _IN_PROGRESS_MARKERS):
+            continue
+        # Klammerinhalte (Bestellungsnummern, Pruefungsdaten, Institution) weg.
+        entry = re.sub(r"\([^)]*\)", "", entry)
+        # Datumsangaben (05/2009, 05.2009) und einzelne Jahreszahlen weg.
+        entry = re.sub(r"\b\d{1,2}[./]\d{4}\b", "", entry)
+        entry = re.sub(r"\b(19|20)\d{2}\b", "", entry)
+        entry = re.sub(r"\s{2,}", " ", entry).strip(" ,;-–—")
+        if entry:
+            cleaned.append(entry)
+    if not cleaned:
+        return None
+    return "; ".join(cleaned[:4])
+
+
+# Keyword -> Abschlussart, geprueft in dieser Reihenfolge gegen den
+# klein geschriebenen ausbildung_titel/qualification-Text (siehe
+# ABSCHLUSSART-REGEL im Extraktions-Prompt oben - dieselbe Zuordnung, nur
+# nachtraeglich regelbasiert statt vom Modell direkt geliefert).
+_ABSCHLUSSART_KEYWORDS: tuple[tuple[str, Abschlussart], ...] = (
+    ("steuerberater", Abschlussart.BERUFSEXAMEN_STB),
+    ("wirtschaftsprüfer", Abschlussart.BERUFSEXAMEN_WP),
+    ("wirtschaftspruefer", Abschlussart.BERUFSEXAMEN_WP),
+    ("wp-examen", Abschlussart.BERUFSEXAMEN_WP),
+    ("rechtsanwal", Abschlussart.BERUFSEXAMEN_RA),
+    ("zulassung als rechtsanwalt", Abschlussart.BERUFSEXAMEN_RA),
+    ("promotion", Abschlussart.STUDIUM_PROMOTION),
+    ("doktor", Abschlussart.STUDIUM_PROMOTION),
+    ("dr. ", Abschlussart.STUDIUM_PROMOTION),
+    ("bachelor", Abschlussart.STUDIUM_BACHELOR),
+    ("master", Abschlussart.STUDIUM_MASTER),
+    ("diplom", Abschlussart.STUDIUM_MASTER),
+    ("magister", Abschlussart.STUDIUM_MASTER),
+    ("bilanzbuchhalter", Abschlussart.FORTBILDUNG),
+    ("steuerfachwirt", Abschlussart.FORTBILDUNG),
+    ("fachberater", Abschlussart.FORTBILDUNG),
+    ("fachanwal", Abschlussart.FORTBILDUNG),
+    ("ausbildung", Abschlussart.AUSBILDUNG),
+    ("ausgebildet", Abschlussart.AUSBILDUNG),
+)
+
+
+def derive_abschluesse_from_text(*texts: str | None) -> list[str]:
+    """Leitet Abschlussart(en) rein regelbasiert (Keyword-Mapping) aus
+    bereits vorhandenem ausbildung_titel/qualification-Freitext ab - fuer
+    Kandidaten, die VOR Einfuehrung des strukturierten abschluesse-Felds
+    verarbeitet wurden (kein erneuter LLM-Call). Liefert
+    ["kein_abschluss_erkennbar"], wenn Text vorhanden ist, aber kein Keyword
+    trifft; ein leeres Array nur, wenn ueberhaupt kein Text uebergeben wurde."""
+    combined = " ".join(t for t in texts if t).strip().lower()
+    if not combined:
+        return []
+    found: list[str] = []
+    for keyword, abschlussart in _ABSCHLUSSART_KEYWORDS:
+        if keyword in combined and abschlussart.value not in found:
+            found.append(abschlussart.value)
+    return found or [Abschlussart.KEIN_ABSCHLUSS_ERKENNBAR.value]
+
+
+# Keyword -> Rechtsgebiet, geprueft gegen jeden einzelnen
+# fachliche_schwerpunkte-Eintrag (klein geschrieben) - deckt sowohl deutsche
+# als auch englische Schreibweisen ab (siehe services/synonyms.py, dieselbe
+# Grundidee, hier aber direkt auf das feste Rechtsgebiet-Vokabular gemappt).
+_RECHTSGEBIET_KEYWORDS: tuple[tuple[str, Rechtsgebiet], ...] = (
+    ("arbeitsrecht", Rechtsgebiet.ARBEITSRECHT),
+    ("employment law", Rechtsgebiet.ARBEITSRECHT),
+    ("labour law", Rechtsgebiet.ARBEITSRECHT),
+    ("labor law", Rechtsgebiet.ARBEITSRECHT),
+    ("steuerrecht", Rechtsgebiet.STEUERRECHT),
+    ("tax law", Rechtsgebiet.STEUERRECHT),
+    ("gesellschaftsrecht", Rechtsgebiet.GESELLSCHAFTSRECHT),
+    ("corporate law", Rechtsgebiet.GESELLSCHAFTSRECHT),
+    ("company law", Rechtsgebiet.GESELLSCHAFTSRECHT),
+    ("handelsrecht", Rechtsgebiet.HANDELSRECHT),
+    ("commercial law", Rechtsgebiet.HANDELSRECHT),
+    ("vertragsrecht", Rechtsgebiet.VERTRAGSRECHT),
+    ("contract law", Rechtsgebiet.VERTRAGSRECHT),
+    ("familienrecht", Rechtsgebiet.FAMILIENRECHT),
+    ("family law", Rechtsgebiet.FAMILIENRECHT),
+    ("erbrecht", Rechtsgebiet.ERBRECHT),
+    ("inheritance law", Rechtsgebiet.ERBRECHT),
+    ("succession law", Rechtsgebiet.ERBRECHT),
+    ("insolvenzrecht", Rechtsgebiet.INSOLVENZRECHT),
+    ("insolvency law", Rechtsgebiet.INSOLVENZRECHT),
+    ("bankruptcy law", Rechtsgebiet.INSOLVENZRECHT),
+    ("immobilienrecht", Rechtsgebiet.IMMOBILIENRECHT),
+    ("real estate law", Rechtsgebiet.IMMOBILIENRECHT),
+    ("property law", Rechtsgebiet.IMMOBILIENRECHT),
+    ("gewerblicher rechtsschutz", Rechtsgebiet.IP_RECHT),
+    ("geistiges eigentum", Rechtsgebiet.IP_RECHT),
+    ("ip law", Rechtsgebiet.IP_RECHT),
+    ("intellectual property", Rechtsgebiet.IP_RECHT),
+    ("datenschutzrecht", Rechtsgebiet.DATENSCHUTZRECHT),
+    ("data protection law", Rechtsgebiet.DATENSCHUTZRECHT),
+    ("prozessrecht", Rechtsgebiet.PROZESSRECHT),
+    ("litigation", Rechtsgebiet.PROZESSRECHT),
+)
+
+
+def derive_rechtsgebiete_from_schwerpunkte(schwerpunkte: list[str] | None) -> list[str]:
+    """Leitet Rechtsgebiete rein regelbasiert (Keyword-Mapping) aus bereits
+    vorhandenen fachliche_schwerpunkte-Eintraegen ab - fuer Kandidaten, die
+    VOR Einfuehrung des strukturierten rechtsgebiete-Felds verarbeitet
+    wurden (kein erneuter LLM-Call). Leeres Array, wenn kein bekanntes
+    Rechtsgebiet-Keyword unter den Schwerpunkten vorkommt - anders als bei
+    abschluesse gibt es hier KEINEN "kein_rechtsgebiet_erkennbar"-Fallback
+    (das feste Vokabular hat keinen solchen Wert, ein Rechtsanwalt ohne
+    erkennbaren Schwerpunkt bleibt hier einfach leer)."""
+    if not schwerpunkte:
+        return []
+    found: list[str] = []
+    for entry in schwerpunkte:
+        if not isinstance(entry, str):
+            continue
+        lowered = entry.lower()
+        for keyword, rechtsgebiet in _RECHTSGEBIET_KEYWORDS:
+            if keyword in lowered and rechtsgebiet.value not in found:
+                found.append(rechtsgebiet.value)
+    return found
+
+
+# Rollen, fuer die die Titelschutz-Regel gilt (siehe TITELSCHUTZ-REGEL im
+# Extraktions-Prompt oben) + die Textbausteine, die als Beleg fuer den
+# jeweiligen geschuetzten Titel gelten (Examen bestanden/Bestellung/
+# Zulassung) - fuer den read-only Audit der bereits verarbeiteten
+# Kandidaten (Punkt 8c), NICHT fuer eine automatische Korrektur.
+TITELSCHUTZ_EVIDENCE_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "steuerberater": ("steuerberater", "bestellung", "steuerberaterprüfung", "steuerberaterexamen"),
+    "wirtschaftspruefer": ("wp-examen", "wirtschaftsprüferexamen", "bestellung", "bestellt"),
+    "rechtsanwalt": ("zulassung", "staatsexamen", "rechtsanwältin seit", "rechtsanwalt seit"),
+}
+
+
+def has_titelschutz_evidence(rolle: str, *texts: str | None) -> bool:
+    """Prueft, ob ausbildung_titel/qualification (oder ein anderer
+    uebergebener Text) einen expliziten Beleg fuer den geschuetzten Titel
+    `rolle` enthaelt (Examen bestanden/Bestellung/Zulassung) - siehe
+    TITELSCHUTZ-REGEL im Extraktions-Prompt. Rein heuristisch (Substring-
+    Match), fuer den read-only Audit gedacht, NICHT fuer eine automatische
+    Entscheidung."""
+    keywords = TITELSCHUTZ_EVIDENCE_KEYWORDS.get(rolle)
+    if not keywords:
+        return True  # keine Titelschutz-Regel fuer diese Rolle definiert
+    combined = " ".join(t for t in texts if t).lower()
+    if not combined:
+        return False
+    return any(keyword in combined for keyword in keywords)
 
 
 def _normalize_berufliche_stationen(raw: Any) -> list[dict[str, Any]]:
@@ -440,6 +763,9 @@ _EMPTY_STRUCTURED_FIELDS: dict[str, Any] = {
     "fachliche_schwerpunkte": [],
     "edv_kenntnisse": [],
     "rollen": [],
+    "abschluesse": [],
+    "rechtsgebiete": [],
+    "examensnoten": None,
     "current_employer_internal": None,
     "berufliche_stationen": [],
 }
@@ -578,8 +904,18 @@ def extract_candidate_fields(
         data["fachliche_schwerpunkte"] = []
     if not isinstance(data.get("edv_kenntnisse"), list):
         data["edv_kenntnisse"] = []
+    # Synonym-Normalisierung (Deutsch/Englisch, Singular/Plural) - siehe
+    # services/synonyms.py fuer die Begruendung (loest z.B. "Jahresabschluss"
+    # vs. "Jahresabschlüsse" als zwei getrennte Eintraege).
+    data["fachliche_schwerpunkte"] = normalize_terms(data["fachliche_schwerpunkte"])
+    data["edv_kenntnisse"] = normalize_terms(data["edv_kenntnisse"])
     data["rollen"] = _normalize_rollen(data.get("rollen"))
+    data["abschluesse"] = _normalize_abschluesse(data.get("abschluesse"))
+    data["rechtsgebiete"] = _normalize_rechtsgebiete(data.get("rechtsgebiete"))
     data["berufliche_stationen"] = _normalize_berufliche_stationen(data.get("berufliche_stationen"))
+    # Defensive Laengenbegrenzung - siehe _MAX_FIELD_LENGTHS oben.
+    for field_name in ("job_title", "qualification", "ausbildung_titel", "examensnoten"):
+        data[field_name] = _truncate_field(field_name, data.get(field_name))
     data["llm_fallback_used"] = False
 
     agency_profile = is_agency_letterhead(cv_text)
@@ -608,7 +944,11 @@ def extract_candidate_fields(
             # anwenden, damit ein von dort gemergter roher rollen-/
             # berufliche_stationen-Wert nicht ungeprueft durchrutscht.
             data["rollen"] = _normalize_rollen(data.get("rollen"))
+            data["abschluesse"] = _normalize_abschluesse(data.get("abschluesse"))
+            data["rechtsgebiete"] = _normalize_rechtsgebiete(data.get("rechtsgebiete"))
             data["berufliche_stationen"] = _normalize_berufliche_stationen(
                 data.get("berufliche_stationen")
             )
+            for field_name in ("job_title", "qualification", "ausbildung_titel", "examensnoten"):
+                data[field_name] = _truncate_field(field_name, data.get(field_name))
     return data

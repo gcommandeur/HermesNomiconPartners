@@ -482,6 +482,105 @@ def test_write_review_csv_backs_up_existing_file_instead_of_overwriting(
     assert "alter,inhalt" not in output_path.read_text(encoding="utf-8-sig")
 
 
+class TestRowLevelDataErrorHandling:
+    """Punkt 4 des Konsolidierten Auftrags 'Fehlerbehebung Import': ein
+    DataError (z.B. Wert zu lang fuer eine Spalte) beim Schreiben EINES
+    Kandidaten darf den GESAMTEN Lauf nicht abstuerzen lassen - ohne
+    session.rollback() waeren nach einem fehlgeschlagenen commit() ALLE
+    nachfolgenden commits in derselben Session ebenfalls ungueltig (genau
+    das war der gemeldete Absturz: 'value too long for type character
+    varying(240)')."""
+
+    def test_data_error_on_cv_extraction_raw_commit_skips_row_and_continues(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
+    ) -> None:
+        _use_session_factory(monkeypatch, session_factory)
+        _use_tmp_output_path(monkeypatch, tmp_path)
+        with session_factory() as session:
+            c1 = _make_candidate_with_cv(session, first_name="A")
+            c2 = _make_candidate_with_cv(session, first_name="B")
+            ids = [c1.id, c2.id]
+        _stub_extraction(monkeypatch, {"rollen": ["steuerberater"]})
+
+        from sqlalchemy.exc import DataError
+        from sqlalchemy.orm import Session as SASession
+
+        original_commit = SASession.commit
+        calls = {"n": 0}
+
+        def flaky_commit(self: SASession) -> None:
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise DataError(
+                    "INSERT", {}, Exception("value too long for type character varying(240)")
+                )
+            original_commit(self)
+
+        monkeypatch.setattr(SASession, "commit", flaky_commit)
+
+        with session_factory() as session:
+            candidates = [session.get(Candidate, cid) for cid in ids]
+        stats = backfill_script.backfill(apply=True, candidates=candidates)
+
+        # Der erste Kandidat (fehlgeschlagener commit) zaehlt als
+        # uebersprungen, NICHT als Fehler, der den Lauf beendet - der zweite
+        # Kandidat wird trotzdem noch verarbeitet.
+        assert stats["candidates_checked"] == 2
+        assert stats["skipped_data_error"] == 1
+        assert stats["candidates_updated"] == 1
+
+        with session_factory() as session:
+            first = session.get(Candidate, ids[0])
+            second = session.get(Candidate, ids[1])
+        # rollback() greift: der fehlgeschlagene Schreibvorgang hinterlaesst
+        # keine Halbdaten.
+        assert first.cv_extraction_raw is None
+        assert second.cv_extraction_raw is not None
+        assert second.rollen == ["steuerberater"]
+
+    def test_data_error_on_derived_columns_commit_keeps_raw_persisted(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
+    ) -> None:
+        """Schlaegt NUR der zweite commit() (abgeleitete Spalten unter
+        --apply) fehl, bleibt das bereits committete cv_extraction_raw aus
+        dem ersten commit() trotzdem als Checkpoint erhalten - nur die
+        abgeleiteten Spalten dieses einen Kandidaten gehen verloren."""
+        _use_session_factory(monkeypatch, session_factory)
+        _use_tmp_output_path(monkeypatch, tmp_path)
+        with session_factory() as session:
+            candidate = _make_candidate_with_cv(session)
+            candidate_id = candidate.id
+        _stub_extraction(monkeypatch, {"rollen": ["steuerberater"]})
+
+        from sqlalchemy.exc import DataError
+        from sqlalchemy.orm import Session as SASession
+
+        original_commit = SASession.commit
+        calls = {"n": 0}
+
+        def flaky_commit(self: SASession) -> None:
+            calls["n"] += 1
+            if calls["n"] == 2:
+                raise DataError("UPDATE", {}, Exception("value too long"))
+            original_commit(self)
+
+        monkeypatch.setattr(SASession, "commit", flaky_commit)
+
+        with session_factory() as session:
+            candidates = [session.get(Candidate, candidate_id)]
+        stats = backfill_script.backfill(apply=True, candidates=candidates)
+
+        assert stats["skipped_data_error"] == 1
+
+        with session_factory() as session:
+            refreshed = session.get(Candidate, candidate_id)
+        # Erster commit (cv_extraction_raw) war erfolgreich und bleibt
+        # bestehen, auch wenn der zweite commit (abgeleitete Spalten)
+        # fehlschlug.
+        assert refreshed.cv_extraction_raw is not None
+        assert refreshed.rollen == []
+
+
 class TestConfirmBeforeRunning:
     def test_zero_candidates_skips_confirmation(self, capsys: pytest.CaptureFixture) -> None:
         assert backfill_script._confirm_before_running(0, skip_confirmation=False) is True

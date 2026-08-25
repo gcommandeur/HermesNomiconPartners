@@ -175,6 +175,93 @@ class TestRollenFilter:
         assert response.json()["total_count"] == 2
 
 
+class TestAbschluesseFilter:
+    """GET /candidates?abschluesse=... - Filter auf die strukturierte
+    Abschlussart-Taxonomie (models/enums.py::Abschlussart), exakt gleiche
+    Mechanik wie der bestehende rollen-Filter oben (Punkt 7a des
+    Konsolidierten Auftrags "Fehlerbehebung Import + Erweiterung
+    Extraktionsschema")."""
+
+    def _create(self, client: TestClient, name: str, abschluesse: list[str]) -> dict:
+        response = client.post(
+            "/api/v1/candidates",
+            json={"first_name": name, "last_name": "Test", "abschluesse": abschluesse},
+        )
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    def test_filters_to_candidates_with_the_given_abschlussart(
+        self, client: TestClient
+    ) -> None:
+        stb = self._create(client, "Anna", ["berufsexamen_stb"])
+        self._create(client, "Bernd", ["berufsexamen_ra"])
+
+        response = client.get("/api/v1/candidates?abschluesse=berufsexamen_stb")
+
+        assert response.status_code == 200
+        ids = [item["id"] for item in response.json()["items"]]
+        assert ids == [stb["id"]]
+
+    def test_multiple_abschluesse_are_or_combined(self, client: TestClient) -> None:
+        stb = self._create(client, "Anna", ["berufsexamen_stb"])
+        ra = self._create(client, "Bernd", ["berufsexamen_ra"])
+        self._create(client, "Clara", ["ausbildung"])
+
+        response = client.get(
+            "/api/v1/candidates?abschluesse=berufsexamen_stb&abschluesse=berufsexamen_ra"
+        )
+
+        ids = {item["id"] for item in response.json()["items"]}
+        assert ids == {stb["id"], ra["id"]}
+
+    def test_candidate_with_multiple_abschluesse_matches_any_of_them(
+        self, client: TestClient
+    ) -> None:
+        both = self._create(client, "Anna", ["ausbildung", "berufsexamen_stb"])
+
+        response = client.get("/api/v1/candidates?abschluesse=ausbildung")
+
+        ids = [item["id"] for item in response.json()["items"]]
+        assert ids == [both["id"]]
+
+    def test_combines_with_rollen_and_search(self, client: TestClient) -> None:
+        match_response = client.post(
+            "/api/v1/candidates",
+            json={
+                "first_name": "Anna",
+                "last_name": "Test",
+                "rollen": ["steuerberater"],
+                "abschluesse": ["berufsexamen_stb"],
+            },
+        )
+        assert match_response.status_code == 201, match_response.text
+        match = match_response.json()
+        client.post(
+            "/api/v1/candidates",
+            json={
+                "first_name": "Anna",
+                "last_name": "Test",
+                "rollen": ["steuerberater"],
+                "abschluesse": ["ausbildung"],
+            },
+        )
+
+        response = client.get(
+            "/api/v1/candidates?abschluesse=berufsexamen_stb&rollen=steuerberater&search=Anna"
+        )
+
+        ids = [item["id"] for item in response.json()["items"]]
+        assert ids == [match["id"]]
+
+    def test_unset_abschluesse_filter_returns_everyone(self, client: TestClient) -> None:
+        self._create(client, "Anna", ["berufsexamen_stb"])
+        self._create(client, "Bernd", [])
+
+        response = client.get("/api/v1/candidates")
+
+        assert response.json()["total_count"] == 2
+
+
 class TestRadiusFilter:
     """GET /candidates?plz_ort=...&radius_km=... - echter Umkreis-Filter
     (repositories/candidates.py bleibt unberuehrt, siehe services/
