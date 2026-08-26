@@ -121,6 +121,62 @@ class CandidateSubmissionService(
         self.session.commit()
         super().delete(entity_id)
 
+    def archive(
+        self, entity_id: uuid.UUID, current_user: User | None = None
+    ) -> CandidateSubmission:
+        """Expliziter Abschluss NACH einem Placement (Nutzer-Vorgabe "Prozesse
+        abschliessen") - blendet den Prozess aus dem Kanban aus, OHNE Status
+        oder Historie anzufassen (siehe models/submission.py::archived_at).
+        Bewusst NUR ab status==PLACEMENT erlaubt: das ist ein Erfolgs-
+        Abschluss, kein allgemeiner "aus dem Kanban werfen"-Mechanismus -
+        fuer andere Ausgaenge existiert bereits CANCELLED."""
+        submission = self.get(entity_id)
+        if submission.status != SubmissionStatus.PLACEMENT:
+            raise BusinessRuleError(
+                "Nur Prozesse im Status 'placement' koennen abgeschlossen werden."
+            )
+        if submission.archived_at is not None:
+            return submission
+        now = datetime.now(UTC)
+        submission.archived_at = now
+        self.audit_logs.create(
+            {
+                "entity_type": "candidate_submission",
+                "entity_id": submission.id,
+                "action": "archived",
+                "changed_by": current_user.email if current_user else None,
+                "old_values": {"archived_at": None},
+                "new_values": {"archived_at": now.isoformat()},
+            }
+        )
+        self.session.commit()
+        self.session.refresh(submission)
+        return submission
+
+    def unarchive(
+        self, entity_id: uuid.UUID, current_user: User | None = None
+    ) -> CandidateSubmission:
+        """Macht archive() rueckgaengig - fuer den Fall, dass ein Prozess
+        versehentlich abgeschlossen wurde oder doch noch im Blick bleiben
+        soll (z.B. Rechnungsklaerung)."""
+        submission = self.get(entity_id)
+        if submission.archived_at is None:
+            return submission
+        self.audit_logs.create(
+            {
+                "entity_type": "candidate_submission",
+                "entity_id": submission.id,
+                "action": "unarchived",
+                "changed_by": current_user.email if current_user else None,
+                "old_values": {"archived_at": submission.archived_at.isoformat()},
+                "new_values": {"archived_at": None},
+            }
+        )
+        submission.archived_at = None
+        self.session.commit()
+        self.session.refresh(submission)
+        return submission
+
     def list_for_candidate(
         self,
         candidate_id: uuid.UUID,

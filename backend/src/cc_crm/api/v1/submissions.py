@@ -118,9 +118,42 @@ def transition_submission(
     submission_id: uuid.UUID,
     payload: CandidateSubmissionTransition,
     session: DatabaseSession,
+    current_user: CurrentUser,
 ) -> CandidateSubmissionRead:
+    # changed_by war hier bisher IMMER None (Nutzer-Feedback "Änderungshistorie
+    # im Kandidatenprofil sichtbar machen", Punkt 4) - der Kanban-Drag ist der
+    # mit Abstand haeufigste Statuswechsel-Ausloeser, jeder resultierende
+    # AuditLog-Eintrag ("status_changed") war dadurch keinem Menschen
+    # zuzuordnen. Nur setzen, wenn der Aufrufer nicht bereits explizit einen
+    # Wert mitgibt (z.B. ein spaeterer automatischer Ausloeser, der sich
+    # selbst als "automatisch" kennzeichnen will statt einem Nutzer
+    # zugeschrieben zu werden).
+    if payload.changed_by is None:
+        payload = payload.model_copy(update={"changed_by": current_user.email})
     return CandidateSubmissionRead.model_validate(
         CandidateSubmissionService(session).transition(submission_id, payload)
+    )
+
+
+@router.post("/{submission_id}/archive", response_model=CandidateSubmissionRead)
+def archive_submission(
+    submission_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> CandidateSubmissionRead:
+    """Expliziter Abschluss NACH einem Placement - blendet den Prozess aus
+    dem Kanban aus, ohne Status/Historie anzufassen (siehe services/
+    submissions.py::CandidateSubmissionService.archive). Nur ab
+    status=='placement' erlaubt."""
+    return CandidateSubmissionRead.model_validate(
+        CandidateSubmissionService(session).archive(submission_id, current_user)
+    )
+
+
+@router.post("/{submission_id}/unarchive", response_model=CandidateSubmissionRead)
+def unarchive_submission(
+    submission_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> CandidateSubmissionRead:
+    return CandidateSubmissionRead.model_validate(
+        CandidateSubmissionService(session).unarchive(submission_id, current_user)
     )
 
 
@@ -157,9 +190,10 @@ def create_feedback(
     submission_id: uuid.UUID,
     payload: FeedbackCreate,
     session: DatabaseSession,
+    current_user: CurrentUser,
 ) -> FeedbackCreateResult:
     service = RecruitingProcessService(session)
-    feedback = service.create_feedback(submission_id, payload)
+    feedback = service.create_feedback(submission_id, payload, changed_by=current_user.email)
     submission = service.submissions.get(submission_id)
     return FeedbackCreateResult(
         feedback=FeedbackRead.model_validate(feedback),

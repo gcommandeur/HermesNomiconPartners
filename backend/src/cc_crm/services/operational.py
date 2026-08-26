@@ -28,6 +28,7 @@ from cc_crm.schemas.operational import (
     SourcingMetricCreate,
 )
 from cc_crm.services.base import CrudService
+from cc_crm.services.recruiting import stage_reached_counts
 from cc_crm.services.storage import has_generic_filename
 
 
@@ -323,11 +324,12 @@ class CockpitService:
         # der Praxis nicht gepflegt und blieb deshalb dauerhaft leer, obwohl
         # das Kanban laengst Submissions mit Status INTERVIEW zeigte
         # ("Interviews: 0" in Analytics vs. echte Prozesse im Kanban - siehe
-        # Nutzer-Feedback 2026-07-15). "Interviews" zaehlt deshalb jetzt den
-        # echten, aktuellen Submission-Status - konsistent mit dem Kanban.
-        interviews_in_progress = [
-            item for item in submissions if item.status == SubmissionStatus.INTERVIEW
-        ]
+        # Nutzer-Feedback 2026-07-15). "Interviews" zaehlt daher weiterhin
+        # NICHT ueber die Interview-Tabelle, sondern (seit Punkt 3c) ueber
+        # die im Zeitraum tatsaechlich erreichte INTERVIEW-Transition
+        # (siehe reached_since/stage_reached_counts unten) - das behebt
+        # zusaetzlich die vorherige Inkonsistenz, dass "interviews" (anders
+        # als offers/placements) den period-Zeitraum ignorierte.
         reached_interview_stage = {
             SubmissionStatus.INTERVIEW,
             SubmissionStatus.OFFER,
@@ -360,6 +362,23 @@ class CockpitService:
             and (task.snoozed_until is None or naive_utc(task.snoozed_until) <= now)
         ]
         hot_submissions = [item for item in submissions if item.status in self.HOT]
+        # Prozesse im Status OFFER/PLACEMENT OHNE zugehoerigen Offer-/
+        # Placement-Datensatz - unfertige Erfassungen (Kanban-Drag ohne
+        # ausgefuelltes Formular), siehe CockpitRead.data_gaps. UEBER DEN
+        # GESAMTEN BESTAND geprueft (nicht period-beschraenkt), eine
+        # unfertige Erfassung bleibt unfertig, unabhaengig vom gewaehlten
+        # Cockpit-Zeitraum.
+        offer_submission_ids = set(self.session.scalars(select(Offer.submission_id)).all())
+        placement_submission_ids = set(self.session.scalars(select(Placement.submission_id)).all())
+        gap_submissions = [
+            item
+            for item in submissions
+            if (item.status == SubmissionStatus.OFFER and item.id not in offer_submission_ids)
+            or (
+                item.status == SubmissionStatus.PLACEMENT
+                and item.id not in placement_submission_ids
+            )
+        ]
         # Aeltere Task-Zeilen (vor Einfuehrung von candidate_id/client_company_id
         # auf automatischen Follow-ups) haben diese Spalten leer, obwohl die
         # verknuepfte Submission Kandidat/Kanzlei kennt - als Fallback ueber
@@ -394,10 +413,12 @@ class CockpitService:
         # konstante statt mit der Datenmenge wachsende Query-Anzahl).
         candidate_ids = {value for value in task_candidate_ids.values() if value} | {
             item.candidate_id for item in hot_submissions
-        }
-        client_ids = {value for value in task_client_ids.values() if value} | {
-            item.client_company_id for item in hot_submissions if item.client_company_id
-        }
+        } | {item.candidate_id for item in gap_submissions}
+        client_ids = (
+            {value for value in task_client_ids.values() if value}
+            | {item.client_company_id for item in hot_submissions if item.client_company_id}
+            | {item.client_company_id for item in gap_submissions if item.client_company_id}
+        )
         candidate_names = self._candidate_names(candidate_ids)
         client_names = self._client_names(client_ids)
 
@@ -442,6 +463,23 @@ class CockpitService:
             }
             for item in hot_submissions
         ]
+        data_gaps = [
+            {
+                "kind": "submission",
+                "title": self._hot_title(item, candidate_names, client_names),
+                "detail": (
+                    "Status 'Offer' ohne erfasstes Angebot (Gehalt/Fee fehlt)"
+                    if item.status == SubmissionStatus.OFFER
+                    else "Status 'Placement' ohne erfasstes Placement (Gehalt/Fee fehlt)"
+                ),
+                "due_at": item.follow_up_at,
+                "candidate_id": item.candidate_id,
+                "client_company_id": item.client_company_id,
+                "submission_id": item.id,
+                "priority": "normal",
+            }
+            for item in gap_submissions
+        ]
         paid = sum(1 for fee in fees if fee.invoice_status == InvoiceStatus.PAID)
         expected = sum(float(item.expected_fee or 0) for item in submissions)
         realized = sum(
@@ -455,25 +493,51 @@ class CockpitService:
             )
             or 0
         )
+        # UEBER DEN GESAMTEN BESTAND (nicht auf `period` beschraenkt wie die
+        # `fees`-Liste oben) - eine seit Monaten offene Rechnung bleibt
+        # "offen", unabhaengig vom gewaehlten Cockpit-Zeitraum. Zaehlt
+        # DISTINCT Placements (nicht Fees): ein Placement mit mehreren
+        # offenen Teilrechnungen soll trotzdem nur einmal auftauchen.
+        open_invoice_placement_count = len(
+            {
+                fee.placement_id
+                for fee in self.session.scalars(select(Fee)).all()
+                if fee.invoice_status not in (InvoiceStatus.PAID, InvoiceStatus.CANCELLED)
+            }
+        )
         reached_interview_in_period = [
             item for item in period_submissions if item.status in reached_interview_stage
         ]
         sourcing = SourcingMetricService(self.session).totals_for_period(since.date(), now.date())
+        # PIPELINE-Kennzahlen: aus der echten Statuswechsel-Historie
+        # (AuditLog), nicht aus Anlagezeitpunkt oder aktuellem Status - siehe
+        # services/recruiting.py::stage_reached_counts fuer die ausfuehrliche
+        # Begruendung (Nutzer-Entscheidung "KPIs stimmen nicht", Punkt 3).
+        # UEBER ALLE Submissions prueft (nicht nur period_submissions), da
+        # eine im Zeitraum erreichte Stufe nicht voraussetzt, dass die
+        # Submission selbst auch in diesem Zeitraum ANGELEGT wurde.
+        all_submission_ids = [item.id for item in submissions]
+        reached_since = stage_reached_counts(self.session, all_submission_ids, since=since)
         return {
             "period": period,
             "important": important,
             "hot_processes": hot,
+            "data_gaps": data_gaps,
             "sourcing": sourcing,
             "recruiting_kpis": self._recruiting_kpis(),
             "kpis": {
                 "qualification_calls": len(period_submissions),
                 "cv_available": cv_count,
                 "submissions": len(period_submissions),
-                "interviews": len(interviews_in_progress),
+                "cv_outs_reached_count": len(reached_since[SubmissionStatus.CV_OUT]),
+                "interviews": len(reached_since[SubmissionStatus.INTERVIEW]),
                 "offers": len(offers),
+                "offer_stage_reached_count": len(reached_since[SubmissionStatus.OFFER]),
                 "placements": len(placements),
+                "placement_stage_reached_count": len(reached_since[SubmissionStatus.PLACEMENT]),
                 "expected_fees": expected,
                 "realized_fees": realized,
+                "open_invoice_placement_count": open_invoice_placement_count,
             },
             "rates": {
                 "submission_to_interview": self._rate(

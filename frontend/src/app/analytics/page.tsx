@@ -13,23 +13,30 @@ export default async function AnalyticsPage() {
   const result = await getCockpit("week");
   const { kpis, rates, sourcing, recruiting_kpis: recruitingKpis } = result.data;
   const recruitingKpiCards: [string, string][] = [
-    ["Time-to-Fill (Median)", recruitingKpis.time_to_fill_days !== null ? `${recruitingKpis.time_to_fill_days} Tage` : NO_DATA],
+    ["Time-to-Fill ab Prozessanlage (Median)", recruitingKpis.time_to_fill_days !== null ? `${recruitingKpis.time_to_fill_days} Tage` : NO_DATA],
     ["Time-to-Interview (Median)", recruitingKpis.time_to_interview_days !== null ? `${recruitingKpis.time_to_interview_days} Tage` : NO_DATA],
     ["Ø Fee pro Placement", recruitingKpis.average_fee_per_placement !== null ? formatCurrency(recruitingKpis.average_fee_per_placement) : NO_DATA],
   ];
+  // "Neue Prozesse" (kpis.submissions) ist eine EIGENE Kennzahl (im Zeitraum
+  // angelegt) und steht bewusst NICHT mehr im Pipeline-Trichter - der zeigt
+  // durchgehend erreichte Stufen (Transition), siehe Backend schemas/
+  // operational.py::CockpitKpis-Docstring (Nutzer-Entscheidung "KPIs
+  // stimmen nicht", Punkt 3b/3d).
   const funnel: [string, number | string][] = [
     ["Pitches / InMails", sourcing.has_data ? sourcing.pitches : NO_DATA],
     ["Antworten", sourcing.has_data ? sourcing.responses : NO_DATA],
     ["Positive Antworten", sourcing.has_data ? sourcing.positive_responses : NO_DATA],
     ["Quali Calls", kpis.qualification_calls], ["CV In", kpis.cv_available],
-    ["CV-Outs", kpis.submissions], ["Interviews", kpis.interviews],
-    ["Offers", kpis.offers], ["Placements", kpis.placements], ["Bezahlte Fees", rates.placement_to_paid ? kpis.placements : 0],
+    ["CV-Outs", kpis.cv_outs_reached_count], ["Interviews", kpis.interviews],
+    ["Offers (kaufmännisch)", kpis.offers], ["Offers (Pipeline)", kpis.offer_stage_reached_count],
+    ["Placements (kaufmännisch)", kpis.placements], ["Placements (Pipeline)", kpis.placement_stage_reached_count],
+    ["Bezahlte Fees", rates.placement_to_paid ? kpis.placements : 0],
   ];
   const conversions: [string, number | string][] = [
     ["Pitch → Antwort", sourcing.pitch_to_response_rate ?? NO_DATA],
     ["Antwort → Quali Call", sourcing.response_to_qualification_call_rate ?? NO_DATA],
     ["Quali Call → CV In", kpis.qualification_calls ? Math.round(kpis.cv_available / kpis.qualification_calls * 1000) / 10 : NO_DATA],
-    ["CV In → CV-Out", kpis.cv_available ? Math.round(kpis.submissions / kpis.cv_available * 1000) / 10 : NO_DATA],
+    ["CV In → CV-Out", kpis.cv_available ? Math.round(kpis.cv_outs_reached_count / kpis.cv_available * 1000) / 10 : NO_DATA],
     ["CV-Out → Interview", rates.submission_to_interview], ["Interview → Offer", rates.interview_to_offer],
     ["Offer → Placement", rates.offer_to_placement], ["Placement → bezahlt", rates.placement_to_paid],
   ];

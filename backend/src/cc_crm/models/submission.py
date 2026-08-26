@@ -97,3 +97,14 @@ class CandidateSubmission(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True
     )
+
+    # Expliziter Abschluss NACH einem Placement (Nutzer-Vorgabe "Prozesse
+    # abschliessen"): blendet den Prozess aus dem Kanban aus, OHNE seinen
+    # Status/seine Historie anzufassen - bewusst NICHT der bestehende
+    # CANCELLED-Status (der ist eine echte Abbruch-Transition mit eigener
+    # Geschaeftsbedeutung, cancellation_reason etc.) und KEINE Loeschung.
+    # Rein additiv: Gewaehrleistungs-Uebersicht/KPIs/Rechnungsstatus filtern
+    # NICHT danach, nur die Kanban-Ansicht blendet archivierte Prozesse
+    # standardmaessig aus (client-seitiger Filter, siehe submission-
+    # views.tsx). Nullable, nicht-archiviert ist der Normalfall.
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

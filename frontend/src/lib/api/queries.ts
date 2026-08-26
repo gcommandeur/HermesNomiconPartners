@@ -213,6 +213,18 @@ export async function deletePlacement(submissionId: string) {
   return apiDelete(`/submissions/${submissionId}/placement`);
 }
 
+/** Expliziter Abschluss NACH einem Placement - blendet den Prozess aus dem
+ * Kanban aus, ohne Status/Historie anzutasten (siehe Backend services/
+ * submissions.py::CandidateSubmissionService.archive). Nur ab
+ * status=="placement" erlaubt. */
+export async function archiveSubmission(submissionId: string) {
+  return apiPost<CandidateSubmission>(`/submissions/${submissionId}/archive`, {});
+}
+
+export async function unarchiveSubmission(submissionId: string) {
+  return apiPost<CandidateSubmission>(`/submissions/${submissionId}/unarchive`, {});
+}
+
 export async function getMailingGroups() {
   return apiGet<MailingGroup[]>("/mailing-groups", []);
 }
@@ -256,6 +268,13 @@ export async function getEmailTemplates() {
 
 export async function getActivitiesForCandidate(candidateId: string) {
   return apiGet<Activity[]>(`/activities?candidate_id=${candidateId}`, []);
+}
+
+/** Änderungshistorie fürs Kandidatenprofil (was/wann/durch wen) - anders als
+ * Activities (kein changed_by) direkt aus dem AuditLog, siehe Backend
+ * api/v1/candidates.py::get_candidate_history. Bewusst nicht admin-only. */
+export async function getCandidateHistory(candidateId: string) {
+  return apiGet<AuditLogEntry[]>(`/candidates/${candidateId}/history`, []);
 }
 
 export async function getTasksForCandidate(candidateId: string) {

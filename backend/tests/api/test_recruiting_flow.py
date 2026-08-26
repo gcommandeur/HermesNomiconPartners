@@ -56,6 +56,32 @@ def _transition(client: TestClient, submission_id: str, status: str, **extra: ob
     return response.json()
 
 
+def test_transition_records_changed_by_as_the_real_user(
+    client: TestClient, admin_token: str
+) -> None:
+    """Regressionsschutz (Nutzer-Feedback "Änderungshistorie...", Punkt 4):
+    PATCH .../transition liess changed_by bisher IMMER None - der mit
+    Abstand haeufigste Statuswechsel-Ausloeser (Kanban-Drag) war dadurch
+    keinem Menschen zuzuordnen."""
+    from tests.conftest import TEST_USER_EMAIL
+
+    submission = _create_submission(client)
+    _transition(client, submission["id"], "cv_in")
+
+    audit_entries = client.get(
+        "/api/v1/audit-logs", headers={"Authorization": f"Bearer {admin_token}"}
+    ).json()
+    status_changes = [
+        entry
+        for entry in audit_entries
+        if entry["entity_type"] == "candidate_submission"
+        and entry["entity_id"] == submission["id"]
+        and entry["action"] == "status_changed"
+    ]
+    assert status_changes
+    assert all(entry["changed_by"] == TEST_USER_EMAIL for entry in status_changes)
+
+
 def test_invalid_submission_transition_is_rejected(client: TestClient) -> None:
     submission = _create_submission(client)
 

@@ -4,6 +4,8 @@ from datetime import UTC, datetime, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
+from cc_crm.models.enums import InvoiceStatus
+from cc_crm.models.recruiting import Fee
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.task import Task
 
@@ -21,6 +23,213 @@ def test_cockpit_and_email_templates(client: TestClient) -> None:
     templates = templates_response.json()
     assert len(templates) >= 10
     assert any(item["key"] == "candidate_submission" for item in templates)
+
+
+def _walk_submission_to_placement(client: TestClient) -> dict:
+    candidate = client.post(
+        "/api/v1/candidates", json={"first_name": "Anna", "last_name": "Muster"}
+    ).json()
+    company = client.post(
+        "/api/v1/clients", json={"name": "Muster Kanzlei", "status": "active"}
+    ).json()
+    submission = client.post(
+        "/api/v1/submissions",
+        json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
+    ).json()
+    for target_status in ("cv_in", "cv_out", "interview", "offer", "placement"):
+        response = client.patch(
+            f"/api/v1/submissions/{submission['id']}/transition",
+            json={"status": target_status},
+        )
+        assert response.status_code == 200, response.text
+    placement = client.post(
+        f"/api/v1/submissions/{submission['id']}/placement",
+        json={
+            "start_date": "2026-09-01",
+            "final_salary": "70000.00",
+            "fee_percentage": "27.00",
+            "guarantee_period_months": 6,
+        },
+    )
+    assert placement.status_code == 201, placement.text
+    return placement.json()
+
+
+class TestCockpitOpenInvoiceCount:
+    """kpis.open_invoice_placement_count - ersetzt den frueher hartcodierten
+    Platzhaltertext "1 Placement hat offenen Rechnungsstatus." im Cockpit
+    (Nutzer-Feedback "Prozesse abschliessen...", Punkt 1)."""
+
+    def test_zero_when_no_fees_exist(self, client: TestClient) -> None:
+        cockpit = client.get("/api/v1/cockpit?period=week").json()
+        assert cockpit["kpis"]["open_invoice_placement_count"] == 0
+
+    def test_counts_placement_with_an_unpaid_fee(self, client: TestClient) -> None:
+        placement = _walk_submission_to_placement(client)
+        fee = client.post(
+            f"/api/v1/placements/{placement['id']}/fees", json={"amount_net": "18900.00"}
+        )
+        assert fee.status_code == 201, fee.text
+        assert fee.json()["invoice_status"] == "draft"
+
+        cockpit = client.get("/api/v1/cockpit?period=week").json()
+
+        assert cockpit["kpis"]["open_invoice_placement_count"] == 1
+
+    def test_does_not_count_a_paid_fee(
+        self, client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        # Kein PATCH-Endpunkt fuer invoice_status vorhanden - Rechnungsstatus
+        # wird bisher nur intern/administrativ gepflegt, direkt in der DB
+        # nachgestellt.
+        placement = _walk_submission_to_placement(client)
+        fee = client.post(
+            f"/api/v1/placements/{placement['id']}/fees", json={"amount_net": "18900.00"}
+        ).json()
+        with session_factory() as session:
+            db_fee = session.get(Fee, uuid.UUID(fee["id"]))
+            assert db_fee is not None
+            db_fee.invoice_status = InvoiceStatus.PAID
+            session.commit()
+
+        cockpit = client.get("/api/v1/cockpit?period=week").json()
+
+        assert cockpit["kpis"]["open_invoice_placement_count"] == 0
+
+    def test_ignores_period_scope(self, client: TestClient) -> None:
+        """Anders als die period-gescopten Kennzahlen: eine offene Rechnung
+        bleibt offen, egal welchen Cockpit-Zeitraum man gerade ansieht."""
+        placement = _walk_submission_to_placement(client)
+        client.post(f"/api/v1/placements/{placement['id']}/fees", json={"amount_net": "1.00"})
+
+        for period in ("week", "month", "quarter"):
+            cockpit = client.get(f"/api/v1/cockpit?period={period}").json()
+            assert cockpit["kpis"]["open_invoice_placement_count"] == 1
+
+
+class TestCockpitPipelineKpis:
+    """Pipeline-Kennzahlen (Nutzer-Entscheidung "KPIs stimmen nicht", Punkt
+    3): aus der echten Statuswechsel-Historie (AuditLog), nicht aus
+    Anlagezeitpunkt oder Kindobjekten - siehe services/operational.py::
+    CockpitService.build."""
+
+    def test_cv_outs_reached_counts_transition_not_creation(self, client: TestClient) -> None:
+        candidate = client.post(
+            "/api/v1/candidates", json={"first_name": "Anna", "last_name": "Muster"}
+        ).json()
+        company = client.post(
+            "/api/v1/clients", json={"name": "Kanzlei CvOut", "status": "active"}
+        ).json()
+        submission = client.post(
+            "/api/v1/submissions",
+            json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
+        ).json()
+        for target in ("cv_in", "cv_out"):
+            response = client.patch(
+                f"/api/v1/submissions/{submission['id']}/transition", json={"status": target}
+            )
+            assert response.status_code == 200, response.text
+
+        cockpit = client.get("/api/v1/cockpit?period=week").json()
+
+        assert cockpit["kpis"]["cv_outs_reached_count"] == 1
+        # "submissions" (Neue Prozesse) bleibt unabhaengig davon 1, da genau
+        # eine Submission im Zeitraum angelegt wurde - beide Zahlen duerfen
+        # sich unterscheiden, das ist keine Inkonsistenz.
+        assert cockpit["kpis"]["submissions"] == 1
+
+    def test_interviews_respects_period_like_offers_and_placements(
+        self, client: TestClient
+    ) -> None:
+        candidate = client.post(
+            "/api/v1/candidates", json={"first_name": "Anna", "last_name": "Muster"}
+        ).json()
+        company = client.post(
+            "/api/v1/clients", json={"name": "Kanzlei Interview", "status": "active"}
+        ).json()
+        submission = client.post(
+            "/api/v1/submissions",
+            json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
+        ).json()
+        for target in ("cv_in", "cv_out", "interview"):
+            response = client.patch(
+                f"/api/v1/submissions/{submission['id']}/transition", json={"status": target}
+            )
+            assert response.status_code == 200, response.text
+
+        cockpit = client.get("/api/v1/cockpit?period=week").json()
+
+        assert cockpit["kpis"]["interviews"] == 1
+
+    def test_offer_and_placement_stage_reached_count_via_transition_alone(
+        self, client: TestClient
+    ) -> None:
+        """Reiner Kanban-Drag auf 'placement', OHNE das Placement-Formular
+        auszufuellen - die Pipeline-Kennzahl zaehlt trotzdem den erreichten
+        Status; die kaufmaennische Kennzahl (placements) bleibt 0, da kein
+        Placement-Datensatz existiert."""
+        candidate = client.post(
+            "/api/v1/candidates", json={"first_name": "Anna", "last_name": "Muster"}
+        ).json()
+        company = client.post(
+            "/api/v1/clients", json={"name": "Kanzlei Placement", "status": "active"}
+        ).json()
+        submission = client.post(
+            "/api/v1/submissions",
+            json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
+        ).json()
+        for target in ("cv_in", "cv_out", "interview", "offer", "placement"):
+            response = client.patch(
+                f"/api/v1/submissions/{submission['id']}/transition", json={"status": target}
+            )
+            assert response.status_code == 200, response.text
+
+        cockpit = client.get("/api/v1/cockpit?period=week").json()
+
+        assert cockpit["kpis"]["placement_stage_reached_count"] == 1
+        assert cockpit["kpis"]["placements"] == 0
+        assert cockpit["kpis"]["offer_stage_reached_count"] == 1
+
+
+class TestCockpitDataGaps:
+    """data_gaps: Prozesse im Status OFFER/PLACEMENT ohne zugehoerigen
+    Offer-/Placement-Datensatz - sichtbar machen statt stillschweigend
+    hinnehmen (Nutzer-Entscheidung Punkt 3d)."""
+
+    def test_placement_without_record_appears_in_data_gaps(self, client: TestClient) -> None:
+        candidate = client.post(
+            "/api/v1/candidates", json={"first_name": "Anna", "last_name": "Muster"}
+        ).json()
+        company = client.post(
+            "/api/v1/clients", json={"name": "Kanzlei Gap", "status": "active"}
+        ).json()
+        submission = client.post(
+            "/api/v1/submissions",
+            json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
+        ).json()
+        for target in ("cv_in", "cv_out", "interview", "offer", "placement"):
+            client.patch(
+                f"/api/v1/submissions/{submission['id']}/transition", json={"status": target}
+            )
+
+        cockpit = client.get("/api/v1/cockpit?period=week").json()
+
+        gap_submission_ids = {gap["submission_id"] for gap in cockpit["data_gaps"]}
+        assert submission["id"] in gap_submission_ids
+
+    def test_placement_with_record_does_not_appear_in_data_gaps(
+        self, client: TestClient
+    ) -> None:
+        placement = _walk_submission_to_placement(client)
+
+        cockpit = client.get("/api/v1/cockpit?period=week").json()
+
+        gap_submission_ids = {gap["submission_id"] for gap in cockpit["data_gaps"]}
+        assert placement["submission_id"] not in gap_submission_ids
+
+    def test_no_gaps_when_everything_is_properly_recorded(self, client: TestClient) -> None:
+        cockpit = client.get("/api/v1/cockpit?period=week").json()
+        assert cockpit["data_gaps"] == []
 
 
 def test_email_templates_have_distinct_specific_bodies(client: TestClient) -> None:

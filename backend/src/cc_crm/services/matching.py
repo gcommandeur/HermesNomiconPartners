@@ -79,7 +79,11 @@ class CandidateMatchingService:
         return matches[:limit]
 
     def bulk_submit(
-        self, candidate_id: uuid.UUID, payload: BulkSubmitRequest
+        self,
+        candidate_id: uuid.UUID,
+        payload: BulkSubmitRequest,
+        *,
+        changed_by: str | None = None,
     ) -> BulkSubmitResponse:
         self.candidates.get(candidate_id)
         if payload.target_status not in BULK_SUBMIT_TARGETS:
@@ -97,7 +101,9 @@ class CandidateMatchingService:
                 continue
             seen.add(client_company_id)
             try:
-                submission = self._submit_to_one(candidate_id, client_company_id, payload)
+                submission = self._submit_to_one(
+                    candidate_id, client_company_id, payload, changed_by=changed_by
+                )
             except (ConflictError, BusinessRuleError, EntityNotFoundError) as exc:
                 skipped += 1
                 results.append(
@@ -123,6 +129,8 @@ class CandidateMatchingService:
         candidate_id: uuid.UUID,
         client_company_id: uuid.UUID,
         payload: BulkSubmitRequest,
+        *,
+        changed_by: str | None = None,
     ) -> CandidateSubmission:
         self.clients.get(client_company_id)
         submission = self.submissions.create(
@@ -134,7 +142,8 @@ class CandidateMatchingService:
         )
         for status in self._transition_path(payload.target_status):
             submission = self.submissions.transition(
-                submission.id, CandidateSubmissionTransition(status=status)
+                submission.id,
+                CandidateSubmissionTransition(status=status, changed_by=changed_by),
             )
         return submission
 

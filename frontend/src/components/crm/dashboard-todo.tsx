@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CalendarCheck2, CheckCircle2, ListTodo, X } from "lucide-react";
+import { CalendarCheck2, Check, CheckCircle2, ListTodo, ShieldOff, X } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,24 @@ export function DashboardTodo({ items }: { items: CockpitItem[] }) {
     setRowError(taskId, null);
     try {
       await resolveTask(taskId, { outcome: "no_response" });
+      removeRow(taskId);
+    } catch {
+      setRowError(taskId, "Konnte nicht geschlossen werden - bitte erneut versuchen.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Schlichtes "Erledigt" fuer alles, was keinen Kalendereintrag braucht -
+  // abgearbeitet oder anderweitig geklaert. "Nicht relevant" ist bewusst ein
+  // eigener Abschlussgrund (nicht unter "done" mitgezaehlt), damit sich
+  // spaeter auswerten laesst, wie oft der Mail-Agent eine Aufgabe faelschlich
+  // erzeugt (Werbemail, Fehlzuordnung) - siehe Backend schemas/task.py.
+  async function handleResolve(taskId: string, outcome: "done" | "not_relevant") {
+    setBusyId(taskId);
+    setRowError(taskId, null);
+    try {
+      await resolveTask(taskId, { outcome });
       removeRow(taskId);
     } catch {
       setRowError(taskId, "Konnte nicht geschlossen werden - bitte erneut versuchen.");
@@ -152,6 +170,18 @@ export function DashboardTodo({ items }: { items: CockpitItem[] }) {
                     }}
                   >
                     <CalendarCheck2 size={13} /> Gespräch vereinbart
+                  </Button>
+                  <Button variant="outline" size="sm" disabled={isBusy} onClick={() => handleResolve(taskId, "done")}>
+                    <Check size={13} /> Erledigt
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isBusy}
+                    onClick={() => handleResolve(taskId, "not_relevant")}
+                    title="Fehlzuordnung des Mail-Agenten (Werbemail, falscher Treffer) - wird separat ausgewertet."
+                  >
+                    <ShieldOff size={13} /> Nicht relevant
                   </Button>
                 </div>
               </div>

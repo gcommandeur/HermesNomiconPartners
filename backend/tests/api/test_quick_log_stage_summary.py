@@ -414,10 +414,118 @@ def test_stage_summary_counts_across_multiple_submissions(client: TestClient) ->
     data = summary.json()
     assert data["qualification_call"] == 2
     assert data["cv_in"] == 1
-    assert data["cv_out"] == 0
+    # Submission A wurde per PATCH .../transition (Kanban-Drag) nach cv_out
+    # bewegt, OHNE dass dafuer ein SubmissionFeedback-Eintrag mit stage=
+    # "cv_out" existiert - stage_summary() zaehlt seit der Umstellung auf
+    # die echte Statuswechsel-Historie (AuditLog) trotzdem korrekt 1 statt
+    # faelschlich 0 (Nutzer-Feedback "KPIs stimmen nicht", Punkt 3a - genau
+    # dieser Fall war der gemeldete Zaehlfehler).
+    assert data["cv_out"] == 1
     assert data["interview"] == 1
     assert data["offer"] == 0
     assert data["placement"] == 0
+
+
+def test_stage_summary_counts_pure_kanban_drag_without_any_feedback(
+    client: TestClient,
+) -> None:
+    """Kernfall des gemeldeten Bugs: ein Prozess wird NUR per Kanban-Drag
+    (PATCH .../transition) bewegt, es wird nie irgendein Feedback-Eintrag
+    angelegt - jede erreichte Stufe muss trotzdem korrekt gezaehlt werden."""
+    candidate = _create_candidate(client, "PureDrag")
+    company = client.post("/api/v1/clients", json={"name": "Kanzlei PureDrag"}).json()
+    submission = client.post(
+        "/api/v1/submissions",
+        json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
+    ).json()
+    for target in ("cv_in", "cv_out"):
+        response = client.patch(
+            f"/api/v1/submissions/{submission['id']}/transition", json={"status": target}
+        )
+        assert response.status_code == 200, response.text
+
+    summary = client.get(f"/api/v1/candidates/{candidate['id']}/stage-summary").json()
+
+    assert summary["qualification_call"] == 1
+    assert summary["cv_in"] == 1
+    assert summary["cv_out"] == 1
+    assert summary["interview"] == 0
+
+
+def test_stage_summary_counts_offer_reached_via_transition_alone(
+    client: TestClient,
+) -> None:
+    """Ein Prozess kann per Drag auf 'offer' stehen, OHNE dass je das
+    Offer-Formular (POST .../offers) ausgefuellt wurde - die Pipeline-
+    Kennzahl zaehlt trotzdem den erreichten Status, nicht das (fehlende)
+    Kindobjekt."""
+    candidate = _create_candidate(client, "OfferViaTransitionOnly")
+    company = client.post("/api/v1/clients", json={"name": "Kanzlei OfferOnly"}).json()
+    submission = client.post(
+        "/api/v1/submissions",
+        json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
+    ).json()
+    for target in ("cv_in", "cv_out", "interview", "offer"):
+        response = client.patch(
+            f"/api/v1/submissions/{submission['id']}/transition", json={"status": target}
+        )
+        assert response.status_code == 200, response.text
+
+    summary = client.get(f"/api/v1/candidates/{candidate['id']}/stage-summary").json()
+
+    assert summary["offer"] == 1
+    assert summary["placement"] == 0
+
+
+def test_quick_log_records_changed_by_on_the_resulting_status_change(
+    client: TestClient,
+) -> None:
+    """Regressionsschutz (Nutzer-Feedback "Änderungshistorie...", Punkt 4):
+    quick-log trieb den Prozess bisher intern per transition() voran, OHNE
+    changed_by zu setzen."""
+    from tests.conftest import TEST_USER_EMAIL
+
+    candidate = _create_candidate(client, "QuickLogChangedBy")
+    client.post(
+        f"/api/v1/candidates/{candidate['id']}/quick-log",
+        json={
+            "stage": "cv_in",
+            "feedback_type": "internal",
+            "feedback_text": "Direkt bis Shortlist.",
+            "received_at": "2026-07-01T09:00:00",
+        },
+    )
+
+    history = client.get(f"/api/v1/candidates/{candidate['id']}/history").json()
+    status_changes = [entry for entry in history if entry["action"] == "status_changed"]
+    assert status_changes
+    assert all(entry["changed_by"] == TEST_USER_EMAIL for entry in status_changes)
+
+
+def test_feedback_with_target_status_records_changed_by(client: TestClient) -> None:
+    """Regressionsschutz (Nutzer-Feedback "Änderungshistorie...", Punkt 4):
+    ein per Feedback-target_status ausgeloester Statuswechsel liess
+    changed_by bisher ebenfalls leer."""
+    from tests.conftest import TEST_USER_EMAIL
+
+    candidate = _create_candidate(client, "FeedbackTargetStatusChangedBy")
+    submission = client.post(
+        "/api/v1/submissions", json={"candidate_id": candidate["id"]}
+    ).json()
+    client.post(
+        f"/api/v1/submissions/{submission['id']}/feedback",
+        json={
+            "feedback_type": "internal",
+            "feedback_text": "Shortlist erreicht.",
+            "received_at": "2026-07-02T09:00:00",
+            "target_status": "cv_in",
+        },
+    )
+
+    history = client.get(f"/api/v1/candidates/{candidate['id']}/history").json()
+    status_changes = [entry for entry in history if entry["action"] == "status_changed"]
+    assert status_changes
+    assert all(entry["changed_by"] == TEST_USER_EMAIL for entry in status_changes)
 
 
 def test_stage_summary_returns_404_for_unknown_candidate(client: TestClient) -> None:

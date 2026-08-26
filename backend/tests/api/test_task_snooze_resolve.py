@@ -63,6 +63,44 @@ class TestResolve:
 
         assert response.status_code == 200, response.text
         assert response.json()["status"] == "done"
+        assert response.json()["resolution_outcome"] == "no_response"
+
+    def test_resolve_done_closes_task_without_calendar_event(self, client: TestClient) -> None:
+        """Schlichtes 'Erledigt' fuer Aufgaben, die einfach abgearbeitet
+        wurden - kein Kalendereintrag, keine Rueckfrage noetig."""
+        task = _create_task(client)
+
+        response = client.post(f"/api/v1/tasks/{task['id']}/resolve", json={"outcome": "done"})
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["status"] == "done"
+        assert body["resolution_outcome"] == "done"
+
+        events = client.get("/api/v1/calendar-events").json()
+        items = events["items"] if isinstance(events, dict) else events
+        assert not any("Task Test" in event["title"] for event in items)
+
+    def test_resolve_not_relevant_closes_task_and_is_distinguishable_from_done(
+        self, client: TestClient
+    ) -> None:
+        """Eigener Abschlussgrund fuer Fehlzuordnungen des Mail-Agenten
+        (Werbemail, falscher Treffer) - separat auswertbar, nicht unter
+        'done' mitgezaehlt."""
+        task = _create_task(client)
+
+        response = client.post(
+            f"/api/v1/tasks/{task['id']}/resolve", json={"outcome": "not_relevant"}
+        )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["status"] == "done"
+        assert body["resolution_outcome"] == "not_relevant"
+
+    def test_resolution_outcome_is_null_while_task_is_open(self, client: TestClient) -> None:
+        task = _create_task(client)
+        assert task["resolution_outcome"] is None
 
     def test_resolve_meeting_scheduled_creates_calendar_event_and_closes_task(
         self, client: TestClient
@@ -81,6 +119,7 @@ class TestResolve:
         assert response.status_code == 200, response.text
         body = response.json()
         assert body["status"] == "done"
+        assert body["resolution_outcome"] == "meeting_scheduled"
 
         events = client.get("/api/v1/calendar-events").json()
         items = events["items"] if isinstance(events, dict) else events

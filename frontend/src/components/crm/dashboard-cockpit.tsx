@@ -8,13 +8,55 @@ import { DemoNotice } from "@/components/crm/demo-notice";
 import { WeeklyChartLoader } from "@/components/crm/weekly-chart-loader";
 import { DashboardTodo } from "@/components/crm/dashboard-todo";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import type { Cockpit } from "@/lib/api/types";
+import type { Cockpit, CockpitItem } from "@/lib/api/types";
 
+/** Echte statt hartcodierte Warn-Chips (vorher zwei der drei Meldungen als
+ * fixer Text, ohne Datenbezug - siehe Nutzer-Feedback "Prozesse
+ * abschliessen...", Punkt 1). Beide Zaehl-Meldungen fallen weg, wenn ihr
+ * Wert 0 ist, statt eine falsche "0 ..."-Meldung zu zeigen. */
+function buildWarnings(cockpit: Cockpit): string[] {
+  const overdueCount = cockpit.important.filter(
+    (item: CockpitItem) => item.due_at && new Date(item.due_at).getTime() < Date.now(),
+  ).length;
+  const openInvoiceCount = cockpit.kpis.open_invoice_placement_count;
+
+  const warnings: string[] = [];
+  if (overdueCount > 0) {
+    warnings.push(
+      `${overdueCount} ${overdueCount === 1 ? "Follow-up ist" : "Follow-ups sind"} überfällig und ${overdueCount === 1 ? "braucht" : "brauchen"} eine Entscheidung.`,
+    );
+  }
+  if (openInvoiceCount > 0) {
+    warnings.push(
+      `${openInvoiceCount} ${openInvoiceCount === 1 ? "Placement hat" : "Placements haben"} offenen Rechnungsstatus.`,
+    );
+  }
+  // Prozesse im Status Offer/Placement ohne erfassten Datensatz - unfertige
+  // Erfassungen, die die kaufmaennischen Kennzahlen unterzaehlen (siehe
+  // Backend CockpitRead.data_gaps, Nutzer-Entscheidung "KPIs stimmen
+  // nicht", Punkt 3d).
+  if (cockpit.data_gaps.length > 0) {
+    const count = cockpit.data_gaps.length;
+    warnings.push(
+      `${count} ${count === 1 ? "Prozess hat" : "Prozesse haben"} Status Offer/Placement ohne erfassten Datensatz - Gehalt/Fee nachtragen.`,
+    );
+  }
+  warnings.push("Do-not-touch-Kanzleien werden in Mailing/Geo Mapping ausgeschlossen.");
+  return warnings;
+}
+
+// "CV-Outs" zeigt jetzt cv_outs_reached_count (echte CV_OUT-Transition im
+// Zeitraum) statt vorher faelschlich cockpit.kpis.submissions (das zaehlt
+// im Zeitraum ANGELEGTE Prozesse, unabhaengig vom erreichten Status - siehe
+// Backend schemas/operational.py::CockpitKpis-Docstring, Nutzer-Feedback
+// "KPIs stimmen nicht", Punkt 3b). "Offers"/"Placements" bleiben bewusst
+// die KAUFMAENNISCHEN Zahlen (echte Datensaetze) - dieser Trichter zeigt
+// den Fortschritt von der Erfassung her, nicht die reine Pipeline.
 function buildChartData(cockpit: Cockpit) {
   return [
     ["Quali Calls", cockpit.kpis.qualification_calls],
     ["CV In", cockpit.kpis.cv_available],
-    ["CV-Outs", cockpit.kpis.submissions],
+    ["CV-Outs", cockpit.kpis.cv_outs_reached_count],
     ["Interviews", cockpit.kpis.interviews],
     ["Offers", cockpit.kpis.offers],
     ["Placements", cockpit.kpis.placements],
@@ -35,11 +77,7 @@ export function DashboardCockpit({
   const error = initialError;
 
   const chartData = buildChartData(cockpit);
-  const warnings = [
-    "2 Follow-ups sind überfällig und brauchen heute eine Entscheidung.",
-    "1 Placement hat offenen Rechnungsstatus.",
-    "Do-not-touch-Kanzleien werden in Mailing/Geo Mapping ausgeschlossen.",
-  ];
+  const warnings = buildWarnings(cockpit);
   const quickMetrics: { label: string; value: string | number; Icon: typeof CalendarClock }[] = [
     { label: "Interviews diese Woche", value: cockpit.kpis.interviews, Icon: CalendarClock },
     { label: "Offers offen", value: cockpit.kpis.offers, Icon: FileCheck2 },

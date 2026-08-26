@@ -17,6 +17,7 @@ from cc_crm.schemas.candidate import (
     CvExtractionSuggestion,
 )
 from cc_crm.schemas.pagination import Page
+from cc_crm.schemas.recruiting import AuditLogRead
 from cc_crm.schemas.submission import (
     CandidateQuickLogCreate,
     CandidateQuickLogResult,
@@ -177,6 +178,16 @@ def delete_candidate(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+@router.get("/{candidate_id}/history", response_model=list[AuditLogRead])
+def get_candidate_history(candidate_id: uuid.UUID, session: DatabaseSession) -> list[AuditLogRead]:
+    """Änderungshistorie fürs Kandidatenprofil (Timeline-Tab) - was/wann/
+    durch wen, siehe services/candidates.py::CandidateService.history.
+    Bewusst NICHT admin-only wie GET /audit-logs (das globale Log): die
+    eigene Kandidaten-Historie ist regulärer Bestandteil des Profils."""
+    entries = CandidateService(session).history(candidate_id)
+    return [AuditLogRead.model_validate(entry) for entry in entries]
+
+
 @router.post("/{candidate_id}/anonymize", response_model=CandidateRead)
 def anonymize_candidate(
     candidate_id: uuid.UUID, session: DatabaseSession, admin: AdminUser
@@ -206,11 +217,14 @@ def quick_log_candidate_stage(
     candidate_id: uuid.UUID,
     payload: CandidateQuickLogCreate,
     session: DatabaseSession,
+    current_user: CurrentUser,
 ) -> CandidateQuickLogResult:
     """Quali-Call-Notiz anlegen - startet dabei bei Bedarf automatisch
     einen Prozess (siehe RecruitingProcessService.quick_log), ohne dass vorher
     eine separate "Prozess erstellen"-Aktion noetig ist."""
-    return RecruitingProcessService(session).quick_log(candidate_id, payload)
+    return RecruitingProcessService(session).quick_log(
+        candidate_id, payload, changed_by=current_user.email
+    )
 
 
 @router.get("/{candidate_id}/stage-summary", response_model=CandidateStageSummary)

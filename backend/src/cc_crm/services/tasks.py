@@ -56,6 +56,7 @@ class TaskService(CrudService[Task, TaskCreate, TaskUpdate]):
             )
 
         task.status = TaskStatus.DONE
+        task.resolution_outcome = payload.outcome
         if payload.notes:
             task.description = (
                 f"{task.description}\n\n{payload.notes}" if task.description else payload.notes

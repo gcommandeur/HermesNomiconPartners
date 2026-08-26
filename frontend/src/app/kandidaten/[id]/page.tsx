@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   getActivitiesForCandidate,
   getCandidate,
+  getCandidateHistory,
   getClients,
   getDocumentsForOwner,
   getNotesForCandidate,
@@ -20,6 +21,7 @@ import { AddToMailingButton } from "@/components/crm/add-to-mailing-button";
 import { RegisterRecentCandidate } from "@/components/crm/register-recent-candidate";
 import { CandidateSubmissionStages } from "@/components/crm/candidate-submission-stages";
 import { CandidateProcessLog } from "@/components/crm/candidate-process-log";
+import { CandidateHistoryPanel } from "@/components/crm/candidate-history-panel";
 import { NotesPanel } from "@/components/crm/notes-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +42,7 @@ export default async function CandidateDetailPage({
   const backLink = from === "prozesse"
     ? { href: "/prozesse", label: "Zurück zu Prozesse" }
     : { href: "/kandidaten", label: "Zur Kandidatenliste" };
-  const [result, submissionsResult, clientsResult, activitiesResult, tasksResult, documentsResult, notesResult] = await Promise.all([
+  const [result, submissionsResult, clientsResult, activitiesResult, tasksResult, documentsResult, notesResult, historyResult] = await Promise.all([
     getCandidate(id),
     getSubmissions(),
     getClients(),
@@ -48,6 +50,7 @@ export default async function CandidateDetailPage({
     getTasksForCandidate(id),
     getDocumentsForOwner("candidate", id),
     getNotesForCandidate(id),
+    getCandidateHistory(id),
   ]);
   const candidate = result.data;
   if (!candidate) notFound();
@@ -57,6 +60,7 @@ export default async function CandidateDetailPage({
   const tasks = tasksResult.data;
   const documents = documentsResult.data;
   const notes = notesResult.data;
+  const history = historyResult.data;
   const clientName = (clientId: string | null) => clientId ? (clientsResult.data.find((client) => client.id === clientId)?.name ?? "Kanzlei") : "Kanzlei offen";
   const anonymousProfile = candidate.short_profile ?? [
     `${candidate.job_title ?? "Kandidat/in"} mit Schwerpunkt ${candidate.summary ?? "Steuern / Beratung"}.`,
@@ -223,6 +227,12 @@ export default async function CandidateDetailPage({
           </div>
         </TabsContent>
         <TabsContent value="Timeline">
+          {/* Änderungshistorie (was/wann/durch wen, aus dem AuditLog) steht
+           * bewusst ALS EIGENER BLOCK oberhalb der Aktivitäten-Liste - klar
+           * getrennt, da Aktivitäten (Mails, Anrufe, ...) keine changed_by-
+           * Spalte tragen und beide Datenquellen unterschiedliche Fragen
+           * beantworten ("was ist passiert" vs. "wer hat es ausgelöst"). */}
+          <CandidateHistoryPanel entries={history} />
           <div className="space-y-2">
             {activities.map((activity) => (
               <Card key={activity.id}>

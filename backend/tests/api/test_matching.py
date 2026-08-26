@@ -89,6 +89,30 @@ def test_bulk_submit_creates_cv_out_submissions_for_all_targets(client: TestClie
     assert all(match["already_submitted"] for match in matches)
 
 
+def test_bulk_submit_records_changed_by_on_the_resulting_status_changes(
+    client: TestClient,
+) -> None:
+    """Regressionsschutz (Nutzer-Feedback "Änderungshistorie...", Punkt 4):
+    bulk-submit trieb Prozesse bisher intern per transition() voran, OHNE
+    changed_by zu setzen - jeder resultierende status_changed-Eintrag war
+    keinem Nutzer zuzuordnen."""
+    from tests.conftest import TEST_USER_EMAIL
+
+    candidate = _create_candidate(client)
+    kanzlei = _create_client_company(client, name="Kanzlei ChangedBy")
+
+    response = client.post(
+        f"/api/v1/candidates/{candidate['id']}/bulk-submit",
+        json={"client_company_ids": [kanzlei["id"]]},
+    )
+    assert response.status_code == 200, response.text
+
+    history = client.get(f"/api/v1/candidates/{candidate['id']}/history").json()
+    status_changes = [entry for entry in history if entry["action"] == "status_changed"]
+    assert status_changes
+    assert all(entry["changed_by"] == TEST_USER_EMAIL for entry in status_changes)
+
+
 def test_bulk_submit_skips_duplicates_without_failing_the_batch(client: TestClient) -> None:
     candidate = _create_candidate(client)
     kanzlei_a = _create_client_company(client, name="Kanzlei A")

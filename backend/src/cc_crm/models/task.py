@@ -56,3 +56,10 @@ class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     source_mail_message_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("mail_messages.id", ondelete="SET NULL")
     )
+    # Abschlussgrund von POST /tasks/{id}/resolve (siehe schemas/task.py::
+    # TaskResolveRequest.outcome) - bisher NUR ephemer verarbeitet (loeste
+    # nur status=DONE aus, wurde nirgends gespeichert). Jetzt persistiert,
+    # damit z.B. "not_relevant" spaeter auswertbar ist (Nutzer-Vorgabe:
+    # "damit man auswerten kann, wie oft der Mail-Agent danebenliegt").
+    # Nullable: ueber snooze() geschlossene/noch offene Tasks haben keinen.
+    resolution_outcome: Mapped[str | None] = mapped_column(String(40))

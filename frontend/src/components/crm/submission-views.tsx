@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Ban, Building2, CalendarPlus, ChevronDown, Columns3, Download, Eye, List, ShieldAlert } from "lucide-react";
+import { Archive, ArchiveRestore, Ban, Building2, CalendarPlus, ChevronDown, Columns3, Download, Eye, List, ShieldAlert } from "lucide-react";
 import type {
   Candidate,
   CandidateSubmission,
@@ -20,6 +20,7 @@ import { InterviewModal } from "@/components/crm/interview-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { apiDelete, apiPatch } from "@/lib/api/client";
+import { archiveSubmission, unarchiveSubmission } from "@/lib/api/queries";
 import { useCurrentUser } from "@/lib/api/hooks";
 import { useInterviewMutations } from "@/lib/use-interview-mutations";
 import { formatTimeFromIso, toLocalIsoString } from "@/lib/calendar-utils";
@@ -121,6 +122,12 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
   // gefiltert, da Prozesse hier bereits vollstaendig geladen sind (siehe
   // getSubmissions() in lib/api/queries.ts, keine Server-Pagination).
   const [mineOnly, setMineOnly] = useState(false);
+  // Abgeschlossene Placements (archived_at gesetzt) sind standardmaessig
+  // aus dem Kanban ausgeblendet (Nutzer-Vorgabe "Nach Placement aus der
+  // Prozessuebersicht herausnehmen") - ueber diesen Filter wieder
+  // einblendbar, rein client-seitig (die Daten bleiben unveraendert
+  // geladen, betrifft nur die Kanban-/Tabellen-Anzeige hier).
+  const [showArchived, setShowArchived] = useState(false);
   const { data: currentUserData } = useCurrentUser();
   const currentUserId = currentUserData?.data.id;
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -190,6 +197,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase();
     return items.filter((item) => {
+      if (!showArchived && item.archived_at) return false;
       if (mineOnly && item.owner_user_id !== currentUserId) return false;
       if (!term) return true;
       const haystack = [
@@ -199,7 +207,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
       return haystack.includes(term);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, search, mineOnly, currentUserId, candidates, clients, contacts]);
+  }, [items, search, mineOnly, showArchived, currentUserId, candidates, clients, contacts]);
 
   const exportRows = filteredItems.map((item) => ({
     Kandidat: candidateName(item.candidate_id),
@@ -277,6 +285,34 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
     }
   }
 
+  /** Expliziter Abschluss NACH einem Placement (siehe Backend services/
+   * submissions.py::CandidateSubmissionService.archive) - blendet die Karte
+   * aus dem Kanban aus, ohne Status/Historie anzutasten. Optimistic UI wie
+   * applyTransition oben: sofort lokal setzen, bei Fehler zurueckrollen. */
+  async function toggleArchived(submissionId: string, archive: boolean) {
+    const previous = items;
+    setItems((current) =>
+      current.map((item) =>
+        item.id === submissionId
+          ? { ...item, archived_at: archive ? new Date().toISOString() : null }
+          : item,
+      ),
+    );
+    try {
+      const updated = archive
+        ? await archiveSubmission(submissionId)
+        : await unarchiveSubmission(submissionId);
+      setItems((current) =>
+        current.map((item) => (item.id === submissionId ? updated : item)),
+      );
+    } catch (error) {
+      setItems(previous);
+      setMessage(
+        error instanceof Error ? error.message : "Abschließen fehlgeschlagen.",
+      );
+    }
+  }
+
   // Optimistic-UI-Mutationen fuer Interview-Runden - ausgelagert in
   // lib/use-interview-mutations.ts, damit dieselbe Logik hier UND im
   // Interview-Panel der Stufen-Bearbeitung (stage-edit-modal.tsx) genutzt
@@ -320,12 +356,25 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
           <Button size="sm" variant={view === "table" ? "dark" : "outline"} onClick={() => setView("table")}><List size={14} />Tabelle</Button>
         </div>
       </div>
-      <FilterBar
-        placeholder="Nach Kandidat, Kanzlei, Ansprechpartner oder Status suchen"
-        value={search}
-        onChange={setSearch}
-        ownerFilter={{ mineOnly, onChange: setMineOnly }}
-      />
+      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center">
+        <div className="flex-1">
+          <FilterBar
+            placeholder="Nach Kandidat, Kanzlei, Ansprechpartner oder Status suchen"
+            value={search}
+            onChange={setSearch}
+            ownerFilter={{ mineOnly, onChange: setMineOnly }}
+          />
+        </div>
+        <Button
+          size="sm"
+          variant={showArchived ? "dark" : "outline"}
+          onClick={() => setShowArchived((current) => !current)}
+          title="Abgeschlossene Placements sind standardmäßig ausgeblendet - Historie/KPIs/Rechnungsstatus bleiben davon unberührt."
+        >
+          <Archive size={14} />
+          {showArchived ? "Abgeschlossene ausblenden" : "Abgeschlossene anzeigen"}
+        </Button>
+      </div>
       {message && <div className="mb-4 flex items-center gap-2 rounded-lg border border-[#D8DADF]/20 bg-[#102A4C]/65 p-3 text-xs text-[#CBD5E1]"><ShieldAlert size={15} />{message}</div>}
 
       {clientPrompt && (
@@ -462,6 +511,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                           <span className="shrink-0 text-[10px] text-[#94A3B8]">{formatDate(item.follow_up_at)}</span>
                           <div className="flex shrink-0 items-center gap-0.5">
                             {isHot(item.status) && <span className="rounded-full bg-[#1F5FA8]/20 px-1.5 py-0.5 text-[9px] text-[#69A7EA]">Hot</span>}
+                            {item.archived_at && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] text-emerald-300">Abgeschlossen</span>}
                             <button
                               type="button"
                               title="Kanzlei hinzufügen/ändern"
@@ -494,6 +544,26 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                                 className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
                               >
                                 <CalendarPlus size={12} />
+                              </button>
+                            )}
+                            {item.status === "placement" && !item.archived_at && (
+                              <button
+                                type="button"
+                                title="Prozess abschließen (verschwindet aus dem Kanban, Historie/KPIs/Rechnungsstatus bleiben erhalten)"
+                                onClick={(event) => { event.stopPropagation(); void toggleArchived(item.id, true); }}
+                                className="rounded p-1 text-[#94A3B8] hover:bg-emerald-950/40 hover:text-emerald-300"
+                              >
+                                <Archive size={12} />
+                              </button>
+                            )}
+                            {item.status === "placement" && item.archived_at && (
+                              <button
+                                type="button"
+                                title="Abschluss zurücknehmen"
+                                onClick={(event) => { event.stopPropagation(); void toggleArchived(item.id, false); }}
+                                className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
+                              >
+                                <ArchiveRestore size={12} />
                               </button>
                             )}
                             <button

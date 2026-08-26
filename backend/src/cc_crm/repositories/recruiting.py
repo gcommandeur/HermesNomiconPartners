@@ -1,7 +1,7 @@
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from cc_crm.models.base import Base
@@ -77,4 +77,29 @@ class AuditLogRepository(SQLAlchemyRepository[AuditLog]):
         statement = (
             select(AuditLog).order_by(AuditLog.changed_at.desc()).offset(offset).limit(limit)
         )
+        return self.session.scalars(statement).all()
+
+    def list_for_candidate(
+        self, candidate_id: uuid.UUID, submission_ids: Sequence[uuid.UUID]
+    ) -> Sequence[AuditLog]:
+        """Aenderungshistorie fuer die Kandidat-Detailseite (Nutzer-Feedback
+        "Änderungshistorie im Kandidatenprofil sichtbar machen") - deckt
+        sowohl direkt am Kandidaten geloggte Aktionen (entity_type=
+        "candidate", z.B. "deleted"/"anonymized") als auch Aktionen an ALLEN
+        Prozessen des Kandidaten ab (entity_type="candidate_submission", z.B.
+        "status_changed"/"archived") - ohne Letzteres wuerden Statuswechsel,
+        die den grossen Teil der Historie ausmachen, komplett fehlen. Neueste
+        zuerst."""
+        candidate_filter = and_(
+            AuditLog.entity_type == "candidate", AuditLog.entity_id == candidate_id
+        )
+        if submission_ids:
+            submission_filter = and_(
+                AuditLog.entity_type == "candidate_submission",
+                AuditLog.entity_id.in_(submission_ids),
+            )
+            entity_filter = or_(candidate_filter, submission_filter)
+        else:
+            entity_filter = candidate_filter
+        statement = select(AuditLog).where(entity_filter).order_by(AuditLog.changed_at.desc())
         return self.session.scalars(statement).all()

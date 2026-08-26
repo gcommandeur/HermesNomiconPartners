@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from cc_crm.api.dependencies import DatabaseSession
+from cc_crm.api.dependencies import CurrentUser, DatabaseSession
 from cc_crm.schemas.matching import BulkSubmitRequest, BulkSubmitResponse, ClientMatchRead
 from cc_crm.services.matching import CandidateMatchingService
 
@@ -24,5 +24,8 @@ def bulk_submit_candidate(
     candidate_id: uuid.UUID,
     payload: BulkSubmitRequest,
     session: DatabaseSession,
+    current_user: CurrentUser,
 ) -> BulkSubmitResponse:
-    return CandidateMatchingService(session).bulk_submit(candidate_id, payload)
+    return CandidateMatchingService(session).bulk_submit(
+        candidate_id, payload, changed_by=current_user.email
+    )

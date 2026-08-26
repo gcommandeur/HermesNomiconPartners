@@ -81,6 +81,10 @@ class CandidateSubmissionRead(CandidateSubmissionBase, EntityRead):
     momentum: int | None = None
     closing_probability: float | None = None
     closing_status: ClosingStatus | None = None
+    # Expliziter Abschluss NACH einem Placement (siehe models/submission.py::
+    # archived_at) - None ist der Normalfall, blendet den Prozess NUR aus
+    # dem Kanban aus (client-seitig gefiltert), aendert sonst nichts.
+    archived_at: datetime | None = None
 
 
 class ClosingScoreInput(BaseModel):

@@ -348,6 +348,10 @@ export interface CandidateSubmission extends Entity {
    * Sichtbarkeitsgrenze - nicht zu verwechseln mit dem Freitextfeld `owner`
    * oben, siehe Backend models/submission.py::owner_user_id). */
   owner_user_id?: string | null;
+  /** Expliziter Abschluss NACH einem Placement (POST /submissions/{id}/
+   * archive) - blendet den Prozess aus dem Kanban aus, ohne Status/
+   * Historie anzutasten. null ist der Normalfall (nicht abgeschlossen). */
+  archived_at?: string | null;
 }
 
 /** Freitext-Feedback zu einem Prozess (siehe Backend models/recruiting.py::
@@ -568,21 +572,49 @@ export interface RecruitingKpis {
   average_fee_per_placement: number | null;
 }
 
+/** Zwei unterschiedliche Fragen, bewusst getrennt (Backend schemas/
+ * operational.py::CockpitKpis-Docstring fuer die volle Begruendung):
+ * PIPELINE-Kennzahlen (*_reached_count/interviews) aus der echten
+ * Statuswechsel-Historie ("wurde dieser Schritt im Kanban gemacht"),
+ * KAUFMAENNISCHE Kennzahlen (offers/placements/expected_fees/realized_fees)
+ * aus den gepflegten Offer-/Placement-Datensaetzen (Gehalt/Fee haengen nur
+ * dort). Wo beide nebeneinander stehen, ist die Differenz eine Kennzahl
+ * fuer sich - siehe Cockpit.data_gaps. */
+export interface CockpitKpis {
+  qualification_calls: number;
+  cv_available: number;
+  /** "Neue Prozesse" - im Zeitraum ANGELEGTE Prozesse (nicht: erreichte
+   * CV-Out-Stufe, trotz des Feldnamens - siehe cv_outs_reached_count). */
+  submissions: number;
+  /** PIPELINE: im Zeitraum tatsaechlich CV_OUT erreicht (Transition). */
+  cv_outs_reached_count: number;
+  /** PIPELINE: im Zeitraum tatsaechlich INTERVIEW erreicht (Transition). */
+  interviews: number;
+  /** KAUFMAENNISCH: echte Offer-Objekte, im Zeitraum angelegt. */
+  offers: number;
+  /** PIPELINE: im Zeitraum tatsaechlich OFFER erreicht (Transition). */
+  offer_stage_reached_count: number;
+  /** KAUFMAENNISCH: echte Placement-Objekte, im Zeitraum angelegt. */
+  placements: number;
+  /** PIPELINE: im Zeitraum tatsaechlich PLACEMENT erreicht (Transition). */
+  placement_stage_reached_count: number;
+  expected_fees: number;
+  realized_fees: number;
+  /** DISTINCT Placements mit mindestens einer nicht-bezahlten Fee (draft/
+   * issued/due) - unabhaengig vom gewaehlten `period`. */
+  open_invoice_placement_count: number;
+}
+
 export interface Cockpit {
   period: string;
   important: CockpitItem[];
   hot_processes: CockpitItem[];
+  /** Prozesse im Status OFFER/PLACEMENT ohne zugehoerigen Offer-/Placement-
+   * Datensatz - unfertige Erfassungen (Kanban-Drag ohne ausgefuelltes
+   * Formular). */
+  data_gaps: CockpitItem[];
   recruiting_kpis: RecruitingKpis;
-  kpis: {
-    qualification_calls: number;
-    cv_available: number;
-    submissions: number;
-    interviews: number;
-    offers: number;
-    placements: number;
-    expected_fees: number;
-    realized_fees: number;
-  };
+  kpis: CockpitKpis;
   rates: {
     submission_to_interview: number;
     interview_to_offer: number;
@@ -641,9 +673,12 @@ export interface Task extends Entity {
   /** Nur bei automatisch aus einer Mail erzeugten Tasks gesetzt (siehe
    * Backend services/mail_sync.py). */
   source_mail_message_id?: string | null;
+  /** Abschlussgrund von POST /tasks/{id}/resolve - null, solange offen oder
+   * per snooze() zurueckgestellt (kein Abschluss). */
+  resolution_outcome?: TaskResolveOutcome | null;
 }
 
-export type TaskResolveOutcome = "no_response" | "meeting_scheduled";
+export type TaskResolveOutcome = "no_response" | "meeting_scheduled" | "done" | "not_relevant";
 
 export interface DocumentMeta extends Entity {
   owner_type: "candidate" | "client" | "submission" | "placement" | "fee";

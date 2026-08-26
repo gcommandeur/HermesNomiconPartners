@@ -84,14 +84,52 @@ class CockpitItem(BaseModel):
 
 
 class CockpitKpis(BaseModel):
+    """Zwei unterschiedliche Fragen, bewusst GETRENNT ausgewiesen (Nutzer-
+    Entscheidung "KPIs stimmen nicht", Punkt 3d): Pipeline-Kennzahlen ("wie
+    viele Prozesse haben Stufe X ERREICHT") beruhen durchgehend auf der
+    echten Statuswechsel-Historie (AuditLog) - das bildet ab, was im Kanban
+    tatsaechlich passiert, unabhaengig davon, ob ein zugehoeriges Formular
+    ausgefuellt wurde. Kaufmaennische Kennzahlen (Umsatz, Ø Fee, Rechnungs-
+    status) beruhen weiterhin auf den gepflegten Offer-/Placement-
+    Datensaetzen, weil dort Gehalt/Fee/Rechnungsdaten haengen - ein reiner
+    Statuswechsel liefert die nicht. Wo beide nebeneinander stehen (offer/
+    offer_stage_reached_count, placements/placement_stage_reached_count),
+    ist die Differenz eine Kennzahl fuer sich: sie zeigt unfertige
+    Erfassungen (siehe CockpitRead.data_gaps)."""
+
     qualification_calls: int
     cv_available: int
+    # "Neue Prozesse" - im Zeitraum ANGELEGTE CandidateSubmissions
+    # (unabhaengig vom aktuellen/erreichten Status). Historisch als
+    # "CV-Outs" beschriftet, was NICHT stimmte (siehe cv_outs_reached_count
+    # fuer die tatsaechliche CV-Out-Pipeline-Kennzahl) - Feldname bleibt aus
+    # Kompatibilitaetsgruenden, nur die Bedeutung/Beschriftung wurde
+    # richtiggestellt.
     submissions: int
+    # PIPELINE: im Zeitraum tatsaechlich CV_OUT erreicht (Statuswechsel-
+    # Transition, nicht Anlagezeitpunkt der Submission).
+    cv_outs_reached_count: int
+    # PIPELINE: im Zeitraum tatsaechlich INTERVIEW erreicht (Transition) -
+    # vorher: aktueller Bestand an Submissions mit status==interview,
+    # UNABHAENGIG vom period-Zeitraum (Inkonsistenz zu offers/placements
+    # unten, siehe Nutzer-Feedback Punkt 3c).
     interviews: int
+    # KAUFMAENNISCH: echte Offer-Objekte, im Zeitraum ANGELEGT.
     offers: int
+    # PIPELINE: im Zeitraum tatsaechlich OFFER erreicht (Transition).
+    offer_stage_reached_count: int
+    # KAUFMAENNISCH: echte Placement-Objekte, im Zeitraum ANGELEGT.
     placements: int
+    # PIPELINE: im Zeitraum tatsaechlich PLACEMENT erreicht (Transition).
+    placement_stage_reached_count: int
     expected_fees: float
     realized_fees: float
+    # Anzahl DISTINCT Placements mit mindestens einer Fee im Status
+    # draft/issued/due (nicht paid/cancelled) - Basis fuer den "X Placement(s)
+    # haben offenen Rechnungsstatus"-Hinweis im Cockpit (vorher ein
+    # hartcodierter Platzhaltertext, siehe Nutzer-Feedback "Prozesse
+    # abschliessen...", Punkt 1).
+    open_invoice_placement_count: int
 
 
 class CockpitRates(BaseModel):
@@ -119,6 +157,10 @@ class RecruitingKpis(BaseModel):
     haetten, um aussagekraeftig zu sein. None, solange keine einzige
     Placement/Interview-Transition vorliegt (keine Kennzahl vorspiegeln)."""
 
+    # Gemessen ab PROZESS-ANLAGE (CandidateSubmission.created_at) bis zur
+    # Placement-Erfassung, NICHT ab CV-Out o.ae. - Nutzer-Entscheidung Punkt
+    # 3e: das entspricht dem tatsaechlichen Ablauf, hier nur zur Klarheit
+    # explizit benannt statt implizit "irgendein Start".
     time_to_fill_days: float | None
     time_to_interview_days: float | None
     average_fee_per_placement: float | None
@@ -132,3 +174,10 @@ class CockpitRead(BaseModel):
     recruiting_kpis: RecruitingKpis
     rates: CockpitRates
     sourcing: SourcingFunnel
+    # Prozesse im Status OFFER/PLACEMENT OHNE zugehoerigen Offer-/Placement-
+    # Datensatz - unfertige Erfassungen (Kanban-Drag ohne ausgefuelltes
+    # Formular), die die kaufmaennischen Kennzahlen (offers/placements)
+    # unterzaehlen wuerden. Sichtbar machen statt nur die Differenz zu den
+    # Pipeline-Kennzahlen stillschweigend hinnehmen (Nutzer-Entscheidung
+    # Punkt 3d).
+    data_gaps: list[CockpitItem]

@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from cc_crm.core.config import get_settings
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.enums import Abschlussart, CandidateStatus, Rolle
+from cc_crm.models.recruiting import AuditLog
+from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.user import User
 from cc_crm.repositories.candidates import CandidateRepository
 from cc_crm.repositories.notes import NoteRepository
@@ -112,6 +114,23 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         candidate = super().get(entity_id)
         self._attach_ghosting_flags([candidate])
         return candidate
+
+    def history(self, entity_id: uuid.UUID) -> list[AuditLog]:
+        """Aenderungshistorie fuers Kandidatenprofil (Nutzer-Feedback
+        "Änderungshistorie im Kandidatenprofil sichtbar machen") - deckt
+        Aktionen am Kandidaten selbst UND an all seinen Prozessen ab (siehe
+        repositories/recruiting.py::AuditLogRepository.list_for_candidate),
+        da die meisten Eintraege (Stufenwechsel) an der jeweiligen
+        CandidateSubmission haengen, nicht am Kandidaten."""
+        self.get(entity_id)
+        submission_ids = list(
+            self.session.scalars(
+                select(CandidateSubmission.id).where(
+                    CandidateSubmission.candidate_id == entity_id
+                )
+            ).all()
+        )
+        return list(self.audit_logs.list_for_candidate(entity_id, submission_ids))
 
     def update(self, entity_id: uuid.UUID, payload: CandidateUpdate) -> Candidate:
         """Stempelt cv_in_recorded_at, sobald cv_available echt (neu) auf

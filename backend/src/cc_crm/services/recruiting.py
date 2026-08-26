@@ -5,7 +5,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import TypeVar
 
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from cc_crm.core.config import get_settings
@@ -15,7 +15,7 @@ from cc_crm.models.calendar_event import CalendarEvent
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.enums import CalendarEventType, SubmissionStatus
-from cc_crm.models.recruiting import Fee, Interview, Offer, Placement, SubmissionFeedback
+from cc_crm.models.recruiting import AuditLog, Fee, Interview, Offer, Placement, SubmissionFeedback
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.user import User
 from cc_crm.repositories.activities import ActivityRepository
@@ -80,6 +80,48 @@ INTERVIEW_CALENDAR_REMINDER_MINUTES = 60
 ChildT = TypeVar("ChildT", bound=Base)
 
 
+def stage_reached_counts(
+    session: Session,
+    submission_ids: list[uuid.UUID],
+    *,
+    since: datetime | None = None,
+) -> dict[SubmissionStatus, set[uuid.UUID]]:
+    """Fuer jede SubmissionStatus-Stufe: die Menge der `submission_ids`, die
+    laut Audit-Log (action='status_changed', siehe services/submissions.py::
+    transition()) MINDESTENS EINMAL dorthin gewechselt sind - die reale
+    Statuswechsel-Historie statt SubmissionFeedback-Eintraegen oder
+    Interview/Offer/Placement-Kindobjekten (siehe stage_summary() unten fuer
+    die ausfuehrliche Begruendung). `since` optional: nur Transitionen AB
+    diesem Zeitpunkt zaehlen (fuer period-gescopte Cockpit-Kennzahlen, siehe
+    services/operational.py::CockpitService).
+
+    Oeffentliche Modulfunktion statt Methode, damit CockpitService dieselbe
+    Logik fuer die Pipeline-Kennzahlen wiederverwenden kann, ohne sie zu
+    duplizieren."""
+    reached: dict[SubmissionStatus, set[uuid.UUID]] = {
+        status: set() for status in SubmissionStatus
+    }
+    if not submission_ids:
+        return reached
+    filters = [
+        AuditLog.entity_type == "candidate_submission",
+        AuditLog.entity_id.in_(submission_ids),
+        AuditLog.action == "status_changed",
+    ]
+    if since is not None:
+        filters.append(AuditLog.changed_at >= since)
+    for row in session.scalars(select(AuditLog).where(*filters)).all():
+        raw_status = (row.new_values or {}).get("status")
+        if not isinstance(raw_status, str):
+            continue
+        try:
+            target_status = SubmissionStatus(raw_status)
+        except ValueError:
+            continue
+        reached[target_status].add(row.entity_id)
+    return reached
+
+
 class RecruitingProcessService:
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -101,7 +143,11 @@ class RecruitingProcessService:
         return list(self.feedback.list_for_submission(submission_id))
 
     def create_feedback(
-        self, submission_id: uuid.UUID, payload: FeedbackCreate
+        self,
+        submission_id: uuid.UUID,
+        payload: FeedbackCreate,
+        *,
+        changed_by: str | None = None,
     ) -> SubmissionFeedback:
         """Legt eine Notiz an - bringt optional per `target_status` (Bullhorn-
         artiges "Action"-Feld, siehe Frontend feedback-panel.tsx) einen
@@ -124,7 +170,9 @@ class RecruitingProcessService:
                 if target_status != submission.status:
                     submission = self.submissions.transition(
                         submission_id,
-                        CandidateSubmissionTransition(status=target_status),
+                        CandidateSubmissionTransition(
+                            status=target_status, changed_by=changed_by
+                        ),
                         commit=False,
                     )
             values = payload.model_dump(exclude={"target_status"})
@@ -167,7 +215,11 @@ class RecruitingProcessService:
         self.session.commit()
 
     def quick_log(
-        self, candidate_id: uuid.UUID, payload: CandidateQuickLogCreate
+        self,
+        candidate_id: uuid.UUID,
+        payload: CandidateQuickLogCreate,
+        *,
+        changed_by: str | None = None,
     ) -> CandidateQuickLogResult:
         """Legt eine Notiz zu einer der drei fruehen Stufen an und startet
         dabei bei Bedarf automatisch einen Prozess - keine separate "Prozess
@@ -195,7 +247,7 @@ class RecruitingProcessService:
         for status in QUICK_LOG_STAGE_ORDER[current_index + 1 : target_index + 1]:
             submission = self.submissions.transition(
                 submission.id,
-                CandidateSubmissionTransition(status=status),
+                CandidateSubmissionTransition(status=status, changed_by=changed_by),
             )
 
         feedback = self.create_feedback(
@@ -207,6 +259,7 @@ class RecruitingProcessService:
                 next_step=payload.next_step,
                 stage=payload.stage,
             ),
+            changed_by=changed_by,
         )
         return CandidateQuickLogResult(
             submission=CandidateSubmissionRead.model_validate(submission),
@@ -214,46 +267,43 @@ class RecruitingProcessService:
         )
 
     def stage_summary(self, candidate_id: uuid.UUID) -> CandidateStageSummary:
-        """Anzahl erreichter Ereignisse je Stufe ueber ALLE Submissions eines
-        Kandidaten (auch ueber mehrere Kanzleien hinweg) - Basis der Prozess-
-        Timeline auf der Kandidat-Detailseite."""
-        self.submissions.candidates.get(candidate_id)
-        feedback_counts: dict[SubmissionStatus, int] = dict(
-            self.session.execute(
-                select(SubmissionFeedback.stage, func.count())
-                .join(
-                    CandidateSubmission,
-                    SubmissionFeedback.submission_id == CandidateSubmission.id,
-                )
-                .where(
-                    CandidateSubmission.candidate_id == candidate_id,
-                    SubmissionFeedback.stage.isnot(None),
-                )
-                .group_by(SubmissionFeedback.stage)
-            ).all()  # type: ignore[arg-type]
-        )
+        """Anzahl Submissions eines Kandidaten (auch ueber mehrere Kanzleien
+        hinweg), die eine Stufe TATSAECHLICH ERREICHT haben - Basis der
+        Prozess-Timeline auf der Kandidat-Detailseite. Das ist eine reine
+        Pipeline-Frage ("wurde dieser Schritt im Kanban je gemacht") und wird
+        deshalb durchgehend aus der echten Statuswechsel-Historie (AuditLog,
+        siehe services/submissions.py::transition()) abgeleitet - NICHT mehr
+        aus SubmissionFeedback (manuelle Notizen mit optionalem, oft nie
+        gesetztem stage-Tag; ein reiner Kanban-Drag erzeugt nie einen
+        Feedback-Eintrag, der Zaehler blieb dadurch faelschlich bei 0 stehen
+        - Nutzer-Feedback "KPIs stimmen nicht", Punkt 3a) und NICHT mehr aus
+        den Interview/Offer/Placement-Kindobjekten (die haengen an einer
+        SEPARATEN, oft nachtraeglich erst ausgefuellten Formular-Aktion, nicht
+        am Statuswechsel selbst - fuer die KAUFMAENNISCHE Sicht bleiben diese
+        Objekte weiterhin die massgebliche Quelle, siehe CockpitService,
+        NICHT hier).
 
-        def _count(model: type[Base]) -> int:
-            return (
-                self.session.scalar(
-                    select(func.count())
-                    .select_from(model)
-                    .join(
-                        CandidateSubmission,
-                        model.submission_id == CandidateSubmission.id,  # type: ignore[attr-defined]
-                    )
-                    .where(CandidateSubmission.candidate_id == candidate_id)
+        qualification_call zaehlt EINFACH ALLE Submissions des Kandidaten:
+        das ist die Startstufe, es gibt nie eine eingehende Transition
+        dorthin (siehe ALLOWED_TRANSITIONS), jede Submission durchlaeuft sie
+        also per Definition genau einmal."""
+        self.submissions.candidates.get(candidate_id)
+        submission_ids = list(
+            self.session.scalars(
+                select(CandidateSubmission.id).where(
+                    CandidateSubmission.candidate_id == candidate_id
                 )
-                or 0
-            )
+            ).all()
+        )
+        reached = stage_reached_counts(self.session, submission_ids)
 
         return CandidateStageSummary(
-            qualification_call=feedback_counts.get(SubmissionStatus.QUALIFICATION_CALL, 0),
-            cv_in=feedback_counts.get(SubmissionStatus.CV_IN, 0),
-            cv_out=feedback_counts.get(SubmissionStatus.CV_OUT, 0),
-            interview=_count(Interview),
-            offer=_count(Offer),
-            placement=_count(Placement),
+            qualification_call=len(submission_ids),
+            cv_in=len(reached[SubmissionStatus.CV_IN]),
+            cv_out=len(reached[SubmissionStatus.CV_OUT]),
+            interview=len(reached[SubmissionStatus.INTERVIEW]),
+            offer=len(reached[SubmissionStatus.OFFER]),
+            placement=len(reached[SubmissionStatus.PLACEMENT]),
         )
 
     def list_interviews(self, submission_id: uuid.UUID) -> list[Interview]:

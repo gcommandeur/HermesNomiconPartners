@@ -38,6 +38,7 @@ class TaskUpdate(BaseModel):
 class TaskRead(TaskBase, EntityRead):
     snoozed_until: datetime | None = None
     source_mail_message_id: uuid.UUID | None = None
+    resolution_outcome: str | None = None
 
 
 class TaskSnoozeRequest(BaseModel):
@@ -45,7 +46,12 @@ class TaskSnoozeRequest(BaseModel):
 
 
 class TaskResolveRequest(BaseModel):
-    outcome: Literal["no_response", "meeting_scheduled"]
+    # "done": schlichtes Erledigt fuer alles, was keinen Kalendereintrag
+    # braucht (abgearbeitet, anderweitig geklaert). "not_relevant": Fehl-
+    # zuordnung (Werbemail, falscher Treffer) - eigener Wert statt unter
+    # "no_response" mitzuzaehlen, damit spaeter auswertbar ist, wie oft der
+    # Mail-Agent danebenliegt (Nutzer-Vorgabe).
+    outcome: Literal["no_response", "meeting_scheduled", "done", "not_relevant"]
     # NUR bei outcome="meeting_scheduled" Pflicht - siehe TaskService.resolve.
     scheduled_at: datetime | None = None
     notes: str | None = None
