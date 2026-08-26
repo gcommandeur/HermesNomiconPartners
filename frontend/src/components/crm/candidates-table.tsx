@@ -16,7 +16,7 @@ import { PaginationControls } from "@/components/crm/pagination-controls";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { compareValues, type SortDir } from "@/lib/sort";
-import { ABSCHLUSSART_OPTIONS, abschlussartLabel, formatDate, ROLLE_OPTIONS, rolleLabel } from "@/lib/utils";
+import { ABSCHLUSSART_OPTIONS, abschlussartLabel, formatDate, ROLLE_OPTIONS, rolleLabel, searchFieldLabel } from "@/lib/utils";
 import { usePagination } from "@/lib/use-pagination";
 import { apiPost } from "@/lib/api/client";
 import { useCurrentUser, useReactivationCandidatesCache } from "@/lib/api/hooks";
@@ -496,7 +496,19 @@ export function CandidatesTable() {
         {displayedCandidates.map((candidate) => (
           <tr key={candidate.id} className="hover:bg-[#203A5A]/35">
             <td className="px-4 py-3.5 text-xs text-[#94A3B8]">{candidate.candidate_number ?? "—"}</td>
-            <td className="px-4 py-3.5"><Link href={`/kandidaten/${candidate.id}`} className="font-semibold text-[#D8DADF] hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</Link>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-[#e4aeb4]" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[11px] text-[#94A3B8]">Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</p></td>
+            <td className="px-4 py-3.5"><Link href={`/kandidaten/${candidate.id}`} className="font-semibold text-[#D8DADF] hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</Link>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-[#e4aeb4]" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[11px] text-[#94A3B8]">Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</p>
+              {/* Nachvollziehbarkeit der Freitextsuche (Punkt 5) - nur
+               * gesetzt, wenn `search` aktiv ist (siehe Backend
+               * repositories/candidates.py::compute_search_match_fields). */}
+              {candidate.search_match_fields && candidate.search_match_fields.length > 0 && (
+                <p className="mt-1 text-[11px] text-[#F0B429]">
+                  Treffer in: {candidate.search_match_fields.map(searchFieldLabel).join(", ")}
+                  {candidate.search_matched_values && candidate.search_matched_values.length > 0 && (
+                    <> ({candidate.search_matched_values.join(", ")})</>
+                  )}
+                </p>
+              )}
+            </td>
             <td className="px-4 py-3.5"><p>{candidate.job_title ?? "—"}</p><p className="mt-1 text-[11px] text-[#94A3B8]">{candidate.qualification ?? "Qualifikation offen"}</p></td>
             <td className="px-4 py-3.5">
               {candidate.rollen && candidate.rollen.length > 0 ? (

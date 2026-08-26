@@ -148,6 +148,30 @@ export function rechtsgebietLabel(value: Rechtsgebiet): string {
   return RECHTSGEBIET_LABELS[value] ?? value;
 }
 
+// Feld-Keys aus Candidate.search_match_fields (siehe Backend
+// repositories/candidates.py::compute_search_match_fields) -> Anzeige-Label
+// fuer den "Treffer in: ..."-Hinweis in candidates-table.tsx (Punkt 5 des
+// Freitextsuche-Auftrags: Nachvollziehbarkeit, warum ein Treffer gefunden
+// wurde).
+export const SEARCH_FIELD_LABELS: Record<string, string> = {
+  first_name: "Vorname",
+  last_name: "Nachname",
+  email: "E-Mail",
+  job_title: "Rolle",
+  candidate_number: "Kandidatennummer",
+  qualification: "Qualifikation",
+  ausbildung_titel: "Ausbildung/Weiterbildung",
+  current_employer_internal: "Aktueller Arbeitgeber",
+  summary: "Zusammenfassung",
+  fachliche_schwerpunkte: "Fachliche Schwerpunkte",
+  edv_kenntnisse: "EDV-Kenntnisse",
+  berufliche_stationen: "Berufliche Stationen",
+};
+
+export function searchFieldLabel(field: string): string {
+  return SEARCH_FIELD_LABELS[field] ?? field;
+}
+
 // Feste Auswahl gaengiger Kuendigungsfrist-Kombinationen (Backend
 // Candidate.notice_period bleibt bewusst String(160) Freitext - siehe
 // models/candidate.py - keine Migration noetig, nur die UI wird

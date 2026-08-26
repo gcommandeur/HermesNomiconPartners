@@ -179,6 +179,15 @@ export interface Candidate extends Entity {
   /** Zustaendiger Mitarbeiter (Komfort-Filter "Meine Kandidaten", KEINE
    * Sichtbarkeitsgrenze - siehe Backend models/candidate.py::owner_user_id). */
   owner_user_id?: string | null;
+  /** Nur gesetzt, wenn GET /candidates mit `search` aufgerufen wurde (siehe
+   * Backend repositories/candidates.py::compute_search_match_fields) -
+   * macht nachvollziehbar, WARUM ein Treffer gefunden wurde: welche
+   * Feld(er) gematcht haben (Feld-Keys, siehe SEARCH_FIELD_LABELS in
+   * lib/utils.ts) und - fuer fachliche_schwerpunkte/edv_kenntnisse - die
+   * konkreten gematchten Eintraege fuers Hervorheben. null bei jeder
+   * anderen Abfrage (z.B. GET /candidates/{id}). */
+  search_match_fields?: string[] | null;
+  search_matched_values?: string[] | null;
 }
 
 export interface ClientCompany extends Entity {

@@ -134,6 +134,14 @@ class CandidateRead(CandidateBase, EntityRead):
     # hierueber bereits ausgelesene CV-Infos wiederverwenden, auch wenn dafuer
     # (noch) keine eigene Kandidaten-Spalte existiert.
     cv_extraction_raw: dict[str, Any] | None = None
+    # Nur gesetzt, wenn GET /candidates mit `search` aufgerufen wurde (siehe
+    # repositories/candidates.py::compute_search_match_fields) - macht im
+    # Frontend nachvollziehbar, WARUM ein Treffer gefunden wurde (welches
+    # Feld gematcht hat, plus die konkreten fachliche_schwerpunkte/
+    # edv_kenntnisse-Eintraege fuers Hervorheben). None bei jeder anderen
+    # Abfrage (z.B. GET /candidates/{id}) - kein Suchkontext vorhanden.
+    search_match_fields: list[str] | None = None
+    search_matched_values: list[str] | None = None
 
 
 class CvExtractionRequest(BaseModel):

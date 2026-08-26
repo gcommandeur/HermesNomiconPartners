@@ -12,9 +12,15 @@ einem Schritt:
    Wert ersetzt, ein nicht erkannter Eintrag bleibt unveraendert stehen
    (kein Datenverlust bei unbekannten Begriffen).
 2. Sprachunabhaengige Suche: repositories/candidates.py::filtered() nutzt
-   dieselbe Tabelle, um eine deutsche Sucheingabe ("Steuerrecht") auch bei
-   einem rein englischen CV-Eintrag ("Tax Law") treffen zu lassen, ohne dass
-   der Nutzer beide Sprachen selbst eingeben muss.
+   dieselbe Tabelle (ueber search_expansion_terms() unten), um eine deutsche
+   Sucheingabe ("Steuerrecht") auch bei einem rein englischen CV-Eintrag
+   ("Tax Law") treffen zu lassen, ohne dass der Nutzer beide Sprachen selbst
+   eingeben muss. Deutsche Komposita-Ober-/Unterbegriffe (z.B. "Buchhaltung"
+   -> "Finanzbuchhaltung") brauchen dafuer KEINEN eigenen Tabelleneintrag -
+   das loest bereits der normalisierte Substring-Match in
+   repositories/candidates.py (deutsche Komposita enthalten den Grundbegriff
+   woertlich). HYPERNYMS unten deckt nur echte Wortstamm-Wechsel ab, wo das
+   nicht greift (z.B. "Lohn" -> "Gehaltsabrechnung"/"Payroll").
 
 Bewusst NICHT erschoepfend - eine kuratierte Auswahl der haeufigsten
 Begriffe fuer Steuer-/Wirtschaftspruefungs-/Rechtskanzleien, erweiterbar bei
@@ -48,6 +54,7 @@ SYNONYMS: dict[str, list[str]] = {
     "Jahresabschluss": [
         "Jahresabschlüsse",
         "Jahresabschluesse",
+        "Abschlusserstellung",
         "Annual Financial Statements",
         "Financial Statements",
         "Annual Accounts",
@@ -57,6 +64,7 @@ SYNONYMS: dict[str, list[str]] = {
     "Lohnbuchhaltung": [
         "Lohn- und Gehaltsabrechnung",
         "Gehaltsabrechnung",
+        "Entgeltabrechnung",
         "Payroll",
         "Payroll Accounting",
     ],
@@ -75,6 +83,20 @@ SYNONYMS: dict[str, list[str]] = {
     "MS Office": ["Microsoft Office", "MS-Office"],
     "MS Excel": ["Microsoft Excel", "Excel"],
     "SAP FI/CO": ["SAP FI", "SAP CO", "SAP Finance"],
+}
+
+
+# Einseitige Ober-/Unterbegriff-Erweiterung fuer die Suche (NICHT fuer die
+# Extraktions-Normalisierung oben - dort bleibt SYNONYMS die einzige
+# Quelle): ein breiterer Suchbegriff (Key, kleingeschrieben) soll zusaetzlich
+# nach den hier gelisteten, sprachlich UNVERWANDTEN spezifischeren Begriffen
+# suchen. Nur fuer echte Wortstamm-Wechsel gedacht (z.B. "Lohn" teilt keinen
+# Wortstamm mit "Gehaltsabrechnung"/"Payroll") - ein Komposita-Fall wie
+# "Buchhaltung" -> "Finanzbuchhaltung" braucht KEINEN Eintrag hier, das
+# findet bereits der normalisierte Substring-Match von selbst (siehe oben).
+# Bewusst NICHT erschoepfend, wie SYNONYMS auch.
+HYPERNYMS: dict[str, list[str]] = {
+    "lohn": ["Lohnbuchhaltung", "Gehaltsabrechnung", "Entgeltabrechnung", "Payroll"],
 }
 
 
@@ -129,3 +151,46 @@ def canonical_variants(query: str) -> list[str]:
     if canonical is None:
         return []
     return [canonical, *SYNONYMS.get(canonical, [])]
+
+
+def is_recognized_term(term: str) -> bool:
+    """True, wenn `term` (z.B. das GESAMTE mehrwortige "MS Office") als
+    Ganzes ein bekannter Synonym-Eintrag ist - fuer repositories/
+    candidates.py::filtered, das mehrere leerzeichengetrennte Suchworte
+    sonst UND-verknuepft einzeln behandelt: "MS Office" wuerde dabei
+    faelschlich zu "MS" UND "Office" aufgespalten, wovon "MS" allein nicht
+    registriert ist und nichts faende - ein als Ganzes bekannter mehrwortiger
+    Begriff bleibt deshalb EIN Suchwort."""
+    return term.strip().casefold() in _LOOKUP
+
+
+def search_expansion_terms(query: str) -> list[str]:
+    """Fuer die Kandidaten-Freitextsuche (repositories/candidates.py::
+    filtered): liefert `query` selbst PLUS alle bekannten Synonym-Varianten
+    (canonical_variants) PLUS - falls `query` ein HYPERNYMS-Key ist - die
+    dort gelisteten Unterbegriffe (jeweils wiederum inkl. deren eigener
+    Synonym-Gruppe, z.B. "Lohn" -> "Lohnbuchhaltung" -> auch "Payroll").
+    Dedupliziert (case-insensitive), Reihenfolge stabil. `query` bleibt IMMER
+    im Ergebnis, auch wenn kein Eintrag existiert - der Aufrufer braucht sich
+    dann um einen Fallback nicht zu kuemmern."""
+    cleaned = query.strip()
+    if not cleaned:
+        return []
+    seen: set[str] = set()
+    result: list[str] = []
+
+    def _add(term: str) -> None:
+        key = term.casefold()
+        if key in seen:
+            return
+        seen.add(key)
+        result.append(term)
+
+    _add(cleaned)
+    for variant in canonical_variants(cleaned):
+        _add(variant)
+    for hypernym_term in HYPERNYMS.get(cleaned.casefold(), []):
+        _add(hypernym_term)
+        for variant in canonical_variants(hypernym_term):
+            _add(variant)
+    return result

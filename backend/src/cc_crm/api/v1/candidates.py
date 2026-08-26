@@ -8,6 +8,7 @@ from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
 from cc_crm.api.v1.operational import _read_upload_with_size_limit, _validate_upload_type
 from cc_crm.core.config import get_settings
 from cc_crm.models.enums import Abschlussart, CandidateStatus, Rolle
+from cc_crm.repositories.candidates import compute_search_match_fields
 from cc_crm.schemas.candidate import (
     CandidateCreate,
     CandidateRead,
@@ -91,7 +92,23 @@ def list_candidates(
         offset=offset,
         limit=limit,
     )
-    items = [CandidateRead.model_validate(candidate) for candidate in entities]
+    # Nachvollziehbarkeit fuer die erweiterte Freitextsuche (Punkt 5) - NUR
+    # fuer die aktuell zurueckgegebene Seite berechnet, nicht fuer den
+    # gesamten (potenziell grossen) Treffer-Bestand. Kein Effekt, wenn
+    # search leer/nicht gesetzt ist (compute_search_match_fields liefert
+    # dann ([], [])).
+    items = []
+    for candidate in entities:
+        read = CandidateRead.model_validate(candidate)
+        if search:
+            matched_fields, matched_values = compute_search_match_fields(candidate, search)
+            read = read.model_copy(
+                update={
+                    "search_match_fields": matched_fields,
+                    "search_matched_values": matched_values,
+                }
+            )
+        items.append(read)
     return Page(items=items, total_count=total, limit=limit, offset=offset)
 
 
