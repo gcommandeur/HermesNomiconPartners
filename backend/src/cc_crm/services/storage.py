@@ -165,6 +165,57 @@ def plan_new_candidate_document(
     return new_filename, sibling_renames
 
 
+# Umlaut-/Sonderzeichen-Transkription fuer Dateinamen (siehe
+# cv_upload_filename unten) - dieselbe ae/oe/ue/ss-Konvention wie an anderen
+# Normalisierungsstellen im Projekt (z.B. repositories/candidates.py fuer die
+# Freitextsuche), hier aber fuer einen DATEINAMEN statt einen SQL-Vergleich.
+_UMLAUT_TRANSLITERATION = {
+    "ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss",
+    "Ä": "Ae", "Ö": "Oe", "Ü": "Ue",
+}
+_INVALID_FILENAME_CHARS_RE = re.compile(r"[^A-Za-z0-9\-]")
+_MULTI_HYPHEN_RE = re.compile(r"-{2,}")
+
+
+def _normalize_name_part_for_filename(value: str) -> str:
+    """Ein Namensteil (Vor- oder Nachname) fuer die CV_NACHNAME.VORNAME-
+    Konvention (siehe cv_upload_filename): Umlaute transkribiert, Leerzeichen
+    (Doppelnamen wie "von der Heide") zu Bindestrich statt abgeschnitten,
+    bereits vorhandene Bindestriche (Doppelnamen wie "Müller-Lüdenscheid")
+    bleiben erhalten - alles andere entfernt statt durch Unterstriche
+    ersetzt, damit der Name kompakt bleibt."""
+    cleaned = value.strip()
+    for umlaut, replacement in _UMLAUT_TRANSLITERATION.items():
+        cleaned = cleaned.replace(umlaut, replacement)
+    cleaned = re.sub(r"\s+", "-", cleaned)
+    cleaned = _INVALID_FILENAME_CHARS_RE.sub("", cleaned)
+    cleaned = _MULTI_HYPHEN_RE.sub("-", cleaned).strip("-")
+    return cleaned or "Unbekannt"
+
+
+def cv_upload_filename(
+    *, first_name: str, last_name: str, existing_cv_count: int, extension: str
+) -> str:
+    """CV-Dateinamens-Konvention (Nutzer-Vorgabe): "CV_NACHNAME.VORNAME" +
+    Dateiendung, z.B. "CV_MUSTERMANN.MAX.pdf" - GILT NUR fuer document_type
+    == "cv" (siehe api/v1/operational.py::_candidate_upload_naming). Andere
+    Kandidaten-Dokumenttypen (Vertraege etc.) bleiben bei der bestehenden
+    Kandidaten-Nr.-Konvention (candidate_document_filenames oben) - diese
+    hier ist bewusst NICHT candidate_number-basiert, weil die Konvention
+    explizit den Namen im Dateinamen verlangt.
+
+    Bei mehreren CVs derselben Person haengt ab dem ZWEITEN CV ein
+    fortlaufender Zaehler an (z.B. "CV_MUSTERMANN.MAX_2.pdf") -
+    `existing_cv_count` ist die Anzahl der VOR diesem Upload bereits
+    vorhandenen CV-Dokumente desselben Kandidaten."""
+    last = _normalize_name_part_for_filename(last_name)
+    first = _normalize_name_part_for_filename(first_name)
+    base = f"CV_{last}.{first}"
+    suffix = "" if existing_cv_count == 0 else f"_{existing_cv_count + 1}"
+    ext = extension if extension.startswith(".") else f".{extension}"
+    return f"{base}{suffix}{ext}"
+
+
 def _s3_configured() -> bool:
     return bool(get_settings().s3_bucket)
 

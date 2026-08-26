@@ -2,7 +2,7 @@ import pytest
 
 from cc_crm.core.config import get_settings
 from cc_crm.services import storage
-from cc_crm.services.storage import has_generic_filename, read_document_bytes
+from cc_crm.services.storage import cv_upload_filename, has_generic_filename, read_document_bytes
 
 
 @pytest.mark.parametrize(
@@ -38,6 +38,83 @@ def test_generic_filenames_are_detected(filename: str) -> None:
 )
 def test_non_generic_filenames_are_not_flagged(filename: str) -> None:
     assert has_generic_filename(filename) is False
+
+
+class TestCvUploadFilename:
+    """Dateibenennung fuer CVs (Konsolidierter Auftrag "Schnelle
+    Submission"): CV_NACHNAME.VORNAME + Endung."""
+
+    def test_basic_convention(self) -> None:
+        assert (
+            cv_upload_filename(
+                first_name="Max", last_name="Mustermann", existing_cv_count=0, extension=".pdf"
+            )
+            == "CV_Mustermann.Max.pdf"
+        )
+
+    def test_extension_without_leading_dot_is_normalized(self) -> None:
+        assert (
+            cv_upload_filename(
+                first_name="Max", last_name="Mustermann", existing_cv_count=0, extension="pdf"
+            )
+            == "CV_Mustermann.Max.pdf"
+        )
+
+    def test_umlauts_are_transliterated(self) -> None:
+        assert (
+            cv_upload_filename(
+                first_name="Jürgen", last_name="Müller", existing_cv_count=0, extension=".docx"
+            )
+            == "CV_Mueller.Juergen.docx"
+        )
+        assert (
+            cv_upload_filename(
+                first_name="Katja", last_name="Groß", existing_cv_count=0, extension=".pdf"
+            )
+            == "CV_Gross.Katja.pdf"
+        )
+
+    def test_second_cv_gets_counter_suffix(self) -> None:
+        assert (
+            cv_upload_filename(
+                first_name="Max", last_name="Mustermann", existing_cv_count=1, extension=".pdf"
+            )
+            == "CV_Mustermann.Max_2.pdf"
+        )
+        assert (
+            cv_upload_filename(
+                first_name="Max", last_name="Mustermann", existing_cv_count=2, extension=".pdf"
+            )
+            == "CV_Mustermann.Max_3.pdf"
+        )
+
+    def test_double_name_with_space_becomes_hyphenated(self) -> None:
+        """Doppelnamen mit Leerzeichen (z.B. "von der Heide") werden NICHT
+        abgeschnitten, sondern zu einem zusammenhaengenden, bindestrich-
+        getrennten Namensteil."""
+        assert (
+            cv_upload_filename(
+                first_name="Anna", last_name="von der Heide", existing_cv_count=0, extension=".pdf"
+            )
+            == "CV_von-der-Heide.Anna.pdf"
+        )
+
+    def test_existing_hyphenated_double_name_is_preserved(self) -> None:
+        assert (
+            cv_upload_filename(
+                first_name="Max",
+                last_name="Müller-Lüdenscheid",
+                existing_cv_count=0,
+                extension=".pdf",
+            )
+            == "CV_Mueller-Luedenscheid.Max.pdf"
+        )
+
+    def test_missing_name_falls_back_to_placeholder(self) -> None:
+        assert (
+            cv_upload_filename(first_name="", last_name="", existing_cv_count=0, extension=".pdf")
+            == "CV_Unbekannt.Unbekannt.pdf"
+        )
 
 
 def test_read_document_bytes_translates_s3_no_such_key_to_file_not_found(

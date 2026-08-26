@@ -100,6 +100,67 @@ def test_reactivation_list_returns_only_stale_contacts(client: TestClient) -> No
     assert narrow.json() == []
 
 
+class TestAnonymousProfileAutoSave:
+    """PATCH /candidates/{id} mit short_profile legt automatisch ein "Nr.
+    XXXX.docx"-Dokument am Kandidaten ab (Auftrag "Schnelle Submission") -
+    vorher wurde das Profil nur ad hoc fuer den Download erzeugt, nie
+    dauerhaft gespeichert."""
+
+    def test_saving_short_profile_creates_the_document(self, client: TestClient) -> None:
+        candidate = client.post(
+            "/api/v1/candidates",
+            json={"first_name": "Anna", "last_name": "Muster", "candidate_number": "4456"},
+        ).json()
+
+        update = client.patch(
+            f"/api/v1/candidates/{candidate['id']}",
+            json={
+                "short_profile": (
+                    "## Kandidatin-Nr. 4456\n\n**Kurzprofil**\nDie Kandidatin ist "
+                    "Steuerberaterin."
+                )
+            },
+        )
+        assert update.status_code == 200
+
+        documents = client.get(
+            "/api/v1/documents",
+            params={"owner_type": "candidate", "owner_id": candidate["id"]},
+        ).json()
+        anonymous_profile_docs = [d for d in documents if d["document_type"] == "anonymous_profile"]
+        assert len(anonymous_profile_docs) == 1
+        assert anonymous_profile_docs[0]["filename"] == "Nr. 4456.docx"
+
+    def test_updating_an_unrelated_field_does_not_touch_the_document(
+        self, client: TestClient
+    ) -> None:
+        candidate = client.post(
+            "/api/v1/candidates",
+            json={
+                "first_name": "Anna",
+                "last_name": "Muster",
+                "candidate_number": "4456",
+                "short_profile": "## Kandidatin-Nr. 4456\n\n**Kurzprofil**\nText.",
+            },
+        ).json()
+        client.patch(
+            f"/api/v1/candidates/{candidate['id']}",
+            json={"short_profile": "## Kandidatin-Nr. 4456\n\n**Kurzprofil**\nText."},
+        )
+        documents_before = client.get(
+            "/api/v1/documents",
+            params={"owner_type": "candidate", "owner_id": candidate["id"]},
+        ).json()
+
+        client.patch(f"/api/v1/candidates/{candidate['id']}", json={"city": "Berlin"})
+
+        documents_after = client.get(
+            "/api/v1/documents",
+            params={"owner_type": "candidate", "owner_id": candidate["id"]},
+        ).json()
+        assert len(documents_after) == len(documents_before)
+
+
 class TestRollenFilter:
     """GET /candidates?rollen=... - Filter auf die normalisierte
     Candidate.rollen-Taxonomie (nicht zu verwechseln mit `role`, das auf

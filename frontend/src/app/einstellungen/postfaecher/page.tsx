@@ -230,6 +230,67 @@ function formatDateTime(value: string | null): string {
   return new Date(value).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" });
 }
 
+/** Rate-Limiting fuer den SMTP-Versand (Backend services/mail_send.py) -
+ * Pause zwischen Sends + Tageslimit sind je Postfach konfigurierbar statt
+ * hart verdrahtet (Nutzer-Vorgabe "Schnelle Submission", Schritt 1). Eigene
+ * lokale Draft-Werte statt direkt `account.*` zu binden, damit Tippen keinen
+ * PATCH pro Tastendruck ausloest - erst "Speichern" persistiert. */
+function ThrottleSettingsEditor({
+  account,
+  busy,
+  onSave,
+}: {
+  account: MailAccount;
+  busy: boolean;
+  onSave: (values: { send_throttle_seconds: number; daily_send_limit: number }) => void;
+}) {
+  const [throttleSeconds, setThrottleSeconds] = useState(String(account.send_throttle_seconds));
+  const [dailyLimit, setDailyLimit] = useState(String(account.daily_send_limit));
+
+  const dirty =
+    Number(throttleSeconds) !== account.send_throttle_seconds ||
+    Number(dailyLimit) !== account.daily_send_limit;
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[#94A3B8]">
+      <span>Versand-Pause</span>
+      <input
+        type="number"
+        min={0}
+        max={3600}
+        value={throttleSeconds}
+        onChange={(e) => setThrottleSeconds(e.target.value)}
+        className="h-7 w-16 rounded border border-white/10 bg-[#0D1B2E] px-1.5 text-center text-[#F8FAFC] outline-none focus:border-[#1F5FA8]"
+      />
+      <span>s · Tageslimit</span>
+      <input
+        type="number"
+        min={1}
+        max={10000}
+        value={dailyLimit}
+        onChange={(e) => setDailyLimit(e.target.value)}
+        className="h-7 w-20 rounded border border-white/10 bg-[#0D1B2E] px-1.5 text-center text-[#F8FAFC] outline-none focus:border-[#1F5FA8]"
+      />
+      <span>Mails/Tag</span>
+      {dirty && (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() =>
+            onSave({
+              send_throttle_seconds: Number(throttleSeconds),
+              daily_send_limit: Number(dailyLimit),
+            })
+          }
+        >
+          Speichern
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export default function PostfaecherPage() {
   const { data: meData, isLoading: meLoading } = useCurrentUser();
   const isAdmin = meData?.data.is_admin ?? false;
@@ -511,6 +572,11 @@ export default function PostfaecherPage() {
                         IMAP {account.imap_host}:{account.imap_port} · SMTP {account.smtp_host}:
                         {account.smtp_port} · zuletzt abgerufen: {formatDateTime(account.last_synced_at)}
                       </p>
+                      <ThrottleSettingsEditor
+                        account={account}
+                        busy={busy}
+                        onSave={(values) => void patchAccount(account, values)}
+                      />
                     </div>
 
                     <div className="flex flex-wrap gap-2">

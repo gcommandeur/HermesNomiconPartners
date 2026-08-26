@@ -36,12 +36,28 @@ from docx.document import Document as DocxDocument
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from cc_crm.core.errors import ConflictError
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.enums import Anrede
 
+# Alias: "Document" ist in diesem Modul bereits der python-docx-Typ (siehe
+# `from docx import Document` oben) - unser DB-Modell braucht daher einen
+# anderen Namen.
+from cc_crm.models.operational import Document as CandidateDocument
+from cc_crm.services.storage import delete_document_bytes, save_document_bytes
+
 TEMPLATE_PATH = Path(__file__).resolve().parents[3] / "templates" / "anonymes_profil_master.docx"
+
+# Eigener document_type (siehe models/operational.py::Document), damit das
+# automatisch abgelegte anonyme Profil eindeutig von einem hochgeladenen CV
+# ("cv") oder sonstigen Dokumenten unterscheidbar bleibt.
+ANONYMOUS_PROFILE_DOCUMENT_TYPE = "anonymous_profile"
+_DOCX_CONTENT_TYPE = (
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+)
 
 _HEADING_UEBERBLICK = "Überblick"
 # KORREKTUR: "Über die Person" war ein Fehlschluss aus einem Vergleich mit
@@ -428,3 +444,74 @@ def generate_profile_docx(candidate: Candidate) -> bytes:
     buffer = io.BytesIO()
     doc.save(buffer)
     return buffer.getvalue()
+
+
+def persist_anonymous_profile_document(
+    session: Session, candidate: Candidate
+) -> CandidateDocument:
+    """Legt das gerade generierte/aktualisierte anonyme Profil (candidate.
+    short_profile) automatisch als Dokument am Kandidaten ab - vorher wurde
+    das .docx nur ad hoc fuer den Download erzeugt (siehe
+    generate_profile_docx), nie dauerhaft gespeichert. Erst dadurch kann das
+    Profil spaeter automatisch an Versand-Mails angehaengt werden, ohne es
+    bei jedem Versand neu zu generieren (Auftrag "Schnelle Submission").
+
+    Dateiname IMMER "Nr. {candidate_number}.docx" (build_export_filename,
+    dieselbe Konvention wie beim manuellen .docx-Download).
+
+    ERSETZT eine vorhandene Vorversion, statt zu versionieren: short_profile
+    selbst ist ein einzelnes, veraenderliches Feld ohne eigene
+    Versionshistorie in dieser App - zusaetzliches Aufbewahren aelterer
+    .docx-Exporte wuerde nur veraltete Duplikate anhaeufen, die vor dem
+    Versand erst manuell aussortiert werden muessten, ohne echten Mehrwert
+    (die aktuelle Wahrheit steht ohnehin in short_profile, nicht in einer
+    alten Datei)."""
+    docx_bytes = generate_profile_docx(candidate)
+    filename = build_export_filename(candidate)
+
+    existing = session.scalar(
+        select(CandidateDocument).where(
+            CandidateDocument.owner_type == "candidate",
+            CandidateDocument.owner_id == candidate.id,
+            CandidateDocument.document_type == ANONYMOUS_PROFILE_DOCUMENT_TYPE,
+        )
+    )
+    # Gleicher Dateiname (der Normalfall - candidate_number aendert sich
+    # nach der Erstvergabe praktisch nie) -> derselbe storage_key wird an
+    # Ort und Stelle ueberschrieben. Nur falls sich der Dateiname seit dem
+    # letzten Speichern geaendert hat (z.B. candidate_number wurde erst
+    # NACH dem ersten Profil-Speichern vergeben), wird unter dem neuen Namen
+    # abgelegt und der alte Storage-Eintrag im Anschluss entfernt.
+    reuse_storage_key = existing.storage_key if existing and existing.filename == filename else None
+    storage_key = save_document_bytes(
+        owner_type="candidate",
+        owner_id=candidate.id,
+        filename=filename,
+        content=docx_bytes,
+        storage_key=reuse_storage_key,
+    )
+
+    if existing is not None:
+        if existing.storage_key != storage_key:
+            delete_document_bytes(existing.storage_key)
+        existing.filename = filename
+        existing.storage_key = storage_key
+        existing.content_type = _DOCX_CONTENT_TYPE
+        existing.size_bytes = len(docx_bytes)
+        session.commit()
+        session.refresh(existing)
+        return existing
+
+    document = CandidateDocument(
+        owner_type="candidate",
+        owner_id=candidate.id,
+        document_type=ANONYMOUS_PROFILE_DOCUMENT_TYPE,
+        filename=filename,
+        storage_key=storage_key,
+        content_type=_DOCX_CONTENT_TYPE,
+        size_bytes=len(docx_bytes),
+    )
+    session.add(document)
+    session.commit()
+    session.refresh(document)
+    return document

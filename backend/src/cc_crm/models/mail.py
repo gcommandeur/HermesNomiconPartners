@@ -53,6 +53,18 @@ class MailAccount(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Vorrang, siehe dort.
     default_for_cv_out: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
+    # Rate-Limiting fuer den SMTP-Versand (services/mail_send.py) - je
+    # Postfach konfigurierbar statt hart verdrahtet (Nutzer-Vorgabe), da
+    # Versandgrenzen je Provider/Vertrag unterschiedlich sind. Konservative
+    # Defaults: fuer United Domains (aktuell genutzter Hoster) liess sich
+    # keine offizielle, dokumentierte Tagesgrenze ermitteln - ein oft
+    # zitierter, nicht offiziell bestaetigter Anhaltspunkt liegt bei ca.
+    # 250 Mails/Stunde; 8s Pause + 150/Tag bleibt bei einem vollen Achtstunden-
+    # Lauf deutlich darunter, ohne die Werte hier als belastbar auszugeben -
+    # in den Einstellungen ("E-Mails & Konten") pro Postfach anpassbar.
+    send_throttle_seconds: Mapped[int] = mapped_column(Integer, default=8, nullable=False)
+    daily_send_limit: Mapped[int] = mapped_column(Integer, default=150, nullable=False)
+
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Hoechste bereits verarbeitete IMAP-UID. Bewusst zusaetzlich zu
     # last_synced_at: Serverzeiten weichen ab und Mails koennen nachtraeglich

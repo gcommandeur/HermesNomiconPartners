@@ -142,6 +142,40 @@ class TestDefaultForCvOut:
         assert "bereits verbunden" in response.json()["detail"]
 
 
+class TestSendThrottleSettings:
+    """Rate-Limiting (services/mail_send.py) ist je Postfach konfigurierbar
+    ueber diese Felder, nicht hart verdrahtet."""
+
+    def test_defaults_are_applied_when_not_specified(
+        self, client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        _make_admin(session_factory)
+
+        created = client.post("/api/v1/mail-accounts", json=_PAYLOAD).json()
+
+        assert created["send_throttle_seconds"] == 8
+        assert created["daily_send_limit"] == 150
+
+    def test_values_are_settable_and_persisted(
+        self, client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        _make_admin(session_factory)
+        created = client.post(
+            "/api/v1/mail-accounts",
+            json={**_PAYLOAD, "send_throttle_seconds": 15, "daily_send_limit": 50},
+        ).json()
+        assert created["send_throttle_seconds"] == 15
+        assert created["daily_send_limit"] == 50
+
+        response = client.patch(
+            f"/api/v1/mail-accounts/{created['id']}", json={"daily_send_limit": 30}
+        )
+
+        assert response.status_code == 200
+        assert response.json()["daily_send_limit"] == 30
+        assert response.json()["send_throttle_seconds"] == 15
+
+
 class TestUpdateAndDelete:
     def test_update_without_password_keeps_the_stored_one(
         self, client: TestClient, session_factory: sessionmaker[Session]

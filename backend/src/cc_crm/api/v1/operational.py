@@ -27,6 +27,7 @@ from cc_crm.services.operational import (
     SourcingMetricService,
 )
 from cc_crm.services.storage import (
+    cv_upload_filename,
     plan_new_candidate_document,
     read_document_bytes,
     rename_document_bytes,
@@ -131,14 +132,23 @@ def create_document(payload: DocumentCreate, session: DatabaseSession) -> Docume
 def _candidate_upload_naming(
     session: DatabaseSession, owner_id: uuid.UUID, document_type: str, original_filename: str
 ) -> tuple[str | None, dict[uuid.UUID, str]]:
-    """Kandidaten-Nr.-Konvention fuer neue Kandidaten-Dokumente (Nutzer-
-    Vorgabe: "1823.pdf" statt "ddd4ce82_1823_Kroll_Simon.pdf", siehe
-    services/storage.py::plan_new_candidate_document). Gibt (None, {})
-    zurueck, wenn der Kandidat (noch) keine candidate_number hat - der
-    Aufrufer faellt dann auf das alte Zufalls-Namensschema zurueck, statt
-    einen Dateinamen ohne Nummer zu erzeugen."""
+    """Dateinamens-Konvention fuer neue Kandidaten-Dokumente - zwei Regeln
+    je nach document_type (Nutzer-Vorgabe "Schnelle Submission" +
+    Dateibenennung):
+
+    - "cv": IMMER "CV_NACHNAME.VORNAME" + Endung (siehe
+      services/storage.py::cv_upload_filename), UNABHAENGIG davon, ob die
+      candidate_number bereits vergeben ist - die Konvention haengt am
+      Namen, nicht an der Nummer.
+    - alles andere (Vertraege etc.): bleibt bei der bestehenden Kandidaten-
+      Nr.-Konvention ("1823.pdf" statt "ddd4ce82_1823_Kroll_Simon.pdf",
+      siehe services/storage.py::plan_new_candidate_document) - dafuer wird
+      weiterhin eine gesetzte candidate_number vorausgesetzt, sonst (None,
+      {}), und der Aufrufer faellt auf das alte Zufalls-Namensschema
+      zurueck.
+    """
     candidate = session.get(Candidate, owner_id)
-    if candidate is None or not candidate.candidate_number:
+    if candidate is None:
         return None, {}
 
     existing = list(
@@ -148,6 +158,23 @@ def _candidate_upload_naming(
             )
         ).all()
     )
+
+    if document_type == "cv":
+        existing_cv_count = sum(1 for doc in existing if doc.document_type == "cv")
+        extension = Path(original_filename).suffix.lower()
+        filename = cv_upload_filename(
+            first_name=candidate.first_name,
+            last_name=candidate.last_name,
+            existing_cv_count=existing_cv_count,
+            extension=extension,
+        )
+        # Bewusst keine sibling_renames: die CV-Konvention haengt am Namen,
+        # nicht an einer fortlaufenden Nummer - ein bereits vorhandenes CV
+        # muss durch den Zaehler eines neuen CVs nicht umbenannt werden.
+        return filename, {}
+
+    if not candidate.candidate_number:
+        return None, {}
     return plan_new_candidate_document(
         list(existing), candidate.candidate_number, document_type, original_filename
     )

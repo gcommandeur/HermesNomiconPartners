@@ -828,6 +828,12 @@ export interface MailAccount {
   username: string;
   is_active: boolean;
   default_for_cv_out: boolean;
+  /** Rate-Limiting fuer den SMTP-Versand (Backend services/mail_send.py) -
+   * Pause in Sekunden zwischen zwei Sends bzw. maximale Anzahl Mails pro
+   * Tag ueber dieses Postfach, je Postfach konfigurierbar statt hart
+   * verdrahtet. */
+  send_throttle_seconds: number;
+  daily_send_limit: number;
   last_synced_at: string | null;
   sync_error: string | null;
 }

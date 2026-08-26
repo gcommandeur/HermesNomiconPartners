@@ -1,3 +1,4 @@
+import logging
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
@@ -22,7 +23,10 @@ from cc_crm.services.cv_extraction import (
     is_agency_letterhead,
 )
 from cc_crm.services.geo import candidate_coordinates, haversine_km, resolve_place_query
+from cc_crm.services.profile_docx_export import persist_anonymous_profile_document
 from cc_crm.services.storage import delete_document_bytes
+
+logger = logging.getLogger("cc_crm.candidates")
 
 # Obergrenze fuer den PLZ+Umkreis-Filter (list_filtered mit plz_ort+radius_km):
 # Umkreis-Distanz ist auf den bestehenden Spalten (kein gespeichertes lat/lng)
@@ -121,6 +125,22 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         if updated.cv_available and not was_cv_available and updated.cv_in_recorded_at is None:
             updated.cv_in_recorded_at = datetime.now(UTC)
             self.session.commit()
+        if "short_profile" in payload.model_fields_set and updated.short_profile:
+            # Legt das gerade (neu) gespeicherte anonyme Profil automatisch
+            # als "Nr. XXXX.docx"-Dokument ab (Auftrag "Schnelle Submission",
+            # Punkt "Anonymes Profil wird nicht dauerhaft abgelegt"). Ein
+            # Fehler hierbei (z.B. ein noch nicht parsebarer Profiltext)
+            # darf das eigentliche Speichern von short_profile NICHT
+            # verhindern - best effort, wie die Sent-Ordner-Ablage bei
+            # services/mail_send.py.
+            try:
+                persist_anonymous_profile_document(self.session, updated)
+            except Exception:  # noqa: BLE001 - Dokumenten-Ablage ist best effort
+                logger.warning(
+                    "Anonymes Profil konnte nicht als Dokument abgelegt werden (Kandidat %s)",
+                    updated.id,
+                    exc_info=True,
+                )
         return updated
 
     def anonymize(self, entity_id: uuid.UUID, admin_user: User) -> Candidate:

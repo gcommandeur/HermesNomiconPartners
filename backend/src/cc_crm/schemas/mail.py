@@ -34,6 +34,10 @@ class MailAccountCreate(BaseModel):
 
     is_active: bool = True
     default_for_cv_out: bool = False
+    # Rate-Limiting fuer services/mail_send.py - siehe models/mail.py fuer
+    # die Begruendung der Defaults.
+    send_throttle_seconds: int = Field(default=8, ge=0, le=3600)
+    daily_send_limit: int = Field(default=150, ge=1, le=10000)
 
 
 class MailAccountUpdate(BaseModel):
@@ -50,6 +54,8 @@ class MailAccountUpdate(BaseModel):
     password: str | None = Field(default=None, min_length=1)
     is_active: bool | None = None
     default_for_cv_out: bool | None = None
+    send_throttle_seconds: int | None = Field(default=None, ge=0, le=3600)
+    daily_send_limit: int | None = Field(default=None, ge=1, le=10000)
 
 
 class MailAccountRead(EntityRead):
@@ -66,6 +72,8 @@ class MailAccountRead(EntityRead):
     username: str
     is_active: bool
     default_for_cv_out: bool
+    send_throttle_seconds: int
+    daily_send_limit: int
     last_synced_at: datetime | None
     # Letzter Abruf-Fehler im Klartext, damit in der Oberflaeche erkennbar
     # ist, ob es an den Zugangsdaten oder z.B. am Netzwerk lag
