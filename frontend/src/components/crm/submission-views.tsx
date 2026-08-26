@@ -13,6 +13,7 @@ import type {
   SubmissionStatus,
 } from "@/lib/api/types";
 import { StatusPill } from "./status-pill";
+import { STAGE_LABELS } from "@/components/crm/submission-stage-bar";
 import { DataTable } from "./data-table";
 import { FilterBar } from "@/components/crm/filter-bar";
 import { ExportActions, downloadCsv } from "@/components/crm/export-actions";
@@ -128,6 +129,12 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
   // einblendbar, rein client-seitig (die Daten bleiben unveraendert
   // geladen, betrifft nur die Kanban-/Tabellen-Anzeige hier).
   const [showArchived, setShowArchived] = useState(false);
+  // Mobile-Kanban (Nutzer-Vorgabe "Mobile"): statt sechs nebeneinander-/
+  // untereinanderliegender Spalten (die meisten leer) eine Stufen-Auswahl
+  // plus nur die Prozesse DIESER EINEN Stufe darunter, siehe den
+  // lg:hidden-Block im view === "kanban"-Zweig unten. Nur fuer den
+  // Kanban-Modus relevant.
+  const [mobileStage, setMobileStage] = useState<SubmissionStatus>("qualification_call");
   const { data: currentUserData } = useCurrentUser();
   const currentUserId = currentUserData?.data.id;
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -322,26 +329,220 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
   const { createInterviewOptimistic, updateInterviewOptimistic, deleteInterviewOptimistic } =
     useInterviewMutations(interviews, setInterviews, setMessage);
 
+  /** Gemeinsame Statuswechsel-Logik fuer Drag&Drop (Desktop) UND die
+   * explizite Stufenwechsel-Aktion auf Mobile (siehe die Buttons in
+   * renderCard unten) - Ziehen ueber mehrere Spalten funktioniert auf Touch
+   * schlecht, daher dort Buttons statt Drag&Drop (Nutzer-Vorgabe "Mobile"). */
+  function changeStage(submissionId: string, targetStatus: SubmissionStatus) {
+    const submission = items.find((item) => item.id === submissionId);
+    if (!submission || submission.status === targetStatus) return;
+
+    const allowed = allowedTransitions[submission.status] ?? [];
+    if (!allowed.includes(targetStatus)) {
+      setMessage(`Ungültiger Statuswechsel: ${submission.status} → ${targetStatus}. Der Statusautomat blockiert diesen Schritt.`);
+      return;
+    }
+    if (targetStatus === "interview" && !submission.client_company_id) {
+      setClientPrompt({ submissionId: submission.id, target: targetStatus });
+      return;
+    }
+    void applyTransition(submission.id, targetStatus);
+  }
+
   function moveToStatus(targetStatus: SubmissionStatus) {
     if (!draggedId) return;
-    const dragged = items.find((item) => item.id === draggedId);
+    const id = draggedId;
     setDraggedId(null);
-    if (!dragged || dragged.status === targetStatus) return;
-
-    const allowed = allowedTransitions[dragged.status] ?? [];
-    if (!allowed.includes(targetStatus)) {
-      setMessage(`Ungültiger Statuswechsel: ${dragged.status} → ${targetStatus}. Der Statusautomat blockiert diesen Schritt.`);
-      return;
-    }
-    if (targetStatus === "interview" && !dragged.client_company_id) {
-      setClientPrompt({ submissionId: dragged.id, target: targetStatus });
-      return;
-    }
-    void applyTransition(dragged.id, targetStatus);
+    changeStage(id, targetStatus);
   }
 
   function openCandidate(candidateId: string) {
     router.push(`/kandidaten/${candidateId}?from=prozesse`);
+  }
+
+  /** Eine Kanban-Karte, gemeinsam genutzt vom Desktop-Grid (mobile=false,
+   * Drag&Drop, kompakte Icon-Buttons) und der neuen Mobile-Stufenliste
+   * (mobile=true, KEIN Drag&Drop - Ziehen ueber mehrere Spalten funktioniert
+   * auf Touch schlecht, siehe changeStage - und mindestens 44px
+   * Trefferflaeche je Aktionssymbol, Nutzer-Vorgabe
+   * "Mobile"). Als Closure statt eigener Komponente, damit sie ohne
+   * Prop-Drilling auf den gesamten State/die Handler dieser Komponente
+   * zugreifen kann. */
+  function renderCard(item: CandidateSubmission, { mobile }: { mobile: boolean }) {
+    const expanded = expandedIds.has(item.id);
+    const dueFollowUp = isFollowUpDue(item);
+    const iconBtnClass = mobile
+      ? "flex size-11 shrink-0 items-center justify-center rounded-lg text-[#94A3B8]"
+      : "rounded p-1 text-[#94A3B8]";
+    const iconSize = mobile ? 18 : 12;
+    const nextStages = allowedTransitions[item.status]?.filter((s) => s !== "cancelled") ?? [];
+
+    return (
+      <article
+        key={item.id}
+        draggable={!mobile}
+        onDragStart={mobile ? undefined : () => setDraggedId(item.id)}
+        onClick={() => openCandidate(item.candidate_id)}
+        title="Zum Kandidatenprofil"
+        className={cn(
+          "cursor-pointer rounded-lg border p-2 shadow-[0_1px_1px_rgba(0,0,0,.03)]",
+          !mobile && "active:cursor-grabbing",
+          dueFollowUp
+            ? "border-red-400/50 bg-red-950/20 hover:border-red-400/70"
+            : "border-white/10 bg-[#12243A] hover:border-[#1F5FA8]/50",
+        )}
+      >
+        {/* Name und Kanzlei je auf eigener Zeile, in einer eigenen Kopfzeile
+         * ohne Konkurrenz um Breite mit Datum/Icons (die stehen jetzt in
+         * einer eigenen Zeile darunter) - bei langen Kanzleinamen (z.B.
+         * "GmbH & Co. KG Steuerberatungsgesellschaft") fielen beide vorher
+         * in ein gemeinsames truncate, sodass selbst der Kandidatenname nur
+         * noch als "Pascal-Arnold Sli…" sichtbar war. Volltitel via
+         * title-Attribut bei Kanzlei-Truncation weiterhin per Hover
+         * einsehbar. */}
+        <div className="min-w-0">
+          <p className={cn("truncate font-semibold hover:underline", mobile ? "text-sm" : "text-xs")}>{candidateName(item.candidate_id)}</p>
+          <p
+            className={cn("mt-0.5 truncate text-[#94A3B8]", mobile ? "text-xs" : "text-[10px]")}
+            title={clientName(item.client_company_id)}
+          >
+            {clientName(item.client_company_id)}
+          </p>
+        </div>
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <span className="shrink-0 text-[10px] text-[#94A3B8]">{formatDate(item.follow_up_at)}</span>
+          <div className={cn("flex shrink-0 items-center", mobile ? "gap-1" : "gap-0.5")}>
+            {isHot(item.status) && <span className="rounded-full bg-[#1F5FA8]/20 px-1.5 py-0.5 text-[9px] text-[#69A7EA]">Hot</span>}
+            {item.archived_at && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] text-emerald-300">Abgeschlossen</span>}
+            <button
+              type="button"
+              title="Kanzlei hinzufügen/ändern"
+              onClick={(event) => { event.stopPropagation(); setClientPrompt({ submissionId: item.id }); }}
+              className={cn(iconBtnClass, "hover:bg-white/10 hover:text-white")}
+            >
+              <Building2 size={iconSize} />
+            </button>
+            <button
+              type="button"
+              title="Kandidat seitlich anzeigen (Prozesse bleibt offen)"
+              onClick={(event) => { event.stopPropagation(); setQuickViewCandidateId(item.candidate_id); }}
+              className={cn(iconBtnClass, "hover:bg-white/10 hover:text-white")}
+            >
+              <Eye size={iconSize} />
+            </button>
+            <button
+              type="button"
+              title="Prozess abbrechen"
+              onClick={(event) => { event.stopPropagation(); setCancelPrompt(item.id); }}
+              className={cn(iconBtnClass, "hover:bg-red-950/40 hover:text-red-200")}
+            >
+              <Ban size={iconSize} />
+            </button>
+            {item.status === "interview" && (
+              <button
+                type="button"
+                title="Interview planen"
+                onClick={(event) => { event.stopPropagation(); setInterviewModal({ submissionId: item.id, interview: null }); }}
+                className={cn(iconBtnClass, "hover:bg-white/10 hover:text-white")}
+              >
+                <CalendarPlus size={iconSize} />
+              </button>
+            )}
+            {item.status === "placement" && !item.archived_at && (
+              <button
+                type="button"
+                title="Prozess abschließen (verschwindet aus dem Kanban, Historie/KPIs/Rechnungsstatus bleiben erhalten)"
+                onClick={(event) => { event.stopPropagation(); void toggleArchived(item.id, true); }}
+                className={cn(iconBtnClass, "hover:bg-emerald-950/40 hover:text-emerald-300")}
+              >
+                <Archive size={iconSize} />
+              </button>
+            )}
+            {item.status === "placement" && item.archived_at && (
+              <button
+                type="button"
+                title="Abschluss zurücknehmen"
+                onClick={(event) => { event.stopPropagation(); void toggleArchived(item.id, false); }}
+                className={cn(iconBtnClass, "hover:bg-white/10 hover:text-white")}
+              >
+                <ArchiveRestore size={iconSize} />
+              </button>
+            )}
+            <button
+              type="button"
+              title={expanded ? "Details ausblenden" : "Details anzeigen"}
+              onClick={(event) => { event.stopPropagation(); toggleExpanded(item.id); }}
+              className={cn(iconBtnClass, "hover:bg-white/10 hover:text-white")}
+            >
+              <ChevronDown size={iconSize} className={cn("transition-transform", expanded && "rotate-180")} />
+            </button>
+          </div>
+        </div>
+        {/* Stufenwechsel auf Mobile ueber eine explizite Aktion statt
+         * Drag&Drop (Nutzer-Vorgabe "Mobile") - nur gezeigt, wenn es
+         * ueberhaupt einen erlaubten naechsten Schritt gibt. */}
+        {mobile && nextStages.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5 border-t border-white/10 pt-2" onClick={(event) => event.stopPropagation()}>
+            {nextStages.map((stage) => (
+              <button
+                key={stage}
+                type="button"
+                onClick={() => changeStage(item.id, stage)}
+                className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-lg border border-[#1F5FA8]/40 bg-[#1F5FA8]/10 px-2 text-xs text-[#69A7EA] hover:bg-[#1F5FA8]/20"
+              >
+                → {STAGE_LABELS[stage]}
+              </button>
+            ))}
+          </div>
+        )}
+        {expanded && (
+          <div className="mt-2 space-y-2 border-t border-white/10 pt-2" onClick={(event) => event.stopPropagation()}>
+            {item.closing_status && <ClosingScoreBadge status={item.closing_status} probability={item.closing_probability} />}
+            <ClosingScoreForm submissionId={item.id} />
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Nächster Schritt</p>
+              <p className="mt-1 text-xs">{item.next_step ?? item.summary ?? "Follow-up festlegen"}</p>
+            </div>
+            {(interviewsBySubmission.get(item.id)?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Interview-Runden</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {(interviewsBySubmission.get(item.id) ?? []).map((interview, index) => (
+                    <button
+                      key={interview.id}
+                      type="button"
+                      title={`${interview.interview_type} — ${formatChipDateTime(interview.scheduled_at)}`}
+                      onClick={() => setInterviewModal({ submissionId: item.id, interview })}
+                      className="flex items-center gap-1 rounded-full border border-white/10 bg-[#0D1B2E] px-2 py-1 text-[10px] text-[#CBD5E1] hover:border-[#1F5FA8]/50 hover:text-white"
+                    >
+                      <span className={`size-1.5 rounded-full ${interviewDotClass(interview)}`} />
+                      R{index + 1} · {formatChipDateTime(interview.scheduled_at)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[10px] text-[#A7ADB7]">
+              {nextUpcomingInterview(item.id) ? (
+                <span>Nächstes Interview: {formatChipDateTime(nextUpcomingInterview(item.id)!.scheduled_at)}</span>
+              ) : (
+                <span>Follow-up {formatDate(item.follow_up_at)}</span>
+              )}
+              <span>{expectedFee(item).toLocaleString("de-DE")} €</span>
+            </div>
+            {item.client_company_id ? null : (
+              <button
+                type="button"
+                onClick={(event) => { event.stopPropagation(); setClientPrompt({ submissionId: item.id }); }}
+                className="flex w-full items-center justify-center gap-1.5 rounded bg-[#7F1D1D]/40 px-2 py-1.5 text-[10px] text-red-100 hover:bg-[#7F1D1D]/60"
+              >
+                <Building2 size={11} />Ab Interview Kanzlei verknüpfen — jetzt hinzufügen
+              </button>
+            )}
+          </div>
+        )}
+      </article>
+    );
   }
 
   return (
@@ -450,7 +651,51 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
 
       {view === "kanban" ? (
         <div className="pb-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {/* Mobile (<lg): Stufen-Auswahl + nur die Prozesse DIESER EINEN
+           * Stufe darunter, statt sechs (meist leerer) Spalten/Bloecke
+           * uebereinander - Nutzer-Vorgabe "Mobile". Ab lg identisches
+           * Sechs-Spalten-Kanban wie zuvor, inkl. Drag&Drop. */}
+          <div className="lg:hidden">
+            <div className="scrollbar-subtle -mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
+              {columns.map((column) => {
+                const count = filteredItems.filter((s) => s.status === column.status).length;
+                const active = mobileStage === column.status;
+                return (
+                  <button
+                    key={column.status}
+                    type="button"
+                    onClick={() => setMobileStage(column.status)}
+                    className={cn(
+                      "flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium",
+                      active
+                        ? "border-[#1F5FA8]/60 bg-[#1F5FA8]/25 text-white"
+                        : "border-white/10 bg-[#0D1B2E] text-[#94A3B8]",
+                    )}
+                  >
+                    {column.title}
+                    <span
+                      className={cn(
+                        "grid size-5 place-items-center rounded-full text-[10px]",
+                        active ? "bg-[#1F5FA8]/40 text-white" : "bg-[#12243A] text-[#CBD5E1]",
+                      )}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="space-y-2 pb-4">
+              {filteredItems.filter((s) => s.status === mobileStage).map((item) => renderCard(item, { mobile: true }))}
+              {/* Leere Stufe kompakt statt als grosse leere Flaeche - Nutzer-
+               * Vorgabe "Mobile". */}
+              {filteredItems.filter((s) => s.status === mobileStage).length === 0 && (
+                <p className="py-6 text-center text-xs text-[#94A3B8]">Keine Prozesse in dieser Stufe.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="hidden lg:grid lg:grid-cols-3 lg:gap-3 xl:grid-cols-6">
             {columns.map((column) => {
               const columnItems = filteredItems.filter((submission) => submission.status === column.status);
               return (
@@ -464,167 +709,8 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                     <h2 className="truncate text-xs font-semibold text-[#F8FAFC]">{column.title}</h2>
                     <span className="grid size-5 shrink-0 place-items-center rounded-full border border-white/10 bg-[#12243A] text-[10px] text-[#CBD5E1]">{columnItems.length}</span>
                   </header>
-                  {/* Unterhalb lg blendet die fixierte BottomNav (siehe
-                   * layout/bottom-nav.tsx) zusaetzlich ~5rem am unteren
-                   * Bildschirmrand aus (plus das dazugehoerige pb-20 auf
-                   * <main> in app-shell.tsx) - ohne den Abzug wuerden die
-                   * letzten Kanban-Karten dahinter verschwinden. Ab lg gibt
-                   * es keine BottomNav, dort bleibt der urspruengliche Wert. */}
-                  <div className="scrollbar-subtle max-h-[calc(100vh-360px-5rem)] space-y-2 overflow-y-auto lg:max-h-[calc(100vh-360px)]">
-                    {columnItems.map((item) => {
-                      const expanded = expandedIds.has(item.id);
-                      const dueFollowUp = isFollowUpDue(item);
-                      return (
-                      <article
-                        key={item.id}
-                        draggable
-                        onDragStart={() => setDraggedId(item.id)}
-                        onClick={() => openCandidate(item.candidate_id)}
-                        title="Zum Kandidatenprofil"
-                        className={cn(
-                          "cursor-pointer rounded-lg border p-2 shadow-[0_1px_1px_rgba(0,0,0,.03)] active:cursor-grabbing",
-                          dueFollowUp
-                            ? "border-red-400/50 bg-red-950/20 hover:border-red-400/70"
-                            : "border-white/10 bg-[#12243A] hover:border-[#1F5FA8]/50",
-                        )}
-                      >
-                        {/* Name und Kanzlei je auf eigener Zeile, in einer
-                         * eigenen Kopfzeile ohne Konkurrenz um Breite mit
-                         * Datum/Icons (die stehen jetzt in einer eigenen
-                         * Zeile darunter) - bei langen Kanzleinamen (z.B.
-                         * "GmbH & Co. KG Steuerberatungsgesellschaft") fielen
-                         * beide vorher in ein gemeinsames truncate, sodass
-                         * selbst der Kandidatenname nur noch als
-                         * "Pascal-Arnold Sli…" sichtbar war. Volltitel via
-                         * title-Attribut bei Kanzlei-Truncation weiterhin per
-                         * Hover einsehbar. */}
-                        <div className="min-w-0">
-                          <p className="truncate text-xs font-semibold hover:underline">{candidateName(item.candidate_id)}</p>
-                          <p
-                            className="mt-0.5 truncate text-[10px] text-[#94A3B8]"
-                            title={clientName(item.client_company_id)}
-                          >
-                            {clientName(item.client_company_id)}
-                          </p>
-                        </div>
-                        <div className="mt-1.5 flex items-center justify-between gap-2">
-                          <span className="shrink-0 text-[10px] text-[#94A3B8]">{formatDate(item.follow_up_at)}</span>
-                          <div className="flex shrink-0 items-center gap-0.5">
-                            {isHot(item.status) && <span className="rounded-full bg-[#1F5FA8]/20 px-1.5 py-0.5 text-[9px] text-[#69A7EA]">Hot</span>}
-                            {item.archived_at && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] text-emerald-300">Abgeschlossen</span>}
-                            <button
-                              type="button"
-                              title="Kanzlei hinzufügen/ändern"
-                              onClick={(event) => { event.stopPropagation(); setClientPrompt({ submissionId: item.id }); }}
-                              className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
-                            >
-                              <Building2 size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              title="Kandidat seitlich anzeigen (Prozesse bleibt offen)"
-                              onClick={(event) => { event.stopPropagation(); setQuickViewCandidateId(item.candidate_id); }}
-                              className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
-                            >
-                              <Eye size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              title="Prozess abbrechen"
-                              onClick={(event) => { event.stopPropagation(); setCancelPrompt(item.id); }}
-                              className="rounded p-1 text-[#94A3B8] hover:bg-red-950/40 hover:text-red-200"
-                            >
-                              <Ban size={12} />
-                            </button>
-                            {item.status === "interview" && (
-                              <button
-                                type="button"
-                                title="Interview planen"
-                                onClick={(event) => { event.stopPropagation(); setInterviewModal({ submissionId: item.id, interview: null }); }}
-                                className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
-                              >
-                                <CalendarPlus size={12} />
-                              </button>
-                            )}
-                            {item.status === "placement" && !item.archived_at && (
-                              <button
-                                type="button"
-                                title="Prozess abschließen (verschwindet aus dem Kanban, Historie/KPIs/Rechnungsstatus bleiben erhalten)"
-                                onClick={(event) => { event.stopPropagation(); void toggleArchived(item.id, true); }}
-                                className="rounded p-1 text-[#94A3B8] hover:bg-emerald-950/40 hover:text-emerald-300"
-                              >
-                                <Archive size={12} />
-                              </button>
-                            )}
-                            {item.status === "placement" && item.archived_at && (
-                              <button
-                                type="button"
-                                title="Abschluss zurücknehmen"
-                                onClick={(event) => { event.stopPropagation(); void toggleArchived(item.id, false); }}
-                                className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
-                              >
-                                <ArchiveRestore size={12} />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              title={expanded ? "Details ausblenden" : "Details anzeigen"}
-                              onClick={(event) => { event.stopPropagation(); toggleExpanded(item.id); }}
-                              className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
-                            >
-                              <ChevronDown size={12} className={cn("transition-transform", expanded && "rotate-180")} />
-                            </button>
-                          </div>
-                        </div>
-                        {expanded && (
-                          <div className="mt-2 space-y-2 border-t border-white/10 pt-2" onClick={(event) => event.stopPropagation()}>
-                            {item.closing_status && <ClosingScoreBadge status={item.closing_status} probability={item.closing_probability} />}
-                            <ClosingScoreForm submissionId={item.id} />
-                            <div>
-                              <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Nächster Schritt</p>
-                              <p className="mt-1 text-xs">{item.next_step ?? item.summary ?? "Follow-up festlegen"}</p>
-                            </div>
-                            {(interviewsBySubmission.get(item.id)?.length ?? 0) > 0 && (
-                              <div>
-                                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Interview-Runden</p>
-                                <div className="mt-1 flex flex-wrap gap-1">
-                                  {(interviewsBySubmission.get(item.id) ?? []).map((interview, index) => (
-                                    <button
-                                      key={interview.id}
-                                      type="button"
-                                      title={`${interview.interview_type} — ${formatChipDateTime(interview.scheduled_at)}`}
-                                      onClick={() => setInterviewModal({ submissionId: item.id, interview })}
-                                      className="flex items-center gap-1 rounded-full border border-white/10 bg-[#0D1B2E] px-2 py-1 text-[10px] text-[#CBD5E1] hover:border-[#1F5FA8]/50 hover:text-white"
-                                    >
-                                      <span className={`size-1.5 rounded-full ${interviewDotClass(interview)}`} />
-                                      R{index + 1} · {formatChipDateTime(interview.scheduled_at)}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[10px] text-[#A7ADB7]">
-                              {nextUpcomingInterview(item.id) ? (
-                                <span>Nächstes Interview: {formatChipDateTime(nextUpcomingInterview(item.id)!.scheduled_at)}</span>
-                              ) : (
-                                <span>Follow-up {formatDate(item.follow_up_at)}</span>
-                              )}
-                              <span>{expectedFee(item).toLocaleString("de-DE")} €</span>
-                            </div>
-                            {item.client_company_id ? null : (
-                              <button
-                                type="button"
-                                onClick={(event) => { event.stopPropagation(); setClientPrompt({ submissionId: item.id }); }}
-                                className="flex w-full items-center justify-center gap-1.5 rounded bg-[#7F1D1D]/40 px-2 py-1.5 text-[10px] text-red-100 hover:bg-[#7F1D1D]/60"
-                              >
-                                <Building2 size={11} />Ab Interview Kanzlei verknüpfen — jetzt hinzufügen
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </article>
-                      );
-                    })}
+                  <div className="scrollbar-subtle max-h-[calc(100vh-360px)] space-y-2 overflow-y-auto">
+                    {columnItems.map((item) => renderCard(item, { mobile: false }))}
                     {columnItems.length === 0 && <div className="rounded-lg border border-dashed border-white/10 p-5 text-center text-[11px] text-[#94A3B8]">Keine Prozesse</div>}
                   </div>
                 </section>
