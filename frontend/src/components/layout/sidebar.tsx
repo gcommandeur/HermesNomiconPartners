@@ -69,17 +69,23 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
       )}>
         <div className="flex h-24 items-center border-b border-white/10 px-4">
           <Link href="/" className={cn("flex min-w-0 items-center", collapsed ? "mx-auto" : "gap-3")} onClick={onMobileClose}>
-            <Image src="/brand/hermes-appicon.svg" alt="Hermes" width={44} height={44} className="h-11 w-11 shrink-0 rounded-xl object-contain" priority />
-            {/* Wortmarke nur im ausgeklappten Zustand - eingeklappt bleibt es
-                bei reinem Icon (Nutzer-Vorgabe). Bildmarke (Icon oben) bleibt
-                unveraendert dieselbe SVG-Datei wie zuvor. */}
+            {/* Commandeur-Consulting-Logo (Nutzer-Vorgabe "zurueck zu unserem
+                Commandeur Consulting Logo"): das CC-Monogramm liegt auf
+                einer weissen Flaeche im Bild selbst (siehe commandeur-mark-
+                white.png-Erzeugung), weil der untere/dunkle Teil des
+                Metallic-Farbverlaufs auf dem dunklen Sidebar-Hintergrund
+                sonst kaum noch zu erkennen waere - so bleibt der Ring auf
+                jedem Hintergrund klar sichtbar. Eingeklappt bewusst NUR das
+                CC (Nutzer-Vorgabe "beim kleiner machen nur das CC ohne die
+                Schrift"), Wortmarke nur im ausgeklappten Zustand daneben. */}
+            <Image src="/brand/commandeur-mark-white.png" alt="Commandeur Consulting" width={44} height={44} className="h-11 w-11 shrink-0 rounded-xl object-contain" priority />
             {!collapsed && (
               <Image
-                src="/brand/hermes-wordmark.png"
-                alt="Hermes Recruiting OS"
-                width={194}
-                height={72}
-                className="h-10 w-auto object-contain"
+                src="/brand/commandeur-wordmark.png"
+                alt="Commandeur Consulting"
+                width={1418}
+                height={232}
+                className="h-9 w-auto object-contain"
                 priority
               />
             )}
