@@ -690,26 +690,98 @@ def derive_rechtsgebiete_from_schwerpunkte(schwerpunkte: list[str] | None) -> li
 # Zulassung) - fuer den read-only Audit der bereits verarbeiteten
 # Kandidaten (Punkt 8c), NICHT fuer eine automatische Korrektur.
 TITELSCHUTZ_EVIDENCE_KEYWORDS: dict[str, tuple[str, ...]] = {
-    "steuerberater": ("steuerberater", "bestellung", "steuerberaterprüfung", "steuerberaterexamen"),
-    "wirtschaftspruefer": ("wp-examen", "wirtschaftsprüferexamen", "bestellung", "bestellt"),
-    "rechtsanwalt": ("zulassung", "staatsexamen", "rechtsanwältin seit", "rechtsanwalt seit"),
+    # "steuerberater" als Substring deckt automatisch auch die weibliche
+    # Form ("Steuerberaterin") und Zusammensetzungen ("Steuerberatungs-
+    # gesellschaft" als TEIL eines Belegtexts, nicht als alleinstehender
+    # Arbeitgebername - siehe has_titelschutz_evidence-Docstring zur
+    # Feldauswahl) ab.
+    "steuerberater": (
+        "steuerberater",
+        "stb",
+        "bestellung",
+        "steuerberaterpruefung",
+        "steuerberaterexamen",
+    ),
+    # "wirtschaftspruefer" (nach Umlaut-Normalisierung, siehe _normalize_umlauts)
+    # deckt "Wirtschaftsprüfer"/"Wirtschaftsprüferin" gleichermassen ab -
+    # fehlte hier bisher komplett als bare Keyword (Bug: job_title
+    # "Wirtschaftsprüfer" wurde nicht als Beleg erkannt).
+    "wirtschaftspruefer": (
+        "wirtschaftspruefer",
+        "wp",
+        "wp-examen",
+        "wirtschaftsprueferexamen",
+        "bestellung",
+        "bestellt",
+    ),
+    # "rechtsanwalt" deckt NICHT automatisch "Rechtsanwältin" ab (anders als
+    # bei steuerberater: "anwalt" vs. "anwaeltin" nach Normalisierung sind
+    # unterschiedliche Zeichenketten) - deshalb als eigenes Keyword noetig.
+    # Fehlte hier bisher ebenfalls komplett als bare Keyword.
+    "rechtsanwalt": (
+        "rechtsanwalt",
+        "rechtsanwaeltin",
+        "ra",
+        "zulassung",
+        "staatsexamen",
+        "rechtsanwaeltin seit",
+        "rechtsanwalt seit",
+    ),
 }
+
+# Kurzformen/Abkuerzungen (RA, WP, StB), bei denen ein reiner Substring-Match
+# zu viele Fehltreffer haette (z.B. "ra" in "Praktikant") - hier zusaetzlich
+# Wortgrenzen verlangen (siehe has_titelschutz_evidence).
+_WORD_BOUNDARY_KEYWORDS = {"ra", "wp", "stb"}
+
+
+def _normalize_umlauts(text: str) -> str:
+    """Vereinheitlicht Umlaut-Schreibweisen (ü/ue etc.) auf die
+    ue/oe/ae-Form, damit Belegtext und Keywords unabhaengig von der im CV
+    verwendeten Schreibweise ("Wirtschaftsprüfer" vs. "Wirtschaftspruefer")
+    zueinander passen (Nutzer-Feedback: echte deutsche Schreibweisen mit
+    Umlaut wurden bisher nicht erkannt)."""
+    return (
+        text.casefold()
+        .replace("ä", "ae")
+        .replace("ö", "oe")
+        .replace("ü", "ue")
+    )
 
 
 def has_titelschutz_evidence(rolle: str, *texts: str | None) -> bool:
     """Prueft, ob ausbildung_titel/qualification (oder ein anderer
     uebergebener Text) einen expliziten Beleg fuer den geschuetzten Titel
-    `rolle` enthaelt (Examen bestanden/Bestellung/Zulassung) - siehe
-    TITELSCHUTZ-REGEL im Extraktions-Prompt. Rein heuristisch (Substring-
-    Match), fuer den read-only Audit gedacht, NICHT fuer eine automatische
-    Entscheidung."""
+    `rolle` enthaelt (Examen bestanden/Bestellung/Zulassung, der Titel selbst,
+    oder eine gaengige Kurzform/weibliche Form) - siehe TITELSCHUTZ-REGEL im
+    Extraktions-Prompt. Rein heuristisch (Substring-Match nach Umlaut-
+    Normalisierung, kurze Abkuerzungen zusaetzlich mit Wortgrenzen), fuer den
+    read-only Audit gedacht, NICHT fuer eine automatische Entscheidung.
+
+    WICHTIG fuer Aufrufer: hier duerfen NUR Texte uebergeben werden, die die
+    Qualifikation der PERSON SELBST beschreiben (job_title, qualification,
+    ausbildung_titel, "rolle" je berufliche Station, Freitext-
+    Zusammenfassungen). Arbeitgeber-/Kanzleityp-Felder (current_employer_
+    internal, kanzleityp) duerfen NICHT hier hinein - "Steuerberatungs-
+    gesellschaft" als Arbeitgebername belegt nicht, dass die Person selbst
+    Steuerberater ist. Ebenso darf niemals die zu pruefende "rollen"-Liste
+    selbst als Belegtext mitgegeben werden (Zirkelschluss: die Behauptung
+    waere sonst ihr eigener Beweis)."""
     keywords = TITELSCHUTZ_EVIDENCE_KEYWORDS.get(rolle)
     if not keywords:
         return True  # keine Titelschutz-Regel fuer diese Rolle definiert
-    combined = " ".join(t for t in texts if t).lower()
+    combined = " ".join(t for t in texts if t)
     if not combined:
         return False
-    return any(keyword in combined for keyword in keywords)
+    normalized = _normalize_umlauts(combined)
+    for keyword in keywords:
+        keyword_normalized = _normalize_umlauts(keyword)
+        if keyword_normalized in _WORD_BOUNDARY_KEYWORDS:
+            if re.search(rf"\b{re.escape(keyword_normalized)}\b", normalized):
+                return True
+        elif keyword_normalized in normalized:
+            return True
+    return False
 
 
 def _normalize_berufliche_stationen(raw: Any) -> list[dict[str, Any]]:

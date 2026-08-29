@@ -217,6 +217,101 @@ class TestAudit:
         assert refreshed.rollen == ["wirtschaftspruefer"]
         assert refreshed.job_title == "Auditor"
 
+    def test_does_not_treat_own_rollen_list_in_cv_extraction_raw_as_evidence(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
+    ) -> None:
+        """Regressionsschutz gegen den gemeldeten Zirkelschluss: cv_extraction_raw
+        enthaelt fast immer den Schluessel "rollen" mit demselben Wert wie
+        candidate.rollen - das darf NIE als eigener Beleg fuer sich selbst
+        gewertet werden. Genau der gemeldete Fall: job_title traegt einen
+        englischen Industrietitel ("Tax Consultant"), rollen=["steuerberater"]
+        taucht aber im rohen Extraktions-JSON auf."""
+        _use_session_factory(monkeypatch, session_factory)
+        with session_factory() as session:
+            candidate = Candidate(
+                candidate_number="12",
+                first_name="Jonas",
+                last_name="Circular",
+                rollen=["steuerberater"],
+                job_title="Tax Consultant M&A Consultant",
+                cv_extraction_raw={
+                    "rollen": ["steuerberater"],
+                    "job_title": "Tax Consultant M&A Consultant",
+                    "current_employer_internal": "ABC Steuerberatungsgesellschaft mbH",
+                },
+            )
+            session.add(candidate)
+            session.commit()
+
+        rows = audit_script.audit()
+
+        assert len(rows) == 1
+        assert rows[0]["candidate_number"] == "12"
+        assert rows[0]["geschuetzte_rolle_ohne_beleg"] == "steuerberater"
+
+    def test_does_not_treat_employer_name_as_evidence(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
+    ) -> None:
+        """"Steuerberatungsgesellschaft" als Arbeitgebername (current_employer_
+        internal bzw. kanzleityp je Station) belegt nicht, dass die Person
+        SELBST Steuerberater ist."""
+        _use_session_factory(monkeypatch, session_factory)
+        with session_factory() as session:
+            candidate = Candidate(
+                candidate_number="13",
+                first_name="Kira",
+                last_name="Employer",
+                rollen=["steuerberater"],
+                job_title="Senior Consultant",
+                current_employer_internal="XYZ Steuerberatungsgesellschaft mbH",
+                berufliche_stationen=[
+                    {
+                        "kanzleityp": "Steuerberatungsgesellschaft",
+                        "kanzleigroesse": "50-100",
+                        "dauer_jahre": 2,
+                        "rolle": None,
+                    }
+                ],
+            )
+            session.add(candidate)
+            session.commit()
+
+        rows = audit_script.audit()
+
+        assert len(rows) == 1
+        assert rows[0]["candidate_number"] == "13"
+
+    def test_station_rolle_still_counts_as_evidence(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
+    ) -> None:
+        """Das Feld "rolle" je Station bleibt (anders als kanzleityp) ein
+        gueltiger Beleg - eine fruehere Station ausdruecklich als
+        Steuerberater klassifiziert ist ein echter, wenn auch struktureller,
+        Beleg (Nutzer-Vorgabe explizit: "das Feld 'rolle' je Station")."""
+        _use_session_factory(monkeypatch, session_factory)
+        with session_factory() as session:
+            candidate = Candidate(
+                candidate_number="14",
+                first_name="Lea",
+                last_name="StationRolle",
+                rollen=["steuerberater"],
+                job_title="Tax Director",
+                berufliche_stationen=[
+                    {
+                        "kanzleityp": "Mittelstand",
+                        "kanzleigroesse": "10-50",
+                        "dauer_jahre": 4,
+                        "rolle": "steuerberater",
+                    }
+                ],
+            )
+            session.add(candidate)
+            session.commit()
+
+        rows = audit_script.audit()
+
+        assert rows == []
+
     def test_herkunft_cv_extraktion(
         self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
     ) -> None:

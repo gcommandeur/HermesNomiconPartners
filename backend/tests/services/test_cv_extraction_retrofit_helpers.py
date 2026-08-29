@@ -123,3 +123,45 @@ class TestHasTitelschutzEvidence:
 
     def test_role_without_titelschutz_rule_defaults_to_true(self) -> None:
         assert has_titelschutz_evidence("bilanzbuchhalter", "irgendein Text") is True
+
+    # --- Nutzer-Feedback "Schreibweisen werden nicht erkannt": bare
+    # Titel-Keyword fehlte bisher komplett fuer wirtschaftspruefer/
+    # rechtsanwalt (nur steuerberater hatte sich selbst als Keyword), und
+    # Umlaut-Schreibweisen (ü) wurden nicht auf die interne ue-Form
+    # normalisiert. ---
+    def test_bare_job_title_wirtschaftspruefer_with_umlaut_is_evidence(self) -> None:
+        assert has_titelschutz_evidence("wirtschaftspruefer", "Wirtschaftsprüfer") is True
+
+    def test_bare_job_title_wirtschaftspruefer_uppercase_is_evidence(self) -> None:
+        assert has_titelschutz_evidence("wirtschaftspruefer", "WIRTSCHAFTSPRÜFER") is True
+
+    def test_bare_job_title_rechtsanwalt_is_evidence(self) -> None:
+        assert has_titelschutz_evidence("rechtsanwalt", "Rechtsanwalt") is True
+
+    def test_feminine_form_rechtsanwaeltin_with_umlaut_is_evidence(self) -> None:
+        assert has_titelschutz_evidence("rechtsanwalt", "RECHTSANWÄLTIN") is True
+
+    def test_combined_role_wirtschaftspruefer_steuerberater_is_evidence_for_both(self) -> None:
+        text = "Wirtschaftsprüfer / Steuerberater"
+        assert has_titelschutz_evidence("wirtschaftspruefer", text) is True
+        assert has_titelschutz_evidence("steuerberater", text) is True
+
+    def test_abbreviation_stb_is_evidence(self) -> None:
+        assert has_titelschutz_evidence("steuerberater", "StB") is True
+
+    def test_abbreviation_wp_is_evidence(self) -> None:
+        assert has_titelschutz_evidence("wirtschaftspruefer", "WP") is True
+
+    def test_abbreviation_ra_is_evidence(self) -> None:
+        assert has_titelschutz_evidence("rechtsanwalt", "RA") is True
+
+    def test_abbreviation_ra_requires_word_boundary_not_substring(self) -> None:
+        """"ra" darf nicht als blosser Substring in unrelated Woertern
+        matchen (z.B. "Praktikant") - sonst waere praktisch jeder Text ein
+        Beleg fuer rechtsanwalt."""
+        assert has_titelschutz_evidence("rechtsanwalt", "Praktikant im Steuerrecht") is False
+
+    def test_abbreviation_wp_requires_word_boundary_not_substring(self) -> None:
+        # Synthetischer String, der "wp" NICHT an einer Wortgrenze enthaelt -
+        # ein reiner Substring-Match wuerde hier faelschlich treffen.
+        assert has_titelschutz_evidence("wirtschaftspruefer", "xwpx") is False

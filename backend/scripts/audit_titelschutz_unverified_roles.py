@@ -2,23 +2,37 @@
 Datenverlust", Schritt 1): listet Kandidaten, deren "rollen"
 steuerberater/wirtschaftspruefer/rechtsanwalt enthaelt, OHNE dass IRGENDEINES
 der folgenden Felder einen expliziten Beleg fuer den geschuetzten Titel
-enthaelt (Examen bestanden/Bestellung/Zulassung oder der Titel selbst - siehe
-cv_extraction.py::has_titelschutz_evidence/TITELSCHUTZ_EVIDENCE_KEYWORDS,
-dieselbe Regel wie die TITELSCHUTZ-REGEL im Extraktions-Prompt):
+enthaelt (Examen bestanden/Bestellung/Zulassung, der Titel selbst, oder eine
+gaengige Kurzform/weibliche Form - siehe cv_extraction.py::
+has_titelschutz_evidence/TITELSCHUTZ_EVIDENCE_KEYWORDS, dieselbe Regel wie die
+TITELSCHUTZ-REGEL im Extraktions-Prompt):
 
-  - ausbildung_titel, qualification (urspruengliche Beleg-Felder)
+  - ausbildung_titel, qualification, examensnoten (urspruengliche/direkte
+    Beleg-Felder)
   - job_title (2026-08 ergaenzt): bei Sourcing-Kandidaten ohne CV steht der
     Beleg oft NUR hier, direkt von der Kanzlei-Website uebernommen (z.B.
     "Steuerberaterin") - vorher faelschlich als unbelegt gemeldet.
-  - berufliche_stationen (2026-08 ergaenzt): jede Station kann eine eigene
-    "rolle" tragen (z.B. eine fruehere Station als Steuerberater neben einer
-    aktuellen anderen Position) - alle String-Werte der Stationen werden
-    durchsucht.
-  - summary (2026-08 ergaenzt): freier CV-Zusammenfassungstext.
-  - cv_extraction_raw (2026-08 ergaenzt): das vollstaendige letzte
-    Extraktionsergebnis, inkl. Felder ohne eigene Kandidaten-Spalte (z.B.
-    erfahrungen_zusammenfassung) - kann einen Beleg enthalten, der bei der
-    Uebernahme in die einzelnen Spalten nicht mitgekommen ist.
+  - berufliche_stationen: NUR das Feld "rolle" je Station (Kategorie-Wert wie
+    "steuerberater" fuer genau diese Station) - NICHT kanzleityp/
+    kanzleigroesse, das beschreibt den ARBEITGEBER, nicht die Qualifikation
+    der Person.
+  - summary, sowie job_title/qualification/ausbildung_titel/examensnoten/
+    erfahrungen_zusammenfassung/berufliche_stationen[].rolle INNERHALB von
+    cv_extraction_raw (dem vollstaendigen letzten Extraktionsergebnis) - kann
+    einen Beleg enthalten, der bei der Uebernahme in die einzelnen Spalten
+    nicht mitgekommen ist.
+
+WICHTIG - bewusst NICHT durchsucht (2026-08 Korrektur nach Fehlalarm-Meldung):
+  - cv_extraction_raw["rollen"] / current_employer_internal / kanzleityp:
+    eine erste Fassung durchsuchte cv_extraction_raw komplett rekursiv,
+    inklusive des "rollen"-Schluessels selbst - jeder Kandidat mit
+    rollen=["steuerberater"] hatte damit automatisch einen "Beleg" fuer
+    steuerberater (Zirkelschluss: die zu pruefende Behauptung wurde als ihr
+    eigener Beweis gewertet). current_employer_internal/kanzleityp wurden aus
+    demselben Grund ausgeschlossen: "Steuerberatungsgesellschaft" als
+    Arbeitgebername belegt nicht, dass die Person SELBST Steuerberater ist.
+    Siehe has_titelschutz_evidence-Docstring in cv_extraction.py fuer die
+    vollstaendige Begruendung.
 
 Hintergrund: diese drei Rollen sind in Deutschland gesetzlich geschuetzte
 Berufsbezeichnungen. Kandidaten, die VOR der Titelschutz-Regel im Prompt
@@ -86,37 +100,46 @@ CSV_FIELDS = [
 _TITELSCHUTZ_ROLLEN = tuple(TITELSCHUTZ_EVIDENCE_KEYWORDS.keys())
 
 
-def _flatten_strings(value: Any) -> list[str]:
-    """Sammelt rekursiv alle String-Werte aus einer beliebig verschachtelten
-    JSON-Struktur (dict/list/str) - fuer die Beleg-Suche in
-    berufliche_stationen (Liste von Dicts) und cv_extraction_raw (komplettes
-    Extraktions-JSON, Struktur variiert je nach Prompt-Version)."""
-    if isinstance(value, str):
-        return [value]
-    if isinstance(value, dict):
-        collected: list[str] = []
-        for item in value.values():
-            collected.extend(_flatten_strings(item))
-        return collected
-    if isinstance(value, list):
-        collected = []
-        for item in value:
-            collected.extend(_flatten_strings(item))
-        return collected
-    return []
+def _station_rollen(stationen: Any) -> list[str]:
+    """Nur das Feld "rolle" je Station (nicht kanzleityp/kanzleigroesse -
+    das beschreibt den Arbeitgeber, nicht die Qualifikation der Person)."""
+    if not isinstance(stationen, list):
+        return []
+    return [
+        station["rolle"]
+        for station in stationen
+        if isinstance(station, dict) and isinstance(station.get("rolle"), str)
+    ]
+
+
+def _str_field(source: Any, key: str) -> str | None:
+    if not isinstance(source, dict):
+        return None
+    value = source.get(key)
+    return value if isinstance(value, str) else None
 
 
 def _evidence_text(candidate: Candidate) -> str:
-    """Alle Felder zusammen, die als Beleg fuer eine geschuetzte Rolle
-    gelten koennen (Schritt 1 der Beleg-Verbreiterung)."""
+    """Alle Felder zusammen, die als Beleg fuer eine geschuetzte Rolle gelten
+    koennen - bewusst eine ALLOWLIST (nicht "alles rekursiv durchsuchen"),
+    siehe Modul-Docstring: nur was die Qualifikation der Person selbst
+    beschreibt, NIE die zu pruefende "rollen"-Liste oder Arbeitgeber-Felder
+    (current_employer_internal/kanzleityp)."""
+    raw = candidate.cv_extraction_raw
     parts = [
         candidate.ausbildung_titel,
         candidate.qualification,
         candidate.job_title,
         candidate.summary,
+        candidate.examensnoten,
+        *_station_rollen(candidate.berufliche_stationen),
+        _str_field(raw, "job_title"),
+        _str_field(raw, "qualification"),
+        _str_field(raw, "ausbildung_titel"),
+        _str_field(raw, "examensnoten"),
+        _str_field(raw, "erfahrungen_zusammenfassung"),
+        *_station_rollen(raw.get("berufliche_stationen") if isinstance(raw, dict) else None),
     ]
-    parts.extend(_flatten_strings(candidate.berufliche_stationen))
-    parts.extend(_flatten_strings(candidate.cv_extraction_raw))
     return " ".join(p for p in parts if p)
 
 
@@ -209,9 +232,10 @@ def main() -> None:
     print(f"\nAudit-CSV: {OUTPUT_PATH}")
     print(
         "\nManuelle Pruefung noetig - dieses Skript aendert NICHTS automatisch. Jede Zeile "
-        "bedeutet nur: keines der durchsuchten Felder (ausbildung_titel/qualification/"
-        "job_title/berufliche_stationen/summary/cv_extraction_raw) enthaelt (aktuell) einen "
-        "erkennbaren Beleg (Examen/Bestellung/Zulassung/Titel) fuer die genannte Rolle - das "
+        "bedeutet nur: keines der durchsuchten Qualifikations-Felder (ausbildung_titel/"
+        "qualification/job_title/examensnoten/berufliche_stationen[].rolle/summary, sowie "
+        "dieselben Felder innerhalb von cv_extraction_raw) enthaelt (aktuell) einen erkennbaren "
+        "Beleg (Examen/Bestellung/Zulassung/Titel/Kurzform) fuer die genannte Rolle - das "
         "Original-CV kann trotzdem einen gueltigen Beleg enthalten, der bei der Extraktion in "
         "keines dieser Felder uebernommen wurde."
     )
