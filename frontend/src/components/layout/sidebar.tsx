@@ -70,22 +70,25 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
         <div className="flex h-24 items-center border-b border-white/10 px-4">
           <Link href="/" className={cn("flex min-w-0 items-center", collapsed ? "mx-auto" : "gap-3")} onClick={onMobileClose}>
             {/* Commandeur-Consulting-Logo (Nutzer-Vorgabe "zurueck zu unserem
-                Commandeur Consulting Logo"): das CC-Monogramm liegt auf
-                einer weissen Flaeche im Bild selbst (siehe commandeur-mark-
-                white.png-Erzeugung), weil der untere/dunkle Teil des
-                Metallic-Farbverlaufs auf dem dunklen Sidebar-Hintergrund
-                sonst kaum noch zu erkennen waere - so bleibt der Ring auf
-                jedem Hintergrund klar sichtbar. Eingeklappt bewusst NUR das
-                CC (Nutzer-Vorgabe "beim kleiner machen nur das CC ohne die
-                Schrift"), Wortmarke nur im ausgeklappten Zustand daneben. */}
-            <Image src="/brand/commandeur-mark-white.png" alt="Commandeur Consulting" width={44} height={44} className="h-11 w-11 shrink-0 rounded-xl object-contain" priority />
+                Commandeur Consulting Logo"): das CC-Monogramm bleibt
+                transparent (Nutzer-Feedback "CC-Logo soll transparent
+                sein") - der Platin-Farbverlauf hat inzwischen genug
+                Kontrast, um auch ohne weisse Flaeche direkt auf dem dunklen
+                Sidebar-Hintergrund klar erkennbar zu sein. Eingeklappt
+                bewusst NUR das CC (Nutzer-Vorgabe "beim kleiner machen nur
+                das CC ohne die Schrift"), Wortmarke nur im ausgeklappten
+                Zustand daneben - h-6 statt vorher h-9, sonst ragt der
+                Schriftzug bei 1418:232 Bildseitenverhaeltnis ueber den
+                verfuegbaren Platz neben dem Icon hinaus (Nutzer-Feedback
+                "Schrift ... nicht ueber Grenze"). */}
+            <Image src="/brand/commandeur-mark.png" alt="Commandeur Consulting" width={44} height={44} className="h-11 w-11 shrink-0 object-contain" priority />
             {!collapsed && (
               <Image
                 src="/brand/commandeur-wordmark.png"
                 alt="Commandeur Consulting"
                 width={1418}
                 height={232}
-                className="h-9 w-auto object-contain"
+                className="h-6 w-auto max-w-full object-contain"
                 priority
               />
             )}
