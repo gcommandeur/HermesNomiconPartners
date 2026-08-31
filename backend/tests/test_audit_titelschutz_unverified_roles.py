@@ -1,8 +1,16 @@
 """Tests fuer scripts/audit_titelschutz_unverified_roles.py - READ-ONLY Audit
 fuer Kandidaten mit steuerberater/wirtschaftspruefer/rechtsanwalt in "rollen"
 ohne erkennbaren Beleg (Schritt 1 der Titelschutz-Korrektur: Beleg-Pruefung
-verbreitert auf ausbildung_titel/qualification/job_title/
-berufliche_stationen/summary/cv_extraction_raw, plus Herkunfts-Ausweisung)."""
+verbreitert auf ausbildung_titel/qualification/job_title/examensnoten/
+summary/cv_extraction_raw, plus Herkunfts-Ausweisung).
+
+Grundregel der Allowlist (zweifach nach gemeldeten Zirkelschluessen
+nachgeschaerft): nur Felder, die eine Qualifikation IM WORTLAUT DES CV
+wiedergeben, zaehlen als Beleg. Eine vom Modell selbst erzeugte
+Kategorisierung (rollen, berufliche_stationen[].rolle) zaehlt NIE als Beleg
+fuer eine andere vom selben Modell erzeugte Kategorisierung - siehe
+test_does_not_treat_own_rollen_list_in_cv_extraction_raw_as_evidence und
+test_station_rolle_alone_is_not_evidence."""
 
 import pytest
 from sqlalchemy.orm import Session, sessionmaker
@@ -87,40 +95,61 @@ class TestAudit:
 
         assert rows == []
 
-    def test_does_not_flag_role_with_evidence_only_in_berufliche_stationen(
+    def test_station_rolle_alone_is_not_evidence(
         self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
     ) -> None:
+        """Regressionsschutz gegen den ZWEITEN gemeldeten Zirkelschluss (eine
+        Ebene tiefer als der erste): berufliche_stationen[].rolle ist keine
+        dokumentierte Qualifikation im Wortlaut des CV, sondern dieselbe
+        Modell-Klassifikation wie das uebergeordnete "rollen"-Feld, nur pro
+        Station statt insgesamt - erzeugt im selben Extraktionslauf, aus
+        demselben Text. Zaehlt daher NICHT als Beleg, auch wenn mehrere
+        Stationen "rolle": "steuerberater" tragen (genau der gemeldete Fall
+        Nr. 1723/3170: englischer Jobtitel, aber Stationen-Rollen
+        "steuerberater"), egal ob auf der Kandidaten-Spalte oder innerhalb
+        von cv_extraction_raw."""
         _use_session_factory(monkeypatch, session_factory)
         with session_factory() as session:
             candidate = Candidate(
                 candidate_number="4",
                 first_name="Dana",
                 last_name="Station",
-                rollen=["rechtsanwalt"],
-                job_title="Senior Associate",
+                rollen=["steuerberater"],
+                job_title="Global Tax Director",
                 berufliche_stationen=[
                     {
                         "kanzleityp": "Grosskanzlei",
                         "kanzleigroesse": "200+",
                         "dauer_jahre": 3,
-                        "rolle": "rechtsanwalt",
+                        "rolle": "steuerberater",
                     },
                     {
                         "kanzleityp": "Mittelstand",
                         "kanzleigroesse": "10-50",
                         "dauer_jahre": 1,
-                        "rolle": None,
-                        # Freitext-Notiz innerhalb der Station kann den Beleg tragen.
-                        "notiz": "Zulassung als Rechtsanwalt 2018 erhalten",
+                        "rolle": "steuerberater",
                     },
                 ],
+                cv_extraction_raw={
+                    "job_title": "Global Tax Director",
+                    "berufliche_stationen": [
+                        {
+                            "kanzleityp": "Grosskanzlei",
+                            "kanzleigroesse": "200+",
+                            "dauer_jahre": 3,
+                            "rolle": "steuerberater",
+                        },
+                    ],
+                },
             )
             session.add(candidate)
             session.commit()
 
         rows = audit_script.audit()
 
-        assert rows == []
+        assert len(rows) == 1
+        assert rows[0]["candidate_number"] == "4"
+        assert rows[0]["geschuetzte_rolle_ohne_beleg"] == "steuerberater"
 
     def test_does_not_flag_role_with_evidence_only_in_summary(
         self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
@@ -280,37 +309,6 @@ class TestAudit:
 
         assert len(rows) == 1
         assert rows[0]["candidate_number"] == "13"
-
-    def test_station_rolle_still_counts_as_evidence(
-        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
-    ) -> None:
-        """Das Feld "rolle" je Station bleibt (anders als kanzleityp) ein
-        gueltiger Beleg - eine fruehere Station ausdruecklich als
-        Steuerberater klassifiziert ist ein echter, wenn auch struktureller,
-        Beleg (Nutzer-Vorgabe explizit: "das Feld 'rolle' je Station")."""
-        _use_session_factory(monkeypatch, session_factory)
-        with session_factory() as session:
-            candidate = Candidate(
-                candidate_number="14",
-                first_name="Lea",
-                last_name="StationRolle",
-                rollen=["steuerberater"],
-                job_title="Tax Director",
-                berufliche_stationen=[
-                    {
-                        "kanzleityp": "Mittelstand",
-                        "kanzleigroesse": "10-50",
-                        "dauer_jahre": 4,
-                        "rolle": "steuerberater",
-                    }
-                ],
-            )
-            session.add(candidate)
-            session.commit()
-
-        rows = audit_script.audit()
-
-        assert rows == []
 
     def test_herkunft_cv_extraktion(
         self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
