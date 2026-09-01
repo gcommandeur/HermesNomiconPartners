@@ -127,6 +127,71 @@ def test_extract_candidate_fields_normalizes_rollen_and_stationen(
     ]
 
 
+def test_extract_candidate_fields_drops_rechtsgebiete_for_non_legal_role(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Schritt 4 der Titelschutz-Korrektur: rechtsgebiete ist als
+    Unterscheidungsmerkmal fuer Jurist:innen gedacht - ein Steuerberater
+    bekommt "Steuerrecht" bereits ueber fachliche_schwerpunkte abgedeckt.
+    Code-Check zusaetzlich zur RECHTSGEBIETE-REGEL im Prompt, falls sich das
+    Modell nicht daran haelt."""
+    monkeypatch.setattr(
+        cv_extraction,
+        "generate_text",
+        _fake_generate_text(
+            {
+                "first_name": "Jana",
+                "rollen": ["steuerberater"],
+                "rechtsgebiete": ["steuerrecht"],
+            }
+        ),
+    )
+
+    result = cv_extraction.extract_candidate_fields("irrelevanter CV-Text")
+
+    assert result["rechtsgebiete"] == []
+
+
+def test_extract_candidate_fields_keeps_rechtsgebiete_for_rechtsanwalt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        cv_extraction,
+        "generate_text",
+        _fake_generate_text(
+            {
+                "first_name": "Jana",
+                "rollen": ["rechtsanwalt"],
+                "rechtsgebiete": ["arbeitsrecht"],
+            }
+        ),
+    )
+
+    result = cv_extraction.extract_candidate_fields("irrelevanter CV-Text")
+
+    assert result["rechtsgebiete"] == ["arbeitsrecht"]
+
+
+def test_extract_candidate_fields_keeps_rechtsgebiete_for_rechtsfachangestellte(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        cv_extraction,
+        "generate_text",
+        _fake_generate_text(
+            {
+                "first_name": "Jana",
+                "rollen": ["rechtsfachangestellte"],
+                "rechtsgebiete": ["insolvenzrecht"],
+            }
+        ),
+    )
+
+    result = cv_extraction.extract_candidate_fields("irrelevanter CV-Text")
+
+    assert result["rechtsgebiete"] == ["insolvenzrecht"]
+
+
 def test_extract_candidate_fields_defaults_missing_rollen_and_stationen_to_empty(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -172,6 +237,25 @@ def test_cv_structured_fields_includes_new_fields() -> None:
     assert "rollen" in cv_extraction.CV_STRUCTURED_FIELDS
     assert "current_employer_internal" in cv_extraction.CV_STRUCTURED_FIELDS
     assert "berufliche_stationen" in cv_extraction.CV_STRUCTURED_FIELDS
+
+
+class TestTitelschutzRoleConfusionGuard:
+    """Regressionsschutz fuer Schritt 3b der Titelschutz-Korrektur: zwei der
+    18 gemeldeten Faelle (Nr. 1738 job_title "Steuerberater" -> faelschlich
+    rechtsanwalt; Nr. 3330 job_title "WIRTSCHAFTSPRÜFER" -> faelschlich
+    steuerberater) waren keine Uebervorsichtigkeit, sondern eine Verwechslung
+    zwischen den drei geschuetzten Rollen - der Beleg war da, wurde aber der
+    FALSCHEN Rolle zugeordnet. Wie bei TestNebentaetigkeitExclusion oben
+    steckt die Ableitung ausschliesslich im Prompt - dieser Test prueft nur,
+    dass die verschaerfte Regel im Prompt-Text steht; ob das Modell ihr
+    tatsaechlich folgt, muesste an einer echten Stichprobe verifiziert
+    werden (kein Massen-Re-Parse, Nutzer-Vorgabe "das waere die Kosten nicht
+    wert")."""
+
+    def test_prompt_requires_evidence_to_match_the_correct_protected_role(self) -> None:
+        prompt = cv_extraction._FIELD_EXTRACTION_SYSTEM_PROMPT
+        assert "RICHTIGEN der drei geschuetzten Rollen" in prompt
+        assert "massgebliche Beleg" in prompt
 
 
 class TestNebentaetigkeitExclusion:

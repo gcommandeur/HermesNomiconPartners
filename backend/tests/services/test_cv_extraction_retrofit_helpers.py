@@ -104,6 +104,41 @@ class TestDeriveRechtsgebieteFromSchwerpunkte:
         result = derive_rechtsgebiete_from_schwerpunkte(["Arbeitsrecht", "Employment Law"])
         assert result == ["arbeitsrecht"]
 
+    # --- Schritt 4 der Titelschutz-Korrektur: nur bei rechtsanwalt/
+    # rechtsfachangestellte ueberhaupt ableiten - genau der Bug, der den
+    # urspruenglichen Backfill bei fast jedem Steuerberater "Steuerrecht"
+    # eintragen liess. ---
+    def test_rollen_none_keeps_backwards_compatible_behaviour(self) -> None:
+        """Ohne rollen-Argument (Default None) unveraendertes Verhalten -
+        reine Rueckwaertskompatibilitaet fuer Aufrufer, die (noch) keine
+        Rollenpruefung wollen."""
+        result = derive_rechtsgebiete_from_schwerpunkte(["Steuerrecht"])
+        assert result == ["steuerrecht"]
+
+    def test_drops_result_for_non_legal_role(self) -> None:
+        result = derive_rechtsgebiete_from_schwerpunkte(["Steuerrecht"], ["steuerberater"])
+        assert result == []
+
+    def test_keeps_result_for_rechtsanwalt(self) -> None:
+        result = derive_rechtsgebiete_from_schwerpunkte(["Arbeitsrecht"], ["rechtsanwalt"])
+        assert result == ["arbeitsrecht"]
+
+    def test_keeps_result_for_rechtsfachangestellte(self) -> None:
+        result = derive_rechtsgebiete_from_schwerpunkte(
+            ["Insolvenzrecht"], ["rechtsfachangestellte"]
+        )
+        assert result == ["insolvenzrecht"]
+
+    def test_drops_result_for_empty_rollen(self) -> None:
+        result = derive_rechtsgebiete_from_schwerpunkte(["Steuerrecht"], [])
+        assert result == []
+
+    def test_keeps_result_when_legal_role_is_one_of_several(self) -> None:
+        result = derive_rechtsgebiete_from_schwerpunkte(
+            ["Arbeitsrecht"], ["rechtsanwalt", "partner"]
+        )
+        assert result == ["arbeitsrecht"]
+
 
 class TestHasTitelschutzEvidence:
     def test_english_job_title_alone_is_not_evidence(self) -> None:

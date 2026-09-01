@@ -125,6 +125,42 @@ _ROLLE_KEYWORDS: tuple[tuple[str, Rolle], ...] = (
     ("rechtsanwältin", Rolle.RECHTSANWALT),
 )
 
+# "partner" als reiner Substring traf faelschlich auch unrelated deutsche
+# Komposita wie "Ansprechpartner" (Kontaktperson, kein Kanzlei-Partner -
+# gemeldeter Fehlklassifikations-Fall Nr. 4450). Deshalb fuer "partner"
+# ALLEIN auf Wortgrenzen-Matching umgestellt (siehe _matches_partner_keyword
+# unten) statt reinem Substring wie bei den uebrigen Keywords oben - die
+# bleiben bewusst Substring-Matches, weil das dort NOTWENDIG ist (z.B. muss
+# "steuerberater" weiterhin in "Steuerberaterin" treffen; eine strikte
+# \bsteuerberater\b-Regex wuerde die weibliche Form NICHT mehr finden, da
+# "berater" und "in" ohne Wortgrenze aneinanderstossen - anders als bei
+# "partner" gibt es dort kein bekanntes Fehlklassifikations-Kompositum).
+#
+# Reine \b-Wortgrenzen-Regex allein reicht fuer "partner" nicht: deutsche
+# Komposita OHNE Leerzeichen wie "Seniorpartner"/"Ansprechpartner" sind
+# beide zusammengeschriebene Woerter ohne interne Wortgrenze - eine Regex
+# kann sie nicht auseinanderhalten. Da "Seniorpartner"/"Equity Partner"/
+# "Sozius" laut Nutzer-Vorgabe WEITERHIN treffen sollen, deshalb eine
+# explizite Allowlist bekannter guter Komposita zusaetzlich zur
+# Wortgrenzen-Regex (statt einer Blockliste wie "alles ausser
+# Ansprechpartner") - sicherer Default: ein neues, unbekanntes "irgendwas-
+# partner"-Kompositum trifft NICHT automatisch, nur die hier explizit
+# gelisteten.
+_PARTNER_WORD_PATTERN = re.compile(r"\bpartner\b")
+_PARTNER_COMPOUND_ALLOWLIST = (
+    "seniorpartner",
+    "juniorpartner",
+    "hauptpartner",
+    "sozius",
+    "sozia",
+)
+
+
+def _matches_partner_keyword(normalized_text: str) -> bool:
+    if _PARTNER_WORD_PATTERN.search(normalized_text):
+        return True
+    return any(compound in normalized_text for compound in _PARTNER_COMPOUND_ALLOWLIST)
+
 
 def _job_title_from_raw_data(raw_data: dict[str, object] | None) -> str | None:
     """Titel/Fachgebiet aus dem schemalosen raw_data - Schluesselname je nach
@@ -161,7 +197,11 @@ def _rollen_from_text(text: str | None) -> list[Rolle]:
     normalized = text.lower()
     matches: list[Rolle] = []
     for keyword, rolle in _ROLLE_KEYWORDS:
-        if keyword in normalized and rolle not in matches:
+        if rolle == Rolle.PARTNER:
+            is_match = _matches_partner_keyword(normalized)
+        else:
+            is_match = keyword in normalized
+        if is_match and rolle not in matches:
             matches.append(rolle)
     return matches
 

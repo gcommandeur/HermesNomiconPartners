@@ -117,6 +117,18 @@ _VALID_ROLLEN = {rolle.value for rolle in Rolle}
 _VALID_ABSCHLUSSARTEN = {wert.value for wert in Abschlussart}
 _VALID_RECHTSGEBIETE = {wert.value for wert in Rechtsgebiet}
 
+# Konsolidierter Auftrag "Titelschutz-Korrektur ohne Datenverlust + Rollen-
+# Herkunft + Rechtsgebiete", Schritt 4: rechtsgebiete ist als Unterscheidungs-
+# merkmal fuer Jurist:innen gedacht - bei Nicht-Jurist:innen (Steuerberater
+# etc.) macht "Steuerrecht" o.ae. das Feld als Filter wertlos (steht dann bei
+# fast jedem Steuerberater), waehrend die fachliche Einordnung fuer sie
+# bereits vollstaendig in fachliche_schwerpunkte steht. Deshalb NUR bei
+# diesen beiden Rollen befuellt - als Code-Check zusaetzlich zur RECHTSGEBIETE-
+# REGEL im Prompt (Verteidigung in der Tiefe, gleiches Muster wie der
+# Commandeur-Adress-Check oben im Moduldocstring: ein LLM-Fehler bei der
+# Befolgung der Prompt-Regel darf hier nicht durchrutschen).
+JURISTISCHE_ROLLEN = {Rolle.RECHTSANWALT.value, Rolle.RECHTSFACHANGESTELLTE.value}
+
 _FIELD_EXTRACTION_SYSTEM_PROMPT = """Du extrahierst strukturierte Kontakt- und Rollendaten aus einem
 Lebenslauf-Text für ein Recruiting-CRM (Fokus Steuern/Wirtschaftsprüfung/Recht).
 Der Text stammt aus einer automatischen PDF/DOCX-Extraktion und kann Layout-
@@ -208,6 +220,19 @@ AUSGEUEBTEN TAETIGKEIT vergeben (z.B. "bilanzbuchhalter" bei Jahresabschluss-
 /Buchhaltungstaetigkeiten, oder "sonstige" wenn nichts passt) - NIEMALS
 steuerberater/wirtschaftspruefer/rechtsanwalt allein aus der Seniorität oder
 einem englischen Jobtitel ableiten.
+
+WICHTIG - der Beleg muss zur RICHTIGEN der drei geschuetzten Rollen gehoeren,
+nicht nur irgendeine der drei: "Bestellung 05/2009" belegt "steuerberater",
+NICHT "wirtschaftspruefer" oder "rechtsanwalt" - "Zulassung als Rechtsanwalt"
+belegt "rechtsanwalt", NICHT "steuerberater" - auch wenn im selben CV
+Kolleg:innen mit der jeweils ANDEREN geschuetzten Rolle erwaehnt werden (z.B.
+"Kanzlei fuer Steuerberater und Rechtsanwaelte" als Arbeitgeberbeschreibung -
+das ist kein Beleg fuer die Rolle der Person selbst). Steht der geschuetzte
+Titel WOERTLICH im job_title/in der Berufsbezeichnung der Person (z.B.
+"Steuerberater", "Wirtschaftsprüfer"), ist DAS der staerkste und
+massgebliche Beleg fuer GENAU DIESE Rolle - nicht fuer eine andere der drei,
+selbst wenn an anderer Stelle im Text ein Hinweis auf eine der beiden
+uebrigen geschuetzten Rollen steht.
 
 ROLLEN-TAXONOMIE (fuer "rollen" UND fuer "rolle" je Station in
 berufliche_stationen) - typische Aufgaben/Signale je Rolle:
@@ -527,7 +552,14 @@ def _normalize_abschluesse(raw: Any) -> list[str]:
     return _normalize_enum_list(raw, _VALID_ABSCHLUSSARTEN)
 
 
-def _normalize_rechtsgebiete(raw: Any) -> list[str]:
+def _normalize_rechtsgebiete(raw: Any, rollen: list[str] | None = None) -> list[str]:
+    """`rollen` ist optional (Rueckwaertskompatibilitaet fuer bestehende
+    Aufrufer), aber JEDER Aufrufer im Extraktionspfad uebergibt es - siehe
+    JURISTISCHE_ROLLEN oben: ohne rechtsanwalt/rechtsfachangestellte in
+    `rollen` bleibt rechtsgebiete immer leer, unabhaengig davon, was das
+    Modell geliefert hat."""
+    if rollen is not None and not (JURISTISCHE_ROLLEN & set(rollen)):
+        return []
     return _normalize_enum_list(raw, _VALID_RECHTSGEBIETE)
 
 
@@ -662,7 +694,9 @@ _RECHTSGEBIET_KEYWORDS: tuple[tuple[str, Rechtsgebiet], ...] = (
 )
 
 
-def derive_rechtsgebiete_from_schwerpunkte(schwerpunkte: list[str] | None) -> list[str]:
+def derive_rechtsgebiete_from_schwerpunkte(
+    schwerpunkte: list[str] | None, rollen: list[str] | None = None
+) -> list[str]:
     """Leitet Rechtsgebiete rein regelbasiert (Keyword-Mapping) aus bereits
     vorhandenen fachliche_schwerpunkte-Eintraegen ab - fuer Kandidaten, die
     VOR Einfuehrung des strukturierten rechtsgebiete-Felds verarbeitet
@@ -670,7 +704,18 @@ def derive_rechtsgebiete_from_schwerpunkte(schwerpunkte: list[str] | None) -> li
     Rechtsgebiet-Keyword unter den Schwerpunkten vorkommt - anders als bei
     abschluesse gibt es hier KEINEN "kein_rechtsgebiet_erkennbar"-Fallback
     (das feste Vokabular hat keinen solchen Wert, ein Rechtsanwalt ohne
-    erkennbaren Schwerpunkt bleibt hier einfach leer)."""
+    erkennbaren Schwerpunkt bleibt hier einfach leer).
+
+    `rollen` (Schritt 4 der Titelschutz-Korrektur): nur bei rechtsanwalt/
+    rechtsfachangestellte ueberhaupt ableiten (siehe JURISTISCHE_ROLLEN) -
+    genau der Bug, der die urspruengliche Backfill-Ausfuehrung ohne Rollen-
+    Pruefung bei fast jedem Steuerberater "Steuerrecht" eintragen liess.
+    Optional mit Default None NUR fuer Rueckwaertskompatibilitaet zu
+    bestehenden Aufrufstellen, die (noch) keine Rollen mitgeben - ein
+    Aufrufer, der die Rollenpruefung will, MUSS `rollen` explizit
+    uebergeben."""
+    if rollen is not None and not (JURISTISCHE_ROLLEN & set(rollen)):
+        return []
     if not schwerpunkte:
         return []
     found: list[str] = []
@@ -983,7 +1028,7 @@ def extract_candidate_fields(
     data["edv_kenntnisse"] = normalize_terms(data["edv_kenntnisse"])
     data["rollen"] = _normalize_rollen(data.get("rollen"))
     data["abschluesse"] = _normalize_abschluesse(data.get("abschluesse"))
-    data["rechtsgebiete"] = _normalize_rechtsgebiete(data.get("rechtsgebiete"))
+    data["rechtsgebiete"] = _normalize_rechtsgebiete(data.get("rechtsgebiete"), data["rollen"])
     data["berufliche_stationen"] = _normalize_berufliche_stationen(data.get("berufliche_stationen"))
     # Defensive Laengenbegrenzung - siehe _MAX_FIELD_LENGTHS oben.
     for field_name in ("job_title", "qualification", "ausbildung_titel", "examensnoten"):
@@ -1017,7 +1062,9 @@ def extract_candidate_fields(
             # berufliche_stationen-Wert nicht ungeprueft durchrutscht.
             data["rollen"] = _normalize_rollen(data.get("rollen"))
             data["abschluesse"] = _normalize_abschluesse(data.get("abschluesse"))
-            data["rechtsgebiete"] = _normalize_rechtsgebiete(data.get("rechtsgebiete"))
+            data["rechtsgebiete"] = _normalize_rechtsgebiete(
+                data.get("rechtsgebiete"), data["rollen"]
+            )
             data["berufliche_stationen"] = _normalize_berufliche_stationen(
                 data.get("berufliche_stationen")
             )
