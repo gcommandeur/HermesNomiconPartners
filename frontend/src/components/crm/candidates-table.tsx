@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, Ghost, History, X } from "lucide-react";
+import { ChevronDown, Ghost, History, ShieldAlert, X } from "lucide-react";
 import { FilterBar } from "@/components/crm/filter-bar";
 import { DataTable } from "@/components/crm/data-table";
 import { StatusPill } from "@/components/crm/status-pill";
@@ -182,6 +182,14 @@ export function CandidatesTable() {
   // Sichtbarkeitsgrenze (Default "Alle" bleibt unveraendert). Siehe
   // Backend models/candidate.py::owner_user_id fuer die Begruendung.
   const [mineOnly, setMineOnly] = useState(false);
+  // Titelschutz-Korrektur Schritt 2: eigener Filter, um Kandidaten mit
+  // unbestaetigter geschuetzter Rolle wiederzufinden (Nutzer-Vorgabe -
+  // "sonst findet man sie nicht wieder"). Wirkt wie plzOrt/radiusKm NICHT
+  // auf die separate Reaktivierungsliste (eigene, kleine Sonder-
+  // Datenquelle ohne diesen Filter, gleiches Muster wie dort).
+  const [rollenUnbestaetigtOnly, setRollenUnbestaetigtOnly] = useState(
+    () => searchParams.get("rollen_unbestaetigt") === "1",
+  );
   const { data: currentUserData } = useCurrentUser();
   const currentUserId = currentUserData?.data.id;
   const [sortKey, setSortKey] = useState<string | null>("candidate_number");
@@ -228,6 +236,7 @@ export function CandidatesTable() {
     abschluesse: selectedAbschluesse,
     plzOrt,
     radiusKm: radiusKm ? Number(radiusKm) : undefined,
+    rollenUnbestaetigt: rollenUnbestaetigtOnly ? true : undefined,
     ownerUserId: mineOnly ? currentUserId : undefined,
     sortBy: sortKey ?? undefined,
     sortDir,
@@ -366,13 +375,23 @@ export function CandidatesTable() {
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <Button
-          size="sm"
-          variant={reactivationOnly ? "dark" : "outline"}
-          onClick={() => setReactivationOnly((current) => !current)}
-        >
-          <History size={14} />Erneut kontaktieren
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant={reactivationOnly ? "dark" : "outline"}
+            onClick={() => setReactivationOnly((current) => !current)}
+          >
+            <History size={14} />Erneut kontaktieren
+          </Button>
+          <Button
+            size="sm"
+            variant={rollenUnbestaetigtOnly ? "dark" : "outline"}
+            onClick={() => setRollenUnbestaetigtOnly((current) => !current)}
+            title="Kandidaten mit geschützter Rolle (Steuerberater/Wirtschaftsprüfer/Rechtsanwalt) ohne erkennbaren Beleg im CV"
+          >
+            <ShieldAlert size={14} />Titel unbestätigt
+          </Button>
+        </div>
         <ExportActions filename="kandidaten" rows={exportRows} />
       </div>
       {reactivationOnly && (
@@ -380,6 +399,16 @@ export function CandidatesTable() {
           <Badge tone="blue" className="gap-1.5">
             Wiedervorlage-Filter aktiv
             <button type="button" onClick={() => setReactivationOnly(false)} title="Filter entfernen" className="hover:text-white">
+              <X size={12} />
+            </button>
+          </Badge>
+        </div>
+      )}
+      {rollenUnbestaetigtOnly && (
+        <div className="mb-3">
+          <Badge tone="amber" className="gap-1.5">
+            Titel-unbestätigt-Filter aktiv
+            <button type="button" onClick={() => setRollenUnbestaetigtOnly(false)} title="Filter entfernen" className="hover:text-white">
               <X size={12} />
             </button>
           </Badge>
@@ -512,8 +541,17 @@ export function CandidatesTable() {
             <td className="px-4 py-3.5"><p>{candidate.job_title ?? "—"}</p><p className="mt-1 text-[11px] text-[#94A3B8]">{candidate.qualification ?? "Qualifikation offen"}</p></td>
             <td className="px-4 py-3.5">
               {candidate.rollen && candidate.rollen.length > 0 ? (
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap items-center gap-1">
                   {candidate.rollen.map((rolle) => <Badge key={rolle} tone="blue">{rolleLabel(rolle)}</Badge>)}
+                  {/* Titelschutz-Korrektur Schritt 2: dezenter Hinweis am
+                   * Rollen-Badge, wenn die geschuetzte Rolle unbelegt ist -
+                   * rollen selbst bleibt unangetastet, siehe Kandidatendetail
+                   * fuer die Bestaetigen-/Korrigieren-Aktionen. */}
+                  {candidate.rollen_unbestaetigt && (
+                    <span title="Titel unbestätigt - kein erkennbarer Beleg im CV">
+                      <ShieldAlert size={13} className="text-[#F0B429]" />
+                    </span>
+                  )}
                 </div>
               ) : (
                 <span className="text-[#94A3B8]">—</span>

@@ -150,3 +150,84 @@ def test_quali_call_payload_never_includes_current_employer_internal(
     assert "Geheime Mandanten-Kanzlei GmbH" not in json.dumps(payload, ensure_ascii=False)
     assert "current_employer_internal" not in payload
     assert "currentEmployerInternal" not in payload
+
+
+class TestRollenUnbestaetigtProfileGuard:
+    """Titelschutz-Korrektur Schritt 2: solange rollen_unbestaetigt gesetzt
+    ist, darf die vom Modell selbst erzeugte "rolle"-Klassifikation je
+    Station nicht ungeprueft in ein anonymes Profil wandern (siehe
+    profile_generator.py::_berufliche_stationen_for_profile)."""
+
+    def test_strips_station_rolle_when_flag_set(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        with session_factory() as session:
+            candidate = _make_candidate(
+                session,
+                rollen_unbestaetigt=True,
+                job_title="Global Tax Director",
+                berufliche_stationen=[
+                    {
+                        "kanzleityp": "Grosskanzlei",
+                        "kanzleigroesse": "200+",
+                        "dauer_jahre": 3,
+                        "rolle": "steuerberater",
+                    }
+                ],
+            )
+            payload = _build_quali_call_payload(candidate)
+
+        assert payload["beruflicheStationen"] == [
+            {"kanzleityp": "Grosskanzlei", "kanzleigroesse": "200+", "dauer_jahre": 3}
+        ]
+        assert "steuerberater" not in json.dumps(payload, ensure_ascii=False)
+
+    def test_keeps_other_station_fields_and_experience_years_when_flag_set(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        """Nur "rolle" wird entfernt - kanzleityp/kanzleigroesse/dauer_jahre
+        (und damit die berechnete Gesamterfahrung) bleiben erhalten, das
+        sind keine geschuetzten Titel."""
+        with session_factory() as session:
+            candidate = _make_candidate(
+                session,
+                rollen_unbestaetigt=True,
+                berufliche_stationen=[
+                    {
+                        "kanzleityp": "Grosskanzlei",
+                        "kanzleigroesse": "200+",
+                        "dauer_jahre": 3,
+                        "rolle": "steuerberater",
+                    },
+                    {
+                        "kanzleityp": "Mittelstand",
+                        "kanzleigroesse": "10-50",
+                        "dauer_jahre": 2,
+                        "rolle": None,
+                    },
+                ],
+            )
+            payload = _build_quali_call_payload(candidate)
+
+        assert payload["berufserfahrungJahre"] == 5.0
+        assert all("rolle" not in station for station in payload["beruflicheStationen"])
+
+    def test_keeps_station_rolle_when_flag_not_set(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        with session_factory() as session:
+            candidate = _make_candidate(
+                session,
+                rollen_unbestaetigt=False,
+                berufliche_stationen=[
+                    {
+                        "kanzleityp": "Mittelstand",
+                        "kanzleigroesse": "10-50",
+                        "dauer_jahre": 4,
+                        "rolle": "steuerberater",
+                    }
+                ],
+            )
+            payload = _build_quali_call_payload(candidate)
+
+        assert payload["beruflicheStationen"][0]["rolle"] == "steuerberater"

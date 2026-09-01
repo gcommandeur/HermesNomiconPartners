@@ -513,14 +513,31 @@ export function CandidateCreateModal({ onCreated }: { onCreated?: (candidate: Ca
 export function CandidateEditModal({
   candidate,
   onUpdated,
+  open: openProp,
+  onOpenChange,
+  hideTrigger = false,
 }: {
   candidate: Candidate;
   onUpdated?: (candidate: Candidate) => void;
+  /** Fuer externe Trigger (z.B. "Rolle korrigieren" am Titelschutz-Hinweis,
+   * siehe candidate-rollen-unbestaetigt-hint.tsx) - unkontrolliert
+   * (eingebauter State), wenn weggelassen, damit bestehende Aufrufstellen
+   * unveraendert bleiben. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Blendet den eingebauten "Bearbeiten"-Button aus, fuer Aufrufstellen
+   * mit einem eigenen Trigger-Button (state bleibt dann komplett extern
+   * gesteuert ueber open/onOpenChange). */
+  hideTrigger?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   return (
     <>
-      <Button size="sm" variant="outline" onClick={() => setOpen(true)}><Pencil size={13} />Bearbeiten</Button>
+      {!hideTrigger && (
+        <Button size="sm" variant="outline" onClick={() => setOpen(true)}><Pencil size={13} />Bearbeiten</Button>
+      )}
       {open && (
         <Modal title="Kandidat bearbeiten" eyebrow="Talent Pool" onClose={() => setOpen(false)}>
           <CandidateCreateForm

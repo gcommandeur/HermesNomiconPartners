@@ -132,17 +132,82 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         )
         return list(self.audit_logs.list_for_candidate(entity_id, submission_ids))
 
-    def update(self, entity_id: uuid.UUID, payload: CandidateUpdate) -> Candidate:
+    def confirm_rollen(self, entity_id: uuid.UUID, current_user: User) -> Candidate:
+        """"Bestätigen"-Aktion (Titelschutz-Korrektur Schritt 2): der Nutzer
+        hat den Titel geprueft (z.B. im Original-CV nachgesehen) und
+        bestaetigt ihn als korrekt, OHNE rollen selbst zu aendern - reines
+        Loeschen des Flags. Fuer die Gegenaktion ("Rolle korrigieren", bei
+        der rollen sich tatsaechlich aendert) siehe update() oben; die gibt
+        es bewusst nicht als eigene Methode, weil sie einfach die normale
+        Rollen-Bearbeitung ist."""
+        candidate = self.get(entity_id)
+        if not candidate.rollen_unbestaetigt:
+            return candidate
+        candidate.rollen_unbestaetigt = False
+        self.audit_logs.create(
+            {
+                "entity_type": "candidate",
+                "entity_id": candidate.id,
+                "action": "rollen_bestaetigt",
+                "changed_by": current_user.email,
+                "old_values": {"rollen_unbestaetigt": True},
+                "new_values": {"rollen_unbestaetigt": False, "rollen": list(candidate.rollen)},
+            }
+        )
+        self.session.commit()
+        self.session.refresh(candidate)
+        return candidate
+
+    def update(
+        self,
+        entity_id: uuid.UUID,
+        payload: CandidateUpdate,
+        current_user: User | None = None,
+    ) -> Candidate:
         """Stempelt cv_in_recorded_at, sobald cv_available echt (neu) auf
         True wechselt - einmalig, nie erneut ueberschrieben. Getrennt vom
         reinen Anzeige-Flag cv_available, damit Analytics ("CV In") nur
         echte, ab dem Stichtag neu erfasste CV-Ins zaehlt statt der 2481
         beim Datenuebertrag pauschal gesetzten Alt-Kandidaten (siehe
-        Modul-Docstring in models/candidate.py, Nutzer-Feedback 2026-07-15)."""
-        was_cv_available = self.get(entity_id).cv_available
+        Modul-Docstring in models/candidate.py, Nutzer-Feedback 2026-07-15).
+
+        Titelschutz-Korrektur Schritt 2: loescht rollen_unbestaetigt
+        automatisch, sobald rollen sich durch dieses Update tatsaechlich
+        AENDERT - das ist die "Rolle korrigieren"-Aktion (oeffnet im
+        Frontend einfach die normale Rollen-Bearbeitung, siehe Auftrag,
+        statt einen eigenen Dialog zu brauchen). Bewusst ein Wertevergleich
+        statt "rollen war im Payload gesetzt": das Bearbeiten-Formular
+        schickt rollen bei JEDER Aenderung mit (auch wenn nur z.B. das
+        Gehalt geaendert wurde) - ohne den Wertevergleich wuerde das Flag
+        schon bei einer voellig unrelated Aenderung geloescht. Schreibt
+        einen AuditLog-Eintrag, damit die Korrektur in der Aenderungs-
+        historie auftaucht (current_user optional fuer Rueckwaertskompatibi-
+        litaet zu bestehenden Aufrufstellen ohne current_user, changed_by
+        bleibt dann None wie bei anderen automatischen Eintraegen)."""
+        before = self.get(entity_id)
+        was_cv_available = before.cv_available
+        was_rollen_unbestaetigt = before.rollen_unbestaetigt
+        old_rollen = list(before.rollen)
+
         updated = super().update(entity_id, payload)
         if updated.cv_available and not was_cv_available and updated.cv_in_recorded_at is None:
             updated.cv_in_recorded_at = datetime.now(UTC)
+            self.session.commit()
+        if was_rollen_unbestaetigt and list(updated.rollen) != old_rollen:
+            updated.rollen_unbestaetigt = False
+            self.audit_logs.create(
+                {
+                    "entity_type": "candidate",
+                    "entity_id": updated.id,
+                    "action": "rollen_korrigiert",
+                    "changed_by": current_user.email if current_user else None,
+                    "old_values": {"rollen": old_rollen, "rollen_unbestaetigt": True},
+                    "new_values": {
+                        "rollen": list(updated.rollen),
+                        "rollen_unbestaetigt": False,
+                    },
+                }
+            )
             self.session.commit()
         if "short_profile" in payload.model_fields_set and updated.short_profile:
             # Legt das gerade (neu) gespeicherte anonyme Profil automatisch
@@ -365,6 +430,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         owner_user_id: uuid.UUID | None = None,
         created_from: datetime | None = None,
         created_to: datetime | None = None,
+        rollen_unbestaetigt: bool | None = None,
         sort_by: str | None = None,
         sort_dir: str = "asc",
         offset: int = 0,
@@ -386,6 +452,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
                 owner_user_id=owner_user_id,
                 created_from=created_from,
                 created_to=created_to,
+                rollen_unbestaetigt=rollen_unbestaetigt,
                 sort_by=sort_by,
                 sort_dir=sort_dir,
                 offset=offset,
@@ -402,6 +469,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             owner_user_id=owner_user_id,
             created_from=created_from,
             created_to=created_to,
+            rollen_unbestaetigt=rollen_unbestaetigt,
             sort_by=sort_by,
             sort_dir=sort_dir,
             offset=offset,
@@ -424,6 +492,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         owner_user_id: uuid.UUID | None,
         created_from: datetime | None,
         created_to: datetime | None,
+        rollen_unbestaetigt: bool | None = None,
         sort_by: str | None,
         sort_dir: str,
         offset: int,
@@ -452,6 +521,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             owner_user_id=owner_user_id,
             created_from=created_from,
             created_to=created_to,
+            rollen_unbestaetigt=rollen_unbestaetigt,
             sort_by=sort_by,
             sort_dir=sort_dir,
             offset=0,

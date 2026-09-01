@@ -9,10 +9,11 @@ const tones = {
   red: "border-[#9b5757]/35 bg-[#5a2f35]/40 text-[#e4aeb4]",
 };
 
-export function Badge({ children, tone = "gray", className }: {
+export function Badge({ children, tone = "gray", className, title }: {
   children: React.ReactNode;
   tone?: keyof typeof tones;
   className?: string;
+  title?: string;
 }) {
-  return <span className={cn("inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium", tones[tone], className)}>{children}</span>;
+  return <span title={title} className={cn("inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium", tones[tone], className)}>{children}</span>;
 }

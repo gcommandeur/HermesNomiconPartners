@@ -250,6 +250,7 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
         owner_user_id: uuid.UUID | None = None,
         created_from: datetime | None = None,
         created_to: datetime | None = None,
+        rollen_unbestaetigt: bool | None = None,
         sort_by: str | None = None,
         sort_dir: str = "asc",
         offset: int = 0,
@@ -301,6 +302,11 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
             filters.append(Candidate.created_at >= created_from)
         if created_to:
             filters.append(Candidate.created_at <= created_to)
+        if rollen_unbestaetigt is not None:
+            # Titelschutz-Korrektur Schritt 2: eigener Filter, um genau die
+            # markierten Kandidaten wiederzufinden (Nutzer-Vorgabe -
+            # "sonst findet man sie nicht wieder").
+            filters.append(Candidate.rollen_unbestaetigt == rollen_unbestaetigt)
         query = (
             select(Candidate)
             .where(*filters)

@@ -325,9 +325,31 @@ def _total_experience_years(stations: list[dict[str, Any]]) -> float | None:
     return total or None
 
 
+def _berufliche_stationen_for_profile(candidate: Candidate) -> list[dict[str, Any]]:
+    """Titelschutz-Korrektur Schritt 2, Sperre fuers anonyme Profil: wenn
+    candidate.rollen_unbestaetigt gesetzt ist, wird das "rolle"-Feld je
+    Station aus der Nutzlast entfernt, BEVOR sie ans LLM geht - das ist die
+    vom Modell selbst erzeugte Klassifikation, genau dieselbe, die im
+    Titelschutz-Audit als unbelegt markiert wurde (siehe scripts/
+    audit_titelschutz_unverified_roles.py). Bewusst WEGLASSEN statt nur zu
+    warnen (und nicht bloss die eine unbelegte Rolle, sondern alle Stationen-
+    Rollen dieses Kandidaten): ein Warnhinweis kann in einem hektischen
+    Arbeitsalltag uebersehen werden, ein weggelassenes Feld nicht - ein
+    unbestaetigter geschuetzter Titel darf UNTER KEINEN UMSTAENDEN in ein
+    ausgehendes Dokument wandern, unabhaengig davon, ob jemand eine Warnung
+    wahrnimmt. Das Frontend zeigt zusaetzlich einen sichtbaren Hinweis, siehe
+    AnonymousProfilePanel - Weglassen und Sichtbarkeit schliessen sich nicht
+    aus."""
+    stationen = candidate.berufliche_stationen or []
+    if not candidate.rollen_unbestaetigt:
+        return stationen
+    return [{k: v for k, v in station.items() if k != "rolle"} for station in stationen]
+
+
 def _build_quali_call_payload(candidate: Candidate) -> dict[str, Any]:
     # wechselgrund and no_gos are intentionally NOT included here - internal
     # only, must never reach the LLM or an outgoing document.
+    berufliche_stationen = _berufliche_stationen_for_profile(candidate)
     return {
         "anrede": candidate.anrede.value if candidate.anrede else None,
         "rolle": candidate.job_title,
@@ -337,8 +359,8 @@ def _build_quali_call_payload(candidate: Candidate) -> dict[str, Any]:
         "profil": candidate.summary,
         "fachlicheSchwerpunkte": candidate.fachliche_schwerpunkte or [],
         "ausbildungTitel": candidate.ausbildung_titel,
-        "berufserfahrungJahre": _total_experience_years(candidate.berufliche_stationen or []),
-        "beruflicheStationen": candidate.berufliche_stationen or [],
+        "berufserfahrungJahre": _total_experience_years(berufliche_stationen),
+        "beruflicheStationen": berufliche_stationen,
         "aktuellesUmfeld": {
             "kanzleityp": candidate.aktuelles_umfeld_kanzleityp,
             "kanzleigroesse": candidate.aktuelles_umfeld_kanzleigroesse,

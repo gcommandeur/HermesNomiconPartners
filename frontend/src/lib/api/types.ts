@@ -130,6 +130,13 @@ export interface Candidate extends Entity {
    * durchsuchbare, kategoriale Ergaenzung zu job_title (Freitext-
    * Originaltitel aus dem CV), nicht dessen Ersatz. */
   rollen?: Rolle[];
+  /** Titelschutz-Korrektur Schritt 2: gesetzt, wenn eine geschuetzte Rolle
+   * (steuerberater/wirtschaftspruefer/rechtsanwalt) OHNE erkennbaren Beleg
+   * im CV vergeben wurde (siehe Backend scripts/
+   * audit_titelschutz_unverified_roles.py). rollen selbst bleibt dabei
+   * unangetastet - system-gesetzt, nicht direkt ueber PATCH steuerbar,
+   * siehe Backend models/candidate.py::rollen_unbestaetigt. */
+  rollen_unbestaetigt?: boolean;
   qualification?: string | null;
   postal_code: string | null;
   city: string | null;
@@ -762,6 +769,11 @@ export interface PageQuery {
    * services/candidates.py::list_filtered). */
   plzOrt?: string;
   radiusKm?: number;
+  /** Nur fuer Kandidaten (Backend GET /candidates?rollen_unbestaetigt=...) -
+   * Titelschutz-Korrektur Schritt 2: findet Kandidaten mit unbestaetigter
+   * geschuetzter Rolle wieder (Nutzer-Vorgabe - "sonst findet man sie nicht
+   * wieder"). undefined laesst den Filter aus. */
+  rollenUnbestaetigt?: boolean;
   /** Komfort-Filter "Meine..." - siehe owner_user_id auf Candidate/
    * ClientCompany/CandidateSubmission/Task oben. */
   ownerUserId?: string;

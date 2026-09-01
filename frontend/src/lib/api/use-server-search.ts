@@ -39,6 +39,7 @@ export function useServerSearchList<T>(
     abschluesse?: Abschlussart[];
     plzOrt?: string;
     radiusKm?: number;
+    rollenUnbestaetigt?: boolean;
     ownerUserId?: string;
     pageSize?: number;
     sortBy?: string;
@@ -75,13 +76,14 @@ export function useServerSearchList<T>(
     abschluesseKey,
     debouncedPlzOrt,
     options.radiusKm,
+    options.rollenUnbestaetigt,
     options.ownerUserId,
     options.sortBy,
     options.sortDir,
   ]);
 
   const offset = page * pageSize;
-  const swrKey = `${cacheKeyPrefix}?search=${debouncedSearch}&status=${options.status ?? ""}&rollen=${rollenKey}&abschluesse=${abschluesseKey}&plz_ort=${radiusActive ? debouncedPlzOrt : ""}&radius_km=${radiusActive ? options.radiusKm : ""}&owner_user_id=${options.ownerUserId ?? ""}&sort_by=${options.sortBy ?? ""}&sort_dir=${options.sortDir ?? ""}&limit=${pageSize}&offset=${offset}`;
+  const swrKey = `${cacheKeyPrefix}?search=${debouncedSearch}&status=${options.status ?? ""}&rollen=${rollenKey}&abschluesse=${abschluesseKey}&plz_ort=${radiusActive ? debouncedPlzOrt : ""}&radius_km=${radiusActive ? options.radiusKm : ""}&rollen_unbestaetigt=${options.rollenUnbestaetigt ?? ""}&owner_user_id=${options.ownerUserId ?? ""}&sort_by=${options.sortBy ?? ""}&sort_dir=${options.sortDir ?? ""}&limit=${pageSize}&offset=${offset}`;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<DataResult<Paginated<T>>>(
     swrKey,
@@ -93,6 +95,7 @@ export function useServerSearchList<T>(
         abschluesse: options.abschluesse,
         plzOrt: radiusActive ? debouncedPlzOrt : undefined,
         radiusKm: radiusActive ? options.radiusKm : undefined,
+        rollenUnbestaetigt: options.rollenUnbestaetigt,
         ownerUserId: options.ownerUserId,
         sortBy: options.sortBy,
         sortDir: options.sortDir,

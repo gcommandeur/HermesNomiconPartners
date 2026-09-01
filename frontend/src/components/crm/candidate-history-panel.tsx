@@ -42,6 +42,15 @@ function describeEntry(entry: AuditLogEntry): string {
   if (entry.entity_type === "candidate" && entry.action === "anonymized") {
     return "Kandidat anonymisiert (DSGVO)";
   }
+  // Titelschutz-Korrektur Schritt 2 (Markieren statt Aendern).
+  if (entry.entity_type === "candidate" && entry.action === "rollen_bestaetigt") {
+    return "Titel bestätigt (nach Prüfung)";
+  }
+  if (entry.entity_type === "candidate" && entry.action === "rollen_korrigiert") {
+    const from = (entry.old_values?.rollen as string[] | undefined)?.join(", ") || "—";
+    const to = (entry.new_values?.rollen as string[] | undefined)?.join(", ") || "—";
+    return `Rolle korrigiert (Titel war unbestätigt): ${from} → ${to}`;
+  }
   // Generischer Rueckfall - macht die Aktion lesbar sichtbar statt sie zu
   // verwerfen, auch wenn sie hier noch nicht explizit uebersetzt ist.
   const entityLabel = entry.entity_type === "candidate" ? "Kandidat" : "Prozess";

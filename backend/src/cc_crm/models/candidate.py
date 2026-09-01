@@ -95,6 +95,22 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Postgres-Array-Containment (@>) entsteht, dann an dieser Stelle auf
     # JSONB + GIN-Index migrieren.
     rollen: Mapped[list[Rolle]] = mapped_column(JSON, default=list, nullable=False)
+    # Konsolidierter Auftrag "Titelschutz-Korrektur ohne Datenverlust +
+    # Rollen-Herkunft + Rechtsgebiete", Schritt 2: markiert (statt zu
+    # aendern) Kandidaten, bei denen eine geschuetzte Rolle (steuerberater/
+    # wirtschaftspruefer/rechtsanwalt, siehe cv_extraction.py::
+    # TITELSCHUTZ_EVIDENCE_KEYWORDS) OHNE erkennbaren Beleg im CV gesetzt
+    # ist (siehe scripts/audit_titelschutz_unverified_roles.py). rollen
+    # selbst bleibt dabei unangetastet - eine automatische Loeschung wuerde
+    # den Kandidaten stillschweigend aus bestehenden Rollen-Filtern
+    # verschwinden lassen, ohne dass jemand den Grund erfaehrt. System-
+    # gesetzt (per Skript oder ueber die Bestaetigen-/Korrigieren-Aktionen,
+    # siehe CandidateService.confirm_rollen/update), NICHT ueber das normale
+    # Create/Update-Schema durch den Nutzer direkt steuerbar - deshalb kein
+    # Feld in CandidateCreate/CandidateUpdate. Wird zusaetzlich in
+    # profile_generator.py geprueft, um zu verhindern, dass ein unbestaetigter
+    # Titel ungeprueft in ein anonymes Profil wandert.
+    rollen_unbestaetigt: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # INTERN — niemals in anonyme Profile / ausgehende Dokumente übernehmen
     # (siehe services/profile_generator.py::_build_quali_call_payload, das
     # bewusst eine Allowlist statt einer Blockliste ist - dieses Feld taucht

@@ -22,6 +22,7 @@ import { RegisterRecentCandidate } from "@/components/crm/register-recent-candid
 import { CandidateSubmissionStages } from "@/components/crm/candidate-submission-stages";
 import { CandidateProcessLog } from "@/components/crm/candidate-process-log";
 import { CandidateHistoryPanel } from "@/components/crm/candidate-history-panel";
+import { CandidateRollenUnbestaetigtHint } from "@/components/crm/candidate-rollen-unbestaetigt-hint";
 import { NotesPanel } from "@/components/crm/notes-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -100,6 +101,7 @@ export default async function CandidateDetailPage({
               {candidate.rollen.map((rolle) => <Badge key={rolle} tone="blue">{rolleLabel(rolle)}</Badge>)}
             </div>
           )}
+          <CandidateRollenUnbestaetigtHint candidate={candidate} />
           {/* Strukturierte Abschlussart(en) (models/enums.py::Abschlussart) -
            * macht ausbildung_titel (Freitext) filterbar, siehe
            * abschluesse-Filter in candidates-table.tsx. */}
@@ -212,7 +214,11 @@ export default async function CandidateDetailPage({
           </div>
         </TabsContent>
         <TabsContent value="Anonymes Profil">
-          <AnonymousProfilePanel candidateId={candidate.id} initialText={anonymousProfile} />
+          <AnonymousProfilePanel
+            candidateId={candidate.id}
+            initialText={anonymousProfile}
+            rollenUnbestaetigt={candidate.rollen_unbestaetigt}
+          />
         </TabsContent>
         <TabsContent value="Notizen">
           <NotesPanel candidateId={candidate.id} initialNotes={notes} />

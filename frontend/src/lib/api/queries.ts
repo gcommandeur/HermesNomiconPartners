@@ -62,6 +62,9 @@ function pageQueryString(query: PageQuery): string {
     params.set("plz_ort", query.plzOrt.trim());
     params.set("radius_km", String(query.radiusKm));
   }
+  if (query.rollenUnbestaetigt !== undefined) {
+    params.set("rollen_unbestaetigt", String(query.rollenUnbestaetigt));
+  }
   if (query.ownerUserId) params.set("owner_user_id", query.ownerUserId);
   if (query.sortBy) params.set("sort_by", query.sortBy);
   if (query.sortDir) params.set("sort_dir", query.sortDir);
@@ -78,6 +81,14 @@ export async function getCandidate(id: string) {
 export async function getReactivationCandidates(thresholdMonths?: number) {
   const query = thresholdMonths ? `?threshold_months=${thresholdMonths}` : "";
   return apiGet<Candidate[]>(`/candidates/reactivation-list${query}`, []);
+}
+
+/** "Bestätigen"-Aktion (Titelschutz-Korrektur Schritt 2) - der Nutzer hat
+ * die Rolle geprüft und bestätigt sie als korrekt, ohne rollen selbst zu
+ * ändern. Löscht nur candidate.rollen_unbestaetigt (siehe Backend
+ * CandidateService.confirm_rollen), schreibt dort einen AuditLog-Eintrag. */
+export async function confirmCandidateRollen(candidateId: string) {
+  return apiPost<Candidate>(`/candidates/${candidateId}/confirm-rollen`, {});
 }
 
 export async function getClients() {

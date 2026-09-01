@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiDownload, apiPatch, apiPost } from "@/lib/api/client";
@@ -11,9 +11,19 @@ import { ErrorBanner } from "@/components/crm/error-banner";
 interface AnonymousProfilePanelProps {
   candidateId: string;
   initialText: string;
+  /** Titelschutz-Korrektur Schritt 2: wenn gesetzt, entfernt der Backend
+   * Profil-Generator die "rolle"-Klassifikation je Station VOR dem
+   * LLM-Aufruf (siehe profile_generator.py::_berufliche_stationen_for_profile)
+   * - dieser Hinweis macht das im Moment der Generierung sichtbar, statt
+   * es komplett stillschweigend zu tun. */
+  rollenUnbestaetigt?: boolean;
 }
 
-export function AnonymousProfilePanel({ candidateId, initialText }: AnonymousProfilePanelProps) {
+export function AnonymousProfilePanel({
+  candidateId,
+  initialText,
+  rollenUnbestaetigt = false,
+}: AnonymousProfilePanelProps) {
   const router = useRouter();
   const [text, setText] = useState(initialText);
   const [generating, setGenerating] = useState(false);
@@ -110,6 +120,16 @@ export function AnonymousProfilePanel({ candidateId, initialText }: AnonymousPro
             </Button>
           </div>
         </div>
+        {rollenUnbestaetigt && (
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-[#F0B429]/25 bg-[#F0B429]/5 p-3 text-xs text-[#F0B429]">
+            <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+            <span>
+              Titel unbestätigt (siehe Hinweis oben) - die zugehörige Rollen-Klassifikation
+              wird beim Generieren automatisch aus dem Profil ausgelassen, statt ungeprüft zu
+              erscheinen.
+            </span>
+          </div>
+        )}
         <ErrorBanner message={error} className="mt-4" />
         <textarea
           value={text}

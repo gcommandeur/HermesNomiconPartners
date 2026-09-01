@@ -65,6 +65,11 @@ def list_candidates(
     owner_user_id: uuid.UUID | None = None,
     created_from: datetime | None = None,
     created_to: datetime | None = None,
+    # Titelschutz-Korrektur Schritt 2: eigener Filter fuer Kandidaten mit
+    # unbestaetigter geschuetzter Rolle (siehe models/candidate.py::
+    # rollen_unbestaetigt) - sonst findet man sie im laufenden Betrieb nicht
+    # wieder. True/False filtert, None (Default) laesst den Filter aus.
+    rollen_unbestaetigt: bool | None = None,
     sort_by: Annotated[
         Literal["candidate_number", "name", "job_title", "city", "salary_expectation", "status"]
         | None,
@@ -88,6 +93,7 @@ def list_candidates(
         owner_user_id=owner_user_id,
         created_from=created_from,
         created_to=created_to,
+        rollen_unbestaetigt=rollen_unbestaetigt,
         sort_by=sort_by,
         sort_dir=sort_dir,
         offset=offset,
@@ -166,8 +172,26 @@ def update_candidate(
     candidate_id: uuid.UUID,
     payload: CandidateUpdate,
     session: DatabaseSession,
+    current_user: CurrentUser,
 ) -> CandidateRead:
-    return CandidateRead.model_validate(CandidateService(session).update(candidate_id, payload))
+    return CandidateRead.model_validate(
+        CandidateService(session).update(candidate_id, payload, current_user)
+    )
+
+
+@router.post("/{candidate_id}/confirm-rollen", response_model=CandidateRead)
+def confirm_candidate_rollen(
+    candidate_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> CandidateRead:
+    """"Bestätigen"-Aktion (Titelschutz-Korrektur Schritt 2): der Nutzer hat
+    die Rolle geprueft (z.B. im Original-CV nachgesehen) und bestaetigt sie
+    als korrekt - loescht nur Candidate.rollen_unbestaetigt, rollen selbst
+    bleibt unangetastet. Fuer die Gegenaktion ("Rolle korrigieren") gibt es
+    bewusst keinen eigenen Endpoint - das ist einfach das normale PATCH
+    oben (siehe CandidateService.update())."""
+    return CandidateRead.model_validate(
+        CandidateService(session).confirm_rollen(candidate_id, current_user)
+    )
 
 
 @router.delete("/{candidate_id}", status_code=status.HTTP_204_NO_CONTENT)
