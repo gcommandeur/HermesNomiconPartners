@@ -138,7 +138,7 @@ def backfill(*, apply: bool, candidates: list[Candidate]) -> dict[str, int]:
                     list(candidate.rechtsgebiete)
                     if candidate.rechtsgebiete
                     else derive_rechtsgebiete_from_schwerpunkte(
-                        candidate.fachliche_schwerpunkte
+                        candidate.fachliche_schwerpunkte, candidate.rollen
                     )
                 )
 

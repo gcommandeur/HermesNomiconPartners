@@ -64,6 +64,10 @@ class TestBackfillApply:
     def test_derives_rechtsgebiete_from_fachliche_schwerpunkte(
         self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
     ) -> None:
+        """rollen=["rechtsanwalt"] (Schritt 4 der Titelschutz-Korrektur:
+        rechtsgebiete wird nur bei einer juristischen Rolle abgeleitet -
+        ohne das waere das Ergebnis jetzt korrekt leer, siehe
+        test_drops_rechtsgebiete_for_non_legal_role unten)."""
         _use_session_factory(monkeypatch, session_factory)
         _use_tmp_output_path(monkeypatch, tmp_path)
         with session_factory() as session:
@@ -71,6 +75,7 @@ class TestBackfillApply:
                 candidate_number="1",
                 first_name="Anna",
                 last_name="Muster",
+                rollen=["rechtsanwalt"],
                 fachliche_schwerpunkte=["Arbeitsrecht", "Vertragsrecht"],
                 cv_extraction_raw={"fachliche_schwerpunkte": ["Arbeitsrecht", "Vertragsrecht"]},
             )
@@ -85,6 +90,36 @@ class TestBackfillApply:
         with session_factory() as session:
             refreshed = session.get(Candidate, candidate_id)
         assert refreshed.rechtsgebiete == ["arbeitsrecht", "vertragsrecht"]
+
+    def test_drops_rechtsgebiete_for_non_legal_role(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
+    ) -> None:
+        """Schritt 4 der Titelschutz-Korrektur: genau der Bug, der den
+        urspruenglichen Lauf dieses Skripts bei fast jedem Steuerberater
+        "Steuerrecht" eintragen liess - rechtsgebiete bleibt jetzt leer ohne
+        rechtsanwalt/rechtsfachangestellte in rollen."""
+        _use_session_factory(monkeypatch, session_factory)
+        _use_tmp_output_path(monkeypatch, tmp_path)
+        with session_factory() as session:
+            candidate = Candidate(
+                candidate_number="2",
+                first_name="Bernd",
+                last_name="Beispiel",
+                rollen=["steuerberater"],
+                fachliche_schwerpunkte=["Steuerrecht"],
+                cv_extraction_raw={"fachliche_schwerpunkte": ["Steuerrecht"]},
+            )
+            session.add(candidate)
+            session.commit()
+            candidate_id = candidate.id
+
+        with session_factory() as session:
+            candidates = script._candidates_to_check(session)
+        script.backfill(apply=True, candidates=candidates)
+
+        with session_factory() as session:
+            refreshed = session.get(Candidate, candidate_id)
+        assert refreshed.rechtsgebiete == []
 
     def test_does_not_overwrite_already_set_abschluesse_or_rechtsgebiete(
         self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session], tmp_path
