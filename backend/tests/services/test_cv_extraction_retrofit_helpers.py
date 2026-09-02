@@ -6,6 +6,7 @@ arbeiten nur auf bereits vorhandenem Freitext."""
 from cc_crm.services.cv_extraction import (
     derive_abschluesse_from_text,
     derive_rechtsgebiete_from_schwerpunkte,
+    derive_rollen_from_text,
     has_titelschutz_evidence,
     shorten_ausbildung_freitext,
 )
@@ -200,3 +201,127 @@ class TestHasTitelschutzEvidence:
         # Synthetischer String, der "wp" NICHT an einer Wortgrenze enthaelt -
         # ein reiner Substring-Match wuerde hier faelschlich treffen.
         assert has_titelschutz_evidence("wirtschaftspruefer", "xwpx") is False
+
+
+class TestDeriveRollenFromText:
+    """Rolle fehlt bei gefuelltem Jobtitel (Zwischenthema, dringender als der
+    Rest der Titelschutz-Feinarbeit): 443 von 1680 Kandidaten (Stand 26.08.)
+    haben job_title gefuellt, aber rollen leer - fast alle nie durch die
+    CV-Extraktion gelaufen. derive_rollen_from_text schliesst diese Luecke
+    fuer manuelles Anlegen/Bearbeiten und die Sourcing-Uebernahme."""
+
+    def test_no_text_yields_empty_list(self) -> None:
+        assert derive_rollen_from_text(None, None) == []
+        assert derive_rollen_from_text("") == []
+
+    def test_no_keyword_match_yields_empty_list(self) -> None:
+        assert derive_rollen_from_text("Irgendein unbekannter Text") == []
+
+    def test_bare_steuerberater_is_derived(self) -> None:
+        """Produktions-Beispiel Nr. 4454 "Steuerberater" - steht der
+        geschuetzte Titel woertlich im job_title, ist das ein Beleg und darf
+        zugeordnet werden."""
+        assert derive_rollen_from_text("Steuerberater") == ["steuerberater"]
+
+    def test_bilanzbuchhalterin_is_derived(self) -> None:
+        """Produktions-Beispiel Nr. 4457."""
+        assert derive_rollen_from_text("Bilanzbuchhalterin") == ["bilanzbuchhalter"]
+
+    def test_steuerfachangestellte_is_derived(self) -> None:
+        """Produktions-Beispiel Nr. 4458."""
+        assert derive_rollen_from_text("Steuerfachangestellte") == ["steuerfachangestellte"]
+
+    def test_qualification_is_also_searched(self) -> None:
+        assert derive_rollen_from_text(None, "Steuerberaterin") == ["steuerberater"]
+
+    def test_english_industry_title_does_not_derive_protected_role(self) -> None:
+        """Dieselbe Titelschutz-Regel wie ueberall im Projekt: englische
+        Industriebezeichnungen loesen keine geschuetzte Rolle aus."""
+        assert derive_rollen_from_text("Tax Manager") == []
+        assert derive_rollen_from_text("Global Tax Director") == []
+
+    # --- Tippfehler-Toleranz (Nutzer-Vorgabe, echte Bestandsdaten) ---
+
+    def test_typo_steuerfachangstellte_still_derives(self) -> None:
+        """Produktions-Beispiel Nr. 3666 "Steuerfachangstellte" (fehlendes
+        'e') - Editierdistanz 1 zu "steuerfachangestellte"."""
+        assert derive_rollen_from_text("Steuerfachangstellte") == ["steuerfachangestellte"]
+
+    def test_typo_does_not_match_unrelated_words(self) -> None:
+        """Editierdistanz-Toleranz darf nicht zu Zufallstreffern bei
+        unrelated, aehnlich langen Woertern fuehren."""
+        assert derive_rollen_from_text("Vertriebsaussendienstmitarbeiterin") == []
+
+    # --- Kurzform + Titelschutz-Sicherung (Nutzer-Vorgabe, Beispiel Nr. 3586) ---
+
+    def test_fachangestelle_steuerberater_derives_fachangestellte_not_steuerberater(
+        self,
+    ) -> None:
+        """Der zentrale, schwierige Fall: "Fachangestelle Steuerberater"
+        (Tippfehler + vertauschte Reihenfolge) - "Steuerberater" bezieht sich
+        hier auf den Arbeitgeber/Kontext, nicht auf die Rolle der Person
+        selbst. Konservativ: die geschuetzte Rolle wird unterdrueckt,
+        steuerfachangestellte (ueber die Kurzform "fachangestellte", Distanz
+        1 zu "Fachangestelle") bleibt."""
+        result = derive_rollen_from_text("Fachangestelle Steuerberater")
+        assert result == ["steuerfachangestellte"]
+        assert "steuerberater" not in result
+
+    def test_buchhalterin_matches_short_variant(self) -> None:
+        """Produktions-Beispiel Nr. 4364 "Buchhalterin" - kuerzere Variante
+        von "bilanzbuchhalter", trifft schon per Substring."""
+        assert derive_rollen_from_text("Buchhalterin") == ["bilanzbuchhalter"]
+
+    def test_rechtsanwaltsfachangestellte_does_not_wrongly_derive_steuerfachangestellte(
+        self,
+    ) -> None:
+        """Allowlist-Schutz (kein "steuer" im Text): "fachangestellte" als
+        Kurzform soll nicht faelschlich bei einer Rechtsanwaltsfach-
+        angestellten (juristischer, nicht steuerlicher Kontext) zuschlagen."""
+        result = derive_rollen_from_text("Rechtsanwaltsfachangestellte")
+        assert "steuerfachangestellte" not in result
+
+    def test_verwaltungsfachangestellte_does_not_wrongly_derive_steuerfachangestellte(
+        self,
+    ) -> None:
+        """Regressionsschutz fuer einen bei der Verifikation gefundenen
+        echten Fehltreffer: "Verwaltungsfachangestellte" (Ausbildungsberuf
+        in der oeffentlichen Verwaltung, voellig unrelated) wurde mit der
+        urspruenglichen Blockliste ("anwalt"/"notar" ausschliessen)
+        faelschlich als steuerfachangestellte erkannt - die Allowlist
+        ("steuer" muss vorkommen) faengt das ab."""
+        result = derive_rollen_from_text("Verwaltungsfachangestellte")
+        assert "steuerfachangestellte" not in result
+
+    def test_bare_fachangestellte_without_any_context_derives_nothing(self) -> None:
+        """Konservativ: ganz ohne Steuer-Kontext lieber keine Rolle als eine
+        geratene."""
+        assert derive_rollen_from_text("Fachangestellte") == []
+
+    def test_sozialberaterin_does_not_wrongly_derive_partner(self) -> None:
+        """Regressionsschutz fuer einen zweiten bei der Verifikation
+        gefundenen echten Fehltreffer: "sozia" in der Partner-Kompositum-
+        Allowlist traf als reiner Substring faelschlich "Sozialberaterin"
+        (unrelated Beratungsrolle, kein Kanzlei-Sozius) - jetzt mit
+        Wortgrenzen je Kompositum statt reinem "in"-Check."""
+        assert derive_rollen_from_text("Sozialberaterin") == []
+
+    def test_im_sozialen_does_not_wrongly_derive_partner(self) -> None:
+        assert (
+            "partner"
+            not in derive_rollen_from_text(
+                "Sachbearbeiterin für Heil und Krankenbehandlung im Sozialen"
+            )
+        )
+
+    def test_partner_und_wirtschaftspruefer_both_kept_together(self) -> None:
+        """Regressionsschutz: die Titelschutz-Sicherung darf legitime
+        Kombinationen wie "Partner, Wirtschaftsprüfer" NICHT unterdruecken -
+        nur das Zusammentreffen mit einer Fachangestellte-Rolle loest die
+        Sicherung aus, nicht mit "partner"."""
+        result = derive_rollen_from_text("Partner, Wirtschaftsprüfer")
+        assert set(result) == {"partner", "wirtschaftspruefer"}
+
+    def test_never_returns_duplicates(self) -> None:
+        result = derive_rollen_from_text("Steuerberater und Steuerberaterin")
+        assert result.count("steuerberater") == 1

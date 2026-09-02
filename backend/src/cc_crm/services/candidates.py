@@ -21,6 +21,7 @@ from cc_crm.schemas.candidate import CandidateCreate, CandidateUpdate, CvExtract
 from cc_crm.services.base import CrudService
 from cc_crm.services.cv_extraction import (
     CV_STRUCTURED_FIELDS,
+    derive_rollen_from_text,
     extract_candidate_fields,
     is_agency_letterhead,
 )
@@ -88,6 +89,22 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         self.audit_logs = AuditLogRepository(session)
         self.documents = DocumentRepository(session)
         self.notes = NoteRepository(session)
+
+    def _maybe_derive_rollen(self, candidate: Candidate) -> None:
+        """Regelbasierte Rollen-Ableitung (kein LLM-Call, siehe
+        cv_extraction.py::derive_rollen_from_text) - greift NUR, wenn rollen
+        aktuell leer ist (Nutzer-Vorgabe: "nur ergaenzen, nie ueberschreiben"
+        - eine bereits gesetzte, ggf. manuell geprueft Rolle bleibt in JEDEM
+        Fall unangetastet, auch wenn job_title/qualification sich spaeter
+        aendern). Committet selbst, da beide Aufrufstellen (create/update)
+        den eigentlichen Schreibvorgang bereits abgeschlossen haben."""
+        if candidate.rollen:
+            return
+        derived = derive_rollen_from_text(candidate.job_title, candidate.qualification)
+        if not derived:
+            return
+        candidate.rollen = derived  # type: ignore[assignment]
+        self.session.commit()
 
     def delete(self, entity_id: uuid.UUID, current_user: User | None = None) -> None:
         # Loeschung ist sicherheits-/nachvollziehbarkeitsrelevant (Punkt 2 des
@@ -209,6 +226,14 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
                 }
             )
             self.session.commit()
+        # Zwischenthema "Rolle fehlt bei gefuelltem Jobtitel": nur wenn
+        # job_title/qualification tatsaechlich Teil dieses Updates waren -
+        # sonst wuerde JEDES unrelated Update (z.B. Gehalt) versuchen, eine
+        # laengst leer gelassene Rolle nachzutragen, obwohl sich am Jobtitel
+        # gar nichts geaendert hat. _maybe_derive_rollen greift ohnehin nur,
+        # wenn rollen aktuell leer ist (nie ueberschreiben).
+        if "job_title" in payload.model_fields_set or "qualification" in payload.model_fields_set:
+            self._maybe_derive_rollen(updated)
         if "short_profile" in payload.model_fields_set and updated.short_profile:
             # Legt das gerade (neu) gespeicherte anonyme Profil automatisch
             # als "Nr. XXXX.docx"-Dokument ab (Auftrag "Schnelle Submission",
@@ -579,9 +604,19 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         return str(highest + 1)
 
     def create(self, payload: CandidateCreate) -> Candidate:
+        """Vergibt bei Bedarf candidate_number, UND leitet rollen regel-
+        basiert aus job_title/qualification ab, wenn beim Anlegen keine
+        Rolle mitgegeben wurde (Zwischenthema "Rolle fehlt bei gefuelltem
+        Jobtitel" - manuelles Anlegen und die Sourcing-Uebernahme liefern
+        job_title, aber bisher NICHTS leitete rollen daraus ab, anders als
+        beim CV-Upload). Ergaenzt NUR, ueberschreibt NIE - greift
+        ausschliesslich, wenn rollen nach dem Erstellen noch leer ist
+        (siehe _maybe_derive_rollen)."""
         if not payload.candidate_number:
             payload = payload.model_copy(update={"candidate_number": self._next_candidate_number()})
-        return super().create(payload)
+        entity = super().create(payload)
+        self._maybe_derive_rollen(entity)
+        return entity
 
 
 def _months_ago(months: int) -> date:

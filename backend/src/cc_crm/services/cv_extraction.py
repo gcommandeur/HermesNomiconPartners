@@ -610,6 +610,187 @@ def shorten_ausbildung_freitext(value: str | None) -> str | None:
     return "; ".join(cleaned[:4])
 
 
+# --- Regelbasierte Rollen-Ableitung aus job_title/qualification (KEIN LLM-
+# Call) - Konsolidierter Auftrag "Titelschutz-Korrektur ohne Datenverlust +
+# Rollen-Herkunft + Rechtsgebiete", Zwischenthema "Rolle fehlt bei gefuelltem
+# Jobtitel": 443 von 1680 Kandidaten (Stand 26.08.) haben job_title gefuellt,
+# aber rollen leer - fast alle davon nie durch die CV-Extraktion gelaufen
+# (kein cv_extraction_raw). Beim CV-Upload leitet das LLM rollen direkt ab,
+# sonst (manuelles Anlegen/Bearbeiten, Sourcing-Uebernahme) NICHTS. Diese
+# Funktion schliesst genau diese Luecke, wiederverwendet von
+# CandidateService.create()/update() und services/sourcing.py.
+#
+# Gleiche Grundtabelle wie zuvor in sourcing.py::_ROLLE_KEYWORDS (jetzt hier
+# zentral, damit Erstellen/Bearbeiten/Sourcing/Backfill dieselbe Logik
+# nutzen), PLUS zwei Erweiterungen ueber das urspruengliche Sourcing-Mapping
+# hinaus:
+#   1. Tippfehler-Toleranz (_levenshtein) - reale Bestandsdaten enthalten
+#      "Steuerfachangstellte"/"Fachangestelle" (fehlende Buchstaben), die ein
+#      exakter Substring-Abgleich verfehlt.
+#   2. Kurzformen (_ROLLE_SHORT_VARIANTS, z.B. bare "fachangestellte") PLUS
+#      eine Titelschutz-Sicherung: taucht zusammen mit einer Kurzform wie
+#      "fachangestellte" (Fachangestellte-Rollen sind Hilfstaetigkeiten BEI
+#      einem Steuerberater/Rechtsanwalt) auch eine geschuetzte Rolle auf,
+#      wird die geschuetzte Rolle unterdrueckt statt automatisch vergeben -
+#      "Fachangestelle Steuerberater" bedeutet fast immer "arbeitet fuer
+#      einen Steuerberater", nicht "ist selbst Steuerberater". Konservativ
+#      nach Nutzer-Vorgabe: im Zweifel keine (geschuetzte) Rolle vergeben
+#      statt einer falschen.
+def _levenshtein(a: str, b: str) -> int:
+    """Klassische Editierdistanz (Einfuegen/Loeschen/Ersetzen) - keine
+    externe Abhaengigkeit noetig fuer die kurzen Woerter/Kompositabegriffe
+    hier."""
+    if a == b:
+        return 0
+    if not a:
+        return len(b)
+    if not b:
+        return len(a)
+    previous_row = list(range(len(b) + 1))
+    for i, char_a in enumerate(a, start=1):
+        current_row = [i]
+        for j, char_b in enumerate(b, start=1):
+            cost = 0 if char_a == char_b else 1
+            current_row.append(
+                min(
+                    previous_row[j] + 1,  # Loeschen
+                    current_row[j - 1] + 1,  # Einfuegen
+                    previous_row[j - 1] + cost,  # Ersetzen
+                )
+            )
+        previous_row = current_row
+    return previous_row[-1]
+
+
+# Ab dieser Keyword-Laenge wird zusaetzlich zum Substring-Match auch
+# Tippfehler-Toleranz (Editierdistanz 1) je Wort-Token im Text versucht -
+# kurze Keywords bleiben bewusst exakt, sonst waechst das Rauschrisiko
+# (z.B. wuerde "partner" mit Distanz 1 zu viele unrelated kurze Woerter treffen).
+_FUZZY_MIN_KEYWORD_LENGTH = 8
+_WORD_TOKEN_PATTERN = re.compile(r"[a-zäöüß]+")
+
+
+def _fuzzy_contains(normalized_text: str, keyword: str) -> bool:
+    if keyword in normalized_text:
+        return True
+    if len(keyword) < _FUZZY_MIN_KEYWORD_LENGTH:
+        return False
+    tokens = _WORD_TOKEN_PATTERN.findall(normalized_text)
+    return any(
+        abs(len(token) - len(keyword)) <= 1 and _levenshtein(token, keyword) <= 1
+        for token in tokens
+    )
+
+
+# Schluesselwort -> Rolle, ABSICHTLICH nach Spezifitaet geordnet (laengere/
+# praezisere Begriffe zuerst) - identisch zur vormaligen Tabelle in
+# sourcing.py (siehe dort fuer die Begruendung der Substring-Strategie, z.B.
+# muss "steuerberater" weiterhin in "Steuerberaterin" treffen).
+_ROLLE_KEYWORDS: tuple[tuple[str, Rolle], ...] = (
+    ("steuerfachangestellte", Rolle.STEUERFACHANGESTELLTE),
+    ("steuerfachwirt", Rolle.STEUERFACHWIRT),
+    ("bilanzbuchhalter", Rolle.BILANZBUCHHALTER),
+    ("steuerberater", Rolle.STEUERBERATER),
+    ("steuerbevollmächtigt", Rolle.STEUERBERATER),
+    ("partner", Rolle.PARTNER),
+    ("prüfungsassistent", Rolle.PRUEFUNGSASSISTENT),
+    ("prüfungsleiter", Rolle.PRUEFUNGSLEITER),
+    ("wirtschaftsprüfer", Rolle.WIRTSCHAFTSPRUEFER),
+    ("rechtsfachangestellte", Rolle.RECHTSFACHANGESTELLTE),
+    ("rechtsanwalt", Rolle.RECHTSANWALT),
+    ("rechtsanwältin", Rolle.RECHTSANWALT),
+)
+
+# "partner" als reiner Substring traf faelschlich auch unrelated deutsche
+# Komposita wie "Ansprechpartner" (gemeldeter Fehlklassifikations-Fall Nr.
+# 4450) - siehe Modul-Kommentar, der urspruenglich in sourcing.py stand:
+# reine \b-Wortgrenzen-Regex kann "Ansprechpartner" nicht von "Seniorpartner"
+# unterscheiden (beide zusammengeschriebene Komposita ohne interne
+# Wortgrenze), deshalb eine explizite Allowlist bekannter guter Komposita
+# zusaetzlich zur Wortgrenzen-Regex.
+_PARTNER_WORD_PATTERN = re.compile(r"\bpartner\b")
+# Bewusst als eigene \b-Regex je Kompositum (NICHT als reiner "in"-Substring-
+# Check) - "sozia" als Substring traf sonst faelschlich "Sozialberaterin"/
+# "...im Sozialen" (gefundener echter Fehltreffer waehrend der Verifikation,
+# unrelated zu Kanzlei-Partnern).
+_PARTNER_COMPOUND_PATTERNS = tuple(
+    re.compile(rf"\b{re.escape(compound)}\b")
+    for compound in ("seniorpartner", "juniorpartner", "hauptpartner", "sozius", "sozia")
+)
+
+
+def _matches_partner_keyword(normalized_text: str) -> bool:
+    if _PARTNER_WORD_PATTERN.search(normalized_text):
+        return True
+    return any(pattern.search(normalized_text) for pattern in _PARTNER_COMPOUND_PATTERNS)
+
+
+# Kurzformen, die der volle Kompositum-Substring-Match sonst verfehlt (siehe
+# Nutzer-Beispiele Nr. 4364 "Buchhalterin", Nr. 3586 "Fachangestelle
+# Steuerberater"). Je Kurzform eine Liste ERFORDERLICHER Begleitwoerter
+# (mindestens einer muss zusaetzlich im Text stehen, leeres Tuple = keine
+# Anforderung): "fachangestellte" bare ist ABSICHTLICH als Allowlist statt
+# Blockliste gebaut, nicht wie beim urspruenglichen "partner"-Fix - "Fach-
+# angestellte" ist in Deutschland ein Sammelbegriff fuer sehr viele
+# unrelated Ausbildungsberufe (Verwaltungsfachangestellte,
+# Rechtsanwaltsfachangestellte, Justizfachangestellte,
+# Sozialversicherungsfachangestellte, Fachangestellte fuer Medien-/
+# Informationsdienste, ...) - eine Blockliste bekannter schlechter
+# Komposita waere ein Whack-a-Mole gegen eine lange, nicht abschliessend
+# bekannte Liste (siehe gemeldeter Fund "Verwaltungsfachangestellte" ->
+# faelschlich steuerfachangestellte waehrend der Verifikation). Die
+# Allowlist verlangt stattdessen einen POSITIVEN Steuer-Kontext-Hinweis -
+# genau das trifft auf Nr. 3586 zu ("Fachangestelle Steuerberater" enthaelt
+# "steuer" ueber das Wort "Steuerberater").
+_ROLLE_SHORT_VARIANTS: tuple[tuple[str, Rolle, tuple[str, ...]], ...] = (
+    ("buchhalter", Rolle.BILANZBUCHHALTER, ()),
+    ("fachangestellte", Rolle.STEUERFACHANGESTELLTE, ("steuer",)),
+)
+
+# Geschuetzte Rollen (siehe TITELSCHUTZ_EVIDENCE_KEYWORDS weiter unten) -
+# werden unterdrueckt, wenn im selben Text zusaetzlich eine Fachangestellte-
+# Rolle erkannt wurde (siehe derive_rollen_from_text-Docstring).
+_SUBORDINATE_ROLES_SUPPRESSING_PROTECTED = {
+    Rolle.STEUERFACHANGESTELLTE,
+    Rolle.RECHTSFACHANGESTELLTE,
+}
+
+
+def derive_rollen_from_text(*texts: str | None) -> list[str]:
+    """Leitet Rolle-Kategorien regelbasiert (kein LLM-Call) aus kurzen
+    Texten wie job_title/qualification ab - siehe Modul-Kommentar oben fuer
+    Hintergrund und die beiden Erweiterungen (Tippfehler-Toleranz,
+    Kurzformen+Titelschutz-Sicherung) gegenueber der urspruenglichen
+    sourcing.py-Fassung. Liefert bewusst eine leere Liste statt zu raten,
+    wenn nichts eindeutig zuordenbar ist."""
+    combined = " ".join(t for t in texts if t)
+    if not combined:
+        return []
+    normalized = combined.lower()
+
+    matches: list[Rolle] = []
+    for keyword, rolle in _ROLLE_KEYWORDS:
+        if rolle == Rolle.PARTNER:
+            is_match = _matches_partner_keyword(normalized)
+        else:
+            is_match = _fuzzy_contains(normalized, keyword)
+        if is_match and rolle not in matches:
+            matches.append(rolle)
+    for keyword, rolle, required_companions in _ROLLE_SHORT_VARIANTS:
+        if rolle in matches:
+            continue
+        if required_companions and not any(c in normalized for c in required_companions):
+            continue
+        if _fuzzy_contains(normalized, keyword):
+            matches.append(rolle)
+
+    if any(rolle in _SUBORDINATE_ROLES_SUPPRESSING_PROTECTED for rolle in matches):
+        protected = set(TITELSCHUTZ_EVIDENCE_KEYWORDS.keys())
+        matches = [rolle for rolle in matches if rolle.value not in protected]
+
+    return [rolle.value for rolle in matches]
+
+
 # Keyword -> Abschlussart, geprueft in dieser Reihenfolge gegen den
 # klein geschriebenen ausbildung_titel/qualification-Text (siehe
 # ABSCHLUSSART-REGEL im Extraktions-Prompt oben - dieselbe Zuordnung, nur

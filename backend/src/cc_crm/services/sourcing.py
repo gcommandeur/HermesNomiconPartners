@@ -31,6 +31,7 @@ from cc_crm.schemas.note import NoteCreate
 from cc_crm.schemas.sourcing import SourcingLeadCreate, SourcingRunResult
 from cc_crm.services import kanzlei_team_scrape, steuerberater_verzeichnis, wpk_berufsregister
 from cc_crm.services.candidates import CandidateService
+from cc_crm.services.cv_extraction import derive_rollen_from_text
 from cc_crm.services.name_matching import (
     SIMILARITY_THRESHOLD,
     name_similarity,
@@ -100,68 +101,6 @@ _JOB_TITLE_RAW_DATA_KEYS = ("beruf", "title")
 # gesetzt wird.
 _PHONE_RAW_DATA_KEYS = ("phone", "telefon")
 
-# Schluesselwort -> Rolle, ABSICHTLICH nach Spezifitaet geordnet (laengere/
-# praezisere Begriffe zuerst), damit z.B. "Steuerfachwirt" nicht faelschlich
-# schon am generischeren "Steuerfachangestellte"-Muster hängen bleibt und
-# umgekehrt. Nur Substring-Match auf den kleingeschriebenen Text - bewusst
-# schlicht, da die Quelltexte (WPK-/StBK-Berufsbezeichnung, LLM-erkannter
-# Team-Seiten-Titel) kurze, meist eindeutige Standardformulierungen sind,
-# anders als ein vollstaendiger CV-Fliesstext (dort uebernimmt das LLM diese
-# Zuordnung direkt, siehe cv_extraction.py-Prompt - es gibt dort KEINE
-# separate wiederverwendbare Text-zu-Rolle-Funktion, nur die nachtraegliche
-# Validierung gegen die Enum-Werte in _normalize_rollen()).
-_ROLLE_KEYWORDS: tuple[tuple[str, Rolle], ...] = (
-    ("steuerfachangestellte", Rolle.STEUERFACHANGESTELLTE),
-    ("steuerfachwirt", Rolle.STEUERFACHWIRT),
-    ("bilanzbuchhalter", Rolle.BILANZBUCHHALTER),
-    ("steuerberater", Rolle.STEUERBERATER),
-    ("steuerbevollmächtigt", Rolle.STEUERBERATER),
-    ("partner", Rolle.PARTNER),
-    ("prüfungsassistent", Rolle.PRUEFUNGSASSISTENT),
-    ("prüfungsleiter", Rolle.PRUEFUNGSLEITER),
-    ("wirtschaftsprüfer", Rolle.WIRTSCHAFTSPRUEFER),
-    ("rechtsfachangestellte", Rolle.RECHTSFACHANGESTELLTE),
-    ("rechtsanwalt", Rolle.RECHTSANWALT),
-    ("rechtsanwältin", Rolle.RECHTSANWALT),
-)
-
-# "partner" als reiner Substring traf faelschlich auch unrelated deutsche
-# Komposita wie "Ansprechpartner" (Kontaktperson, kein Kanzlei-Partner -
-# gemeldeter Fehlklassifikations-Fall Nr. 4450). Deshalb fuer "partner"
-# ALLEIN auf Wortgrenzen-Matching umgestellt (siehe _matches_partner_keyword
-# unten) statt reinem Substring wie bei den uebrigen Keywords oben - die
-# bleiben bewusst Substring-Matches, weil das dort NOTWENDIG ist (z.B. muss
-# "steuerberater" weiterhin in "Steuerberaterin" treffen; eine strikte
-# \bsteuerberater\b-Regex wuerde die weibliche Form NICHT mehr finden, da
-# "berater" und "in" ohne Wortgrenze aneinanderstossen - anders als bei
-# "partner" gibt es dort kein bekanntes Fehlklassifikations-Kompositum).
-#
-# Reine \b-Wortgrenzen-Regex allein reicht fuer "partner" nicht: deutsche
-# Komposita OHNE Leerzeichen wie "Seniorpartner"/"Ansprechpartner" sind
-# beide zusammengeschriebene Woerter ohne interne Wortgrenze - eine Regex
-# kann sie nicht auseinanderhalten. Da "Seniorpartner"/"Equity Partner"/
-# "Sozius" laut Nutzer-Vorgabe WEITERHIN treffen sollen, deshalb eine
-# explizite Allowlist bekannter guter Komposita zusaetzlich zur
-# Wortgrenzen-Regex (statt einer Blockliste wie "alles ausser
-# Ansprechpartner") - sicherer Default: ein neues, unbekanntes "irgendwas-
-# partner"-Kompositum trifft NICHT automatisch, nur die hier explizit
-# gelisteten.
-_PARTNER_WORD_PATTERN = re.compile(r"\bpartner\b")
-_PARTNER_COMPOUND_ALLOWLIST = (
-    "seniorpartner",
-    "juniorpartner",
-    "hauptpartner",
-    "sozius",
-    "sozia",
-)
-
-
-def _matches_partner_keyword(normalized_text: str) -> bool:
-    if _PARTNER_WORD_PATTERN.search(normalized_text):
-        return True
-    return any(compound in normalized_text for compound in _PARTNER_COMPOUND_ALLOWLIST)
-
-
 def _job_title_from_raw_data(raw_data: dict[str, object] | None) -> str | None:
     """Titel/Fachgebiet aus dem schemalosen raw_data - Schluesselname je nach
     Quelle unterschiedlich, siehe _JOB_TITLE_RAW_DATA_KEYS."""
@@ -187,23 +126,13 @@ def _phone_from_raw_data(raw_data: dict[str, object] | None) -> str | None:
 
 
 def _rollen_from_text(text: str | None) -> list[Rolle]:
-    """Leitet Rolle-Kategorien aus einem kurzen Titel-/Fachgebietstext ab, nur
-    wo eindeutig zuordenbar (Nutzer-Vorgabe) - liefert bewusst eine leere
-    Liste statt zu raten, wenn kein Schluesselwort trifft (z.B. WPKs
-    "vereidigte/r Buchprüfer/in", das keiner der 10 Rolle-Kategorien exakt
-    entspricht)."""
-    if not text:
-        return []
-    normalized = text.lower()
-    matches: list[Rolle] = []
-    for keyword, rolle in _ROLLE_KEYWORDS:
-        if rolle == Rolle.PARTNER:
-            is_match = _matches_partner_keyword(normalized)
-        else:
-            is_match = keyword in normalized
-        if is_match and rolle not in matches:
-            matches.append(rolle)
-    return matches
+    """Duenner Wrapper um cv_extraction.py::derive_rollen_from_text (dort
+    liegt die Logik jetzt zentral, damit Erstellen/Bearbeiten/Sourcing/
+    Backfill dieselbe Ableitung nutzen, siehe Modul-Kommentar dort) - liefert
+    bewusst eine leere Liste statt zu raten, wenn kein Schluesselwort trifft
+    (z.B. WPKs "vereidigte/r Buchprüfer/in", das keiner der 10 Rolle-
+    Kategorien exakt entspricht)."""
+    return [Rolle(value) for value in derive_rollen_from_text(text)]
 
 
 def _team_page_notes_text(member: kanzlei_team_scrape.TeamMember) -> str | None:
