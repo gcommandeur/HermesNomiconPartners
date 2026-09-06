@@ -140,6 +140,81 @@ export function ClientsTable() {
         ownerFilter={{ mineOnly, onChange: setMineOnly }}
         loading={isValidating}
       />
+      {/* Mobile (<lg): Karten statt der 9-spaltigen Desktop-Tabelle, siehe
+       * candidates-table.tsx fuer denselben Fix + Begruendung (Nutzer-
+       * Feedback "mobile Version nicht passend"). */}
+      <div className="space-y-2 lg:hidden">
+        {rows.map((row) => {
+          if (row.kind === "single") {
+            const client = row.client;
+            return (
+              <Link
+                key={client.id}
+                href={`/kanzleien/${client.id}`}
+                className="block rounded-lg border border-white/10 bg-[#12243A] p-3 active:bg-[#203A5A]/35"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="min-w-0 truncate text-sm font-semibold text-[#D8DADF]">{client.name}</p>
+                  <StatusPill status={client.status} />
+                </div>
+                <p className="mt-0.5 truncate text-xs text-[#94A3B8]">
+                  {client.region ?? client.city ?? client.postal_code ?? "Region offen"}
+                  {client.focus ? ` · ${client.focus}` : ""}
+                </p>
+                <div className="mt-2 flex items-center justify-between text-[11px] text-[#8a9095]">
+                  <span>Kontakt {formatDate(client.last_contact_at ?? client.last_contact ?? client.updated_at)}</span>
+                  <span>{client.fee_percentage ?? 27} % Honorar</span>
+                </div>
+              </Link>
+            );
+          }
+
+          const { groupKey, locations } = row;
+          const isExpanded = expandedGroup === groupKey;
+          const postalCodes = [...new Set(locations.map((loc) => loc.postal_code).filter(Boolean))];
+          return (
+            <div key={groupKey} className="rounded-lg border border-white/10 bg-[#12243A]">
+              <button
+                type="button"
+                onClick={() => setExpandedGroup(isExpanded ? null : groupKey)}
+                className="flex w-full items-center justify-between gap-2 p-3 text-left"
+              >
+                <span className="flex min-w-0 items-center gap-1.5 truncate text-sm font-semibold text-[#D8DADF]">
+                  {isExpanded ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
+                  <span className="truncate">{groupKey}</span>
+                </span>
+                <span className="shrink-0 text-[11px] text-[#94A3B8]">{locations.length} Standorte</span>
+              </button>
+              {isExpanded && (
+                <div className="space-y-2 border-t border-white/10 p-2">
+                  {locations.map((client) => (
+                    <Link
+                      key={client.id}
+                      href={`/kanzleien/${client.id}`}
+                      className="block rounded-lg border border-white/10 bg-[#0D1B2E]/60 p-3 active:bg-[#203A5A]/35"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 truncate text-sm font-semibold text-[#D8DADF]">{client.name}</p>
+                        <StatusPill status={client.status} />
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-[#94A3B8]">
+                        {client.postal_code ?? "PLZ offen"}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {!isExpanded && postalCodes.length > 0 && (
+                <p className="px-3 pb-3 text-[11px] text-[#94A3B8]">PLZ: {postalCodes.join(", ")}</p>
+              )}
+            </div>
+          );
+        })}
+        {rows.length === 0 && (
+          <p className="py-8 text-center text-xs text-[#94A3B8]">Keine Kanzleien gefunden.</p>
+        )}
+      </div>
+      <div className="hidden lg:block">
       <DataTable
         headers={[
           { label: "Kanzlei", key: "name" },
@@ -233,6 +308,7 @@ export function ClientsTable() {
           );
         })}
       </DataTable>
+      </div>
       <PaginationControls page={page} pageCount={pageCount} onChange={setPage} />
       <p className="mt-3 text-xs text-[#8a9095]">{sorted.length} von {totalCount} Kanzleien</p>
     </>

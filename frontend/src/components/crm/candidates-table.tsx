@@ -505,6 +505,66 @@ export function CandidatesTable() {
       {aiHint && (
         <div className="mb-3 rounded-lg border border-[#F0B429]/25 bg-[#F0B429]/5 p-3 text-xs text-[#F0B429]">{aiHint}</div>
       )}
+      {/* Mobile (<lg): Karten statt der 10-spaltigen Desktop-Tabelle - die
+       * Tabelle bleibt unten fuer den Desktop unveraendert bestehen (siehe
+       * "hidden lg:block"), aber auf einem Telefon war sie faktisch nur die
+       * ersten ~2 Spalten (Nr./Name), der Rest nur per Horizontal-Scroll
+       * erreichbar (Nutzer-Feedback "mobile Version nicht passend"). Zeigt
+       * dieselben Kerninformationen wie die Tabelle, nur gestapelt statt
+       * spaltenweise. */}
+      <div className="space-y-2 lg:hidden">
+        {displayedCandidates.map((candidate) => (
+          <Link
+            key={candidate.id}
+            href={`/kandidaten/${candidate.id}`}
+            className="block rounded-lg border border-white/10 bg-[#12243A] p-3 active:bg-[#203A5A]/35"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[#D8DADF]">
+                  {candidate.candidate_number && (
+                    <span className="text-[#94A3B8]">{candidate.candidate_number}</span>
+                  )}
+                  {candidate.first_name} {candidate.last_name}
+                  {candidate.has_ghosting_history && (
+                    <Ghost size={12} className="shrink-0 text-[#e4aeb4]" aria-label="Ghosting-Historie" />
+                  )}
+                </p>
+                <p className="mt-0.5 truncate text-xs text-[#94A3B8]">
+                  {candidate.job_title ?? "—"} · {candidate.city ?? candidate.postal_code ?? "Region offen"}
+                </p>
+              </div>
+              <StatusPill status={candidate.status} />
+            </div>
+            {candidate.rollen && candidate.rollen.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-1">
+                {candidate.rollen.map((rolle) => <Badge key={rolle} tone="blue">{rolleLabel(rolle)}</Badge>)}
+                {candidate.rollen_unbestaetigt && (
+                  <span title="Titel unbestätigt - kein erkennbarer Beleg im CV">
+                    <ShieldAlert size={13} className="text-[#F0B429]" />
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="mt-2 flex items-center justify-between text-[11px] text-[#8a9095]">
+              <span>Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</span>
+              {candidate.salary_expectation && <span>{candidate.salary_expectation}</span>}
+            </div>
+            {candidate.search_match_fields && candidate.search_match_fields.length > 0 && (
+              <p className="mt-1.5 text-[11px] text-[#F0B429]">
+                Treffer in: {candidate.search_match_fields.map(searchFieldLabel).join(", ")}
+                {candidate.search_matched_values && candidate.search_matched_values.length > 0 && (
+                  <> ({candidate.search_matched_values.join(", ")})</>
+                )}
+              </p>
+            )}
+          </Link>
+        ))}
+        {displayedCandidates.length === 0 && (
+          <p className="py-8 text-center text-xs text-[#94A3B8]">Keine Kandidaten gefunden.</p>
+        )}
+      </div>
+      <div className="hidden lg:block">
       <DataTable
         headers={[
           { label: "Nr.", key: "candidate_number" },
@@ -566,6 +626,7 @@ export function CandidatesTable() {
           </tr>
         ))}
       </DataTable>
+      </div>
       <PaginationControls page={displayedPage} pageCount={displayedPageCount} onChange={displayedSetPage} />
       <p className="mt-3 text-xs text-[#8a9095]">{displayedCandidates.length} von {displayedTotal} Kandidaten</p>
     </>
