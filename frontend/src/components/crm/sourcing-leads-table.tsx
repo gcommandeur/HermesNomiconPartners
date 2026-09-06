@@ -130,6 +130,53 @@ export function SourcingLeadsTable() {
 
   const headers = ["Name", "Quelle", "Arbeitgeber laut Quelle", "PLZ / Ort", "Gefunden", "Aktion"];
 
+  // Mobile (<lg): Karten statt der 6-spaltigen Tabelle, siehe
+  // candidates-table.tsx fuer denselben Fix + Begruendung (Nutzer-Feedback
+  // "mobile Version nicht passend").
+  const renderCard = (lead: SourcingLead) => (
+    <div key={lead.id} className="rounded-lg border border-white/10 bg-[#12243A] p-3">
+      <p className="font-semibold text-[#D8DADF]">{lead.first_name} {lead.last_name}</p>
+      {lead.status === "possible_duplicate" && lead.duplicate_of_candidate_id && (
+        <p className="mt-1 text-[11px]">
+          <Link href={`/kandidaten/${lead.duplicate_of_candidate_id}`} className="text-[#F0B429] hover:underline">
+            Möglicherweise bereits als Kandidat vorhanden – Profil öffnen
+          </Link>
+        </p>
+      )}
+      <p className="mt-1 text-xs text-[#CBD5E1]">
+        {lead.source_url ? (
+          <a href={lead.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-white hover:underline">
+            {SOURCE_LABELS[lead.source_type]}<ExternalLink size={12} />
+          </a>
+        ) : (
+          SOURCE_LABELS[lead.source_type]
+        )}
+        {" · "}{lead.current_employer ?? "Arbeitgeber offen"}
+      </p>
+      <p className="mt-0.5 text-[11px] text-[#94A3B8]">
+        {[lead.postal_code, lead.city].filter(Boolean).join(" ") || "PLZ/Ort offen"} · Gefunden {formatDate(lead.found_at)}
+      </p>
+      {lead.notes_text && (
+        <p className="mt-1.5 line-clamp-3 whitespace-pre-line text-[11px] text-[#94A3B8]">{lead.notes_text}</p>
+      )}
+      <div className="mt-2.5 flex gap-2">
+        <Button size="sm" variant="dark" disabled={busyLeadId === lead.id} onClick={() => void handleAction(lead, "approve")}>
+          Übernehmen
+        </Button>
+        <Button size="sm" variant="outline" disabled={busyLeadId === lead.id} onClick={() => void handleAction(lead, "reject")}>
+          Verwerfen
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderLeadList = (items: SourcingLead[]) => (
+    <>
+      <div className="space-y-2 lg:hidden">{items.map(renderCard)}</div>
+      <div className="hidden lg:block"><DataTable headers={headers}>{items.map(renderRow)}</DataTable></div>
+    </>
+  );
+
   return (
     <>
       <ErrorBanner message={actionError} className="mb-3" />
@@ -142,10 +189,10 @@ export function SourcingLeadsTable() {
               (z.B. Arbeitgeberwechsel eines Bestandskandidaten).
             </span>
           </div>
-          <DataTable headers={headers}>{duplicateLeads.map(renderRow)}</DataTable>
+          {renderLeadList(duplicateLeads)}
         </div>
       )}
-      <DataTable headers={headers}>{pendingLeads.map(renderRow)}</DataTable>
+      {renderLeadList(pendingLeads)}
       {pendingLeads.length === 0 && duplicateLeads.length === 0 && (
         <div className="mt-6 flex flex-col items-center gap-2 rounded-lg border border-white/10 bg-[#0D1B2E] p-8 text-center">
           <UserRoundSearch size={24} className="text-[#94A3B8]" />

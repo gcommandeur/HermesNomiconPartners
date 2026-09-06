@@ -719,6 +719,54 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
           </div>
         </div>
       ) : (
+        <>
+        {/* Mobile (<lg): Karten statt der 10-spaltigen Tabellenansicht, siehe
+         * candidates-table.tsx fuer denselben Fix + Begruendung (Nutzer-
+         * Feedback "mobile Version nicht passend") - der Kanban-Modus oben
+         * hat bereits eine eigene Mobile-Darstellung, diese alternative
+         * "Tabelle"-Ansicht bisher nicht. */}
+        <div className="space-y-2 lg:hidden">
+          {filteredItems.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => openCandidate(item.candidate_id)}
+              className="cursor-pointer rounded-lg border border-white/10 bg-[#12243A] p-3 active:bg-[#203A5A]/35"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="min-w-0 truncate text-sm font-semibold text-[#D8DADF] hover:underline">{candidateName(item.candidate_id)}</p>
+                <StatusPill status={item.status} />
+              </div>
+              <p className="mt-0.5 truncate text-xs text-[#94A3B8]">{clientName(item.client_company_id)}</p>
+              <div className="mt-2 flex items-center justify-between text-[11px] text-[#8a9095]">
+                <span>Follow-up {formatDate(item.follow_up_at)}</span>
+                <span>{expectedFee(item).toLocaleString("de-DE")} €</span>
+              </div>
+              <p className="mt-1 truncate text-[11px] text-[#8a9095]">{item.next_step ?? "Nächster Schritt offen"}</p>
+              <div className="mt-2 flex items-center gap-1" onClick={(event) => event.stopPropagation()}>
+                <button
+                  type="button"
+                  title="Kanzlei hinzufügen/ändern"
+                  onClick={() => setClientPrompt({ submissionId: item.id })}
+                  className="flex size-11 items-center justify-center rounded-lg text-[#94A3B8] hover:bg-white/10 hover:text-white"
+                >
+                  <Building2 size={18} />
+                </button>
+                <button
+                  type="button"
+                  title="Kandidat seitlich anzeigen (Prozesse bleibt offen)"
+                  onClick={() => setQuickViewCandidateId(item.candidate_id)}
+                  className="flex size-11 items-center justify-center rounded-lg text-[#94A3B8] hover:bg-white/10 hover:text-white"
+                >
+                  <Eye size={18} />
+                </button>
+              </div>
+            </div>
+          ))}
+          {filteredItems.length === 0 && (
+            <p className="py-8 text-center text-xs text-[#94A3B8]">Keine Prozesse gefunden.</p>
+          )}
+        </div>
+        <div className="hidden lg:block">
         <DataTable headers={["Kandidat", "Kanzlei", "Ansprechpartner", "Status", "Closing", "Versendet", "Follow-up", "Nächster Schritt", "Erwartete Fee", "Export"]}>
           {filteredItems.map((item) => (
             <tr key={item.id} className="cursor-pointer hover:bg-[#203A5A]/35" onClick={() => openCandidate(item.candidate_id)}>
@@ -776,6 +824,8 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
             </tr>
           ))}
         </DataTable>
+        </div>
+        </>
       )}
 
       <CandidateQuickViewDrawer

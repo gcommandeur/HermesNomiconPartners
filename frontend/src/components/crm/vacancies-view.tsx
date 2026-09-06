@@ -106,6 +106,12 @@ export function VacanciesView({ vacancies, clients }: {
         ))}
         {filtered.length === 0 && <Card><CardContent className="py-12 text-center text-sm text-[#858b90]">Keine Vakanzen gefunden.</CardContent></Card>}
       </section>
+      {/* Nur ab lg: die Kartenansicht oben deckt Mobile bereits vollstaendig
+       * ab (grid-cols-1) - diese Tabelle darunter zeigt dieselben Vakanzen
+       * nur mit ein paar Zusatzspalten (Umkreis/Prioritaet) und war auf
+       * einem Telefon nur horizontal scrollbar erreichbar (Nutzer-Feedback
+       * "mobile Version nicht passend"). */}
+      <div className="hidden lg:block">
       <DataTable headers={["Vakanz", "Kanzlei", "Standort", "Umkreis", "Qualifikation", "Gehalt", "Arbeitsmodell", "Status", "Priorität"]}>
         {filtered.map((vacancy) => (
           <tr key={vacancy.id} className="hover:bg-[#203A5A]/35">
@@ -121,6 +127,7 @@ export function VacanciesView({ vacancies, clients }: {
           </tr>
         ))}
       </DataTable>
+      </div>
       <p className="mt-3 text-xs text-[#8a9095]">{filtered.length} von {vacancies.length} Vakanzen</p>
     </>
   );

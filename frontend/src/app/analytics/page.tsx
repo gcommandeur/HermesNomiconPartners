@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/crm/page-header";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { Card, CardContent } from "@/components/ui/card";
 import { SourcingMetricForm } from "@/components/crm/sourcing-metric-form";
+import { STAGE_LABELS } from "@/lib/stage-labels";
 import { getCockpit } from "@/lib/api/queries";
 import { formatCurrency } from "@/lib/utils";
 
@@ -32,13 +33,20 @@ export default async function AnalyticsPage() {
     ["Placements (kaufmännisch)", kpis.placements], ["Placements (Pipeline)", kpis.placement_stage_reached_count],
     ["Bezahlte Fees", rates.placement_to_paid ? kpis.placements : 0],
   ];
+  // Nutzer-Vorgabe: nur Uebergaenge zwischen den tatsaechlich im Prozess
+  // sichtbaren Stufen (siehe submission-stage-bar.tsx::STAGE_LABELS, dieselbe
+  // Prozess-Timeline wie auf der Kandidatendetailseite) - "Pitch"/"Antwort"
+  // (Sourcing-Vorstufen, keine echte Prozessstufe) und "bezahlt" (Rechnungs-
+  // status, keine Prozessstufe) sind hier keine Prozessstufen und wurden
+  // entfernt. Labels 1:1 aus STAGE_LABELS uebernommen (vorher abweichend
+  // "CV In"/"CV-Out" statt "Shortlist"/"CV Sent" - beide Ansichten zeigen
+  // jetzt denselben Wortlaut).
   const conversions: [string, number | string][] = [
-    ["Pitch → Antwort", sourcing.pitch_to_response_rate ?? NO_DATA],
-    ["Antwort → Quali Call", sourcing.response_to_qualification_call_rate ?? NO_DATA],
-    ["Quali Call → CV In", kpis.qualification_calls ? Math.round(kpis.cv_available / kpis.qualification_calls * 1000) / 10 : NO_DATA],
-    ["CV In → CV-Out", kpis.cv_available ? Math.round(kpis.cv_outs_reached_count / kpis.cv_available * 1000) / 10 : NO_DATA],
-    ["CV-Out → Interview", rates.submission_to_interview], ["Interview → Offer", rates.interview_to_offer],
-    ["Offer → Placement", rates.offer_to_placement], ["Placement → bezahlt", rates.placement_to_paid],
+    [`${STAGE_LABELS.qualification_call} → ${STAGE_LABELS.cv_in}`, kpis.qualification_calls ? Math.round(kpis.cv_available / kpis.qualification_calls * 1000) / 10 : NO_DATA],
+    [`${STAGE_LABELS.cv_in} → ${STAGE_LABELS.cv_out}`, kpis.cv_available ? Math.round(kpis.cv_outs_reached_count / kpis.cv_available * 1000) / 10 : NO_DATA],
+    [`${STAGE_LABELS.cv_out} → ${STAGE_LABELS.interview}`, rates.submission_to_interview],
+    [`${STAGE_LABELS.interview} → ${STAGE_LABELS.offer}`, rates.interview_to_offer],
+    [`${STAGE_LABELS.offer} → ${STAGE_LABELS.placement}`, rates.offer_to_placement],
   ];
   return <>
     <PageHeader eyebrow="Recruiting Analytics" title="Funnel und Conversions" action={<SourcingMetricForm />} />

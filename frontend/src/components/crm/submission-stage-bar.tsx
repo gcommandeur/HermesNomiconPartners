@@ -4,31 +4,13 @@ import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SubmissionStatus } from "@/lib/api/types";
 
-// Stufen orientieren sich am bestehenden SubmissionStatus-Enum (Backend:
-// cc_crm.models.enums.SubmissionStatus) - keine neuen Stufen erfunden.
-// "cancelled" ist kein Fortschritts-Schritt, sondern ein Abbruch und wird
-// separat als roter Endzustand markiert (siehe STAGE_ORDER/isCancelled).
-export const STAGE_ORDER: { status: SubmissionStatus; label: string }[] = [
-  { status: "qualification_call", label: "Quali Call" },
-  { status: "cv_in", label: "Shortlist" },
-  { status: "cv_out", label: "CV Sent" },
-  { status: "interview", label: "Interview" },
-  { status: "offer", label: "Offer" },
-  { status: "placement", label: "Placement" },
-];
-
-/** Anzeigename je Stufe - auch von stage-edit-modal.tsx als Panel-Titel
- * genutzt, damit Kanban/Stage-Bar/Bearbeitungs-Panel immer denselben
- * Wortlaut zeigen. */
-export const STAGE_LABELS: Record<SubmissionStatus, string> = {
-  qualification_call: "Quali Call",
-  cv_in: "Shortlist",
-  cv_out: "CV Sent",
-  interview: "Interview",
-  offer: "Offer",
-  placement: "Placement",
-  cancelled: "Abgebrochen",
-};
+// STAGE_ORDER/STAGE_LABELS leben jetzt in lib/stage-labels.ts (plain Modul
+// ohne "use client") - re-exportiert hier, damit bestehende Importstellen
+// unveraendert bleiben. Siehe dort fuer die Begruendung (Server Components
+// wie app/analytics/page.tsx bekamen aus diesem "use client"-Modul sonst nur
+// "undefined" statt der echten Werte).
+import { STAGE_LABELS, STAGE_ORDER } from "@/lib/stage-labels";
+export { STAGE_LABELS, STAGE_ORDER };
 
 export function SubmissionStageBar({
   status,

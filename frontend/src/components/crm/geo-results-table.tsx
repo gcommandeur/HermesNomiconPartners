@@ -249,6 +249,45 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
     return (
       <div className="min-w-0">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">{kindLabel} ({items.length})</h3>
+        {/* Mobile (<lg): Karten statt der 7-spaltigen Tabelle, siehe
+         * candidates-table.tsx fuer denselben Fix + Begruendung (Nutzer-
+         * Feedback "mobile Version nicht passend") - Checkbox-Auswahl fuer
+         * "ins Mailing uebernehmen" bleibt erhalten. */}
+        <div className="space-y-2 lg:hidden">
+          {pagination.pageItems.map((item) => (
+            <label
+              key={item.id}
+              className="flex items-start gap-3 rounded-lg border border-white/10 bg-[#12243A] p-3"
+            >
+              <input
+                type="checkbox"
+                className="mt-1 shrink-0"
+                checked={selectedIds.has(item.id)}
+                onChange={() => toggle(item.id)}
+                aria-label={`${item.name} auswählen`}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="min-w-0 truncate text-sm font-semibold text-[#D8DADF]">{item.name}</p>
+                  <StatusPill status={item.status} />
+                </div>
+                <p className="mt-0.5 truncate text-xs text-[#94A3B8]">
+                  {item.location}{item.postal_code ? ` · ${item.postal_code}` : ""}
+                </p>
+                {item.tags.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-[#102A4C]/70 px-2 py-1 text-[10px] text-[#CBD5E1]">{tag}</span>)}
+                  </div>
+                )}
+                <p className="mt-1.5 text-[11px] text-[#8a9095]">{item.mailing_ready ? "übertragbar" : "gesperrt"}</p>
+              </div>
+            </label>
+          ))}
+          {items.length === 0 && (
+            <p className="py-8 text-center text-xs text-[#8a9095]">Keine Ergebnisse.</p>
+          )}
+        </div>
+        <div className="hidden lg:block">
         <DataTable headers={["", "Name", "Standort", "PLZ", "Status", "Tags", "Mailing"]}>
           {pagination.pageItems.map((item) => (
             <tr key={item.id} className="hover:bg-[#203A5A]/35">
@@ -272,6 +311,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
             <tr><td colSpan={7} className="px-4 py-8 text-center text-xs text-[#8a9095]">Keine Ergebnisse.</td></tr>
           )}
         </DataTable>
+        </div>
         <PaginationControls page={pagination.page} pageCount={pagination.pageCount} onChange={pagination.setPage} />
         {pagination.pageItems.length > 0 && (
           <label className="mt-2 flex items-center gap-1.5 text-xs text-[#8a9095]">
