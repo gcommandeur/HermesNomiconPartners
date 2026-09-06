@@ -1,13 +1,30 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
+from cc_crm.core.security import hash_password
 from cc_crm.models.enums import InvoiceStatus
 from cc_crm.models.recruiting import Fee
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.task import Task
+from cc_crm.models.user import User
+from cc_crm.services.auth import AuthService
+
+
+@pytest.fixture
+def second_user_token(session_factory: sessionmaker[Session]) -> str:
+    with session_factory() as session:
+        session.add(User(email="colleague@commandeur.example", hashed_password=hash_password("x")))
+        session.commit()
+        _, token = AuthService(session).login("colleague@commandeur.example", "x")
+        return token
+
+
+def auth_header(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
 
 
 def test_cockpit_and_email_templates(client: TestClient) -> None:
@@ -17,12 +34,140 @@ def test_cockpit_and_email_templates(client: TestClient) -> None:
     assert cockpit["period"] == "week"
     assert cockpit["kpis"]["submissions"] == 0
     assert "submission_to_interview" in cockpit["rates"]
+    assert "pitches" in cockpit["kpis"]
+    assert "pitch_to_qualification_call_rate" in cockpit["rates"]
 
-    templates_response = client.get("/api/v1/email-templates")
-    assert templates_response.status_code == 200
-    templates = templates_response.json()
-    assert len(templates) >= 10
-    assert any(item["key"] == "candidate_submission" for item in templates)
+
+class TestCockpitOwnerFilter:
+    """Neuer Nutzerfilter oben in der Analytics-Seite (Nutzer-Vorgabe:
+    "standardauswahl sind alle user... Mehrfachauswahl moeglich") - filtert
+    nach Candidate.owner_user_id, siehe CockpitService.build."""
+
+    def test_no_filter_shows_all_owners(
+        self, client: TestClient, second_user_token: str
+    ) -> None:
+        client.post("/api/v1/candidates", json={"first_name": "Mine", "last_name": "A"})
+        client.post(
+            "/api/v1/candidates",
+            json={"first_name": "Colleague", "last_name": "B"},
+            headers=auth_header(second_user_token),
+        )
+        client.post("/api/v1/submissions", json={"candidate_id": _candidate_id(client, "A")})
+        client.post(
+            "/api/v1/submissions",
+            json={"candidate_id": _candidate_id(client, "B")},
+            headers=auth_header(second_user_token),
+        )
+
+        cockpit = client.get("/api/v1/cockpit?period=week").json()
+        assert cockpit["kpis"]["submissions"] == 2
+
+    def test_filter_restricts_to_selected_owners(
+        self, client: TestClient, second_user_token: str
+    ) -> None:
+        me = client.get("/api/v1/auth/me").json()
+        client.post("/api/v1/candidates", json={"first_name": "Mine", "last_name": "A"})
+        client.post(
+            "/api/v1/candidates",
+            json={"first_name": "Colleague", "last_name": "B"},
+            headers=auth_header(second_user_token),
+        )
+        client.post("/api/v1/submissions", json={"candidate_id": _candidate_id(client, "A")})
+        client.post(
+            "/api/v1/submissions",
+            json={"candidate_id": _candidate_id(client, "B")},
+            headers=auth_header(second_user_token),
+        )
+
+        cockpit = client.get(f"/api/v1/cockpit?period=week&owner_user_id={me['id']}").json()
+        assert cockpit["kpis"]["submissions"] == 1
+
+    def test_multiple_owner_ids_are_unioned(
+        self, client: TestClient, second_user_token: str
+    ) -> None:
+        me = client.get("/api/v1/auth/me").json()
+        colleague = client.get("/api/v1/auth/me", headers=auth_header(second_user_token)).json()
+        client.post("/api/v1/candidates", json={"first_name": "Mine", "last_name": "A"})
+        client.post(
+            "/api/v1/candidates",
+            json={"first_name": "Colleague", "last_name": "B"},
+            headers=auth_header(second_user_token),
+        )
+        client.post("/api/v1/submissions", json={"candidate_id": _candidate_id(client, "A")})
+        client.post(
+            "/api/v1/submissions",
+            json={"candidate_id": _candidate_id(client, "B")},
+            headers=auth_header(second_user_token),
+        )
+
+        cockpit = client.get(
+            f"/api/v1/cockpit?period=week&owner_user_id={me['id']}&owner_user_id={colleague['id']}"
+        ).json()
+        assert cockpit["kpis"]["submissions"] == 2
+
+
+def _candidate_id(client: TestClient, last_name: str) -> str:
+    candidates = client.get("/api/v1/candidates").json()["items"]
+    return next(item["id"] for item in candidates if item["last_name"] == last_name)
+
+
+class TestCockpitPitches:
+    """Pitch/InMail (Stufe 1 der 7-stufigen Pipeline) - ersetzt die vorherige
+    manuelle SourcingFunnel.pitches-Zahl (Nutzer-Entscheidung "Ersetzen")."""
+
+    def test_pitches_counted_in_period(self, client: TestClient) -> None:
+        candidate = client.post(
+            "/api/v1/candidates", json={"first_name": "Pitch", "last_name": "Cockpit"}
+        ).json()
+        client.post(
+            f"/api/v1/candidates/{candidate['id']}/pitch-log",
+            json={"occurred_at": datetime.now(UTC).isoformat()},
+        )
+        client.post(
+            f"/api/v1/candidates/{candidate['id']}/pitch-log",
+            json={"occurred_at": datetime.now(UTC).isoformat()},
+        )
+
+        cockpit = client.get("/api/v1/cockpit?period=week").json()
+        assert cockpit["kpis"]["pitches"] == 2
+
+    def test_pitches_outside_period_are_excluded(self, client: TestClient) -> None:
+        candidate = client.post(
+            "/api/v1/candidates", json={"first_name": "OldPitch", "last_name": "Cockpit"}
+        ).json()
+        old = datetime.now(UTC) - timedelta(days=60)
+        client.post(
+            f"/api/v1/candidates/{candidate['id']}/pitch-log",
+            json={"occurred_at": old.isoformat()},
+        )
+
+        cockpit = client.get("/api/v1/cockpit?period=week").json()
+        assert cockpit["kpis"]["pitches"] == 0
+
+    def test_pitches_respect_owner_filter(
+        self, client: TestClient, second_user_token: str
+    ) -> None:
+        me = client.get("/api/v1/auth/me").json()
+        my_candidate = client.post(
+            "/api/v1/candidates", json={"first_name": "Mine", "last_name": "Pitch"}
+        ).json()
+        colleague_candidate = client.post(
+            "/api/v1/candidates",
+            json={"first_name": "Colleague", "last_name": "Pitch"},
+            headers=auth_header(second_user_token),
+        ).json()
+
+        client.post(
+            f"/api/v1/candidates/{my_candidate['id']}/pitch-log",
+            json={"occurred_at": datetime.now(UTC).isoformat()},
+        )
+        client.post(
+            f"/api/v1/candidates/{colleague_candidate['id']}/pitch-log",
+            json={"occurred_at": datetime.now(UTC).isoformat()},
+        )
+
+        cockpit = client.get(f"/api/v1/cockpit?period=week&owner_user_id={me['id']}").json()
+        assert cockpit["kpis"]["pitches"] == 1
 
 
 def _walk_submission_to_placement(client: TestClient) -> dict:

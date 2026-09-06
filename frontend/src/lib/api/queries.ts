@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateMatch, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailAccount, MailMatchStatus, MailMessageListItem, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, TaskResolveOutcome, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailAccount, MailMatchStatus, MailMessageListItem, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, TaskResolveOutcome, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -269,8 +269,13 @@ export async function getGeoMappingResults() {
   return apiGet<GeoMappingResult[]>("/geo-mapping/results", demoGeoResults);
 }
 
-export async function getCockpit(period = "week") {
-  return apiGet<Cockpit>(`/cockpit?period=${period}`, demoCockpit);
+/** `ownerUserIds` = neuer Mehrfach-Nutzerfilter oben in der Analytics-Seite
+ * (Nutzer-Vorgabe: "standardauswahl sind alle user... Mehrfachauswahl
+ * moeglich") - undefined/leer bedeutet "kein Filter" (alle Nutzer). */
+export async function getCockpit(period = "week", ownerUserIds?: string[]) {
+  const params = new URLSearchParams({ period });
+  for (const id of ownerUserIds ?? []) params.append("owner_user_id", id);
+  return apiGet<Cockpit>(`/cockpit?${params.toString()}`, demoCockpit);
 }
 
 export async function getEmailTemplates() {
@@ -340,6 +345,7 @@ export async function geocodePlace(query: string) {
 }
 
 const emptyStageSummary: CandidateStageSummary = {
+  pitch: 0,
   qualification_call: 0,
   cv_in: 0,
   cv_out: 0,
@@ -358,6 +364,12 @@ export async function getStageSummary(candidateId: string) {
  * einen Prozess (siehe candidate-process-log.tsx). */
 export async function quickLogCandidateStage(candidateId: string, payload: CandidateQuickLogCreate) {
   return apiPost<CandidateQuickLogResult>(`/candidates/${candidateId}/quick-log`, payload);
+}
+
+/** Pitch/InMail-Ereignis loggen - bewusst OHNE Prozess-Anlage/Statuswechsel
+ * (anders als quickLogCandidateStage oben), siehe candidate-process-log.tsx. */
+export async function logCandidatePitch(candidateId: string, payload: CandidatePitchLogCreate) {
+  return apiPost<CandidatePitchLogRead>(`/candidates/${candidateId}/pitch-log`, payload);
 }
 
 export interface CalendarEventQuery {

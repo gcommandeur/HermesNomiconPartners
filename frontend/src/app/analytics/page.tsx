@@ -1,68 +1,10 @@
 import { PageHeader } from "@/components/crm/page-header";
-import { DemoNotice } from "@/components/crm/demo-notice";
-import { Card, CardContent } from "@/components/ui/card";
 import { SourcingMetricForm } from "@/components/crm/sourcing-metric-form";
-import { STAGE_LABELS } from "@/lib/stage-labels";
-import { getCockpit } from "@/lib/api/queries";
-import { formatCurrency } from "@/lib/utils";
+import { AnalyticsDashboard } from "@/components/crm/analytics-dashboard";
 
-export const dynamic = "force-dynamic";
-
-const NO_DATA = "Keine Daten erfasst";
-
-export default async function AnalyticsPage() {
-  const result = await getCockpit("week");
-  const { kpis, rates, sourcing, recruiting_kpis: recruitingKpis } = result.data;
-  const recruitingKpiCards: [string, string][] = [
-    ["Time-to-Fill ab Prozessanlage (Median)", recruitingKpis.time_to_fill_days !== null ? `${recruitingKpis.time_to_fill_days} Tage` : NO_DATA],
-    ["Time-to-Interview (Median)", recruitingKpis.time_to_interview_days !== null ? `${recruitingKpis.time_to_interview_days} Tage` : NO_DATA],
-    ["Ø Fee pro Placement", recruitingKpis.average_fee_per_placement !== null ? formatCurrency(recruitingKpis.average_fee_per_placement) : NO_DATA],
-  ];
-  // "Neue Prozesse" (kpis.submissions) ist eine EIGENE Kennzahl (im Zeitraum
-  // angelegt) und steht bewusst NICHT mehr im Pipeline-Trichter - der zeigt
-  // durchgehend erreichte Stufen (Transition), siehe Backend schemas/
-  // operational.py::CockpitKpis-Docstring (Nutzer-Entscheidung "KPIs
-  // stimmen nicht", Punkt 3b/3d).
-  const funnel: [string, number | string][] = [
-    ["Pitches / InMails", sourcing.has_data ? sourcing.pitches : NO_DATA],
-    ["Antworten", sourcing.has_data ? sourcing.responses : NO_DATA],
-    ["Positive Antworten", sourcing.has_data ? sourcing.positive_responses : NO_DATA],
-    ["Quali Calls", kpis.qualification_calls], ["CV In", kpis.cv_available],
-    ["CV-Outs", kpis.cv_outs_reached_count], ["Interviews", kpis.interviews],
-    ["Offers (kaufmännisch)", kpis.offers], ["Offers (Pipeline)", kpis.offer_stage_reached_count],
-    ["Placements (kaufmännisch)", kpis.placements], ["Placements (Pipeline)", kpis.placement_stage_reached_count],
-    ["Bezahlte Fees", rates.placement_to_paid ? kpis.placements : 0],
-  ];
-  // Nutzer-Vorgabe: nur Uebergaenge zwischen den tatsaechlich im Prozess
-  // sichtbaren Stufen (siehe submission-stage-bar.tsx::STAGE_LABELS, dieselbe
-  // Prozess-Timeline wie auf der Kandidatendetailseite) - "Pitch"/"Antwort"
-  // (Sourcing-Vorstufen, keine echte Prozessstufe) und "bezahlt" (Rechnungs-
-  // status, keine Prozessstufe) sind hier keine Prozessstufen und wurden
-  // entfernt. Labels 1:1 aus STAGE_LABELS uebernommen (vorher abweichend
-  // "CV In"/"CV-Out" statt "Shortlist"/"CV Sent" - beide Ansichten zeigen
-  // jetzt denselben Wortlaut).
-  const conversions: [string, number | string][] = [
-    [`${STAGE_LABELS.qualification_call} → ${STAGE_LABELS.cv_in}`, kpis.qualification_calls ? Math.round(kpis.cv_available / kpis.qualification_calls * 1000) / 10 : NO_DATA],
-    [`${STAGE_LABELS.cv_in} → ${STAGE_LABELS.cv_out}`, kpis.cv_available ? Math.round(kpis.cv_outs_reached_count / kpis.cv_available * 1000) / 10 : NO_DATA],
-    [`${STAGE_LABELS.cv_out} → ${STAGE_LABELS.interview}`, rates.submission_to_interview],
-    [`${STAGE_LABELS.interview} → ${STAGE_LABELS.offer}`, rates.interview_to_offer],
-    [`${STAGE_LABELS.offer} → ${STAGE_LABELS.placement}`, rates.offer_to_placement],
-  ];
+export default function AnalyticsPage() {
   return <>
     <PageHeader eyebrow="Recruiting Analytics" title="Funnel und Conversions" action={<SourcingMetricForm />} />
-    <DemoNotice source={result.source} error={result.error} />
-    {/* Ueber den gesamten historischen Bestand berechnet (nicht auf den
-     * Cockpit-Zeitraum begrenzt), siehe Backend CockpitService::
-     * _recruiting_kpis - ein Median ueber nur eine Woche/einen Monat haette
-     * zu wenige Datenpunkte, um aussagekraeftig zu sein. */}
-    <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {recruitingKpiCards.map(([label, value]) => (
-        <Card key={label}><CardContent className="p-4"><p className="text-[11px] text-[#94A3B8]">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></CardContent></Card>
-      ))}
-    </div>
-    <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_.8fr]">
-      <Card><CardContent><h2 className="font-semibold">Recruiting Funnel</h2><div className="mt-5 space-y-2">{funnel.map(([label,value],index) => <div key={String(label)} className="mx-auto flex h-11 items-center justify-between rounded-md border bg-[#102A4C]/55 px-4" style={{width:`${100-index*5}%`}}><span className="text-xs text-[#CBD5E1]">{label}</span><strong className={typeof value === "string" ? "text-xs font-normal text-[#8a9095]" : undefined}>{value}</strong></div>)}</div></CardContent></Card>
-      <Card><CardContent><h2 className="font-semibold">Conversion Rates</h2><div className="mt-5 divide-y divide-white/10">{conversions.map(([label,value]) => <div key={String(label)} className="py-3"><div className="flex justify-between text-xs"><span className="text-[#CBD5E1]">{label}</span><strong>{typeof value === "string" ? value : `${value} %`}</strong></div><div className="mt-2 h-1.5 rounded-full bg-[#071426]"><div className="h-full rounded-full bg-gradient-to-r from-[#153A66] to-[#69A7EA]" style={{width:`${typeof value === "string" ? 0 : Math.min(value,100)}%`}} /></div></div>)}</div><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-lg border p-3"><p className="text-[10px] text-[#94A3B8]">Erwartet</p><p className="mt-2 font-semibold">{formatCurrency(kpis.expected_fees)}</p></div><div className="rounded-lg border p-3"><p className="text-[10px] text-[#94A3B8]">Realisiert</p><p className="mt-2 font-semibold">{formatCurrency(kpis.realized_fees)}</p></div></div></CardContent></Card>
-    </div>
+    <AnalyticsDashboard />
   </>;
 }

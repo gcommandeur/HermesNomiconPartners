@@ -130,9 +130,17 @@ class CockpitKpis(BaseModel):
     # hartcodierter Platzhaltertext, siehe Nutzer-Feedback "Prozesse
     # abschliessen...", Punkt 1).
     open_invoice_placement_count: int
+    # PIPELINE: Anzahl geloggter Pitch/InMail-Ereignisse im Zeitraum (siehe
+    # models/candidate_pitch_log.py::CandidatePitchLog) - Stufe 1 der
+    # konsolidierten 7-Stufen-Pipeline (Nutzer-Vorgabe: "die 7 Stufen sind
+    # 1. Pitch/InMail, 2. Quali Call, ... 7. Placement"). Ersetzt die
+    # vorherige manuelle SourcingFunnel.pitches-Zahl (siehe sourcing unten,
+    # Nutzer-Entscheidung "Ersetzen").
+    pitches: int
 
 
 class CockpitRates(BaseModel):
+    pitch_to_qualification_call_rate: float
     submission_to_interview: float
     interview_to_offer: float
     offer_to_placement: float

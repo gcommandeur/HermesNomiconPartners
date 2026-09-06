@@ -533,3 +533,86 @@ def test_stage_summary_returns_404_for_unknown_candidate(client: TestClient) -> 
         "/api/v1/candidates/00000000-0000-0000-0000-000000000000/stage-summary"
     )
     assert response.status_code == 404
+
+
+# --- Pitch/InMail (7-Stufen-Konsolidierung) -------------------------------
+#
+# Pitch ist bewusst KEINE SubmissionStatus-Kanban-Stufe (siehe f130c1a: eine
+# fruehere "pitch"-Stufe wurde als eigener Kanban-Status bewusst wieder
+# entfernt) - stattdessen ein eigenstaendiges, zaehlbares Ereignis direkt am
+# Kandidaten (CandidatePitchLog), OHNE Prozess-/Statuswechsel-Bezug.
+
+
+def test_log_candidate_pitch_creates_entry(client: TestClient) -> None:
+    candidate = _create_candidate(client, "PitchLogBasic")
+    response = client.post(
+        f"/api/v1/candidates/{candidate['id']}/pitch-log",
+        json={
+            "occurred_at": "2026-07-01T09:00:00",
+            "notes_text": "InMail ueber LinkedIn verschickt",
+            "next_step": "Nachfassen in 3 Tagen",
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["candidate_id"] == candidate["id"]
+    assert body["notes_text"] == "InMail ueber LinkedIn verschickt"
+    assert body["next_step"] == "Nachfassen in 3 Tagen"
+
+
+def test_log_candidate_pitch_returns_404_for_unknown_candidate(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/candidates/00000000-0000-0000-0000-000000000000/pitch-log",
+        json={"occurred_at": "2026-07-01T09:00:00"},
+    )
+    assert response.status_code == 404
+
+
+def test_log_candidate_pitch_does_not_create_a_submission(client: TestClient) -> None:
+    """Kernabgrenzung zu quick-log: ein Pitch-Log darf NIE einen Prozess
+    anlegen oder einen Statuswechsel ausloesen."""
+    candidate = _create_candidate(client, "PitchLogNoSubmission")
+    client.post(
+        f"/api/v1/candidates/{candidate['id']}/pitch-log",
+        json={"occurred_at": "2026-07-01T09:00:00"},
+    )
+    submissions = client.get(
+        f"/api/v1/candidates/{candidate['id']}/submissions"
+    ).json()
+    assert submissions == []
+
+
+def test_stage_summary_counts_multiple_pitch_logs(client: TestClient) -> None:
+    """Nutzer-Vorgabe: "es kann auch mehrmals da sein" - mehrere Pitch-Logs
+    fuer denselben Kandidaten muessen alle gezaehlt werden."""
+    candidate = _create_candidate(client, "MultiplePitchLogs")
+    for occurred_at in ("2026-06-01T09:00:00", "2026-07-01T09:00:00", "2026-08-01T09:00:00"):
+        response = client.post(
+            f"/api/v1/candidates/{candidate['id']}/pitch-log",
+            json={"occurred_at": occurred_at},
+        )
+        assert response.status_code == 200, response.text
+
+    summary = client.get(f"/api/v1/candidates/{candidate['id']}/stage-summary").json()
+    assert summary["pitch"] == 3
+    assert summary["qualification_call"] == 0
+
+
+def test_stage_summary_pitch_is_independent_of_qualification_call(
+    client: TestClient,
+) -> None:
+    """Pitch-Logs duerfen die bestehenden Kanban-Stufenzaehler nicht
+    beeinflussen, und umgekehrt."""
+    candidate = _create_candidate(client, "PitchIndependentOfQuali")
+    client.post(
+        f"/api/v1/candidates/{candidate['id']}/pitch-log",
+        json={"occurred_at": "2026-07-01T09:00:00"},
+    )
+    client.post(
+        "/api/v1/submissions",
+        json={"candidate_id": candidate["id"]},
+    )
+
+    summary = client.get(f"/api/v1/candidates/{candidate['id']}/stage-summary").json()
+    assert summary["pitch"] == 1
+    assert summary["qualification_call"] == 1

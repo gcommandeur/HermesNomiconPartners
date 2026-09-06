@@ -133,11 +133,35 @@ class CandidateStageSummary(BaseModel):
     """Anzahl erreichter Ereignisse je Stufe ueber ALLE Submissions eines
     Kandidaten hinweg (auch ueber mehrere Kanzleien) - Basis der Prozess-
     Timeline auf der Kandidat-Detailseite (siehe
-    RecruitingProcessService.stage_summary)."""
+    RecruitingProcessService.stage_summary).
 
+    `pitch` ist bewusst KEIN SubmissionStatus-Feld wie die uebrigen fuenf -
+    Pitch/InMail ist keine Kanban-Stufe (Nutzer-Entscheidung: kein eigener
+    Prozess-Status, keine Kanzlei-Bindung wie bei CV-Outs), sondern zaehlt
+    unabhaengige CandidatePitchLog-Eintraege direkt am Kandidaten."""
+
+    pitch: int = 0
     qualification_call: int = 0
     cv_in: int = 0
     cv_out: int = 0
     interview: int = 0
     offer: int = 0
     placement: int = 0
+
+
+class CandidatePitchLogCreate(BaseModel):
+    """Payload fuer POST /candidates/{id}/pitch-log - loggt ein Pitch/InMail-
+    Ereignis, OHNE einen Prozess anzulegen oder einen Statuswechsel
+    auszuloesen (anders als quick-log oben, das die drei echten Kanban-
+    Fruehstufen abdeckt)."""
+
+    occurred_at: datetime
+    notes_text: str | None = None
+    next_step: str | None = None
+
+
+class CandidatePitchLogRead(EntityRead):
+    candidate_id: uuid.UUID
+    occurred_at: datetime
+    notes_text: str | None
+    next_step: str | None

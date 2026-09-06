@@ -15,6 +15,14 @@ import type { SubmissionStatus } from "@/lib/api/types";
 // STAGE_LABELS noch direkt aus dem "use client"-submission-stage-bar.tsx
 // importiert wurde). submission-stage-bar.tsx re-exportiert von hier, damit
 // bestehende Importstellen unveraendert bleiben.
+// Bewusst NICHT Teil von STAGE_ORDER/STAGE_LABELS oben - Pitch/InMail ist
+// keine SubmissionStatus-/Kanban-Stufe (Nutzer-Entscheidung: kein eigener
+// Prozess-Status, siehe CandidatePitchLog), wird aber als Stufe 1 der
+// konsolidierten 7-Stufen-Pipeline sowohl in der Prozess-Timeline
+// (candidate-process-log.tsx) als auch in Analytics (app/analytics/
+// page.tsx) angezeigt - ein gemeinsamer Export haelt den Wortlaut konsistent.
+export const PITCH_LABEL = "Pitch/InMail";
+
 export const STAGE_ORDER: { status: SubmissionStatus; label: string }[] = [
   { status: "qualification_call", label: "Quali Call" },
   { status: "cv_in", label: "Shortlist" },

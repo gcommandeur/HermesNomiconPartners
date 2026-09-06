@@ -4,6 +4,7 @@ from cc_crm.models.auth import AuthSession
 from cc_crm.models.base import Base
 from cc_crm.models.calendar_event import CalendarEvent
 from cc_crm.models.candidate import Candidate
+from cc_crm.models.candidate_pitch_log import CandidatePitchLog
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.contact_person import ContactPerson
 from cc_crm.models.job_mandate import JobMandate
@@ -35,6 +36,7 @@ __all__ = [
     "Base",
     "CalendarEvent",
     "Candidate",
+    "CandidatePitchLog",
     "CandidateSubmission",
     "ClientCompany",
     "ContactPerson",

@@ -21,8 +21,6 @@ const emptyForm = {
   period_end: isoToday(),
   source: "LinkedIn",
   campaign: "",
-  pitches: "0",
-  responses: "0",
   positive_responses: "0",
   qualification_calls: "0",
   notes: "",
@@ -49,8 +47,11 @@ export function SourcingMetricForm() {
         period_end: form.period_end,
         source: form.source,
         campaign: form.campaign.trim() === "" ? null : form.campaign,
-        pitches: Number(form.pitches) || 0,
-        responses: Number(form.responses) || 0,
+        // "pitches"/"responses" bewusst nicht mehr erfasst (Nutzer-
+        // Entscheidung "Ersetzen") - Pitch/InMail wird jetzt ausschliesslich
+        // ueber die Prozess-Timeline je Kandidat geloggt (siehe
+        // candidate-process-log.tsx/POST .../pitch-log), der Backend-
+        // Feld-Default (0) bleibt fuer Altbestand/API-Kompatibilitaet.
         positive_responses: Number(form.positive_responses) || 0,
         qualification_calls: Number(form.qualification_calls) || 0,
         notes: form.notes.trim() === "" ? null : form.notes,
@@ -79,12 +80,10 @@ export function SourcingMetricForm() {
               <div><label className={labelClass}>Quelle</label><Input value={form.source} onChange={(e) => set("source", e.target.value)} /></div>
               <div><label className={labelClass}>Kampagne (optional)</label><Input value={form.campaign} onChange={(e) => set("campaign", e.target.value)} /></div>
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div><label className={labelClass}>Versendete Nachrichten</label><Input type="number" min={0} value={form.pitches} onChange={(e) => set("pitches", e.target.value)} /></div>
-              <div><label className={labelClass}>Antworten</label><Input type="number" min={0} value={form.responses} onChange={(e) => set("responses", e.target.value)} /></div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div><label className={labelClass}>Positive Antworten</label><Input type="number" min={0} value={form.positive_responses} onChange={(e) => set("positive_responses", e.target.value)} /></div>
+              <div><label className={labelClass}>Vereinbarte Quali-Calls</label><Input type="number" min={0} value={form.qualification_calls} onChange={(e) => set("qualification_calls", e.target.value)} /></div>
             </div>
-            <div><label className={labelClass}>Vereinbarte Quali-Calls</label><Input type="number" min={0} value={form.qualification_calls} onChange={(e) => set("qualification_calls", e.target.value)} /></div>
             <div><label className={labelClass}>Notizen</label><Input value={form.notes} onChange={(e) => set("notes", e.target.value)} /></div>
             <ErrorBanner message={error} />
             <div className="flex justify-end">

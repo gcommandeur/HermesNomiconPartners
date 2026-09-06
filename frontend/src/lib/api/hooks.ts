@@ -8,6 +8,7 @@ import {
   getAuditLogs,
   getCalendarEvents,
   getClients,
+  getCockpit,
   getCurrentUser,
   getMailAccounts,
   getMailingGroups,
@@ -20,6 +21,7 @@ import type {
   Candidate,
   CalendarEvent,
   ClientCompany,
+  Cockpit,
   CurrentUserInfo,
   DataResult,
   MailAccount,
@@ -140,6 +142,16 @@ export function invalidateAdminUsersCache() {
  * Aufgabe (siehe candidate-/client-/submission-create-modal.tsx). */
 export function useAssignableUsersCache() {
   return useSWR<DataResult<UserBrief[]>>("/users/assignable", getAssignableUsers, swrConfig);
+}
+
+/** Analytics-Seite mit neuem Mehrfach-Nutzerfilter (Nutzer-Vorgabe:
+ * "standardauswahl sind alle user... Mehrfachauswahl moeglich") - eigener
+ * Cache-Key je Filterauswahl, damit ein Wechsel der ausgewaehlten Nutzer
+ * nicht die Ergebnisse eines anderen Filterstands anzeigt. `ownerUserIds`
+ * undefined bedeutet "kein Filter" (alle Nutzer, Standardzustand). */
+export function useCockpitCache(period: string, ownerUserIds?: string[]) {
+  const key = `/cockpit?period=${period}&owner_user_id=${(ownerUserIds ?? []).slice().sort().join(",")}`;
+  return useSWR<DataResult<Cockpit>>(key, () => getCockpit(period, ownerUserIds), swrConfig);
 }
 
 /** Nur fuer Admins (siehe /einstellungen/audit-log) - chronologisches

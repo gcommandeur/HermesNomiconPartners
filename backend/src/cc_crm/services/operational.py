@@ -17,6 +17,7 @@ from cc_crm.models.operational import Document, EmailDraftLog, SourcingMetric
 from cc_crm.models.recruiting import Fee, Offer, Placement
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.task import Task
+from cc_crm.repositories.candidate_pitch_logs import CandidatePitchLogRepository
 from cc_crm.repositories.operational import (
     DocumentRepository,
     EmailDraftRepository,
@@ -309,11 +310,36 @@ class CockpitService:
         who = f"{candidate_name} bei {client_name}" if client_name else candidate_name
         return f"{status_label} — {who}"
 
-    def build(self, period: str) -> dict[str, object]:
+    def build(
+        self, period: str, owner_user_ids: list[uuid.UUID] | None = None
+    ) -> dict[str, object]:
         now = naive_utc(datetime.now(UTC))
         since = now - timedelta(days={"week": 7, "month": 30, "quarter": 90}.get(period, 7))
         due_soon = now + timedelta(days=1)
+        # Neuer Nutzerfilter oben in der Analytics-Seite (Nutzer-Vorgabe:
+        # "oben koennen mehrere user angewaehlt werden... standardauswahl
+        # sind alle user") - filtert nach Candidate.owner_user_id (gleiches
+        # Feld wie der bestehende "Meine Kandidaten"-Komfort-Filter), NICHT
+        # nach dem Ersteller von Submission/Offer/Placement/Fee, da diese
+        # Objekte kein eigenes owner_user_id-Feld mit derselben Bedeutung
+        # fuehren. `owner_user_ids=None` bedeutet "kein Filter aktiv" (alle
+        # Nutzer) - eine leere Liste (theoretisch: alle Checkboxen manuell
+        # abgewaehlt) filtert auf 0 Kandidaten statt auf "alle", damit die UI
+        # dem tatsaechlichen Auswahlzustand entspricht.
+        owner_filter_active = owner_user_ids is not None
+        filtered_candidate_ids: set[uuid.UUID] | None = None
+        if owner_filter_active:
+            filtered_candidate_ids = set(
+                self.session.scalars(
+                    select(Candidate.id).where(Candidate.owner_user_id.in_(owner_user_ids or []))
+                ).all()
+            )
         submissions = list(self.session.scalars(select(CandidateSubmission)).all())
+        if filtered_candidate_ids is not None:
+            submissions = [
+                item for item in submissions if item.candidate_id in filtered_candidate_ids
+            ]
+        submission_ids_for_owner_filter = {item.id for item in submissions}
         tasks = list(
             self.session.scalars(
                 select(Task).where(Task.status.in_([TaskStatus.OPEN, TaskStatus.IN_PROGRESS]))
@@ -339,16 +365,35 @@ class CockpitService:
             item
             for item in self.session.scalars(select(Offer)).all()
             if naive_utc(item.created_at) >= since
+            and (
+                filtered_candidate_ids is None
+                or item.submission_id in submission_ids_for_owner_filter
+            )
         ]
+        all_placements = list(self.session.scalars(select(Placement)).all())
+        # Ungefiltert (nicht auf `since` beschraenkt) - eine Fee kann neuer
+        # sein als das zugehoerige Placement (nachtraegliche Teilrechnung),
+        # daher muss die Owner-Zuordnung unabhaengig vom Placement-Zeitraum
+        # aufgeloest werden koennen.
+        placement_ids_for_owner_filter = {
+            item.id
+            for item in all_placements
+            if filtered_candidate_ids is None
+            or item.submission_id in submission_ids_for_owner_filter
+        }
         placements = [
             item
-            for item in self.session.scalars(select(Placement)).all()
-            if naive_utc(item.created_at) >= since
+            for item in all_placements
+            if naive_utc(item.created_at) >= since and item.id in placement_ids_for_owner_filter
         ]
         fees = [
             item
             for item in self.session.scalars(select(Fee)).all()
             if naive_utc(item.created_at) >= since
+            and (
+                filtered_candidate_ids is None
+                or item.placement_id in placement_ids_for_owner_filter
+            )
         ]
         period_submissions = [item for item in submissions if naive_utc(item.created_at) >= since]
         due_tasks = [
@@ -485,14 +530,12 @@ class CockpitService:
         realized = sum(
             float(fee.amount_net) for fee in fees if fee.invoice_status == InvoiceStatus.PAID
         )
-        cv_count = (
-            self.session.scalar(
-                select(func.count())
-                .select_from(Candidate)
-                .where(Candidate.cv_in_recorded_at.isnot(None))
-            )
-            or 0
+        cv_count_query = select(func.count()).select_from(Candidate).where(
+            Candidate.cv_in_recorded_at.isnot(None)
         )
+        if filtered_candidate_ids is not None:
+            cv_count_query = cv_count_query.where(Candidate.id.in_(filtered_candidate_ids))
+        cv_count = self.session.scalar(cv_count_query) or 0
         # UEBER DEN GESAMTEN BESTAND (nicht auf `period` beschraenkt wie die
         # `fees`-Liste oben) - eine seit Monaten offene Rechnung bleibt
         # "offen", unabhaengig vom gewaehlten Cockpit-Zeitraum. Zaehlt
@@ -503,12 +546,30 @@ class CockpitService:
                 fee.placement_id
                 for fee in self.session.scalars(select(Fee)).all()
                 if fee.invoice_status not in (InvoiceStatus.PAID, InvoiceStatus.CANCELLED)
+                and (
+                    filtered_candidate_ids is None
+                    or fee.placement_id in placement_ids_for_owner_filter
+                )
             }
         )
         reached_interview_in_period = [
             item for item in period_submissions if item.status in reached_interview_stage
         ]
         sourcing = SourcingMetricService(self.session).totals_for_period(since.date(), now.date())
+        # PITCH/INMAIL (Stufe 1 der 7-stufigen Pipeline, siehe
+        # CandidatePitchLog-Docstring) - unabhaengig von SourcingMetric
+        # (Nutzer-Entscheidung "Ersetzen": die manuell erfassten
+        # Pitches/Antworten-Zahlen aus dem Sourcing-Formular werden hier NICHT
+        # mehr verwendet, `sourcing` oben bleibt nur fuer die uebrigen
+        # SourcingFunnel-Felder erhalten).
+        pitch_candidate_ids = filtered_candidate_ids if owner_filter_active else None
+        pitches_in_period = [
+            item
+            for item in CandidatePitchLogRepository(self.session).list_all(
+                candidate_ids=list(pitch_candidate_ids) if pitch_candidate_ids is not None else None
+            )
+            if naive_utc(item.occurred_at) >= since
+        ]
         # PIPELINE-Kennzahlen: aus der echten Statuswechsel-Historie
         # (AuditLog), nicht aus Anlagezeitpunkt oder aktuellem Status - siehe
         # services/recruiting.py::stage_reached_counts fuer die ausfuehrliche
@@ -538,8 +599,12 @@ class CockpitService:
                 "expected_fees": expected,
                 "realized_fees": realized,
                 "open_invoice_placement_count": open_invoice_placement_count,
+                "pitches": len(pitches_in_period),
             },
             "rates": {
+                "pitch_to_qualification_call_rate": self._rate(
+                    len(period_submissions), len(pitches_in_period)
+                ),
                 "submission_to_interview": self._rate(
                     len(reached_interview_in_period), len(period_submissions)
                 ),

@@ -52,8 +52,8 @@ export const demoCockpit: Cockpit = {
   ],
   data_gaps: [],
   recruiting_kpis: { time_to_fill_days: 38, time_to_interview_days: 11, average_fee_per_placement: 18250 },
-  kpis: { qualification_calls: 7, cv_available: 12, submissions: 9, cv_outs_reached_count: 6, interviews: 4, offers: 2, offer_stage_reached_count: 2, placements: 1, placement_stage_reached_count: 1, expected_fees: 48600, realized_fees: 18250, open_invoice_placement_count: 1 },
-  rates: { submission_to_interview: 44.4, interview_to_offer: 50, offer_to_placement: 50, placement_to_paid: 100 },
+  kpis: { qualification_calls: 7, cv_available: 12, submissions: 9, cv_outs_reached_count: 6, interviews: 4, offers: 2, offer_stage_reached_count: 2, placements: 1, placement_stage_reached_count: 1, expected_fees: 48600, realized_fees: 18250, open_invoice_placement_count: 1, pitches: 22 },
+  rates: { pitch_to_qualification_call_rate: 31.8, submission_to_interview: 44.4, interview_to_offer: 50, offer_to_placement: 50, placement_to_paid: 100 },
   sourcing: { has_data: true, pitches: 126, responses: 34, positive_responses: 18, qualification_calls: 7, pitch_to_response_rate: 27, response_to_qualification_call_rate: 20.6 },
 };
 

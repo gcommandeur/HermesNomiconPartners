@@ -100,8 +100,16 @@ def get_cockpit(
     # eng geschnitten waren. Parameter bleibt fuer bestehende/kuenftige
     # direkte API-Aufrufe erhalten.
     period: Annotated[Literal["week", "month", "quarter"], Query()] = "month",
+    # Neuer Nutzerfilter oben in der Analytics-Seite (Nutzer-Vorgabe:
+    # "standardauswahl sind alle user... Mehrfachauswahl moeglich") -
+    # wiederholter Query-Parameter (?owner_user_id=<uuid>&owner_user_id=<uuid>),
+    # None (Parameter fehlt) bedeutet "kein Filter" (siehe
+    # CockpitService.build-Docstring fuer die None-vs-leere-Liste-Unterscheidung).
+    owner_user_id: Annotated[list[uuid.UUID] | None, Query()] = None,
 ) -> CockpitRead:
-    return CockpitRead.model_validate(CockpitService(session).build(period))
+    return CockpitRead.model_validate(
+        CockpitService(session).build(period, owner_user_ids=owner_user_id)
+    )
 
 
 @router.post("/candidates/{candidate_id}/profile-suggestion", response_model=ProfileSuggestion)

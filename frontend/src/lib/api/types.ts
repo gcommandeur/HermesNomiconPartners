@@ -430,12 +430,34 @@ export interface CandidateQuickLogResult {
 /** Anzahl erreichter Ereignisse je Stufe ueber ALLE Submissions eines
  * Kandidaten (siehe candidate-process-log.tsx). */
 export interface CandidateStageSummary {
+  // KEIN SubmissionStatus-Feld wie die uebrigen sechs - Pitch/InMail ist
+  // keine Kanban-Stufe (Nutzer-Entscheidung: kein eigener Prozess-Status,
+  // keine Kanzlei-Bindung wie bei CV-Outs), sondern zaehlt unabhaengige
+  // CandidatePitchLog-Eintraege direkt am Kandidaten (siehe
+  // candidate-process-log.tsx/POST /candidates/{id}/pitch-log).
+  pitch: number;
   qualification_call: number;
   cv_in: number;
   cv_out: number;
   interview: number;
   offer: number;
   placement: number;
+}
+
+/** Payload fuer POST /candidates/{id}/pitch-log - loggt ein Pitch/InMail-
+ * Ereignis, OHNE einen Prozess anzulegen oder einen Statuswechsel
+ * auszuloesen (anders als CandidateQuickLogCreate oben). */
+export interface CandidatePitchLogCreate {
+  occurred_at: string;
+  notes_text?: string | null;
+  next_step?: string | null;
+}
+
+export interface CandidatePitchLogRead extends Entity {
+  candidate_id: string;
+  occurred_at: string;
+  notes_text: string | null;
+  next_step: string | null;
 }
 
 /** Interview-Runde zu einem Prozess (siehe Backend models/recruiting.py::
@@ -610,6 +632,10 @@ export interface CockpitKpis {
   /** DISTINCT Placements mit mindestens einer nicht-bezahlten Fee (draft/
    * issued/due) - unabhaengig vom gewaehlten `period`. */
   open_invoice_placement_count: number;
+  /** PIPELINE: geloggte Pitch/InMail-Ereignisse im Zeitraum (Stufe 1 der
+   * 7-stufigen Pipeline, siehe CandidatePitchLog) - ersetzt die vorherige
+   * manuelle SourcingFunnel.pitches-Zahl. */
+  pitches: number;
 }
 
 export interface Cockpit {
@@ -623,6 +649,7 @@ export interface Cockpit {
   recruiting_kpis: RecruitingKpis;
   kpis: CockpitKpis;
   rates: {
+    pitch_to_qualification_call_rate: number;
     submission_to_interview: number;
     interview_to_offer: number;
     offer_to_placement: number;

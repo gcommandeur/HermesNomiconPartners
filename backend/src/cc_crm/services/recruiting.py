@@ -13,6 +13,7 @@ from cc_crm.core.errors import BusinessRuleError, ConflictError, EntityNotFoundE
 from cc_crm.models.base import Base
 from cc_crm.models.calendar_event import CalendarEvent
 from cc_crm.models.candidate import Candidate
+from cc_crm.models.candidate_pitch_log import CandidatePitchLog
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.enums import CalendarEventType, SubmissionStatus
 from cc_crm.models.recruiting import AuditLog, Fee, Interview, Offer, Placement, SubmissionFeedback
@@ -21,6 +22,7 @@ from cc_crm.models.user import User
 from cc_crm.repositories.activities import ActivityRepository
 from cc_crm.repositories.base import SQLAlchemyRepository
 from cc_crm.repositories.calendar_events import CalendarEventRepository
+from cc_crm.repositories.candidate_pitch_logs import CandidatePitchLogRepository
 from cc_crm.repositories.clients import ClientCompanyRepository
 from cc_crm.repositories.recruiting import (
     AuditLogRepository,
@@ -44,6 +46,7 @@ from cc_crm.schemas.recruiting import (
     PlacementUpdate,
 )
 from cc_crm.schemas.submission import (
+    CandidatePitchLogCreate,
     CandidateQuickLogCreate,
     CandidateQuickLogResult,
     CandidateStageSummary,
@@ -127,6 +130,7 @@ class RecruitingProcessService:
         self.session = session
         self.submissions = CandidateSubmissionService(session)
         self.feedback = FeedbackRepository(session)
+        self.pitch_logs = CandidatePitchLogRepository(session)
         self.interviews = InterviewRepository(session)
         self.offers = OfferRepository(session)
         self.placements = PlacementRepository(session)
@@ -266,6 +270,24 @@ class RecruitingProcessService:
             feedback=FeedbackRead.model_validate(feedback),
         )
 
+    def log_pitch(
+        self, candidate_id: uuid.UUID, payload: CandidatePitchLogCreate
+    ) -> CandidatePitchLog:
+        """Loggt ein Pitch/InMail-Ereignis direkt am Kandidaten - bewusst OHNE
+        Prozess-Bezug/Statuswechsel (anders als quick_log() oben), siehe
+        CandidatePitchLog-Docstring fuer die Begruendung. Kann beliebig oft
+        pro Kandidat aufgerufen werden (Nutzer-Vorgabe: "es kann auch
+        mehrmals da sein")."""
+        self.submissions.candidates.get(candidate_id)
+        pitch_log = self.pitch_logs.create_for_candidate(
+            candidate_id,
+            occurred_at=payload.occurred_at,
+            notes_text=payload.notes_text,
+            next_step=payload.next_step,
+        )
+        self.session.commit()
+        return pitch_log
+
     def stage_summary(self, candidate_id: uuid.UUID) -> CandidateStageSummary:
         """Anzahl Submissions eines Kandidaten (auch ueber mehrere Kanzleien
         hinweg), die eine Stufe TATSAECHLICH ERREICHT haben - Basis der
@@ -296,8 +318,10 @@ class RecruitingProcessService:
             ).all()
         )
         reached = stage_reached_counts(self.session, submission_ids)
+        pitch_count = self.pitch_logs.count_for_candidate(candidate_id)
 
         return CandidateStageSummary(
+            pitch=pitch_count,
             qualification_call=len(submission_ids),
             cv_in=len(reached[SubmissionStatus.CV_IN]),
             cv_out=len(reached[SubmissionStatus.CV_OUT]),

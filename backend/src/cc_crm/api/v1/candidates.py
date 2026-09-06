@@ -19,6 +19,8 @@ from cc_crm.schemas.candidate import (
 from cc_crm.schemas.pagination import Page
 from cc_crm.schemas.recruiting import AuditLogRead
 from cc_crm.schemas.submission import (
+    CandidatePitchLogCreate,
+    CandidatePitchLogRead,
     CandidateQuickLogCreate,
     CandidateQuickLogResult,
     CandidateStageSummary,
@@ -248,6 +250,20 @@ def quick_log_candidate_stage(
     eine separate "Prozess erstellen"-Aktion noetig ist."""
     return RecruitingProcessService(session).quick_log(
         candidate_id, payload, changed_by=current_user.email
+    )
+
+
+@router.post("/{candidate_id}/pitch-log", response_model=CandidatePitchLogRead)
+def log_candidate_pitch(
+    candidate_id: uuid.UUID,
+    payload: CandidatePitchLogCreate,
+    session: DatabaseSession,
+) -> CandidatePitchLogRead:
+    """Loggt ein Pitch/InMail-Ereignis - bewusst OHNE Prozess-Anlage/
+    Statuswechsel (anders als quick-log oben), siehe
+    RecruitingProcessService.log_pitch/CandidatePitchLog-Docstring."""
+    return CandidatePitchLogRead.model_validate(
+        RecruitingProcessService(session).log_pitch(candidate_id, payload)
     )
 
 

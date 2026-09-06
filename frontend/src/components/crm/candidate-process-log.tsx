@@ -7,17 +7,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { STAGE_LABELS } from "@/components/crm/submission-stage-bar";
-import { getStageSummary, quickLogCandidateStage } from "@/lib/api/queries";
+import { PITCH_LABEL } from "@/lib/stage-labels";
+import { getStageSummary, logCandidatePitch, quickLogCandidateStage } from "@/lib/api/queries";
 import type { CandidateStageSummary, FeedbackTargetStatus } from "@/lib/api/types";
 
 const labelClass = "mb-1 block text-xs text-[#94A3B8]";
 const textareaClass = "min-h-16 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
 const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
 
+/** "pitch" ist bewusst KEIN FeedbackTargetStatus/SubmissionStatus (Nutzer-
+ * Entscheidung: kein eigener Kanban-Status) - die Notiz-Auswahl hier deckt
+ * trotzdem alle 7 Pipeline-Stufen ab, ein Pitch-Eintrag geht dabei ueber
+ * einen eigenen Endpunkt (POST .../pitch-log, siehe handleSubmit unten)
+ * statt ueber quick-log. */
+type LoggableStage = "pitch" | FeedbackTargetStatus;
+
 // Unabhaengig vom aktuellen Prozess-Status waehlbar - beim Quick-Log muss ja
 // evtl. noch gar kein Prozess existieren (siehe RecruitingProcessService.
 // quick_log, das bei Bedarf automatisch einen anlegt).
-const FEEDBACK_STAGES: FeedbackTargetStatus[] = ["qualification_call", "cv_in", "cv_out"];
+const FEEDBACK_STAGES: LoggableStage[] = ["pitch", "qualification_call", "cv_in", "cv_out"];
 
 // Gleiche Vorlage wie feedback-panel.tsx::QUALIFICATION_CALL_TEMPLATE - hier
 // dupliziert statt importiert, da die beiden Formulare (Quick-Log ohne
@@ -27,6 +35,7 @@ const QUALIFICATION_CALL_TEMPLATE =
   "Aktuelle Stelle: \nQualifikationen: \nGehalt: \nKündigungsfrist: \n\nAufgabenbereich: \n\nWechselgrund: \n\nWeitere Notizen: ";
 
 const STAGE_TILES: { key: keyof CandidateStageSummary; label: string }[] = [
+  { key: "pitch", label: PITCH_LABEL },
   { key: "qualification_call", label: "Quali Call" },
   { key: "cv_in", label: "Shortlist" },
   { key: "cv_out", label: "CV Sent" },
@@ -40,13 +49,13 @@ function toDatetimeLocalValue(iso: string): string {
 }
 
 interface FormState {
-  stage: FeedbackTargetStatus;
+  stage: LoggableStage;
   feedback_text: string;
   received_at: string;
   next_step: string;
 }
 
-function emptyForm(stage: FeedbackTargetStatus): FormState {
+function emptyForm(stage: LoggableStage): FormState {
   return {
     stage,
     feedback_text: stage === "qualification_call" ? QUALIFICATION_CALL_TEMPLATE : "",
@@ -58,8 +67,11 @@ function emptyForm(stage: FeedbackTargetStatus): FormState {
 /** Sinnvolle Default-Stufe fuer eine neue Quick-Log-Notiz: die erste, noch
  * nicht erreichte Stufe in der natuerlichen Reihenfolge - laeuft ein Prozess
  * schon weiter (z.B. bereits im Shortlist-Status), macht ein Default auf
- * "Quali Call" wenig Sinn. */
-function defaultStage(summary: CandidateStageSummary | null): FeedbackTargetStatus {
+ * "Quali Call" wenig Sinn. Pitch ist bewusst KEINE Gate-Stufe hier (kann
+ * beliebig oft vorkommen, siehe Nutzer-Vorgabe "es kann auch mehrmals da
+ * sein") - der Default startet daher weiterhin bei Quali Call, Pitch bleibt
+ * ueber die manuelle Auswahl im Dropdown erreichbar. */
+function defaultStage(summary: CandidateStageSummary | null): LoggableStage {
   if (!summary || summary.qualification_call === 0) return "qualification_call";
   if (summary.cv_in === 0) return "cv_in";
   return "cv_out";
@@ -108,13 +120,24 @@ export function CandidateProcessLog({ candidateId }: { candidateId: string }) {
     setBusy(true);
     setMessage(null);
     try {
-      await quickLogCandidateStage(candidateId, {
-        stage: form.stage,
-        feedback_type: "internal",
-        feedback_text: form.feedback_text.trim(),
-        received_at: form.received_at,
-        next_step: form.next_step.trim() || null,
-      });
+      if (form.stage === "pitch") {
+        // Eigener Endpunkt (POST .../pitch-log) statt quick-log - Pitch legt
+        // bewusst KEINEN Prozess an und loest KEINEN Statuswechsel aus
+        // (Nutzer-Entscheidung: kein Kanban-Status, siehe CandidatePitchLog).
+        await logCandidatePitch(candidateId, {
+          occurred_at: form.received_at,
+          notes_text: form.feedback_text.trim() || null,
+          next_step: form.next_step.trim() || null,
+        });
+      } else {
+        await quickLogCandidateStage(candidateId, {
+          stage: form.stage,
+          feedback_type: "internal",
+          feedback_text: form.feedback_text.trim(),
+          received_at: form.received_at,
+          next_step: form.next_step.trim() || null,
+        });
+      }
       setForm(null);
       await reloadSummary();
       // Falls die Seite bisher keine Submissions kannte, war die gesamte
@@ -176,10 +199,12 @@ export function CandidateProcessLog({ candidateId }: { candidateId: string }) {
                 className={selectClass}
                 required
                 value={form.stage}
-                onChange={(e) => set("stage", e.target.value as FeedbackTargetStatus)}
+                onChange={(e) => set("stage", e.target.value as LoggableStage)}
               >
                 {FEEDBACK_STAGES.map((option) => (
-                  <option key={option} value={option}>{STAGE_LABELS[option]}</option>
+                  <option key={option} value={option}>
+                    {option === "pitch" ? PITCH_LABEL : STAGE_LABELS[option]}
+                  </option>
                 ))}
               </select>
             </div>
