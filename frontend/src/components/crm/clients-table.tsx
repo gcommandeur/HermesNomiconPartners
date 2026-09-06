@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { FilterBar } from "@/components/crm/filter-bar";
@@ -260,9 +260,8 @@ export function ClientsTable() {
             .at(-1);
 
           return (
-            <>
+            <Fragment key={groupKey}>
               <tr
-                key={groupKey}
                 className="cursor-pointer hover:bg-[#203A5A]/35"
                 onClick={() => setExpandedGroup(isExpanded ? null : groupKey)}
               >
@@ -304,7 +303,7 @@ export function ClientsTable() {
                     <td className="px-4 py-3.5 font-medium">{client.fee_percentage ?? 27} %</td>
                   </tr>
                 ))}
-            </>
+            </Fragment>
           );
         })}
       </DataTable>
