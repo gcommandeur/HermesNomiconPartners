@@ -533,8 +533,11 @@ class RecruitingProcessService:
         if self.placements.for_submission(submission_id) is not None:
             raise ConflictError("Placement already exists")
         fee_percentage = self._resolve_fee_percentage(submission, payload.fee_percentage)
-        calculated_fee = (payload.final_salary * fee_percentage / Decimal("100")).quantize(
-            MONEY, rounding=ROUND_HALF_UP
+        calculated_fee = self._calculate_fee(
+            final_salary=payload.final_salary,
+            fee_percentage=fee_percentage,
+            rabatt_percentage=payload.rabatt_percentage,
+            fee_fix=payload.fee_fix,
         )
         values = payload.model_dump()
         values.update(
@@ -563,13 +566,22 @@ class RecruitingProcessService:
         if placement is None:
             raise EntityNotFoundError("Placement not found")
         values = payload.model_dump(exclude_unset=True)
-        # calculated_fee neu berechnen, wenn final_salary oder fee_percentage
-        # sich aendern - gleiche Formel wie beim Anlegen (create_placement).
-        if "final_salary" in values or "fee_percentage" in values:
-            final_salary = values.get("final_salary", placement.final_salary)
-            fee_percentage = values.get("fee_percentage", placement.fee_percentage)
-            values["calculated_fee"] = (final_salary * fee_percentage / Decimal("100")).quantize(
-                MONEY, rounding=ROUND_HALF_UP
+        # `clear_fee_fix` ist nur ein Steuerflag (siehe PlacementUpdate) und
+        # kein Modell-Feld - separat behandeln statt an placements.update()
+        # durchzureichen.
+        clear_fee_fix = values.pop("clear_fee_fix", False)
+        if clear_fee_fix:
+            values["fee_fix"] = None
+        # calculated_fee neu berechnen, wenn final_salary, fee_percentage,
+        # rabatt_percentage oder fee_fix sich aendern - gleiche Formel wie
+        # beim Anlegen (create_placement).
+        recalc_fields = {"final_salary", "fee_percentage", "rabatt_percentage", "fee_fix"}
+        if recalc_fields & values.keys():
+            values["calculated_fee"] = self._calculate_fee(
+                final_salary=values.get("final_salary", placement.final_salary),
+                fee_percentage=values.get("fee_percentage", placement.fee_percentage),
+                rabatt_percentage=values.get("rabatt_percentage", placement.rabatt_percentage),
+                fee_fix=values.get("fee_fix", placement.fee_fix),
             )
         updated = self.placements.update(placement, values)
         self.session.commit()
@@ -581,6 +593,29 @@ class RecruitingProcessService:
             raise EntityNotFoundError("Placement not found")
         self.placements.delete(placement)
         self.session.commit()
+
+    @staticmethod
+    def _calculate_fee(
+        *,
+        final_salary: Decimal,
+        fee_percentage: Decimal,
+        rabatt_percentage: Decimal,
+        fee_fix: Decimal | None,
+    ) -> Decimal:
+        """Server-seitige Source of Truth fuer calculated_fee - das Frontend
+        zeigt waehrend der Eingabe dieselbe Formel bereits live an, muss
+        dieser Berechnung hier aber nicht vertrauen (siehe placement-panel.tsx).
+
+        Ist `fee_fix` gesetzt, wird er unveraendert als Fee uebernommen und
+        fee_percentage/rabatt_percentage ignoriert (bleiben aber gespeichert,
+        falls spaeter zurueck auf "Berechnet" gewechselt wird). Sonst:
+        final_salary * fee_percentage/100 * (1 - rabatt_percentage/100).
+        """
+        if fee_fix is not None:
+            return fee_fix.quantize(MONEY, rounding=ROUND_HALF_UP)
+        gross = final_salary * fee_percentage / Decimal("100")
+        discounted = gross * (Decimal("1") - rabatt_percentage / Decimal("100"))
+        return discounted.quantize(MONEY, rounding=ROUND_HALF_UP)
 
     def _resolve_fee_percentage(
         self, submission: CandidateSubmission, requested: Decimal | None

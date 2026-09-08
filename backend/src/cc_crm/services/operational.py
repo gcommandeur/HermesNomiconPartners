@@ -406,7 +406,16 @@ class CockpitService:
             # repositories/tasks.py::filtered(exclude_snoozed=...)).
             and (task.snoozed_until is None or naive_utc(task.snoozed_until) <= now)
         ]
-        hot_submissions = [item for item in submissions if item.status in self.HOT]
+        # Archivierte Placements ("Placement abschliessen", siehe
+        # SubmissionService.archive()) sollen aus den beiden Action-Listen
+        # verschwinden (wie schon im Kanban), aber NICHT aus den KPI-Zahlen
+        # weiter unten (kpis/rates nutzen weiterhin die ungefilterte
+        # `submissions`-Liste) - Nutzer-Vorgabe: die Kennzahlen sollen
+        # archivierte Placements weiterhin mitzaehlen, nur die
+        # "Heisse Prozesse"/"Datenluecken"-Listen sollen sie ausblenden.
+        hot_submissions = [
+            item for item in submissions if item.status in self.HOT and item.archived_at is None
+        ]
         # Prozesse im Status OFFER/PLACEMENT OHNE zugehoerigen Offer-/
         # Placement-Datensatz - unfertige Erfassungen (Kanban-Drag ohne
         # ausgefuelltes Formular), siehe CockpitRead.data_gaps. UEBER DEN
@@ -418,10 +427,13 @@ class CockpitService:
         gap_submissions = [
             item
             for item in submissions
-            if (item.status == SubmissionStatus.OFFER and item.id not in offer_submission_ids)
-            or (
-                item.status == SubmissionStatus.PLACEMENT
-                and item.id not in placement_submission_ids
+            if item.archived_at is None
+            and (
+                (item.status == SubmissionStatus.OFFER and item.id not in offer_submission_ids)
+                or (
+                    item.status == SubmissionStatus.PLACEMENT
+                    and item.id not in placement_submission_ids
+                )
             )
         ]
         # Aeltere Task-Zeilen (vor Einfuehrung von candidate_id/client_company_id

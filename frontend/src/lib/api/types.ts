@@ -544,6 +544,13 @@ export interface Placement extends Entity {
   start_date: string;
   final_salary: number;
   fee_percentage: number;
+  /** Additiver Rabatt in % auf die berechnete Fee, nur im "Berechnet"-Modus
+   * wirksam (siehe fee_fix). 0 = kein Rabatt. */
+  rabatt_percentage: number;
+  /** Wenn gesetzt: dieser Betrag ist die Fee 1:1, fee_percentage/
+   * rabatt_percentage werden ignoriert (aber weiterhin gespeichert/angezeigt,
+   * falls spaeter zurueck auf "Berechnet" gewechselt wird). */
+  fee_fix: number | null;
   calculated_fee: number;
   guarantee_period_months: number;
   status: PlacementStatus;
@@ -555,6 +562,8 @@ export interface PlacementCreate {
   start_date: string;
   final_salary: number;
   fee_percentage?: number | null;
+  rabatt_percentage?: number;
+  fee_fix?: number | null;
   guarantee_period_months?: number;
   status?: PlacementStatus;
 }
@@ -563,6 +572,11 @@ export interface PlacementUpdate {
   start_date?: string;
   final_salary?: number;
   fee_percentage?: number | null;
+  rabatt_percentage?: number;
+  fee_fix?: number | null;
+  /** Einziger Weg, fee_fix nach dem Speichern wieder zu loeschen (Umschalter
+   * zurueck auf "Berechnet") - siehe Backend PlacementUpdate.clear_fee_fix. */
+  clear_fee_fix?: boolean;
   guarantee_period_months?: number;
   status?: PlacementStatus;
 }
