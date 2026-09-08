@@ -25,7 +25,7 @@ export const PITCH_LABEL = "Pitch/InMail";
 
 export const STAGE_ORDER: { status: SubmissionStatus; label: string }[] = [
   { status: "qualification_call", label: "Quali Call" },
-  { status: "cv_in", label: "Shortlist" },
+  { status: "cv_in", label: "CV In" },
   { status: "cv_out", label: "CV Sent" },
   { status: "interview", label: "Interview" },
   { status: "offer", label: "Offer" },
@@ -37,7 +37,7 @@ export const STAGE_ORDER: { status: SubmissionStatus; label: string }[] = [
  * zeigen. */
 export const STAGE_LABELS: Record<SubmissionStatus, string> = {
   qualification_call: "Quali Call",
-  cv_in: "Shortlist",
+  cv_in: "CV In",
   cv_out: "CV Sent",
   interview: "Interview",
   offer: "Offer",

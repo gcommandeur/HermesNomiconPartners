@@ -37,7 +37,7 @@ const QUALIFICATION_CALL_TEMPLATE =
 const STAGE_TILES: { key: keyof CandidateStageSummary; label: string }[] = [
   { key: "pitch", label: PITCH_LABEL },
   { key: "qualification_call", label: "Quali Call" },
-  { key: "cv_in", label: "Shortlist" },
+  { key: "cv_in", label: "CV In" },
   { key: "cv_out", label: "CV Sent" },
   { key: "interview", label: "Interview" },
   { key: "offer", label: "Offer" },
@@ -66,7 +66,7 @@ function emptyForm(stage: LoggableStage): FormState {
 
 /** Sinnvolle Default-Stufe fuer eine neue Quick-Log-Notiz: die erste, noch
  * nicht erreichte Stufe in der natuerlichen Reihenfolge - laeuft ein Prozess
- * schon weiter (z.B. bereits im Shortlist-Status), macht ein Default auf
+ * schon weiter (z.B. bereits im CV-In-Status), macht ein Default auf
  * "Quali Call" wenig Sinn. Pitch ist bewusst KEINE Gate-Stufe hier (kann
  * beliebig oft vorkommen, siehe Nutzer-Vorgabe "es kann auch mehrmals da
  * sein") - der Default startet daher weiterhin bei Quali Call, Pitch bleibt
