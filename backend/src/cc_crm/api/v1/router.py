@@ -13,6 +13,7 @@ from cc_crm.api.v1.geo import router as geo_router
 from cc_crm.api.v1.imports import router as imports_router
 from cc_crm.api.v1.jobs import router as jobs_router
 from cc_crm.api.v1.mail_accounts import router as mail_accounts_router
+from cc_crm.api.v1.mail_send import router as mail_send_router
 from cc_crm.api.v1.mailing_groups import router as mailing_groups_router
 from cc_crm.api.v1.matching import router as matching_router
 from cc_crm.api.v1.nl_search import router as nl_search_router
@@ -50,6 +51,7 @@ protected_router.include_router(submissions_router, tags=["candidate-submissions
 protected_router.include_router(activities_router, tags=["activities"])
 protected_router.include_router(tasks_router, tags=["tasks"])
 protected_router.include_router(mail_accounts_router, tags=["mail-accounts"])
+protected_router.include_router(mail_send_router, tags=["mail-send"])
 protected_router.include_router(notes_router, tags=["notes"])
 protected_router.include_router(operational_router, tags=["operations"])
 protected_router.include_router(recruiting_router, tags=["recruiting-process"])

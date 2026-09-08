@@ -12,7 +12,7 @@ import type { CandidateSubmission, SubmissionStatus } from "@/lib/api/types";
  * geoeffnet per Klick auf die SubmissionStageBar der Kandidat-Detailseite.
  * Zeigt je nach Stufe unterschiedlichen Inhalt (Interview-Runden/Feedback/
  * Angebot/Placement). Der Statuswechsel selbst laeuft fuer die
- * Notiz-gestuetzten Stufen (Quali-Call/Shortlist/CV-Sent) komplett
+ * Notiz-gestuetzten Stufen (Quali-Call/CV-In/CV-Sent) komplett
  * ueber das Status-Feld im FeedbackPanel-Formular (Bullhorn-artiges
  * "Action"-Feld) - kein separater "Status setzen"-Button hier mehr, damit es
  * nicht zwei konkurrierende Wege gibt. */
