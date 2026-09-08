@@ -105,3 +105,25 @@ class ClientDuplicateCandidate(BaseModel):
     postal_code: str | None
     similarity: float
     same_location: bool
+
+
+class ClientDistanceResult(BaseModel):
+    """Eine Kanzlei mit ihrer Entfernung zum Umkreis-Zentrum (siehe
+    services/clients.py::ClientCompanyService.list_near_candidate)."""
+
+    client: ClientCompanyRead
+    distance_km: float = Field(ge=0)
+
+
+class ClientsNearCandidateResult(BaseModel):
+    """Ergebnis der Kanzlei-Umkreissuche ausgehend von einem Kandidaten
+    (Schritt 3 des "Schnelle Submission"-Auftrags - eigenstaendig nutzbar,
+    kein Kettenauftrag). `in_radius` ist nach `distance_km` aufsteigend
+    sortiert. `unresolved` enthaelt Kanzleien ohne aufloesbare PLZ/Ort -
+    fallen aus der sortierten Liste raus, werden aber separat ausgewiesen
+    statt zu verschwinden (Nutzer-Vorgabe)."""
+
+    candidate_id: uuid.UUID
+    radius_km: int
+    in_radius: list[ClientDistanceResult]
+    unresolved: list[ClientCompanyRead]

@@ -10,7 +10,9 @@ from cc_crm.schemas.client_company import (
     ClientCompanyCreate,
     ClientCompanyRead,
     ClientCompanyUpdate,
+    ClientDistanceResult,
     ClientDuplicateCandidate,
+    ClientsNearCandidateResult,
 )
 from cc_crm.schemas.pagination import Page
 from cc_crm.services.client_grouping import ClientGroupingService
@@ -80,6 +82,35 @@ def check_duplicate_client(
         )
         for client, score, same_location in matches
     ]
+
+
+@router.get("/near-candidate/{candidate_id}", response_model=ClientsNearCandidateResult)
+def list_clients_near_candidate(
+    candidate_id: uuid.UUID,
+    session: DatabaseSession,
+    # Gleiche Stufen/Grenzen wie der bestehende Kandidaten-Umkreisfilter
+    # (siehe api/v1/candidates.py::list_candidates::radius_km).
+    radius_km: Annotated[int, Query(ge=1, le=500)],
+    client_status: Annotated[ClientStatus | None, Query(alias="status")] = None,
+) -> ClientsNearCandidateResult:
+    """Kanzleien im Umkreis eines Kandidaten (Zentrum: dessen PLZ/Ort) -
+    eigenstaendiger Endpunkt, kein Kettenauftrag mit Profil-Erzeugung/
+    Mailversand (siehe services/clients.py::ClientCompanyService.
+    list_near_candidate fuer die Begruendung)."""
+    in_radius, unresolved = ClientCompanyService(session).list_near_candidate(
+        candidate_id, radius_km=radius_km, status=client_status
+    )
+    return ClientsNearCandidateResult(
+        candidate_id=candidate_id,
+        radius_km=radius_km,
+        in_radius=[
+            ClientDistanceResult(
+                client=ClientCompanyRead.model_validate(client), distance_km=round(distance, 1)
+            )
+            for client, distance in in_radius
+        ],
+        unresolved=[ClientCompanyRead.model_validate(client) for client in unresolved],
+    )
 
 
 @router.post("", response_model=ClientCompanyRead, status_code=status.HTTP_201_CREATED)

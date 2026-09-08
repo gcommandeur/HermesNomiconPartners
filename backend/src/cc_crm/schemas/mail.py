@@ -132,3 +132,44 @@ class MailMessageRead(BaseModel):
 
     matched_client_company_id: uuid.UUID | None
     matched_client_company_name: str | None
+
+
+class MailSendRequest(BaseModel):
+    """Payload fuer POST /mail/send - Einzelversand mit optionalen Anhaengen,
+    reine Anbindung an das bereits bestehende, getestete services/
+    mail_send.py::send_mail (keine neue Versandlogik hier)."""
+
+    # None = ueber MailAccountService.resolve_send_account(current_user)
+    # aufloesen (persoenlicher Override -> globales Standardpostfach).
+    account_id: uuid.UUID | None = None
+    to_address: EmailStr
+    to_name: str | None = None
+    subject: str = Field(min_length=1, max_length=240)
+    body_text: str = Field(min_length=1)
+    # Verweise auf bereits im Storage liegende Documents (siehe
+    # models/operational.py::Document) - werden erst beim Versand selbst
+    # geladen (send_mail()), nicht hier. document_type=="cv" wird abgelehnt,
+    # siehe api/v1/mail_send.py::send_single_mail (Datenschutz-Vorgabe: beim
+    # Kanzlei-Mailversand darf nie ein CV als Anhang gehen, nur das anonyme
+    # Profil).
+    attachment_document_ids: list[uuid.UUID] = Field(default_factory=list)
+    candidate_id: uuid.UUID | None = None
+    client_company_id: uuid.UUID | None = None
+    contact_person_id: uuid.UUID | None = None
+
+
+class MailSendResult(BaseModel):
+    """Antwort auf einen erfolgreichen Einzelversand - `to_address` kommt
+    aus dem Request, nicht aus dem MailMessage-Modell (das hat als reines
+    Eingangs-/Ausgangs-Log kein eigenes Empfaenger-Feld, siehe
+    models/mail.py::MailMessage)."""
+
+    id: uuid.UUID
+    mail_account_id: uuid.UUID
+    to_address: str
+    subject: str
+    sent_at: datetime
+    matched_candidate_id: uuid.UUID | None
+    matched_client_company_id: uuid.UUID | None
+    matched_contact_person_id: uuid.UUID | None
+    created_activity_id: uuid.UUID | None
