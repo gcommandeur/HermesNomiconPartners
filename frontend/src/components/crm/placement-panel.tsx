@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorBanner } from "@/components/crm/error-banner";
@@ -17,16 +17,34 @@ const STATUS_OPTIONS: { value: PlacementStatus; label: string }[] = [
   { value: "cancelled", label: "Storniert" },
 ];
 
+/** "berechnet" = final_salary * fee_percentage/100 * (1 - rabatt_percentage/100),
+ * "fix" = fee_fix wird 1:1 uebernommen. Server rechnet dieselbe Formel
+ * autoritativ nach (siehe services/recruiting.py::_calculate_fee) - die
+ * Live-Anzeige hier ist nur eine Vorschau, keine Quelle der Wahrheit. */
+type FeeMode = "berechnet" | "fix";
+
 interface FormState {
   start_date: string;
   final_salary: string;
   fee_percentage: string;
+  rabatt_percentage: string;
+  fee_fix: string;
+  fee_mode: FeeMode;
   guarantee_period_months: string;
   status: PlacementStatus;
 }
 
 function emptyForm(): FormState {
-  return { start_date: "", final_salary: "", fee_percentage: "", guarantee_period_months: "6", status: "planned" };
+  return {
+    start_date: "",
+    final_salary: "",
+    fee_percentage: "",
+    rabatt_percentage: "0",
+    fee_fix: "",
+    fee_mode: "berechnet",
+    guarantee_period_months: "6",
+    status: "planned",
+  };
 }
 
 function formFromPlacement(placement: Placement): FormState {
@@ -34,9 +52,36 @@ function formFromPlacement(placement: Placement): FormState {
     start_date: placement.start_date,
     final_salary: String(placement.final_salary),
     fee_percentage: String(placement.fee_percentage),
+    rabatt_percentage: String(placement.rabatt_percentage ?? 0),
+    fee_fix: placement.fee_fix != null ? String(placement.fee_fix) : "",
+    fee_mode: placement.fee_fix != null ? "fix" : "berechnet",
     guarantee_period_months: String(placement.guarantee_period_months),
     status: placement.status,
   };
+}
+
+/** Live-Vorschau der Fee waehrend der Eingabe - rein clientseitig, keine
+ * Server-Rundtrip. `null` wenn die Eingaben (noch) keine Berechnung
+ * zulassen (z.B. Honorarsatz leer im Berechnet-Modus, da der Kanzlei-
+ * Standardsatz erst serverseitig aufgeloest wird). */
+function previewFee(form: FormState): number | null {
+  if (form.fee_mode === "fix") {
+    const fix = Number(form.fee_fix);
+    return form.fee_fix.trim() && !Number.isNaN(fix) ? fix : null;
+  }
+  const finalSalary = Number(form.final_salary);
+  const feePercentage = Number(form.fee_percentage);
+  const rabatt = form.rabatt_percentage.trim() ? Number(form.rabatt_percentage) : 0;
+  if (
+    !form.final_salary.trim() ||
+    Number.isNaN(finalSalary) ||
+    !form.fee_percentage.trim() ||
+    Number.isNaN(feePercentage) ||
+    Number.isNaN(rabatt)
+  ) {
+    return null;
+  }
+  return finalSalary * (feePercentage / 100) * (1 - rabatt / 100);
 }
 
 /** Placement-Formular fuer die Stufe "placement" - singulaer (ein Placement
@@ -68,6 +113,8 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
     setForm((state) => ({ ...state, [key]: value }));
   }
 
+  const feePreview = useMemo(() => previewFee(form), [form]);
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const finalSalary = Number(form.final_salary);
@@ -79,14 +126,34 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
       setMessage("Bitte ein gültiges finales Gehalt angeben.");
       return;
     }
+    const isFix = form.fee_mode === "fix";
+    if (isFix) {
+      const fix = Number(form.fee_fix);
+      if (!form.fee_fix.trim() || Number.isNaN(fix) || fix <= 0) {
+        setMessage("Bitte eine gültige fixe Fee angeben.");
+        return;
+      }
+    }
     setBusy(true);
     setMessage(null);
     try {
+      const rabattPercentage = form.rabatt_percentage.trim() ? Number(form.rabatt_percentage) : 0;
+      const feeFix = isFix ? Number(form.fee_fix) : null;
       if (placement) {
         const updated = await updatePlacement(submissionId, {
           start_date: form.start_date,
           final_salary: finalSalary,
+          // Leer gelassen = unveraendert (Kanzlei-/Submission-Standardsatz
+          // bleibt bestehen) - anders als beim Anlegen wuerde `null` hier
+          // serverseitig fee_percentage auf "kein Wert" zuruecksetzen und die
+          // Fee-Neuberechnung zum Absturz bringen.
           fee_percentage: form.fee_percentage.trim() ? Number(form.fee_percentage) : undefined,
+          rabatt_percentage: rabattPercentage,
+          fee_fix: feeFix ?? undefined,
+          // Ohne fixe Fee explizit zuruecksetzen (sonst bliebe ein zuvor
+          // gesetzter fee_fix-Wert serverseitig stehen, siehe
+          // PlacementUpdate.clear_fee_fix).
+          clear_fee_fix: !isFix,
           guarantee_period_months: Number(form.guarantee_period_months) || 0,
           status: form.status,
         });
@@ -97,6 +164,8 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
           start_date: form.start_date,
           final_salary: finalSalary,
           fee_percentage: form.fee_percentage.trim() ? Number(form.fee_percentage) : null,
+          rabatt_percentage: rabattPercentage,
+          fee_fix: feeFix,
           guarantee_period_months: Number(form.guarantee_period_months) || 0,
           status: form.status,
         });
@@ -157,18 +226,80 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
             />
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <label className={labelClass}>Honorarsatz % (leer = Kanzlei-Standard)</label>
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              step="0.01"
-              value={form.fee_percentage}
-              onChange={(e) => set("fee_percentage", e.target.value)}
-            />
+
+        <div className="flex gap-1 rounded-md border border-white/10 bg-[#0D1B2E] p-1 text-xs">
+          <button
+            type="button"
+            className={`flex-1 rounded px-2 py-1.5 transition ${form.fee_mode === "berechnet" ? "bg-[#1F5FA8] text-white" : "text-[#94A3B8] hover:text-[#F8FAFC]"}`}
+            onClick={() => set("fee_mode", "berechnet")}
+          >
+            Berechnet
+          </button>
+          <button
+            type="button"
+            className={`flex-1 rounded px-2 py-1.5 transition ${form.fee_mode === "fix" ? "bg-[#1F5FA8] text-white" : "text-[#94A3B8] hover:text-[#F8FAFC]"}`}
+            onClick={() => set("fee_mode", "fix")}
+          >
+            Fixe Fee eingeben
+          </button>
+        </div>
+
+        {form.fee_mode === "berechnet" ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className={labelClass}>Honorarsatz % (leer = Kanzlei-Standard)</label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step="0.01"
+                value={form.fee_percentage}
+                onChange={(e) => set("fee_percentage", e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Rabatt %</label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step="0.01"
+                value={form.rabatt_percentage}
+                onChange={(e) => set("rabatt_percentage", e.target.value)}
+              />
+            </div>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className={labelClass}>Fixe Fee (€) *</label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                required
+                value={form.fee_fix}
+                onChange={(e) => set("fee_fix", e.target.value)}
+              />
+            </div>
+            <div className="opacity-40">
+              <label className={labelClass}>Honorarsatz % / Rabatt % (ausgeblendet bei fixer Fee)</label>
+              <div className="flex gap-2">
+                <Input type="number" disabled value={form.fee_percentage} onChange={(e) => set("fee_percentage", e.target.value)} />
+                <Input type="number" disabled value={form.rabatt_percentage} onChange={(e) => set("rabatt_percentage", e.target.value)} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <p className="text-sm font-medium text-[#F8FAFC]">
+          Fee (Vorschau):{" "}
+          {feePreview != null
+            ? feePreview.toLocaleString("de-DE", { style: "currency", currency: "EUR" })
+            : "—"}
+        </p>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={labelClass}>Gewährleistung (Monate)</label>
             <Input
@@ -178,22 +309,22 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
               onChange={(e) => set("guarantee_period_months", e.target.value)}
             />
           </div>
-        </div>
-        <div>
-          <label className={labelClass}>Status</label>
-          <select
-            className={selectClass}
-            value={form.status}
-            onChange={(e) => set("status", e.target.value as PlacementStatus)}
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
+          <div>
+            <label className={labelClass}>Status</label>
+            <select
+              className={selectClass}
+              value={form.status}
+              onChange={(e) => set("status", e.target.value as PlacementStatus)}
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
         {placement && (
           <p className="text-xs text-[#747C89]">
-            Berechnete Fee: {placement.calculated_fee.toLocaleString("de-DE")} € · Gewährleistung bis{" "}
+            Gespeicherte Fee: {placement.calculated_fee.toLocaleString("de-DE")} € · Gewährleistung bis{" "}
             {placement.warranty_end_date}
           </p>
         )}

@@ -92,6 +92,8 @@ class PlacementCreate(BaseModel):
     start_date: date
     final_salary: Decimal = Field(gt=0)
     fee_percentage: Decimal | None = Field(default=None, gt=0, le=100)
+    rabatt_percentage: Decimal = Field(default=Decimal("0"), ge=0, le=100)
+    fee_fix: Decimal | None = Field(default=None, gt=0)
     guarantee_period_months: int = Field(default=0, ge=0)
     status: PlacementStatus = PlacementStatus.PLANNED
 
@@ -115,6 +117,13 @@ class PlacementUpdate(BaseModel):
     start_date: date | None = None
     final_salary: Decimal | None = Field(default=None, gt=0)
     fee_percentage: Decimal | None = Field(default=None, gt=0, le=100)
+    rabatt_percentage: Decimal | None = Field(default=None, ge=0, le=100)
+    fee_fix: Decimal | None = Field(default=None, gt=0)
+    # Einziger Weg, fee_fix nach dem Speichern wieder auf "kein Fixbetrag"
+    # zurueckzusetzen (Umschalter zurueck auf "Berechnet") - `fee_fix: None`
+    # allein ist von "Feld nicht mitgeschickt" nicht unterscheidbar, da
+    # PlacementUpdate ueber `model_dump(exclude_unset=True)` angewendet wird.
+    clear_fee_fix: bool = False
     guarantee_period_months: int | None = Field(default=None, ge=0)
     status: PlacementStatus | None = None
 

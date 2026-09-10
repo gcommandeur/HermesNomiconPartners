@@ -81,6 +81,19 @@ class Placement(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     final_salary: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     fee_percentage: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    # Additiver Rabatt in Prozent (0 = kein Rabatt) auf die berechnete Fee -
+    # nur relevant im "Berechnet"-Modus (siehe fee_fix). Default 0 statt
+    # nullable, damit die Berechnung ohne Sonderfall-Handling
+    # `* (1 - rabatt_percentage/100)` rechnen kann.
+    rabatt_percentage: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), default=Decimal("0"), server_default="0", nullable=False
+    )
+    # Wenn gesetzt: dieser Betrag wird 1:1 als calculated_fee uebernommen,
+    # fee_percentage/rabatt_percentage werden dann ignoriert (bleiben aber
+    # gespeichert/im Formular sichtbar, falls spaeter zurueck auf "Berechnet"
+    # gewechselt wird) - siehe services/recruiting.py create_placement()/
+    # update_placement().
+    fee_fix: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     calculated_fee: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     guarantee_period_months: Mapped[int] = mapped_column(default=0, nullable=False)
     status: Mapped[PlacementStatus] = mapped_column(
