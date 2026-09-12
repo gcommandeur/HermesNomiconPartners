@@ -54,6 +54,12 @@ Weitere Regeln:
     name/status/fee_percentage/honorar_stufe/terms_status/refund_terms/
     guarantee_period_months/payment_terms_days bleiben grundsaetzlich
     unangetastet.
+    AUSNAHME: bei GENAU den zwei EXPLICIT_PAIRS-Eintraegen mit gesetztem
+    website_override (Andreas Deubert, CMS Hasche Sigle) wird die
+    Keeper-website zwangsweise auf die am 30.07.2026 bestaetigte Domain
+    gesetzt, auch wenn dort bereits eine andere website steht - siehe
+    EXPLICIT_PAIRS-Docstring fuer die Begruendung je Fall. Betrifft
+    NIEMALS die generisch per Domain-Kollision erkannten Paare (Weg 1).
   - ContactPerson des Losers wird umgehaengt; bei E-Mail-Dublette
     (case-insensitive) gegen einen bereits beim Keeper vorhandenen Kontakt
     wird der Loser-Kontakt verworfen statt doppelt angelegt.
@@ -169,15 +175,33 @@ FILLABLE_FIELDS = [
     "owner_user_id",
 ]
 
-# Am 30.07.2026 manuell bestaetigte Paare (keeper_name, loser_name) - exakte
-# String-Vergleiche gegen ClientCompany.name, keine Aehnlichkeitsschwelle.
-EXPLICIT_PAIRS: list[tuple[str, str]] = [
+# Am 30.07.2026 manuell bestaetigte Paare (keeper_name, loser_name,
+# website_override) - exakte String-Vergleiche gegen ClientCompany.name,
+# keine Aehnlichkeitsschwelle.
+#
+# website_override: bei den meisten Paaren None (die generische "nur leere
+# Keeper-Felder befuellen"-Regel reicht). Bei genau zwei Paaren wurde die
+# korrekte Domain am 30.07.2026 bereits per echter Korrespondenz bestaetigt
+# UND weicht von der aktuell beim Keeper hinterlegten (falschen) website ab -
+# dort erzwingt der Override das Ueberschreiben einer NICHT-leeren
+# Keeper-website, exklusiv fuer diese beiden Paare (siehe merge_pair()):
+#   - CMS Hasche Sigle: Keeper-website s-h-partner.de war laut Audit
+#     "vermutlich falsch" (keine Korrespondenz gefunden) - cms-hs.com ist
+#     die bestaetigte, richtige Domain.
+#   - Andreas Deubert: stb-deubert.de wurde durch echte Korrespondenz
+#     (kanzlei@stb-deubert.de) bestaetigt.
+EXPLICIT_PAIRS: list[tuple[str, str, str | None]] = [
     (
         "Menold Bezler Rechtsanwälte Steuerberater Wirtschaftsprüfer",
         "Menoldbezler",
+        None,
     ),
-    ("Andreas Deubert Steuerberater · Diplom-Kaufmann", "Stb Deubert"),
-    ("CMS Hasche Sigle Partnerschaft mbB", "Cms Hs"),
+    (
+        "Andreas Deubert Steuerberater · Diplom-Kaufmann",
+        "Stb Deubert",
+        "stb-deubert.de",
+    ),
+    ("CMS Hasche Sigle Partnerschaft mbB", "Cms Hs", "cms-hs.com"),
 ]
 
 # Kein Duplikat, nur fehlende Domain nachtragen (Auftrag): (name, domain).
@@ -364,10 +388,19 @@ def merge_pair(
     grund: str,
     *,
     apply: bool,
+    website_override: str | None = None,
 ) -> dict[str, object]:
     """Fuehrt EIN Paar zusammen. Reihenfolge ist sicherheitsrelevant: erst
-    alle Referenzen umhaengen, dann Felder befuellen, dann live verifizieren,
-    dass nichts mehr auf den Loser zeigt - und erst danach loeschen."""
+    alle Referenzen umhaengen, dann Felder befuellen (Override zuerst, dann
+    die generische Nur-leere-Felder-Logik), dann live verifizieren, dass
+    nichts mehr auf den Loser zeigt - und erst danach loeschen.
+
+    website_override: NUR fuer die zwei explizit am 30.07.2026 bestaetigten
+    Paare gesetzt (siehe EXPLICIT_PAIRS-Docstring) - erzwingt das
+    Ueberschreiben einer bereits gesetzten, NICHT-leeren Keeper-website mit
+    der bestaetigten, korrekten Domain. Bei der generischen Domain-Kollision-
+    Erkennung (Weg 1) bleibt die "nie nicht-leere Felder ueberschreiben"-
+    Regel unangetastet - dort ist website_override immer None."""
     row: dict[str, object] = {
         "keeper_id": str(keeper.id),
         "keeper_name": keeper.name,
@@ -385,11 +418,24 @@ def merge_pair(
 
     keeper_domains = company_domains(keeper)
     loser_domains = company_domains(loser)
-    if keeper_domains and loser_domains and not (keeper_domains & loser_domains):
+    if (
+        website_override is None
+        and keeper_domains
+        and loser_domains
+        and not (keeper_domains & loser_domains)
+    ):
         row["warnung"] = (
             f"Domains weichen ab (Keeper: {sorted(keeper_domains)}, "
             f"Loser: {sorted(loser_domains)}) - vor --apply pruefen"
         )
+
+    override_note = ""
+    if website_override is not None:
+        override_url = f"https://{website_override}"
+        if keeper.website != override_url:
+            override_note = f"website (ueberschrieben: {keeper.website!r} -> {override_url!r})"
+            if apply:
+                keeper.website = override_url
 
     before = count_references(session, loser.id)
     row["submissions_umgehaengt"] = before["candidate_submissions"]
@@ -412,6 +458,8 @@ def merge_pair(
     repoint_mailing_groups(session, keeper.id, loser.id, apply=apply)
 
     filled = fill_empty_fields(keeper, loser, apply=apply)
+    if override_note:
+        filled = [override_note, *filled]
     row["felder_befuellt"] = ",".join(filled)
 
     if not apply:
@@ -485,7 +533,7 @@ def run(*, apply: bool) -> tuple[dict[str, int], list[dict[str, object]]]:
                     stats["errors"] += 1
 
         # --- Erkennungsweg 2: explizit bestaetigte Paare ---
-        for keeper_name, loser_name in EXPLICIT_PAIRS:
+        for keeper_name, loser_name, website_override in EXPLICIT_PAIRS:
             named_keeper = (
                 session.query(ClientCompany).filter(ClientCompany.name == keeper_name).first()
             )
@@ -538,7 +586,14 @@ def run(*, apply: bool) -> tuple[dict[str, int], list[dict[str, object]]]:
                 continue
 
             stats["pairs_explicit"] += 1
-            row = merge_pair(session, named_keeper, named_loser, grund, apply=apply)
+            row = merge_pair(
+                session,
+                named_keeper,
+                named_loser,
+                grund,
+                apply=apply,
+                website_override=website_override,
+            )
             processed.add(named_loser.id)
             rows.append(row)
             if row["aktion"] == "GEMERGT":

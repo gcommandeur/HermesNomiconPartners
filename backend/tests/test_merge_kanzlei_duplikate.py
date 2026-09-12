@@ -351,7 +351,7 @@ class TestExplizitePaareUndDomainFix:
     def test_explizites_paar_wird_ueber_exakten_namen_gemergt(
         self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
     ) -> None:
-        monkeypatch.setattr(script, "EXPLICIT_PAIRS", [("Echte Kanzlei mbB", "Platzhalter")])
+        monkeypatch.setattr(script, "EXPLICIT_PAIRS", [("Echte Kanzlei mbB", "Platzhalter", None)])
         with session_factory() as session:
             _client(session, "Echte Kanzlei mbB")
             _client(session, "Platzhalter")
@@ -367,7 +367,7 @@ class TestExplizitePaareUndDomainFix:
     ) -> None:
         """Exakter String-Vergleich, keine Aehnlichkeitsschwelle - ein nur
         aehnlicher Name darf NICHT gemergt werden."""
-        monkeypatch.setattr(script, "EXPLICIT_PAIRS", [("Echte Kanzlei mbB", "Platzhalter")])
+        monkeypatch.setattr(script, "EXPLICIT_PAIRS", [("Echte Kanzlei mbB", "Platzhalter", None)])
         with session_factory() as session:
             _client(session, "Echte Kanzlei mbB")
             _client(session, "Platzhalter GmbH")  # nur aehnlich, nicht identisch
@@ -379,6 +379,85 @@ class TestExplizitePaareUndDomainFix:
         assert "nicht gefunden" in str(rows[0]["aktion"])
         with session_factory() as session:
             assert session.query(ClientCompany).count() == 2
+
+    def test_website_override_ueberschreibt_nicht_leere_keeper_website(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
+    ) -> None:
+        """Ausnahme von der generellen 'nie nicht-leere Felder
+        ueberschreiben'-Regel: fuer die zwei am 30.07.2026 explizit
+        bestaetigten Paare (Andreas Deubert, CMS Hasche Sigle) muss die
+        bereits gesetzte, aber falsche Keeper-website zwangsweise durch die
+        bestaetigte Domain ersetzt werden - auch wenn der Keeper schon eine
+        andere, nicht-leere website hatte."""
+        monkeypatch.setattr(
+            script,
+            "EXPLICIT_PAIRS",
+            [("Echte Kanzlei mbB", "Platzhalter", "bestaetigte-domain.de")],
+        )
+        with session_factory() as session:
+            _client(session, "Echte Kanzlei mbB", website="https://falsche-domain.de")
+            _client(session, "Platzhalter", website="https://platzhalter-domain.de")
+
+        stats, rows = script.run(apply=True)
+
+        assert stats["pairs_explicit"] == 1
+        assert rows[0]["aktion"] == "GEMERGT"
+        assert "website" in str(rows[0]["felder_befuellt"])
+        assert "falsche-domain.de" in str(rows[0]["felder_befuellt"])
+        assert "bestaetigte-domain.de" in str(rows[0]["felder_befuellt"])
+        with session_factory() as session:
+            keeper = session.query(ClientCompany).one()
+            assert keeper.name == "Echte Kanzlei mbB"
+            assert keeper.website == "https://bestaetigte-domain.de"
+
+    def test_website_override_dry_run_zeigt_geplante_aenderung_ohne_zu_schreiben(
+        self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
+    ) -> None:
+        monkeypatch.setattr(
+            script,
+            "EXPLICIT_PAIRS",
+            [("Echte Kanzlei mbB", "Platzhalter", "bestaetigte-domain.de")],
+        )
+        with session_factory() as session:
+            _client(session, "Echte Kanzlei mbB", website="https://falsche-domain.de")
+            _client(session, "Platzhalter")
+
+        stats, rows = script.run(apply=False)
+
+        assert stats["pairs_explicit"] == 1
+        assert rows[0]["aktion"] == "WUERDE MERGEN"
+        assert "bestaetigte-domain.de" in str(rows[0]["felder_befuellt"])
+        with session_factory() as session:
+            keeper = session.query(ClientCompany).filter_by(name="Echte Kanzlei mbB").one()
+            assert keeper.website == "https://falsche-domain.de", "Dry-Run darf nichts schreiben"
+
+    def test_domain_kollision_ueberschreibt_website_nie_auch_bei_abweichung(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        """Gegenprobe: bei der GENERISCHEN Domain-Kollision-Erkennung
+        (Weg 1) gilt weiterhin die normale Regel - eine nicht-leere
+        Keeper-website wird NIE ueberschrieben, website_override ist dort
+        immer None."""
+        with session_factory() as session:
+            keeper = _client(
+                session,
+                "PKF Issing GmbH & Co. KG",
+                website="https://alt-partner.de",
+                email="info@alt-partner.de",
+            )
+            _client(
+                session,
+                "Alt Partner",
+                website="https://alt-partner.de",
+                email="andere-adresse@sonstwo.de",
+            )
+            original_website = keeper.website
+
+        script.run(apply=True)
+
+        with session_factory() as session:
+            keeper = session.query(ClientCompany).one()
+            assert keeper.website == original_website
 
     def test_domain_fix_ergaenzt_nur_leere_website(
         self, monkeypatch: pytest.MonkeyPatch, session_factory: sessionmaker[Session]
