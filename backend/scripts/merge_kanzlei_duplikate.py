@@ -192,7 +192,11 @@ FILLABLE_FIELDS = [
 #     (kanzlei@stb-deubert.de) bestaetigt.
 EXPLICIT_PAIRS: list[tuple[str, str, str | None]] = [
     (
-        "Menold Bezler Rechtsanwälte Steuerberater Wirtschaftsprüfer",
+        # Voller Name inkl. "Partnerschaft mbB" - live gegen Prod bestaetigt
+        # (der urspruenglich hinterlegte, kuerzere String traf weder lokal
+        # noch in Prod einen echten Datensatz und liess das Paar deshalb
+        # sauber, aber ungewollt uebersprungen).
+        "Menold Bezler Rechtsanwälte Steuerberater Wirtschaftsprüfer Partnerschaft mbB",
         "Menoldbezler",
         None,
     ),
