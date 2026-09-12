@@ -57,6 +57,7 @@ from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from kanzlei_import_data import KANZLEI_ROWS  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from cc_crm.infrastructure.database.session import SessionLocal  # noqa: E402
@@ -64,8 +65,6 @@ from cc_crm.models.client_company import ClientCompany  # noqa: E402
 from cc_crm.models.enums import ClientStatus  # noqa: E402
 from cc_crm.schemas.client_company import ClientCompanyCreate  # noqa: E402
 from cc_crm.services.clients import ClientCompanyService  # noqa: E402
-
-from kanzlei_import_data import KANZLEI_ROWS  # noqa: E402
 
 OUTPUT_PATH = Path(__file__).resolve().parent / "import_kanzleien_aus_lukas_postfach_review.csv"
 

@@ -9,7 +9,9 @@
 from fastapi.testclient import TestClient
 
 
-def _create_submission(client: TestClient, company_name: str = "Kanzlei Alpha", **company_extra: object) -> dict:
+def _create_submission(
+    client: TestClient, company_name: str = "Kanzlei Alpha", **company_extra: object
+) -> dict:
     candidate = client.post(
         "/api/v1/candidates", json={"first_name": "Test", "last_name": "Candidate"}
     ).json()
@@ -47,7 +49,11 @@ class TestCockpitExcludesArchivedPlacements:
         submission = _create_placement_submission(client)
         client.post(
             f"/api/v1/submissions/{submission['id']}/placement",
-            json={"start_date": "2026-09-01", "final_salary": "70000.00", "fee_percentage": "27.00"},
+            json={
+                "start_date": "2026-09-01",
+                "final_salary": "70000.00",
+                "fee_percentage": "27.00",
+            },
         )
 
         before = client.get("/api/v1/cockpit?period=quarter").json()
@@ -111,7 +117,11 @@ class TestPlacementFeeCalculation:
 
         placement = client.post(
             f"/api/v1/submissions/{submission['id']}/placement",
-            json={"start_date": "2026-09-01", "final_salary": "70000.00", "fee_percentage": "27.00"},
+            json={
+                "start_date": "2026-09-01",
+                "final_salary": "70000.00",
+                "fee_percentage": "27.00",
+            },
         )
         assert placement.status_code == 201, placement.text
         data = placement.json()
@@ -146,7 +156,11 @@ class TestPlacementFeeCalculation:
         submission = _create_placement_submission(client)
         placement = client.post(
             f"/api/v1/submissions/{submission['id']}/placement",
-            json={"start_date": "2026-09-01", "final_salary": "70000.00", "fee_percentage": "27.00"},
+            json={
+                "start_date": "2026-09-01",
+                "final_salary": "70000.00",
+                "fee_percentage": "27.00",
+            },
         ).json()
         assert placement["calculated_fee"] == "18900.00"
 
