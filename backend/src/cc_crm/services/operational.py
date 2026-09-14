@@ -1,3 +1,4 @@
+import re
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from statistics import mean, median
@@ -7,17 +8,19 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from cc_crm.core.errors import ConflictError
+from cc_crm.core.errors import ConflictError, EntityNotFoundError
 from cc_crm.core.time import naive_utc
 from cc_crm.models.activity import Activity
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
+from cc_crm.models.email_template import EmailTemplate
 from cc_crm.models.enums import InvoiceStatus, SubmissionStatus, TaskStatus
 from cc_crm.models.operational import Document, EmailDraftLog, SourcingMetric
 from cc_crm.models.recruiting import Fee, Offer, Placement
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.task import Task
 from cc_crm.repositories.candidate_pitch_logs import CandidatePitchLogRepository
+from cc_crm.repositories.email_templates import EmailTemplateRepository
 from cc_crm.repositories.operational import (
     DocumentRepository,
     EmailDraftRepository,
@@ -26,11 +29,17 @@ from cc_crm.repositories.operational import (
 from cc_crm.schemas.operational import (
     DocumentCreate,
     EmailDraftCreate,
+    EmailTemplateUpdate,
     SourcingMetricCreate,
 )
 from cc_crm.services.base import CrudService
 from cc_crm.services.recruiting import stage_reached_counts
 from cc_crm.services.storage import has_generic_filename
+
+# {candidate}, {candidate_number}, ... - erfasst jedes {wort} literal, keine
+# verschachtelten/format-spec-Platzhalter (nicht gebraucht, siehe
+# EmailTemplate-Docstring).
+PLACEHOLDER_RE = re.compile(r"\{(\w+)\}")
 
 
 class EmptyUpdate(BaseModel):
@@ -90,164 +99,55 @@ class SourcingMetricService(CrudService[SourcingMetric, SourcingMetricCreate, Em
 
 
 class EmailWorkflowService:
-    # (key, name, subject, body) - jede Vorlage hat einen eigenen, auf ihren
-    # Anlass zugeschnittenen body-Text (vorher lieferte templates() fuer
-    # jeden Key denselben generischen Fliesstext, nur der subject
-    # unterschied sich - Nutzer-Feedback: das reicht fuer die gewuenschten
-    # Vorlagen nicht aus). Adressat (Kandidat vs. Kanzlei-Kontakt) ergibt
-    # sich aus dem jeweiligen body-Text selbst.
-    TEMPLATES = [
-        (
-            "post_qualification_call",
-            "Nach Quali Call",
-            "Vielen Dank für das Gespräch, {candidate}",
-            "Guten Tag {candidate},\n\n"
-            "vielen Dank für das offene und informative Gespräch eben. Ich habe ein gutes Bild "
-            "von Ihrem Profil und Ihren Vorstellungen gewinnen können.\n\n"
-            "Nächster Schritt: {next_step}\n\n"
-            "Ich melde mich, sobald es Neuigkeiten gibt. Bei Rückfragen erreichen Sie mich "
-            "jederzeit.\n\nBeste Grüße",
-        ),
-        (
-            "request_cv",
-            "CV nachfordern",
-            "Unterlagen zu Ihrem Profil",
-            "Guten Tag {candidate},\n\n"
-            "um Ihr Profil vollständig vorstellen zu können, fehlen mir noch aktuelle "
-            "Unterlagen (Lebenslauf/Zeugnisse). Könnten Sie mir diese bei Gelegenheit "
-            "zusenden?\n\nVielen Dank und beste Grüße",
-        ),
-        (
-            "profile_approval",
-            "Kurzprofil freigeben",
-            "Freigabe Ihres Kurzprofils",
-            "Guten Tag {candidate},\n\n"
-            "anbei finden Sie das anonymisierte Kurzprofil, das ich potenziellen Kanzleien "
-            "vorstellen möchte:\n\n{short_profile}\n\n"
-            "Bitte prüfen Sie den Text kurz und geben Sie mir Bescheid, ob ich ihn so "
-            "verwenden darf oder ob noch etwas angepasst werden soll.\n\nBeste Grüße",
-        ),
-        (
-            "candidate_submission",
-            "CV-Out Vorstellung",
-            "Profilvorstellung: {candidate} – {role}",
-            "Guten Tag {contact},\n\n"
-            "ich möchte Ihnen folgendes Profil für die Position {role} vorstellen:\n\n"
-            "{short_profile}\n\n"
-            "Gehaltsvorstellung: {salary}\n"
-            "Kündigungsfrist: {notice_period}\n\n"
-            "Die vollständigen Unterlagen finden Sie im Anhang. Über Ihre Rückmeldung, ob Sie "
-            "{candidate} kennenlernen möchten, freue ich mich.\n\nBeste Grüße",
-        ),
-        (
-            "submission_follow_up",
-            "CV-Out nachfassen",
-            "Feedback zu {candidate}",
-            "Guten Tag {contact},\n\n"
-            "ich wollte kurz nachfragen, ob Sie das Profil von {candidate} bereits prüfen "
-            "konnten und ob Interesse an einem Kennenlernen besteht.\n\n"
-            "Über eine kurze Rückmeldung würde ich mich freuen.\n\nBeste Grüße",
-        ),
-        (
-            "interview_confirmation",
-            "Interview bestätigen",
-            "Interviewtermin bei {client}",
-            "Guten Tag {contact},\n\n"
-            "hiermit bestätige ich den vereinbarten Interviewtermin für {candidate} bei "
-            "{client}.\n\nNächster Schritt: {next_step}\n\n"
-            "Bitte geben Sie mir Bescheid, falls sich am Termin noch etwas ändert.\n\n"
-            "Beste Grüße",
-        ),
-        (
-            "interview_feedback",
-            "Interviewfeedback nachfassen (Kanzlei)",
-            "Kurzes Feedback zum Interview mit {candidate}",
-            "Guten Tag {contact},\n\n"
-            "wie war Ihr Eindruck vom Gespräch mit {candidate}? Über eine kurze Rückmeldung "
-            "- positiv wie kritisch - würde ich mich freuen, damit wir den Prozess zeitnah "
-            "fortsetzen können.\n\nBeste Grüße",
-        ),
-        (
-            "interview_feedback_candidate",
-            "Interviewfeedback nachfassen (Kandidat)",
-            "Rückmeldung zu Ihrem Interview bei {client}",
-            "Guten Tag {candidate},\n\n"
-            "vielen Dank, dass Sie sich Zeit für das Gespräch bei {client} genommen haben. "
-            "Ich wollte kurz nachfragen, wie Sie das Interview erlebt haben, und Sie über den "
-            "aktuellen Stand informieren.\n\nNächster Schritt: {next_step}\n\nBeste Grüße",
-        ),
-        (
-            "offer_follow_up",
-            "Offer nachfassen",
-            "Abstimmung zum Angebot",
-            "Guten Tag {contact},\n\n"
-            "wie ist der aktuelle Stand beim Angebot für {candidate}? Gibt es von Ihrer Seite "
-            "noch offene Punkte, die wir gemeinsam klären sollten?\n\nBeste Grüße",
-        ),
-        (
-            "candidate_rejection",
-            "Absage Kandidat",
-            "Rückmeldung zum Prozess",
-            "Guten Tag {candidate},\n\n"
-            "leider muss ich Ihnen mitteilen, dass sich {client} für einen anderen "
-            "Kandidaten entschieden hat. Ich weiß, das ist keine schöne Nachricht.\n\n"
-            "Ich halte weiterhin Ausschau nach passenden Positionen für Sie und melde mich, "
-            "sobald es Neuigkeiten gibt.\n\nBeste Grüße",
-        ),
-        (
-            "client_rejection",
-            "Absage Kunde",
-            "Rückmeldung zu {candidate}",
-            "Guten Tag {contact},\n\n"
-            "{candidate} hat sich nach reiflicher Überlegung gegen die Position bei {client} "
-            "entschieden.\n\nIch halte Sie über weitere passende Profile gerne auf dem "
-            "Laufenden.\n\nBeste Grüße",
-        ),
-        (
-            "send_terms",
-            "AGB senden",
-            "Zusammenarbeit mit CC",
-            "Guten Tag {contact},\n\n"
-            "vielen Dank für Ihr Interesse an einer Zusammenarbeit. Anbei erhalten Sie "
-            "unsere Allgemeinen Geschäftsbedingungen zur Prüfung und Unterschrift.\n\n"
-            "Bei Rückfragen stehe ich Ihnen gerne zur Verfügung.\n\nBeste Grüße",
-        ),
-        (
-            "placement_invoice",
-            "Placement / Rechnung",
-            "Erfolgreiche Besetzung",
-            "Guten Tag {contact},\n\n"
-            "vielen Dank für die gute Zusammenarbeit - die Position ist mit {candidate} "
-            "erfolgreich besetzt. Die Rechnung zur vereinbarten Vermittlungsprovision "
-            "erhalten Sie anbei.\n\nBeste Grüße",
-        ),
-    ]
+    """Mail-Vorlagen wurden aus dieser Klasse in die DB-Tabelle
+    `email_templates` verlagert (Auftrag "Mailvorlagen editierbar machen",
+    Alembic-Revision d4e5f6a7b8c9), damit Name/Betreff/Text ohne Deploy im CRM
+    bearbeitet werden koennen - siehe models/email_template.py::EmailTemplate.
+    Die vormals hier hartcodierte TEMPLATES-Liste (13 Vorlagen) wurde 1:1 in
+    die Migration als Seed-Daten uebernommen; `templates()` liest jetzt aus
+    `self.templates_repo` statt aus einer Python-Konstante."""
 
     def __init__(self, session: Session) -> None:
         self.session = session
         self.drafts = EmailDraftRepository(session)
+        self.templates_repo = EmailTemplateRepository(session)
+
+    @staticmethod
+    def extract_placeholders(subject: str, body: str) -> list[str]:
+        """Liest die tatsaechlich verwendeten {token}-Platzhalter aus subject+
+        body (Reihenfolge des ersten Vorkommens, keine Duplikate) - ersetzt
+        die vorherige statische, fuer alle Vorlagen identische Liste, die
+        Platzhalter zeigte, die eine Vorlage gar nicht benutzte."""
+        seen: dict[str, None] = {}
+        for match in PLACEHOLDER_RE.findall(f"{subject}\n{body}"):
+            seen.setdefault(match, None)
+        return list(seen)
 
     def templates(self) -> list[dict[str, object]]:
-        placeholders = [
-            "candidate",
-            "client",
-            "contact",
-            "role",
-            "salary",
-            "notice_period",
-            "short_profile",
-            "next_step",
-        ]
         return [
             {
-                "key": key,
-                "name": name,
-                "subject": subject,
-                "body": body,
-                "placeholders": placeholders,
+                "key": template.key,
+                "name": template.name,
+                "subject": template.subject,
+                "body": template.body,
+                "placeholders": self.extract_placeholders(template.subject, template.body),
             }
-            for key, name, subject, body in self.TEMPLATES
+            for template in self.templates_repo.list_all()
         ]
+
+    def update_template(self, key: str, payload: EmailTemplateUpdate) -> EmailTemplate:
+        """PATCH /operational/email-templates/{key} - `key` selbst ist bewusst
+        nicht Teil von EmailTemplateUpdate (siehe dortiger Docstring) und
+        bleibt deshalb unveraendert, auch wenn Name/Betreff/Text bearbeitet
+        werden."""
+        template = self.templates_repo.get_by_key(key)
+        if template is None:
+            raise EntityNotFoundError(f"Mail-Vorlage '{key}' nicht gefunden")
+        for field, value in payload.model_dump(exclude_unset=True).items():
+            setattr(template, field, value)
+        self.session.commit()
+        self.session.refresh(template)
+        return template
 
     def create_draft(self, payload: EmailDraftCreate) -> EmailDraftLog:
         draft = self.drafts.create(

@@ -16,6 +16,7 @@ from cc_crm.schemas.operational import (
     EmailDraftCreate,
     EmailDraftRead,
     EmailTemplateRead,
+    EmailTemplateUpdate,
     ProfileSuggestion,
     SourcingMetricCreate,
     SourcingMetricRead,
@@ -311,6 +312,24 @@ def list_email_templates(session: DatabaseSession) -> list[EmailTemplateRead]:
     return [
         EmailTemplateRead.model_validate(item) for item in EmailWorkflowService(session).templates()
     ]
+
+
+@router.patch("/email-templates/{key}", response_model=EmailTemplateRead)
+def update_email_template(
+    key: str, payload: EmailTemplateUpdate, session: DatabaseSession
+) -> EmailTemplateRead:
+    # EntityNotFoundError wird global in error_handlers.py auf 404 gemappt.
+    service = EmailWorkflowService(session)
+    template = service.update_template(key, payload)
+    return EmailTemplateRead.model_validate(
+        {
+            "key": template.key,
+            "name": template.name,
+            "subject": template.subject,
+            "body": template.body,
+            "placeholders": service.extract_placeholders(template.subject, template.body),
+        }
+    )
 
 
 @router.post(

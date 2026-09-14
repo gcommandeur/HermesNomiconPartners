@@ -692,6 +692,14 @@ export interface EmailTemplate {
   placeholders: string[];
 }
 
+// PATCH /email-templates/{key} - bewusst ohne `key` (Key ist die stabile
+// Referenz fuer MailingGroup.template_key, siehe Backend-Docstring).
+export interface EmailTemplateUpdate {
+  name?: string;
+  subject?: string;
+  body?: string;
+}
+
 export interface Activity extends Entity {
   candidate_id: string | null;
   client_company_id: string | null;

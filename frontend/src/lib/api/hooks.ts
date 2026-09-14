@@ -10,6 +10,7 @@ import {
   getClients,
   getCockpit,
   getCurrentUser,
+  getEmailTemplates,
   getMailAccounts,
   getMailingGroups,
   getReactivationCandidates,
@@ -24,6 +25,7 @@ import type {
   Cockpit,
   CurrentUserInfo,
   DataResult,
+  EmailTemplate,
   MailAccount,
   MailingGroup,
   UserBrief,
@@ -93,6 +95,23 @@ export function useMailingGroupsCache() {
 
 export function invalidateMailingGroupsCache() {
   return mutate("/mailing-groups");
+}
+
+/** Mail-Vorlagen sind seit "Mailvorlagen editierbar machen" ueber die
+ * Verwaltungsansicht auf der Mailing-Seite bearbeitbar (PATCH /email-
+ * templates/{key}) - deshalb jetzt client-seitig gecached statt als
+ * statischer, einmalig serverseitig gefetchter Prop (vorher: praktisch
+ * unveraenderlich, kein Cache noetig). */
+export function useEmailTemplatesCache() {
+  return useSWR<DataResult<EmailTemplate[]>>(
+    "/email-templates",
+    () => getEmailTemplates(),
+    swrConfig,
+  );
+}
+
+export function invalidateEmailTemplatesCache() {
+  return mutate("/email-templates");
 }
 
 /** Der eingeloggte Nutzer (fuer is_admin-Weichen im Kalender/in der

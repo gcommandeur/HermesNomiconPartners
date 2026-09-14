@@ -8,8 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { apiPatch, apiPost } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/crm/error-banner";
-import { invalidateMailingGroupsCache, useMailingGroupsCache } from "@/lib/api/hooks";
-import type { EmailTemplate, MailingGroup } from "@/lib/api/types";
+import {
+  invalidateMailingGroupsCache,
+  useEmailTemplatesCache,
+  useMailingGroupsCache,
+} from "@/lib/api/hooks";
+import type { MailingGroup } from "@/lib/api/types";
 
 function renderTemplate(text: string, values: Record<string, string>): string {
   return text.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
@@ -17,9 +21,14 @@ function renderTemplate(text: string, values: Record<string, string>): string {
 
 const selectClass = "h-9 rounded-md border border-white/10 bg-[#071426] px-2 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
 
-export function MailingGroupsPanel({ templates }: { templates: EmailTemplate[] }) {
+export function MailingGroupsPanel() {
   const { data, isLoading } = useMailingGroupsCache();
   const groups = useMemo(() => data?.data ?? [], [data]);
+  // Live aus dem selben SWR-Key wie EmailTemplatesPanel - eine dort
+  // gespeicherte Bearbeitung ist hier ohne Reload sofort sichtbar (Auftrag
+  // "Mailvorlagen editierbar machen").
+  const { data: templatesResult, isLoading: templatesLoading } = useEmailTemplatesCache();
+  const templates = useMemo(() => templatesResult?.data ?? [], [templatesResult]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [previewGroupId, setPreviewGroupId] = useState<string | null>(null);
   const [previewTemplateKey, setPreviewTemplateKey] = useState<string | null>(null);
@@ -92,7 +101,7 @@ export function MailingGroupsPanel({ templates }: { templates: EmailTemplate[] }
     setTimeout(() => setCopied(false), 2000);
   }
 
-  if (isLoading) {
+  if (isLoading || templatesLoading) {
     return (
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, index) => (

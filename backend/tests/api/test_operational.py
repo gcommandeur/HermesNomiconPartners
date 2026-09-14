@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.core.security import hash_password
+from cc_crm.models.email_template import EmailTemplate
 from cc_crm.models.enums import InvoiceStatus
 from cc_crm.models.recruiting import Fee
 from cc_crm.models.submission import CandidateSubmission
@@ -377,9 +378,59 @@ class TestCockpitDataGaps:
         assert cockpit["data_gaps"] == []
 
 
-def test_email_templates_have_distinct_specific_bodies(client: TestClient) -> None:
+def test_email_templates_have_distinct_specific_bodies(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
     """Regressionsschutz: templates() lieferte frueher fuer JEDEN Key
-    denselben generischen body-Text - nur der subject unterschied sich."""
+    denselben generischen body-Text - nur der subject unterschied sich.
+
+    Vorlagen liegen seit "Mailvorlagen editierbar machen" in der Tabelle
+    email_templates statt hartcodiert in EmailWorkflowService.TEMPLATES - der
+    `client`-Fixture baut die Test-DB per `Base.metadata.create_all()` auf
+    (keine Alembic-Migration, siehe conftest.py), deshalb werden die fuer
+    diesen Regressionstest relevanten Vorlagen hier direkt per ORM geseedet
+    (der eigentliche Seed-Migrationsinhalt hat seinen eigenen Test, siehe
+    tests/test_email_templates_seed_migration.py)."""
+    with session_factory() as session:
+        session.add_all(
+            [
+                EmailTemplate(
+                    key="post_qualification_call",
+                    name="Nach Quali Call",
+                    subject="Vielen Dank für das Gespräch, {candidate}",
+                    body="Guten Tag {candidate},\n\nNächster Schritt: {next_step}\n\nBeste Grüße",
+                ),
+                EmailTemplate(
+                    key="candidate_submission",
+                    name="CV-Out Vorstellung",
+                    subject="Profilvorstellung: {candidate} – {role}",
+                    body=(
+                        "{short_profile}\n\nGehaltsvorstellung: {salary}\n"
+                        "Kündigungsfrist: {notice_period}"
+                    ),
+                ),
+                EmailTemplate(
+                    key="interview_confirmation",
+                    name="Interview bestätigen",
+                    subject="Interviewtermin bei {client}",
+                    body="Guten Tag {contact},\n\nInterviewtermin für {candidate} bei {client}.",
+                ),
+                EmailTemplate(
+                    key="interview_feedback",
+                    name="Interviewfeedback nachfassen (Kanzlei)",
+                    subject="Kurzes Feedback zum Interview mit {candidate}",
+                    body="Guten Tag {contact},\n\nWie war Ihr Eindruck von {candidate}?",
+                ),
+                EmailTemplate(
+                    key="interview_feedback_candidate",
+                    name="Interviewfeedback nachfassen (Kandidat)",
+                    subject="Rückmeldung zu Ihrem Interview bei {client}",
+                    body="Guten Tag {candidate},\n\nNächster Schritt: {next_step}",
+                ),
+            ]
+        )
+        session.commit()
+
     templates = client.get("/api/v1/email-templates").json()
     by_key = {item["key"]: item for item in templates}
 

@@ -43,7 +43,23 @@ class EmailTemplateRead(BaseModel):
     name: str
     subject: str
     body: str
+    # Dynamisch per Regex aus subject+body extrahiert (siehe
+    # EmailWorkflowService.extract_placeholders), NICHT in der DB
+    # gespeichert - spiegelt nach einer Bearbeitung immer den tatsaechlichen
+    # Vorlageninhalt wider, keine eingefrorene Momentaufnahme.
     placeholders: list[str]
+
+
+class EmailTemplateUpdate(BaseModel):
+    """Payload fuer PATCH /operational/email-templates/{key} - bewusst OHNE
+    key-Feld: der Key ist die stabile Referenz, ueber die MailingGroup.
+    template_key eine Vorlage identifiziert (kein FK, siehe models/
+    email_template.py::EmailTemplate-Docstring), und darf sich deshalb nie
+    aendern, auch wenn Name/Betreff/Text bearbeitet werden."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=160)
+    subject: str | None = Field(default=None, min_length=1, max_length=500)
+    body: str | None = Field(default=None, min_length=1)
 
 
 class EmailDraftCreate(BaseModel):
