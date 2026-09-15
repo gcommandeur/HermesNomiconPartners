@@ -10,6 +10,7 @@ from collections.abc import Iterator
 from datetime import UTC, datetime
 
 import pytest
+import sqlalchemy as sa
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
@@ -185,9 +186,7 @@ class TestUpdateAndDelete:
         _make_admin(session_factory)
         created = client.post("/api/v1/mail-accounts", json=_PAYLOAD).json()
 
-        response = client.patch(
-            f"/api/v1/mail-accounts/{created['id']}", json={"imap_port": 143}
-        )
+        response = client.patch(f"/api/v1/mail-accounts/{created['id']}", json={"imap_port": 143})
 
         assert response.status_code == 200
         assert response.json()["imap_port"] == 143
@@ -479,3 +478,60 @@ class TestMessageList:
         assert len(first_page) == 2
         assert len(second_page) == 2
         assert {row["id"] for row in first_page}.isdisjoint({row["id"] for row in second_page})
+
+
+class TestLegacyRowsAfterM365Migration:
+    """Regressionstest fuer den Prod-Vorfall nach Deploy von baabf41: GET
+    /mail-accounts lieferte 500 fuer jedes Postfach, das schon vor der
+    M365-Migration (e5f6a7b8c9d0) existierte.
+
+    Ursache: SQLAlchemys `Enum()`-Typ speichert ohne `values_callable` den
+    Member-NAMEN ("IMAP_SMTP"), die Migration hatte Bestandszeilen aber per
+    `server_default="imap_smtp"` (Kleinschreibung, .value) befuellt - beim
+    Zurueckladen schlug die Namens-Aufloesung fehl
+    ("'imap_smtp' is not among the defined enum values"). Fix:
+    `values_callable` auf MailAccount.provider/oauth_status, siehe
+    models/mail.py. Dieser Test schreibt die Zeile bewusst per RAW SQL
+    (nicht ueber den ORM-Konstruktor) - genau der Pfad, den die Migration
+    fuer echte Bestandsdaten genommen hat, das faengt ein rein ORM-basierter
+    Test nicht ab."""
+
+    def test_legacy_row_with_lowercase_provider_value_is_readable(
+        self, client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        _make_admin(session_factory)
+        with session_factory() as session:
+            session.execute(
+                sa.text(
+                    """
+                    INSERT INTO mail_accounts (
+                        id, address, label, provider, imap_host, imap_port, imap_use_ssl,
+                        smtp_host, smtp_port, smtp_use_ssl, username, encrypted_password,
+                        is_active, default_for_cv_out, send_throttle_seconds, daily_send_limit,
+                        created_at, updated_at
+                    ) VALUES (
+                        :id, :address, :label, 'imap_smtp', :imap_host, 993, 1,
+                        :smtp_host, 587, 1, :username, :pw,
+                        1, 0, 8, 150,
+                        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                    )
+                    """
+                ),
+                {
+                    "id": str(uuid.uuid4()),
+                    "address": "info@commandeurconsulting.de",
+                    "label": "info-linkedin",
+                    "imap_host": "imap.example.com",
+                    "smtp_host": "smtp.example.com",
+                    "username": "info@commandeurconsulting.de",
+                    "pw": Fernet(_KEY.encode()).encrypt(b"geheim").decode(),
+                },
+            )
+            session.commit()
+
+        response = client.get("/api/v1/mail-accounts")
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert len(body) == 1
+        assert body[0]["provider"] == "imap_smtp"
+        assert body[0]["oauth_status"] is None

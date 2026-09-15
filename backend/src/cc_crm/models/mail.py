@@ -41,8 +41,25 @@ class MailAccount(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # oauth_*-Felder weiter unten. Beide Gruppen sind deshalb nullable: eine
     # microsoft_graph-Zeile hat keine imap_host/smtp_host/username/
     # encrypted_password, eine imap_smtp-Zeile keine oauth_*-Felder.
+    #
+    # values_callable=... explizit gesetzt: SQLAlchemys Enum()-Typ speichert
+    # OHNE values_callable per Default den Member-NAMEN ("IMAP_SMTP"), nicht
+    # dessen .value ("imap_smtp") - Migration e5f6a7b8c9d0 hatte die
+    # Bestandszeilen jedoch per server_default="imap_smtp" (klein, .value)
+    # befuellt, was beim Zurueckladen mit
+    # "'imap_smtp' is not among the defined enum values" scheiterte (Prod-
+    # Vorfall nach Deploy von baabf41 - GET /mail-accounts lieferte 500,
+    # sobald ein Postfach aus der Zeit vor dieser Migration existierte).
+    # values_callable macht .value zur DB-Repraesentation, passend zum
+    # bereits ausgelieferten Migrationswert - keine nachtraegliche
+    # Daten-Migration der Bestandszeilen noetig.
     provider: Mapped[MailAccountProvider] = mapped_column(
-        Enum(MailAccountProvider, native_enum=False, length=16),
+        Enum(
+            MailAccountProvider,
+            native_enum=False,
+            length=16,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
         default=MailAccountProvider.IMAP_SMTP,
         nullable=False,
         index=True,
@@ -71,8 +88,15 @@ class MailAccount(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Gewaehrte Scopes als Diagnose-Info (z.B. bei einem spaeter reduzierten
     # Consent nachvollziehbar, welche Rechte tatsaechlich erteilt wurden).
     oauth_scopes: Mapped[str | None] = mapped_column(Text)
+    # Gleicher values_callable-Grund wie bei provider oben - konsistente
+    # .value-Speicherung fuer beide neuen Enum-Spalten dieser Integration.
     oauth_status: Mapped[MailAccountOAuthStatus | None] = mapped_column(
-        Enum(MailAccountOAuthStatus, native_enum=False, length=20)
+        Enum(
+            MailAccountOAuthStatus,
+            native_enum=False,
+            length=20,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        )
     )
     # Wer den OAuth-Login durchgefuehrt hat - bestimmt zugleich, wessen
     # CalendarEvent-Zeilen mit dem Kalender dieses Postfachs synchronisiert
