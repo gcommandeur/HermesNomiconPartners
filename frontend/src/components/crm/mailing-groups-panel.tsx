@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Combine, Copy, Mail, Users } from "lucide-react";
+import { Check, Combine, Copy, Mail, Pencil, Trash2, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { apiPatch, apiPost } from "@/lib/api/client";
+import { apiDelete, apiPatch, apiPost } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import {
   invalidateMailingGroupsCache,
@@ -39,6 +39,10 @@ export function MailingGroupsPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameBusy, setRenameBusy] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   function toggleSelect(id: string) {
     setSelectedIds((current) => {
@@ -57,6 +61,56 @@ export function MailingGroupsPanel() {
       void invalidateMailingGroupsCache();
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Vorlage konnte nicht zugeordnet werden.");
+    }
+  }
+
+  function startRename(group: MailingGroup) {
+    setError(null);
+    setRenamingId(group.id);
+    setRenameValue(group.name);
+  }
+
+  function cancelRename() {
+    setRenamingId(null);
+    setRenameValue("");
+  }
+
+  async function saveRename(group: MailingGroup) {
+    const trimmed = renameValue.trim();
+    if (!trimmed || trimmed === group.name) {
+      cancelRename();
+      return;
+    }
+    setRenameBusy(true);
+    setError(null);
+    try {
+      await apiPatch<MailingGroup>(`/mailing-groups/${group.id}`, { name: trimmed });
+      void invalidateMailingGroupsCache();
+      cancelRename();
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Gruppe konnte nicht umbenannt werden.");
+    } finally {
+      setRenameBusy(false);
+    }
+  }
+
+  async function handleDelete(group: MailingGroup) {
+    if (!window.confirm(`Gruppe "${group.name}" wirklich löschen?`)) return;
+    setDeletingId(group.id);
+    setError(null);
+    try {
+      await apiDelete(`/mailing-groups/${group.id}`);
+      void invalidateMailingGroupsCache();
+      setSelectedIds((current) => {
+        if (!current.has(group.id)) return current;
+        const next = new Set(current);
+        next.delete(group.id);
+        return next;
+      });
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Gruppe konnte nicht gelöscht werden.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -145,8 +199,29 @@ export function MailingGroupsPanel() {
                   onChange={() => toggleSelect(group.id)}
                   aria-label={`${group.name} auswählen`}
                 />
-                <div>
-                  <p className="font-semibold">{group.name}</p>
+                <div className="min-w-0">
+                  {renamingId === group.id ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void saveRename(group);
+                          if (e.key === "Escape") cancelRename();
+                        }}
+                        className="h-8 w-48"
+                      />
+                      <Button size="icon" variant="ghost" disabled={renameBusy} onClick={() => saveRename(group)} aria-label="Umbenennen speichern">
+                        <Check size={14} />
+                      </Button>
+                      <Button size="icon" variant="ghost" disabled={renameBusy} onClick={cancelRename} aria-label="Umbenennen abbrechen">
+                        <X size={14} />
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="font-semibold">{group.name}</p>
+                  )}
                   <p className="mt-1 text-xs text-[#94A3B8]">{group.recipients.length} Empfänger:innen</p>
                 </div>
               </div>
@@ -163,6 +238,17 @@ export function MailingGroupsPanel() {
                 </select>
                 <Button size="sm" variant="outline" onClick={() => { setPreviewGroupId(group.id); setPreviewTemplateKey(null); }}>
                   <Mail size={13} />Vorschau
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => startRename(group)}>
+                  <Pencil size={13} />Umbenennen
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={deletingId === group.id}
+                  onClick={() => handleDelete(group)}
+                >
+                  <Trash2 size={13} />{deletingId === group.id ? "Lösche…" : "Löschen"}
                 </Button>
               </div>
             </CardContent>
