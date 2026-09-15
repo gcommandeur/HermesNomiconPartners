@@ -11,7 +11,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field
 
-from cc_crm.models.enums import MailMatchStatus
+from cc_crm.models.enums import MailAccountOAuthStatus, MailAccountProvider, MailMatchStatus
 from cc_crm.schemas.base import EntityRead
 
 
@@ -59,17 +59,25 @@ class MailAccountUpdate(BaseModel):
 
 
 class MailAccountRead(EntityRead):
-    """Bewusst OHNE password/encrypted_password - siehe Modul-Docstring."""
+    """Bewusst OHNE password/encrypted_password/encrypted_oauth_refresh_token
+    - siehe Modul-Docstring. imap_host/smtp_host/username sind nullable,
+    seit es neben imap_smtp auch provider=microsoft_graph gibt (siehe
+    models/mail.py::MailAccount) - fuer microsoft_graph-Konten bleiben sie
+    leer, die Oberflaeche unterscheidet stattdessen ueber `provider`."""
 
     address: str
     label: str
-    imap_host: str
+    provider: MailAccountProvider
+    imap_host: str | None
     imap_port: int
     imap_use_ssl: bool
-    smtp_host: str
+    smtp_host: str | None
     smtp_port: int
     smtp_use_ssl: bool
-    username: str
+    username: str | None
+    # Nur fuer provider=microsoft_graph gesetzt - siehe
+    # MailAccountOAuthStatus-Docstring ("Postfach neu verbinden").
+    oauth_status: MailAccountOAuthStatus | None
     is_active: bool
     default_for_cv_out: bool
     send_throttle_seconds: int
@@ -80,6 +88,32 @@ class MailAccountRead(EntityRead):
     # (Nutzer-Vorgabe). Enthaelt nie das Passwort - siehe
     # services/mail_sync.py::_safe_error.
     sync_error: str | None
+
+
+class MailBulkSendRequest(BaseModel):
+    """Payload fuer POST /mail/send-bulk - Massenversand an alle Empfänger
+    einer gespeicherten Mailing-Gruppe (siehe models/mailing_group.py),
+    reine Anbindung an das bereits bestehende, getestete services/
+    mail_send.py::send_bulk (kein neues Rate-Limiting/Versandlogik hier)."""
+
+    account_id: uuid.UUID | None = None
+    mailing_group_id: uuid.UUID
+    subject: str = Field(min_length=1, max_length=240)
+    body_text: str = Field(min_length=1)
+    attachment_document_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class MailBulkSendResult(BaseModel):
+    sent_count: int
+    failed: list[str] = Field(default_factory=list)
+    skipped_due_to_daily_limit_count: int = 0
+
+
+class MailOAuthStartResult(BaseModel):
+    """Antwort auf GET /mail-accounts/oauth/start - das Frontend leitet den
+    Browser per `window.location.href` auf diese URL weiter."""
+
+    authorization_url: str
 
 
 class MailSyncResult(BaseModel):

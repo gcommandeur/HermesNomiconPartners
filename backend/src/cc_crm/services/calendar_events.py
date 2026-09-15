@@ -11,6 +11,7 @@ from cc_crm.models.user import User
 from cc_crm.repositories.calendar_events import CalendarEventRepository
 from cc_crm.schemas.calendar_event import CalendarEventCreate, CalendarEventUpdate
 from cc_crm.services.base import CrudService
+from cc_crm.services.calendar_graph_sync import push_delete_to_graph
 
 
 class CalendarEventService(CrudService[CalendarEvent, CalendarEventCreate, CalendarEventUpdate]):
@@ -74,6 +75,11 @@ class CalendarEventService(CrudService[CalendarEvent, CalendarEventCreate, Calen
     def delete_for_user(self, event_id: uuid.UUID, current_user: User) -> None:
         event = self.get(event_id)
         self._check_access(event, current_user)
+        # Synchron VOR dem CRM-Loeschen (best effort, siehe M365-
+        # Integrationsplan Abschnitt Kalender-Konfliktlogik) - danach ist
+        # external_graph_event_id weg und ein spaeterer Retry nicht mehr
+        # moeglich.
+        push_delete_to_graph(self.session, event)
         self.delete(event_id)
 
     def _check_access(self, event: CalendarEvent, current_user: User) -> None:

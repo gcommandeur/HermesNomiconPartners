@@ -199,6 +199,35 @@ CSV) – Erzeugung lokal via
   dauerhaft eine Kopie personenbezogener Daten außerhalb der DB in den
   App-Platform-Settings hinterlässt
 
+### Microsoft-365-Postfach-Integration (`info@commandeurconsulting.de`)
+
+Delegated-OAuth gegen eine Entra-ID-App-Registrierung ("HermesCRM
+Postfach-Integration") - ermöglicht "Mit Microsoft anmelden" in
+Einstellungen → Postfächer (Login, Senden, bidirektionaler Mail-/Kalender-
+Sync für M365-Postfächer, siehe `integrations/microsoft_graph/`). Ohne diese
+drei Variablen bleibt der Button funktionslos (klarer 422-Fehler statt
+Absturz) - IMAP/SMTP-Postfächer sind davon nicht betroffen.
+
+- `CC_CRM_MS_GRAPH_CLIENT_ID` – Application (client) ID der Entra-ID-App
+- `CC_CRM_MS_GRAPH_TENANT_ID` – Directory (tenant) ID
+- `CC_CRM_MS_GRAPH_CLIENT_SECRET` (verschlüsselt) – Client Secret aus
+  "Zertifikate & Geheimnisse", läuft laut aktueller Registrierung bis
+  14.09.2028 ab
+
+Redirect-URI in Entra ID: `https://hermescrm-v9sle.ondigitalocean.app/api/v1/mail-accounts/oauth/callback`
+(dieselbe Domain wie das Frontend - `/api/v1` wird per App-Platform-Routing
+direkt an die Backend-Komponente weitergereicht).
+
+**Zeitgesteuerter Sync**: `backend/scripts/run_graph_sync.py` synchronisiert
+Mail + Kalender für alle `microsoft_graph`-Postfächer (Delta-Query, kein
+Neuabgleich). IMAP/SMTP-Postfächer bleiben unverändert manuell über "Jetzt
+abrufen" synchronisiert. Empfehlung: als App-Platform-Komponente vom Typ
+**Scheduled Job**, alle 5 Minuten, Kommando `python scripts/run_graph_sync.py`
+(Kosten dafür marginal, siehe M365-Integrationsplan - deutlich unter 1
+$/Monat bei dieser Taktung). Diese Job-Komponente braucht dieselben
+`CC_CRM_DATABASE_URL`/`CC_CRM_MAIL_CREDENTIALS_ENCRYPTION_KEY`/
+`CC_CRM_MS_GRAPH_*`-Variablen wie die Backend-Web-Service-Komponente.
+
 ## Umgebungsvariablen (Frontend-Komponente `hermescrm-frontend`)
 
 - `NEXT_PUBLIC_CC_CRM_API_URL=https://hermescrm-v9sle.ondigitalocean.app/api/v1`

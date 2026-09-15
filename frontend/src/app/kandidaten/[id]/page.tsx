@@ -18,6 +18,7 @@ import { AnonymousProfilePanel } from "@/components/crm/anonymous-profile-panel"
 import { DocumentPanel } from "@/components/crm/document-panel";
 import { CandidateEditModal } from "@/components/crm/candidate-create-modal";
 import { AddToMailingButton } from "@/components/crm/add-to-mailing-button";
+import { MailComposeButton } from "@/components/crm/mail-compose-modal";
 import { RegisterRecentCandidate } from "@/components/crm/register-recent-candidate";
 import { CandidateSubmissionStages } from "@/components/crm/candidate-submission-stages";
 import { CandidateProcessLog } from "@/components/crm/candidate-process-log";
@@ -119,6 +120,16 @@ export default async function CandidateDetailPage({
           {candidate.email && (
             <AddToMailingButton
               recipient={{ kind: "candidate", id: candidate.id, name: `${candidate.first_name} ${candidate.last_name}`, email: candidate.email }}
+            />
+          )}
+          {candidate.email && (
+            <MailComposeButton
+              toAddress={candidate.email}
+              toName={`${candidate.first_name} ${candidate.last_name}`}
+              candidateId={candidate.id}
+              documentOwnerType="candidate"
+              documentOwnerId={candidate.id}
+              placeholderValues={{ candidate: `${candidate.first_name} ${candidate.last_name}` }}
             />
           )}
           <CandidateEditModal candidate={candidate} />

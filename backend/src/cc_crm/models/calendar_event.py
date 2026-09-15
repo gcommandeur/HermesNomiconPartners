@@ -68,3 +68,13 @@ class CalendarEvent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     reminder_minutes_before: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
+
+    # Microsoft-Graph-Kalender-Sync (Auftrag "M365-Postfach-Integration") -
+    # nullable: nur Termine des Nutzers, der ein microsoft_graph-Postfach
+    # verbunden hat (MailAccount.oauth_connected_by_user_id), werden
+    # gespiegelt (siehe services/calendar_graph_sync.py). external_graph_
+    # event_id ist die stabile Graph-Event-ID fuer Update/Delete-Aufrufe;
+    # external_graph_last_synced_at ist die Basis der Last-Write-Wins-
+    # Konfliktloesung (Vergleich mit Graphs lastModifiedDateTime).
+    external_graph_event_id: Mapped[str | None] = mapped_column(String(200), index=True)
+    external_graph_last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

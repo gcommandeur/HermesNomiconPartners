@@ -8,6 +8,7 @@ import { ClientHonorarEditor } from "@/components/crm/client-honorar-editor";
 import { DocumentPanel } from "@/components/crm/document-panel";
 import { ClientEditModal } from "@/components/crm/client-create-modal";
 import { AddToMailingButton } from "@/components/crm/add-to-mailing-button";
+import { MailComposeButton } from "@/components/crm/mail-compose-modal";
 import { contactName, formatCurrency, formatDate, termsStatusLabel } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +46,16 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           {client.email && (
             <AddToMailingButton recipient={{ kind: "client", id: client.id, name: client.name, email: client.email }} />
           )}
+          {client.email && (
+            <MailComposeButton
+              toAddress={client.email}
+              toName={client.name}
+              clientCompanyId={client.id}
+              documentOwnerType="client"
+              documentOwnerId={client.id}
+              placeholderValues={{ client: client.name, contact: primaryContact ? contactName(primaryContact) : client.name }}
+            />
+          )}
           <ClientEditModal client={client} />
         </div>
       </div>
@@ -68,7 +79,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             </Card>
           )}
         </TabsContent>
-        <TabsContent value="Kontakte"><div className="space-y-2">{clientContacts.map((contact) => <Card key={contact.id}><CardContent className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><p className="font-semibold">{contactName(contact)}</p><p className="mt-1 text-xs text-[#94A3B8]">{contact.role_title ?? "Rolle offen"} · {contact.email ?? "keine E-Mail"}</p></div><div className="flex items-center gap-3">{contact.is_primary && <span className="inline-flex items-center gap-1 rounded-full border border-[#D8DADF]/25 bg-[#D8DADF]/10 px-2 py-1 text-[10px] text-[#F8FAFC]"><Star size={11} />Hauptkontakt</span>}{contact.phone && <span className="text-xs text-[#94A3B8]">{contact.phone}</span>}</div></CardContent></Card>)}{clientContacts.length === 0 && <Card><CardContent className="py-12 text-center text-sm text-[#858b90]">Noch keine Kontakte.</CardContent></Card>}</div></TabsContent>
+        <TabsContent value="Kontakte"><div className="space-y-2">{clientContacts.map((contact) => <Card key={contact.id}><CardContent className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><p className="font-semibold">{contactName(contact)}</p><p className="mt-1 text-xs text-[#94A3B8]">{contact.role_title ?? "Rolle offen"} · {contact.email ?? "keine E-Mail"}</p></div><div className="flex items-center gap-3">{contact.is_primary && <span className="inline-flex items-center gap-1 rounded-full border border-[#D8DADF]/25 bg-[#D8DADF]/10 px-2 py-1 text-[10px] text-[#F8FAFC]"><Star size={11} />Hauptkontakt</span>}{contact.phone && <span className="text-xs text-[#94A3B8]">{contact.phone}</span>}{contact.email && <MailComposeButton toAddress={contact.email} toName={contactName(contact)} contactPersonId={contact.id} clientCompanyId={client.id} placeholderValues={{ contact: contactName(contact), client: client.name }} label="Mail" />}</div></CardContent></Card>)}{clientContacts.length === 0 && <Card><CardContent className="py-12 text-center text-sm text-[#858b90]">Noch keine Kontakte.</CardContent></Card>}</div></TabsContent>
         <TabsContent value="Kandidaten"><div className="space-y-2">{clientSubmissions.map((item) => <Card key={item.id}><CardContent className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">{candidateName(item.candidate_id)}</p><p className="mt-1 text-xs text-[#7b8187]">Vorgestellt {formatDate(item.submitted_at)}</p></div><StatusPill status={item.status} /></CardContent></Card>)}</div></TabsContent>
         <TabsContent value="Konditionen">
           <div className="space-y-4">

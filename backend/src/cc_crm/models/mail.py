@@ -20,7 +20,12 @@ from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Tex
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cc_crm.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from cc_crm.models.enums import MailDirection, MailMatchStatus
+from cc_crm.models.enums import (
+    MailAccountOAuthStatus,
+    MailAccountProvider,
+    MailDirection,
+    MailMatchStatus,
+)
 
 
 class MailAccount(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -31,18 +36,66 @@ class MailAccount(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # "info-linkedin", "gege-persoenlich", "contact", "karriere", "lukas".
     label: Mapped[str] = mapped_column(String(80), nullable=False)
 
-    imap_host: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Wie dieses Konto angebunden ist (Auftrag "M365-Postfach-Integration") -
+    # IMAP_SMTP (Default) nutzt die Felder direkt unten, MICROSOFT_GRAPH die
+    # oauth_*-Felder weiter unten. Beide Gruppen sind deshalb nullable: eine
+    # microsoft_graph-Zeile hat keine imap_host/smtp_host/username/
+    # encrypted_password, eine imap_smtp-Zeile keine oauth_*-Felder.
+    provider: Mapped[MailAccountProvider] = mapped_column(
+        Enum(MailAccountProvider, native_enum=False, length=16),
+        default=MailAccountProvider.IMAP_SMTP,
+        nullable=False,
+        index=True,
+    )
+
+    imap_host: Mapped[str | None] = mapped_column(String(255))
     imap_port: Mapped[int] = mapped_column(Integer, default=993, nullable=False)
     imap_use_ssl: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    smtp_host: Mapped[str] = mapped_column(String(255), nullable=False)
+    smtp_host: Mapped[str | None] = mapped_column(String(255))
     smtp_port: Mapped[int] = mapped_column(Integer, default=587, nullable=False)
     smtp_use_ssl: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    username: Mapped[str] = mapped_column(String(320), nullable=False)
+    username: Mapped[str | None] = mapped_column(String(320))
     # Fernet-Chiffrat, NIE Klartext. Entschluesselung nur unmittelbar vor dem
     # IMAP-/SMTP-Verbindungsaufbau (siehe services/mail_credentials.py).
-    encrypted_password: Mapped[str] = mapped_column(Text, nullable=False)
+    encrypted_password: Mapped[str | None] = mapped_column(Text)
+
+    # --- Microsoft-Graph-OAuth (nur provider=microsoft_graph) -------------
+    # Fernet-Chiffrat des Refresh-Tokens (dasselbe Verschluesselungsmodul wie
+    # encrypted_password oben, siehe services/mail_credentials.py) - NIE der
+    # Access-Token: der lebt nur ~60 Min. und wird bei jedem Sync-/Sende-Lauf
+    # frisch aus dem Refresh-Token gezogen, nie persistiert (siehe
+    # services/graph_token_service.py).
+    encrypted_oauth_refresh_token: Mapped[str | None] = mapped_column(Text)
+    # Gewaehrte Scopes als Diagnose-Info (z.B. bei einem spaeter reduzierten
+    # Consent nachvollziehbar, welche Rechte tatsaechlich erteilt wurden).
+    oauth_scopes: Mapped[str | None] = mapped_column(Text)
+    oauth_status: Mapped[MailAccountOAuthStatus | None] = mapped_column(
+        Enum(MailAccountOAuthStatus, native_enum=False, length=20)
+    )
+    # Wer den OAuth-Login durchgefuehrt hat - bestimmt zugleich, wessen
+    # CalendarEvent-Zeilen mit dem Kalender dieses Postfachs synchronisiert
+    # werden (siehe services/calendar_graph_sync.py, Nutzer-Entscheidung:
+    # Kalender-Sync ist pro Nutzer, kein gemeinsamer Firmenkalender).
+    # use_alter=True: User.default_send_account_id verweist bereits auf
+    # mail_accounts.id (Gegenrichtung) - ohne use_alter entsteht ein
+    # Zwei-Tabellen-FK-Zyklus (mail_accounts<->users), den SQLite beim
+    # Droppen der Tabellen (z.B. in Tests) nicht mehr sortieren kann.
+    oauth_connected_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL", use_alter=True)
+    )
+    # Cursor fuer den inkrementellen Mail-Abruf per Microsoft-Graph-Delta-
+    # Query - das providerspezifische Aequivalent zu last_seen_uid unten
+    # (IMAP kennt keine Delta-Links, Graph keine UIDs).
+    graph_delta_link: Mapped[str | None] = mapped_column(Text)
+    # Eigener Cursor fuer den Kalender-Delta-Abruf (services/
+    # calendar_graph_sync.py) - bewusst getrennt von graph_delta_link oben:
+    # Mail- und Kalender-Sync fragen zwei unterschiedliche Graph-Endpoints
+    # ab (/me/mailFolders/inbox/messages/delta vs. /me/calendar/events/
+    # delta), ein gemeinsames Feld wuerde sich die beiden Cursor gegenseitig
+    # ueberschreiben.
+    graph_calendar_delta_link: Mapped[str | None] = mapped_column(Text)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
 

@@ -911,17 +911,28 @@ export interface SourcingRunStatus {
 /** Verbundenes Postfach (IMAP lesend, SMTP schreibend). Enthaelt bewusst
  * KEIN Passwort-Feld - das Backend gibt es nie zurueck, auch nicht
  * maskiert (siehe backend/schemas/mail.py). */
+export type MailAccountProvider = "imap_smtp" | "microsoft_graph";
+export type MailAccountOAuthStatus = "connected" | "needs_reconnect";
+
 export interface MailAccount {
   id: string;
   address: string;
   label: string;
-  imap_host: string;
+  /** "imap_smtp" (Passwort-Login, Default) oder "microsoft_graph" (OAuth,
+   * z.B. info@commandeurconsulting.de) - siehe Backend models/mail.py::
+   * MailAccount. imap_host/smtp_host/username sind fuer microsoft_graph-
+   * Konten null. */
+  provider: MailAccountProvider;
+  imap_host: string | null;
   imap_port: number;
   imap_use_ssl: boolean;
-  smtp_host: string;
+  smtp_host: string | null;
   smtp_port: number;
   smtp_use_ssl: boolean;
-  username: string;
+  username: string | null;
+  /** Nur fuer provider="microsoft_graph" gesetzt - "needs_reconnect" zeigt
+   * den "Postfach neu verbinden"-Button statt eines stillen Ausfalls. */
+  oauth_status: MailAccountOAuthStatus | null;
   is_active: boolean;
   default_for_cv_out: boolean;
   /** Rate-Limiting fuer den SMTP-Versand (Backend services/mail_send.py) -
@@ -973,4 +984,39 @@ export interface MailMessageListItem {
   matched_contact_person_client_company_id: string | null;
   matched_client_company_id: string | null;
   matched_client_company_name: string | null;
+}
+
+/** Payload fuer POST /mail/send (Auftrag "M365-Postfach-Integration",
+ * Compose-UI) - siehe backend/schemas/mail.py::MailSendRequest. */
+export interface MailSendRequest {
+  account_id?: string | null;
+  to_address: string;
+  to_name?: string | null;
+  subject: string;
+  body_text: string;
+  // Dokument-IDs (siehe DocumentMeta) - CV-Dokumente werden serverseitig
+  // hart abgelehnt (project_submission_workflow_cv_attachment_guard),
+  // clientseitig zusaetzlich aus dem Picker ausgeblendet.
+  attachment_document_ids?: string[];
+  candidate_id?: string | null;
+  client_company_id?: string | null;
+  contact_person_id?: string | null;
+}
+
+export interface MailSendResult {
+  id: string;
+  mail_account_id: string;
+  to_address: string;
+  subject: string;
+  sent_at: string;
+  matched_candidate_id: string | null;
+  matched_client_company_id: string | null;
+  matched_contact_person_id: string | null;
+  created_activity_id: string | null;
+}
+
+/** Antwort auf GET /mail-accounts/oauth/start - das Frontend leitet den
+ * Browser per window.location.href dorthin weiter. */
+export interface MailOAuthStartResult {
+  authorization_url: string;
 }

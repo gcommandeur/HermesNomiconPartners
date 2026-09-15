@@ -11,6 +11,7 @@ import { ErrorState } from "@/components/crm/error-state";
 import { ListSkeleton } from "@/components/crm/list-skeleton";
 import { PaginationControls } from "@/components/crm/pagination-controls";
 import { AddToMailingButton } from "@/components/crm/add-to-mailing-button";
+import { MailComposeButton } from "@/components/crm/mail-compose-modal";
 import { contactName } from "@/lib/utils";
 import { useServerSearchList } from "@/lib/api/use-server-search";
 import { getContactsPage } from "@/lib/api/queries";
@@ -87,7 +88,17 @@ export function ContactsTable() {
             <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-[#8a9095]">
               <span className="min-w-0 truncate">{contact.email ?? "—"} {contact.phone ? `· ${contact.phone}` : ""}</span>
               {contact.email && (
-                <AddToMailingButton recipient={{ kind: "contact", id: contact.id, name: contactName(contact), email: contact.email }} />
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <AddToMailingButton recipient={{ kind: "contact", id: contact.id, name: contactName(contact), email: contact.email }} />
+                  <MailComposeButton
+                    toAddress={contact.email}
+                    toName={contactName(contact)}
+                    contactPersonId={contact.id}
+                    clientCompanyId={contact.client_company_id}
+                    placeholderValues={{ contact: contactName(contact), client: contact.client_company_name ?? "" }}
+                    label="Mail"
+                  />
+                </div>
               )}
             </div>
           </div>
@@ -108,7 +119,17 @@ export function ContactsTable() {
             <td className="px-4 py-3.5">{contact.is_primary ? <span className="inline-flex items-center gap-1 rounded-full border border-[#D8DADF]/25 bg-[#D8DADF]/10 px-2 py-1 text-[10px] text-[#F8FAFC]"><Star size={11} />Hauptkontakt</span> : <StatusPill status="draft" />}</td>
             <td className="px-4 py-3.5">
               {contact.email && (
-                <AddToMailingButton recipient={{ kind: "contact", id: contact.id, name: contactName(contact), email: contact.email }} />
+                <div className="flex items-center gap-1.5">
+                  <AddToMailingButton recipient={{ kind: "contact", id: contact.id, name: contactName(contact), email: contact.email }} />
+                  <MailComposeButton
+                    toAddress={contact.email}
+                    toName={contactName(contact)}
+                    contactPersonId={contact.id}
+                    clientCompanyId={contact.client_company_id}
+                    placeholderValues={{ contact: contactName(contact), client: contact.client_company_name ?? "" }}
+                    label="Mail"
+                  />
+                </div>
               )}
             </td>
           </tr>

@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailAccount, MailMatchStatus, MailMessageListItem, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, TaskResolveOutcome, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, TaskResolveOutcome, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -423,6 +423,37 @@ export async function getMailMessages(
   return apiGet<MailMessageListItem[]>(
     `/mail-accounts/${accountId}/messages?${params.toString()}`,
     [],
+  );
+}
+
+/** Admin-only: "Mit Microsoft anmelden" - liefert die Autorisierungs-URL,
+ * das Frontend leitet den Browser per window.location.href dorthin weiter
+ * (Auftrag "M365-Postfach-Integration"). Kein normaler apiGet-Fallback
+ * sinnvoll (kein Demo-Modus fuer einen OAuth-Redirect) - Fehler laufen
+ * ueber die uebliche apiGet-Exception. */
+export async function startMicrosoftOAuth() {
+  return apiGet<MailOAuthStartResult>("/mail-accounts/oauth/start", { authorization_url: "" });
+}
+
+/** Compose-UI (Auftrag "M365-Postfach-Integration") - Einzelversand ueber
+ * ein verbundenes Postfach (IMAP/SMTP oder Microsoft Graph, ununterscheidbar
+ * fuer den Aufrufer). */
+export async function sendMail(payload: MailSendRequest) {
+  return apiPost<MailSendResult>("/mail/send", payload);
+}
+
+/** Massenversand an alle Empfänger einer Mailing-Gruppe (Auftrag "M365-
+ * Postfach-Integration", Mailing-Seite) - siehe Backend
+ * api/v1/mail_send.py::send_bulk_mail. */
+export async function sendBulkMail(payload: {
+  mailing_group_id: string;
+  subject: string;
+  body_text: string;
+  account_id?: string | null;
+}) {
+  return apiPost<{ sent_count: number; failed: string[]; skipped_due_to_daily_limit_count: number }>(
+    "/mail/send-bulk",
+    payload,
   );
 }
 

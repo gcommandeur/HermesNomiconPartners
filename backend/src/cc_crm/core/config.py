@@ -47,6 +47,16 @@ class Settings(BaseSettings):
     #   python -c "from cryptography.fernet import Fernet;
     #              print(Fernet.generate_key().decode())"
     mail_credentials_encryption_key: str | None = None
+    # Microsoft-Graph-OAuth fuer M365-Postfaecher (Auftrag "M365-Postfach-
+    # Integration") - Delegated Permissions, Single-Tenant-App-Registrierung
+    # in Entra ID (siehe integrations/microsoft_graph/). Alle drei muessen
+    # gesetzt sein, damit der "Mit Microsoft anmelden"-Flow funktioniert;
+    # ohne sie bleibt provider=imap_smtp die einzige Option (kein harter
+    # Fehler beim Start, nur beim tatsaechlichen Verbindungsversuch, gleiche
+    # Haltung wie mail_credentials_encryption_key oben).
+    ms_graph_client_id: str | None = None
+    ms_graph_tenant_id: str | None = None
+    ms_graph_client_secret: str | None = None
     # Lokales Verzeichnis für hochgeladene Dokumente (CVs, Verträge, etc.) -
     # Fallback, wenn kein S3-kompatibler Speicher konfiguriert ist (siehe unten).
     # Relativ zum Backend-Arbeitsverzeichnis, falls kein absoluter Pfad gesetzt ist.

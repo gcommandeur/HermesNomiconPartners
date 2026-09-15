@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   ChevronDown,
@@ -13,6 +14,7 @@ import {
   ShieldOff,
   Star,
   Trash2,
+  Unplug,
 } from "lucide-react";
 import { PageHeader } from "@/components/crm/page-header";
 import { ErrorBanner } from "@/components/crm/error-banner";
@@ -21,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api/client";
-import { getMailMessages } from "@/lib/api/queries";
+import { getMailMessages, startMicrosoftOAuth } from "@/lib/api/queries";
 import {
   invalidateMailAccountsCache,
   useCurrentUser,
@@ -297,6 +299,27 @@ export default function PostfaecherPage() {
   const { data, isLoading, error, mutate: retry } = useMailAccountsCache(isAdmin);
   const accounts = data?.data ?? [];
 
+  // Rueckkehr aus dem "Mit Microsoft anmelden"-Flow (siehe api/v1/
+  // mail_accounts.py::mail_oauth_callback) - der Callback redirected mit
+  // ?ms_connected=<adresse> bzw. ?ms_error=<meldung> hierher zurueck.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [msConnectedNotice, setMsConnectedNotice] = useState<string | null>(null);
+  const [msErrorNotice, setMsErrorNotice] = useState<string | null>(null);
+  useEffect(() => {
+    const connected = searchParams.get("ms_connected");
+    const oauthErrorParam = searchParams.get("ms_error");
+    if (connected) {
+      setMsConnectedNotice(connected);
+      void invalidateMailAccountsCache();
+      router.replace("/einstellungen/postfaecher");
+    } else if (oauthErrorParam) {
+      setMsErrorNotice(oauthErrorParam);
+      router.replace("/einstellungen/postfaecher");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -368,6 +391,29 @@ export default function PostfaecherPage() {
     }
   }
 
+  const [oauthError, setOauthError] = useState<string | null>(null);
+  const [oauthBusy, setOauthBusy] = useState(false);
+
+  async function handleConnectMicrosoft() {
+    setOauthBusy(true);
+    setOauthError(null);
+    try {
+      const result = await startMicrosoftOAuth();
+      if (!result.data.authorization_url) {
+        throw new Error("Keine Autorisierungs-URL erhalten.");
+      }
+      // Voller Seitenwechsel (kein SPA-Routing) - der Browser muss die
+      // Backend-Domain zum Microsoft-Login verlassen (Auftrag "M365-
+      // Postfach-Integration").
+      window.location.href = result.data.authorization_url;
+    } catch (exception) {
+      setOauthError(
+        exception instanceof Error ? exception.message : "Verbindung zu Microsoft fehlgeschlagen.",
+      );
+      setOauthBusy(false);
+    }
+  }
+
   async function handleDelete(account: MailAccount) {
     if (!window.confirm(`Postfach ${account.address} wirklich entfernen?`)) return;
     setBusyId(account.id);
@@ -434,14 +480,27 @@ export default function PostfaecherPage() {
                   wieder angezeigt.
                 </p>
               </div>
-              <Button size="sm" variant="outline" onClick={() => setShowForm((open) => !open)}>
-                <Plus size={14} />
-                {showForm ? "Abbrechen" : "Postfach verbinden"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" disabled={oauthBusy} onClick={() => void handleConnectMicrosoft()}>
+                  <Mail size={14} />
+                  {oauthBusy ? "Öffne Microsoft…" : "Mit Microsoft anmelden"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setShowForm((open) => !open)}>
+                  <Plus size={14} />
+                  {showForm ? "Abbrechen" : "IMAP/SMTP-Postfach verbinden"}
+                </Button>
+              </div>
             </div>
           </CardHeader>
 
           <CardContent className="space-y-4">
+            {msConnectedNotice && (
+              <div className="rounded-lg border border-[#4f8a68]/35 bg-[#244d38]/45 p-3 text-xs text-[#a9d6b8]">
+                Postfach {msConnectedNotice} erfolgreich über Microsoft verbunden.
+              </div>
+            )}
+            <ErrorBanner message={msErrorNotice} />
+            <ErrorBanner message={oauthError} />
             <ErrorBanner message={rowError} />
 
             {showForm && (
@@ -567,10 +626,23 @@ export default function PostfaecherPage() {
                             inaktiv
                           </span>
                         )}
+                        {account.provider === "microsoft_graph" && (
+                          <span className="rounded bg-[#1F5FA8]/25 px-2 py-0.5 text-[10px] text-[#69A7EA]">
+                            Microsoft 365
+                          </span>
+                        )}
+                        {account.oauth_status === "needs_reconnect" && (
+                          <span className="flex items-center gap-1 rounded bg-[#3A2416] px-2 py-0.5 text-[10px] text-[#F0B429]">
+                            <Unplug size={10} />Verbindung abgelaufen
+                          </span>
+                        )}
                       </p>
                       <p className="mt-1 text-xs text-[#747C89]">
-                        IMAP {account.imap_host}:{account.imap_port} · SMTP {account.smtp_host}:
-                        {account.smtp_port} · zuletzt abgerufen: {formatDateTime(account.last_synced_at)}
+                        {account.provider === "microsoft_graph"
+                          ? "Microsoft Graph (OAuth)"
+                          : `IMAP ${account.imap_host}:${account.imap_port} · SMTP ${account.smtp_host}:${account.smtp_port}`}
+                        {" · zuletzt abgerufen: "}
+                        {formatDateTime(account.last_synced_at)}
                       </p>
                       <ThrottleSettingsEditor
                         account={account}
@@ -580,15 +652,26 @@ export default function PostfaecherPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void handleSync(account)}
-                        disabled={busy}
-                      >
-                        <RefreshCw size={13} />
-                        {busy ? "Läuft…" : "Jetzt abrufen"}
-                      </Button>
+                      {account.oauth_status === "needs_reconnect" ? (
+                        <Button
+                          size="sm"
+                          disabled={oauthBusy}
+                          onClick={() => void handleConnectMicrosoft()}
+                        >
+                          <Unplug size={13} />
+                          {oauthBusy ? "Öffne Microsoft…" : "Postfach neu verbinden"}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handleSync(account)}
+                          disabled={busy}
+                        >
+                          <RefreshCw size={13} />
+                          {busy ? "Läuft…" : "Jetzt abrufen"}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"

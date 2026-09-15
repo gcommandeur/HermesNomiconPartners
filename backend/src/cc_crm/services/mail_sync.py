@@ -35,7 +35,13 @@ from cc_crm.models.activity import Activity
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.contact_person import ContactPerson
-from cc_crm.models.enums import MailDirection, MailMatchStatus, TaskPriority, TaskStatus
+from cc_crm.models.enums import (
+    MailAccountProvider,
+    MailDirection,
+    MailMatchStatus,
+    TaskPriority,
+    TaskStatus,
+)
 from cc_crm.models.mail import MailAccount, MailMessage
 from cc_crm.models.note import Note
 from cc_crm.models.task import Task
@@ -118,6 +124,14 @@ def fetch_via_imap(account: MailAccount, since_uid: str | None) -> list[FetchedM
     Codepfade brauchen sie nicht)."""
     from imap_tools import AND, MailBox, MailBoxUnencrypted
 
+    # imap_host/username/encrypted_password sind nur fuer provider=
+    # microsoft_graph nullable (siehe models/mail.py) - fetch_via_imap wird
+    # ausschliesslich fuer imap_smtp-Konten aufgerufen (siehe fetch_mail()),
+    # bei denen MailAccountCreate diese Felder als Pflichtfelder erzwingt.
+    assert account.imap_host is not None
+    assert account.username is not None
+    assert account.encrypted_password is not None
+
     password = decrypt_password(account.encrypted_password)
     box_cls = MailBox if account.imap_use_ssl else MailBoxUnencrypted
 
@@ -144,7 +158,51 @@ def fetch_via_imap(account: MailAccount, since_uid: str | None) -> list[FetchedM
     return mails
 
 
-def _safe_error(exc: BaseException, encrypted_password: str) -> str:
+def fetch_via_graph(session: Session, account: MailAccount) -> list[FetchedMail]:
+    """Microsoft-Graph-Aequivalent zu fetch_via_imap - inkrementell per
+    Delta-Query statt UID-Bereich (siehe MailAccount.graph_delta_link).
+    Braucht `session` (anders als fetch_via_imap), um einen gueltigen
+    Access-Token zu beschaffen (services/graph_token_service.py, dort auch
+    die Behandlung eines abgelaufenen Refresh-Tokens) - deshalb kein
+    direkter Ersatz in der injizierbaren `fetcher`-Signatur von
+    MailSyncService, sondern nur ueber die Dispatcher-Funktion fetch_mail()
+    unten erreichbar."""
+    from cc_crm.integrations.microsoft_graph.client import fetch_inbox_delta
+    from cc_crm.services.graph_token_service import get_valid_access_token
+
+    access_token = get_valid_access_token(session, account)
+    result = fetch_inbox_delta(access_token, delta_link=account.graph_delta_link)
+    if result.delta_link:
+        account.graph_delta_link = result.delta_link
+    return [
+        FetchedMail(
+            message_id=message.internet_message_id or f"graph-{message.id}",
+            uid=None,
+            from_name=message.from_name,
+            from_address=message.from_address,
+            subject=message.subject,
+            body_text=message.body_text,
+            received_at=message.received_at,
+        )
+        for message in result.messages
+        # Entwuerfe sind noch keine echten Nachrichten (weder ein- noch
+        # ausgehend) - IMAP kennt dieses Konzept im Posteingang nicht,
+        # Graph liefert sie aber ueber dieselbe Delta-Query mit.
+        if not message.is_draft
+    ]
+
+
+def fetch_mail(session: Session, account: MailAccount, since_uid: str | None) -> list[FetchedMail]:
+    """Provider-Weiche (Auftrag "M365-Postfach-Integration") - Default-
+    Fetcher von MailSyncService, wenn kein expliziter (Test-)Fetcher
+    injiziert wurde. `since_uid` wird fuer microsoft_graph-Konten ignoriert
+    (Cursor ist dort account.graph_delta_link, nicht last_seen_uid)."""
+    if account.provider == MailAccountProvider.MICROSOFT_GRAPH:
+        return fetch_via_graph(session, account)
+    return fetch_via_imap(account, since_uid)
+
+
+def _safe_error(exc: BaseException, encrypted_password: str | None) -> str:
     """Fehlertext fuer die Oberflaeche - mit Absicherung, dass niemals das
     Postfach-Passwort darin landet. Manche IMAP-Bibliotheken zitieren den
     fehlgeschlagenen LOGIN-Befehl inklusive Zugangsdaten in der
@@ -157,6 +215,10 @@ def _safe_error(exc: BaseException, encrypted_password: str) -> str:
     Folgefehler scheitern (live im Test aufgetreten).
     """
     text = f"{type(exc).__name__}: {exc}"
+    # microsoft_graph-Konten haben kein encrypted_password (siehe
+    # models/mail.py) - fuer die gibt es kein Passwort zu maskieren.
+    if not encrypted_password:
+        return text[:2000]
     try:
         password = decrypt_password(encrypted_password)
     except Exception:  # noqa: BLE001 - Schluesselproblem darf hier nichts verschlimmern
@@ -170,11 +232,20 @@ class MailSyncService:
     def __init__(
         self,
         session: Session,
-        fetcher: Callable[[MailAccount, str | None], list[FetchedMail]] = fetch_via_imap,
+        fetcher: Callable[[MailAccount, str | None], list[FetchedMail]] | None = None,
     ) -> None:
         self.session = session
-        self._fetch = fetcher
+        # None (Default) -> Provider-Weiche fetch_mail() (IMAP oder Graph,
+        # je nach account.provider) - Tests injizieren weiterhin einen
+        # expliziten Fake-Fetcher mit derselben schmalen Signatur, davon
+        # unberuehrt.
+        self._fetch = fetcher or self._dispatch_by_provider
         self._candidate_names: list[tuple[uuid.UUID, str]] | None = None
+
+    def _dispatch_by_provider(
+        self, account: MailAccount, since_uid: str | None
+    ) -> list[FetchedMail]:
+        return fetch_mail(self.session, account, since_uid)
 
     # --- oeffentlicher Einstieg ------------------------------------------
 
@@ -227,7 +298,7 @@ class MailSyncService:
         mail: FetchedMail,
         counters: _Counters,
         address: str,
-        encrypted_password: str,
+        encrypted_password: str | None,
     ) -> None:
         counters.highest_uid = _max_uid(counters.highest_uid, mail.uid)
 
@@ -276,16 +347,13 @@ class MailSyncService:
 
     def _already_stored(self, message_id: str) -> bool:
         return (
-            self.session.scalar(
-                select(MailMessage.id).where(MailMessage.message_id == message_id)
-            )
+            self.session.scalar(select(MailMessage.id).where(MailMessage.message_id == message_id))
             is not None
         )
 
     def _store_message(self, account: MailAccount, mail: FetchedMail) -> MailMessage:
         is_own = bool(
-            mail.from_address
-            and mail.from_address.casefold() == account.address.casefold()
+            mail.from_address and mail.from_address.casefold() == account.address.casefold()
         )
         linkedin = is_linkedin_message(
             from_address=mail.from_address,
@@ -351,9 +419,7 @@ class MailSyncService:
         # Der bereinigte Antworttext ersetzt den Rohtext als Activity-Inhalt,
         # der Rohtext bleibt in body_text erhalten.
         candidate_id = (
-            self._find_candidate_by_name(content.candidate_name)
-            if content.candidate_name
-            else None
+            self._find_candidate_by_name(content.candidate_name) if content.candidate_name else None
         )
 
         is_new_candidate = False
@@ -601,13 +667,13 @@ def _max_uid(current: str | None, candidate: str | None) -> str | None:
 def sync_all_active(
     session: Session,
     accounts: Iterable[MailAccount] | None = None,
-    fetcher: Callable[[MailAccount, str | None], list[FetchedMail]] = fetch_via_imap,
+    fetcher: Callable[[MailAccount, str | None], list[FetchedMail]] | None = None,
 ) -> list[MailSyncResult]:
     """Abruf ueber alle aktiven Postfaecher - Einstiegspunkt fuer den
-    spaeteren zeitgesteuerten Lauf."""
+    zeitgesteuerten Lauf (siehe jobs/graph_sync.py). fetcher=None laesst
+    MailSyncService je Konto per account.provider zwischen IMAP und Graph
+    unterscheiden (siehe fetch_mail())."""
     service = MailSyncService(session, fetcher=fetcher)
     if accounts is None:
-        accounts = session.scalars(
-            select(MailAccount).where(MailAccount.is_active.is_(True))
-        ).all()
+        accounts = session.scalars(select(MailAccount).where(MailAccount.is_active.is_(True))).all()
     return [service.sync_account(account) for account in accounts]

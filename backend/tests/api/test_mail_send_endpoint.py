@@ -216,9 +216,7 @@ def test_send_mail_end_to_end_with_attachment(
     monkeypatch.setattr(imaplib, "IMAP4", _FakeIMAP)
     # Keine echte Storage-Anbindung (S3/lokal) noetig - nur der Anhang-Inhalt
     # selbst wird gebraucht, nicht wo er herkommt.
-    monkeypatch.setattr(
-        "cc_crm.services.mail_send.read_document_bytes", lambda _key: b"Testinhalt"
-    )
+    monkeypatch.setattr("cc_crm.services.mail_send.read_document_bytes", lambda _key: b"Testinhalt")
 
     _make_admin(session_factory)
     account = _create_account(client)
@@ -247,3 +245,89 @@ def test_send_mail_end_to_end_with_attachment(
     with session_factory() as session:
         stored = session.query(MailMessage).filter_by(id=uuid.UUID(body["id"])).one()
         assert stored.subject == "Kandidatenprofil Nr. 4456"
+
+
+def _create_mailing_group(client: TestClient, recipients: list[dict]) -> dict:
+    response = client.post(
+        "/api/v1/mailing-groups",
+        json={"name": f"Testgruppe {uuid.uuid4().hex[:8]}", "recipients": recipients},
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+class TestSendBulkMail:
+    """POST /mail/send-bulk (Auftrag "M365-Postfach-Integration", Compose-UI
+    von der Mailing-Seite aus) - reine Anbindung an services/mail_send.py::
+    send_bulk, das bereits umfassend in tests/services/test_mail_send.py
+    getestet ist."""
+
+    def test_rejects_unknown_mailing_group(
+        self, client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        _make_admin(session_factory)
+        _create_account(client)
+        response = client.post(
+            "/api/v1/mail/send-bulk",
+            json={
+                "mailing_group_id": "00000000-0000-0000-0000-000000000000",
+                "subject": "Test",
+                "body_text": "Hallo",
+            },
+        )
+        assert response.status_code == 404, response.text
+
+    def test_sends_to_all_recipients_of_the_group(
+        self,
+        client: TestClient,
+        session_factory: sessionmaker[Session],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _FakeSMTP.sent = []
+        monkeypatch.setattr(smtplib, "SMTP_SSL", _FakeSMTP)
+        monkeypatch.setattr(smtplib, "SMTP", _FakeSMTP)
+        import imaplib
+
+        monkeypatch.setattr(imaplib, "IMAP4_SSL", _FakeIMAP)
+        monkeypatch.setattr(imaplib, "IMAP4", _FakeIMAP)
+
+        _make_admin(session_factory)
+        _create_account(client)
+        candidate = _create_candidate(client)
+        client_response = client.post("/api/v1/clients", json={"name": "Muster Kanzlei"})
+        assert client_response.status_code == 201, client_response.text
+        client_company = client_response.json()
+        group = _create_mailing_group(
+            client,
+            [
+                {
+                    "kind": "candidate",
+                    "id": candidate["id"],
+                    "name": "Test Empfaenger",
+                    "email": "kandidat@example.com",
+                },
+                {
+                    "kind": "client",
+                    "id": client_company["id"],
+                    "name": "Muster Kanzlei",
+                    "email": "kanzlei@example.com",
+                },
+            ],
+        )
+
+        response = client.post(
+            "/api/v1/mail/send-bulk",
+            json={
+                "mailing_group_id": group["id"],
+                "subject": "Rundmail",
+                "body_text": "Hallo zusammen",
+            },
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["sent_count"] == 2
+        assert body["failed"] == []
+        assert {addr for _from, addr in _FakeSMTP.sent} == {
+            "kandidat@example.com",
+            "kanzlei@example.com",
+        }

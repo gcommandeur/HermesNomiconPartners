@@ -288,3 +288,30 @@ class MailMatchStatus(StrEnum):
     PENDING_REVIEW = "pending_review"
     UNMATCHED = "unmatched"
     IGNORED = "ignored"
+
+
+class MailAccountProvider(StrEnum):
+    """Wie ein MailAccount angebunden ist (Auftrag "M365-Postfach-
+    Integration"). IMAP_SMTP ist der historische Default (Passwort-Login,
+    bestehende Postfaecher unveraendert) - MICROSOFT_GRAPH nutzt stattdessen
+    OAuth (Delegated, siehe integrations/microsoft_graph/) fuer Postfaecher,
+    bei denen IMAP/SMTP-Basic-Auth nicht (mehr) funktioniert (Exchange
+    Online). Beide Provider laufen hinter derselben Schnittstelle in
+    services/mail_sync.py und services/mail_send.py - alles darüber
+    (Matching, Vorlagen, Tageslimit, CV-Anhang-Sperre, Postfaecher-
+    Oberflaeche) bleibt unveraendert und funktioniert fuer beide gleich."""
+
+    IMAP_SMTP = "imap_smtp"
+    MICROSOFT_GRAPH = "microsoft_graph"
+
+
+class MailAccountOAuthStatus(StrEnum):
+    """Nur fuer provider=microsoft_graph relevant. NEEDS_RECONNECT statt
+    eines stillen Ausfalls, wenn das Refresh-Token nicht mehr eingeloest
+    werden kann (z.B. nach sehr langer Inaktivitaet oder einer Aenderung der
+    Conditional-Access-Regeln im Tenant) - der Sync-Job ueberspringt Konten
+    in diesem Zustand, die Postfaecher-Oberflaeche zeigt einen "Postfach neu
+    verbinden"-Button statt eines wiederholten Fehlerlogs."""
+
+    CONNECTED = "connected"
+    NEEDS_RECONNECT = "needs_reconnect"

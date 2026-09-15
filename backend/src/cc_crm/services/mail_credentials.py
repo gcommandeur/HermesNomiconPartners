@@ -64,3 +64,12 @@ def decrypt_password(ciphertext: str, settings: Settings | None = None) -> str:
             "vermutlich wurde CC_CRM_MAIL_CREDENTIALS_ENCRYPTION_KEY nachträglich "
             "geändert. Die Zugangsdaten müssen dann neu hinterlegt werden."
         ) from exc
+
+
+def decrypt_with_ttl(ciphertext: str, ttl_seconds: int, settings: Settings | None = None) -> str:
+    """Wie decrypt_password, aber mit Fernets eingebauter Ablaufpruefung -
+    wirft InvalidToken auch bei einem an sich gueltigen, aber zu alten
+    Chiffrat. Genutzt fuer den kurzlebigen OAuth-`state`-Parameter (siehe
+    integrations/microsoft_graph/oauth_state.py), NICHT fuer Postfach-
+    Passwoerter/Refresh-Tokens (die sollen nicht ablaufen)."""
+    return _fernet(settings).decrypt(ciphertext.encode("utf-8"), ttl=ttl_seconds).decode("utf-8")

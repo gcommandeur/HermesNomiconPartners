@@ -48,7 +48,7 @@ from sqlalchemy.orm import Session
 
 from cc_crm.core.errors import BusinessRuleError
 from cc_crm.models.activity import Activity
-from cc_crm.models.enums import MailDirection, MailMatchStatus
+from cc_crm.models.enums import MailAccountProvider, MailDirection, MailMatchStatus
 from cc_crm.models.mail import MailAccount, MailMessage
 from cc_crm.services.mail_credentials import decrypt_password
 from cc_crm.services.storage import read_document_bytes
@@ -135,6 +135,11 @@ def _send_via_smtplib(
     typischerweise Port 465), sonst STARTTLS (typischerweise Port 587) -
     gleiche Zwei-Wege-Unterscheidung wie MailAccount.imap_use_ssl fuer IMAP
     (siehe mail_sync.py::fetch_via_imap)."""
+    # smtp_host/username sind nur fuer provider=microsoft_graph nullable -
+    # dieser Pfad wird ausschliesslich fuer imap_smtp-Konten aufgerufen
+    # (siehe send_mail()).
+    assert account.smtp_host is not None
+    assert account.username is not None
     if account.smtp_use_ssl:
         with smtplib.SMTP_SSL(account.smtp_host, account.smtp_port, timeout=20) as smtp:
             smtp.login(account.username, password)
@@ -155,6 +160,8 @@ def _append_to_sent_via_imaplib(
     False ist KEIN Fehler fuer den Aufrufer (siehe send_mail())."""
     import imaplib
 
+    assert account.imap_host is not None
+    assert account.username is not None
     raw = message.as_bytes()
     box_cls = imaplib.IMAP4_SSL if account.imap_use_ssl else imaplib.IMAP4
     with box_cls(account.imap_host, account.imap_port) as imap:
@@ -167,6 +174,45 @@ def _append_to_sent_via_imaplib(
             if status == "OK":
                 return True
     return False
+
+
+def _send_via_graph(
+    session: Session,
+    *,
+    account: MailAccount,
+    to_address: str,
+    to_name: str | None,
+    subject: str,
+    body_text: str,
+    attachments: list[MailAttachment],
+) -> str:
+    """Graph-Pfad fuer provider=microsoft_graph - `POST /me/sendMail` legt
+    die Mail automatisch in "Gesendete Elemente" ab, das IMAP-APPEND von
+    _append_to_sent_via_imaplib entfaellt hier komplett (siehe M365-
+    Integrationsplan). Graph gibt bei sendMail keine Message-ID zurueck
+    (fire-and-forget, 202 Accepted ohne Body) - fuer den lokalen Dedup-
+    Schluessel wird deshalb, wie beim IMAP/SMTP-Pfad, eine eigene erzeugt
+    (make_msgid); Kollisionsgefahr mit dem eingehenden Sync besteht nicht,
+    da der Mail-Sync ausschliesslich den Posteingang beobachtet (siehe
+    mail_sync.py::fetch_via_graph), nicht "Gesendete Elemente"."""
+    from cc_crm.integrations.microsoft_graph.client import GraphApiError
+    from cc_crm.integrations.microsoft_graph.client import send_mail as graph_send_mail
+    from cc_crm.services.graph_token_service import get_valid_access_token
+
+    access_token = get_valid_access_token(session, account)
+    try:
+        graph_send_mail(
+            access_token,
+            to_address=to_address,
+            to_name=to_name,
+            subject=subject,
+            body_text=body_text,
+            attachments=[(a.filename, a.content_type, a.content) for a in attachments],
+        )
+    except GraphApiError as exc:
+        logger.warning("Graph-Versand ueber %s fehlgeschlagen", account.address, exc_info=True)
+        raise MailSendError(f"Versand über {account.address} fehlgeschlagen: {exc}") from exc
+    return make_msgid(domain=account.address.rsplit("@", 1)[-1])
 
 
 def _start_of_today_utc() -> datetime:
@@ -231,7 +277,6 @@ def send_mail(
             f"Konten') anpassen."
         )
 
-    password = decrypt_password(account.encrypted_password)
     resolved_attachments = [
         MailAttachment(
             filename=ref.filename,
@@ -240,41 +285,55 @@ def send_mail(
         )
         for ref in (attachments or [])
     ]
-    mime_message = _build_mime_message(
-        from_address=account.address,
-        from_name=account.label,
-        to_address=to_address,
-        to_name=to_name,
-        subject=subject,
-        body_text=body_text,
-        attachments=resolved_attachments,
-    )
 
-    try:
-        smtp_sender(account, password, mime_message, to_address)
-    except Exception as exc:  # noqa: BLE001 - jeder Transportfehler ist ein Versandfehler
-        logger.warning("SMTP-Versand ueber %s fehlgeschlagen", account.address, exc_info=True)
-        raise MailSendError(f"Versand über {account.address} fehlgeschlagen: {exc}") from exc
-
-    try:
-        appended = imap_appender(account, password, mime_message)
-        if not appended:
-            logger.warning(
-                "Gesendete Mail ueber %s konnte in keinem bekannten Sent-Ordner "
-                "abgelegt werden - der Versand selbst war erfolgreich.",
-                account.address,
-            )
-    except Exception:  # noqa: BLE001 - Sent-Kopie ist best effort, Versand ist bereits erfolgt
-        logger.warning(
-            "Ablage im Sent-Ordner von %s fehlgeschlagen (Versand war bereits erfolgreich)",
-            account.address,
-            exc_info=True,
+    if account.provider == MailAccountProvider.MICROSOFT_GRAPH:
+        message_id = _send_via_graph(
+            session,
+            account=account,
+            to_address=to_address,
+            to_name=to_name,
+            subject=subject,
+            body_text=body_text,
+            attachments=resolved_attachments,
         )
+    else:
+        assert account.encrypted_password is not None
+        password = decrypt_password(account.encrypted_password)
+        mime_message = _build_mime_message(
+            from_address=account.address,
+            from_name=account.label,
+            to_address=to_address,
+            to_name=to_name,
+            subject=subject,
+            body_text=body_text,
+            attachments=resolved_attachments,
+        )
+        try:
+            smtp_sender(account, password, mime_message, to_address)
+        except Exception as exc:  # noqa: BLE001 - jeder Transportfehler ist ein Versandfehler
+            logger.warning("SMTP-Versand ueber %s fehlgeschlagen", account.address, exc_info=True)
+            raise MailSendError(f"Versand über {account.address} fehlgeschlagen: {exc}") from exc
+
+        try:
+            appended = imap_appender(account, password, mime_message)
+            if not appended:
+                logger.warning(
+                    "Gesendete Mail ueber %s konnte in keinem bekannten Sent-Ordner "
+                    "abgelegt werden - der Versand selbst war erfolgreich.",
+                    account.address,
+                )
+        except Exception:  # noqa: BLE001 - Sent-Kopie ist best effort, Versand ist bereits erfolgt
+            logger.warning(
+                "Ablage im Sent-Ordner von %s fehlgeschlagen (Versand war bereits erfolgreich)",
+                account.address,
+                exc_info=True,
+            )
+        message_id = mime_message["Message-ID"]
 
     now = datetime.now(UTC)
     record = MailMessage(
         mail_account_id=account.id,
-        message_id=mime_message["Message-ID"],
+        message_id=message_id,
         direction=MailDirection.OUTBOUND,
         from_name=account.label,
         from_address=account.address,

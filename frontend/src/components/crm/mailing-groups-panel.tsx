@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api/client";
+import { sendBulkMail } from "@/lib/api/queries";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import {
   invalidateMailingGroupsCache,
@@ -155,6 +156,41 @@ export function MailingGroupsPanel() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const [bulkSending, setBulkSending] = useState(false);
+  const [bulkSendMessage, setBulkSendMessage] = useState<string | null>(null);
+
+  async function handleBulkSend() {
+    if (!previewGroup || !selectedTemplate) return;
+    if (
+      !window.confirm(
+        `Diese Mail jetzt an alle ${previewGroup.recipients.length} Empfänger:innen von "${previewGroup.name}" senden? Alle erhalten denselben Text (keine Personalisierung pro Empfänger:in).`,
+      )
+    ) {
+      return;
+    }
+    setBulkSending(true);
+    setError(null);
+    setBulkSendMessage(null);
+    try {
+      const result = await sendBulkMail({
+        mailing_group_id: previewGroup.id,
+        subject: renderedSubject,
+        body_text: renderedBody,
+      });
+      setBulkSendMessage(
+        `${result.sent_count} Mail(s) versendet.` +
+          (result.failed.length > 0 ? ` ${result.failed.length} fehlgeschlagen.` : "") +
+          (result.skipped_due_to_daily_limit_count > 0
+            ? ` ${result.skipped_due_to_daily_limit_count} wegen Tageslimit übersprungen.`
+            : ""),
+      );
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Versand fehlgeschlagen.");
+    } finally {
+      setBulkSending(false);
+    }
+  }
+
   if (isLoading || templatesLoading) {
     return (
       <div className="space-y-2">
@@ -259,7 +295,7 @@ export function MailingGroupsPanel() {
       {previewGroup && (
         <Modal
           title={previewGroup.name}
-          eyebrow={`${previewGroup.recipients.length} Empfänger:innen — nur Entwurf`}
+          eyebrow={`${previewGroup.recipients.length} Empfänger:innen`}
           maxWidth="max-w-2xl"
           onClose={() => setPreviewGroupId(null)}
         >
@@ -283,11 +319,22 @@ export function MailingGroupsPanel() {
                 <p className="mt-3 text-[10px] uppercase tracking-wider text-[#94A3B8]">Entwurf</p>
                 <pre className="whitespace-pre-wrap rounded-md bg-[#071426] p-3 text-xs leading-6 text-[#CBD5E1]">{renderedBody}</pre>
                 <p className="text-xs text-[#8b9196]">
-                  Nur Textvorschau zum Kopieren — kein automatischer Versand. Beim tatsächlichen Versand an alle {previewGroup.recipients.length} Empfänger:innen würde die Vorlage individuell personalisiert.
+                  Betreff/Text wurden mit den Daten von {exampleRecipient?.name ?? "der ersten Person"} befüllt — beim Versand geht genau dieser Text unverändert an alle {previewGroup.recipients.length} Empfänger:innen (keine Personalisierung pro Person). Vor dem Senden oben bei Bedarf noch anpassen bzw. hier kopieren.
                 </p>
-                <Button size="sm" onClick={handleCopy}>
-                  {copied ? <Check size={14} /> : <Copy size={14} />}{copied ? "Kopiert" : "Text kopieren"}
-                </Button>
+                {bulkSendMessage && (
+                  <div className="rounded-lg border border-[#4f8a68]/35 bg-[#244d38]/45 p-3 text-xs text-[#a9d6b8]">
+                    {bulkSendMessage}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={handleCopy}>
+                    {copied ? <Check size={14} /> : <Copy size={14} />}{copied ? "Kopiert" : "Text kopieren"}
+                  </Button>
+                  <Button size="sm" disabled={bulkSending} onClick={handleBulkSend}>
+                    <Mail size={14} />
+                    {bulkSending ? "Sende…" : `Jetzt an alle ${previewGroup.recipients.length} senden`}
+                  </Button>
+                </div>
               </>
             ) : (
               <p className="text-sm text-[#858b90]">Vorlage auswählen, um eine Vorschau zu sehen.</p>
