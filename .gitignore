@@ -58,3 +58,8 @@ temp/
 _cleanup_backup_legacy/
 
 .claude/settings.local.json
+
+# DigitalOcean App-Spec-Exports (doctl apps spec get) - enthalten
+# EV[...]-verschluesselte Secret-Referenzen, sollen trotzdem nie versehentlich
+# eingecheckt werden (Auftrag "doctl einrichten", 2026-09-16).
+app-spec*.yaml
