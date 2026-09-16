@@ -12,6 +12,7 @@ from cc_crm.api.v1.contacts import router as contacts_router
 from cc_crm.api.v1.geo import router as geo_router
 from cc_crm.api.v1.imports import router as imports_router
 from cc_crm.api.v1.jobs import router as jobs_router
+from cc_crm.api.v1.mail_accounts import public_router as mail_accounts_public_router
 from cc_crm.api.v1.mail_accounts import router as mail_accounts_router
 from cc_crm.api.v1.mail_send import router as mail_send_router
 from cc_crm.api.v1.mailing_groups import router as mailing_groups_router
@@ -34,6 +35,13 @@ api_router.include_router(auth_router, tags=["auth"])
 # Kein Bearer-Auth moeglich (Outlook-Abo einer Internet-URL) - eigener,
 # token-basierter Schutz direkt im Endpunkt (siehe calendar_feed.py).
 api_router.include_router(calendar_feed_router, tags=["calendar-feed"])
+# Kein Bearer-Auth moeglich (Microsoft leitet den Browser nach dem OAuth-
+# Consent direkt hierher zurueck, ohne Authorization-Header) - eigener,
+# state-Parameter-basierter Schutz direkt im Endpunkt (siehe
+# mail_accounts.py::mail_oauth_callback und integrations/microsoft_graph/
+# oauth_state.py). Live-Vorfall: lag zunaechst faelschlich in
+# protected_router und lieferte 401 statt den OAuth-Flow abzuschliessen.
+api_router.include_router(mail_accounts_public_router, tags=["mail-accounts-oauth-callback"])
 
 protected_router = APIRouter(dependencies=[Depends(get_current_user)])
 protected_router.include_router(calendar_events_router, tags=["calendar-events"])

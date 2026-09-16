@@ -32,6 +32,19 @@ from cc_crm.services.mail_sync import MailSyncService
 
 router = APIRouter(prefix="/mail-accounts")
 
+# `oauth/callback` (unten) MUSS ohne die globale Bearer-Auth-Pflicht
+# erreichbar sein - Microsoft leitet den Browser direkt hierher zurueck,
+# ohne Authorization-Header (kein Umweg ueber den Next.js-Proxy, siehe
+# Docstring von mail_oauth_callback). Ein eigener Router ohne
+# `Depends(get_current_user)`, separat und UNPROTECTED auf api_router
+# registriert (siehe api/v1/router.py) - analog zu calendar_feed_router
+# dort, der aus demselben Grund (kein Bearer-Auth moeglich) ebenfalls
+# ausserhalb von protected_router liegt. Live-Vorfall: die Route lag
+# zunaechst in `router` (dem hier in protected_router eingehaengten) und
+# scheiterte deshalb prod-seitig mit 401 "Missing bearer token", bevor sie
+# ueberhaupt state/code auswerten konnte.
+public_router = APIRouter(prefix="/mail-accounts")
+
 
 def _oauth_redirect_uri() -> str:
     """Muss Zeichen-fuer-Zeichen mit der in Entra ID hinterlegten Redirect-
@@ -139,7 +152,7 @@ def start_mail_oauth(admin: AdminUser) -> MailOAuthStartResult:
     return MailOAuthStartResult(authorization_url=url)
 
 
-@router.get("/oauth/callback", include_in_schema=False)
+@public_router.get("/oauth/callback", include_in_schema=False)
 def mail_oauth_callback(
     session: DatabaseSession,
     code: str | None = None,
