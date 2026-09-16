@@ -549,6 +549,147 @@ class TestCalendarGraphSync:
             remaining = session.query(CalendarEvent).filter(CalendarEvent.id == event.id).first()
             assert remaining is None
 
+    def test_pull_created_event_is_not_echoed_back_as_a_local_change(
+        self, session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Prod-Vorfall ("Phantom-Push"): ein per Pull neu angelegtes Event
+        darf beim naechsten sync_account_calendar()-Lauf NICHT per
+        update_event() an Graph zurueckgeschickt werden, nur weil sein
+        TimestampMixin.updated_at (onupdate=func.now()) durch den Pull selbst
+        gesetzt wurde - genau das hat produktiv echte Outlook-Termine mit
+        (zwischenzeitlich falsch geparsten) CRM-Zeiten ueberschrieben."""
+        monkeypatch.setattr(
+            graph_token_service,
+            "refresh_access_token",
+            lambda *, refresh_token, settings=None: GraphTokens(
+                access_token="access-1",
+                refresh_token="refresh-1",
+                expires_in=3600,
+                scope="Calendars.ReadWrite",
+            ),
+        )
+        from cc_crm.integrations.microsoft_graph.client import DeltaCalendarResult
+
+        graph_event = GraphEvent(
+            id="graph-evt-phantom",
+            subject="Kundentermin",
+            body_text=None,
+            start_at=datetime(2026, 9, 20, 16, 0),
+            end_at=datetime(2026, 9, 20, 16, 30),
+            location=None,
+            last_modified_at=datetime(2026, 9, 15, 8, 0, tzinfo=UTC),
+        )
+        monkeypatch.setattr(
+            calendar_graph_sync,
+            "fetch_calendar_delta",
+            lambda access_token, *, delta_link, page_limit=200: DeltaCalendarResult(
+                events=[graph_event], delta_link="cal-delta-phantom"
+            ),
+        )
+
+        def failing_update_event(access_token: str, **kwargs: object) -> None:
+            raise AssertionError(
+                "update_event() darf fuer ein rein per Pull entstandenes/"
+                "geaendertes Event nicht aufgerufen werden (Phantom-Push)"
+            )
+
+        monkeypatch.setattr(calendar_graph_sync, "update_event", failing_update_event)
+
+        with session_factory() as session:
+            user = _make_user(session)
+            account = _make_graph_account(session, user_id=user.id)
+
+            # Lauf 1: Pull legt das Event neu an.
+            calendar_graph_sync.sync_account_calendar(session, account)
+            event = session.scalar(
+                select(CalendarEvent).where(
+                    CalendarEvent.external_graph_event_id == "graph-evt-phantom"
+                )
+            )
+            assert event is not None
+            assert event.start_at == datetime(2026, 9, 20, 16, 0)
+
+            # Lauf 2: nichts hat sich auf Graph-Seite geaendert (gleicher
+            # delta-Aufruf liefert dasselbe last_modified_at) - der Push darf
+            # dieses Event NICHT als lokal geaendert erkennen und
+            # zurueckschicken. failing_update_event wuerde das aufdecken.
+            calendar_graph_sync.sync_account_calendar(session, account)
+
+    def test_pull_updated_event_is_not_echoed_back_as_a_local_change(
+        self, session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Wie oben, aber fuer ein bereits bekanntes Event, dessen Zeit per
+        Pull aktualisiert wird (der eigentliche Prod-Fall: Graph liefert eine
+        neu geparste, korrigierte Zeit fuer ein bestehendes Event)."""
+        monkeypatch.setattr(
+            graph_token_service,
+            "refresh_access_token",
+            lambda *, refresh_token, settings=None: GraphTokens(
+                access_token="access-1",
+                refresh_token="refresh-1",
+                expires_in=3600,
+                scope="Calendars.ReadWrite",
+            ),
+        )
+        from cc_crm.integrations.microsoft_graph.client import DeltaCalendarResult
+
+        with session_factory() as session:
+            user = _make_user(session)
+            account = _make_graph_account(session, user_id=user.id)
+            event = CalendarEvent(
+                title="Kundentermin",
+                start_at=datetime(2026, 9, 20, 14, 0),
+                owner_user_id=user.id,
+                created_by_user_id=user.id,
+                external_graph_event_id="graph-evt-phantom-2",
+                external_graph_last_synced_at=datetime(2026, 9, 1, tzinfo=UTC),
+            )
+            session.add(event)
+            session.commit()
+            # Simuliert ein bereits vorher erfolgreich synchronisiertes Event
+            # (sonst wuerde schon der ERSTE Push-Durchlauf zuschlagen, weil
+            # local_last_synced_at fuer ein frisch angelegtes Event None ist
+            # - das ist push's korrektes Verhalten fuer ein noch nie
+            # gepushtes lokales Event, nicht der hier zu testende Bug).
+            from sqlalchemy import func as sa_func
+
+            event.local_last_synced_at = sa_func.now()
+            session.commit()
+
+            corrected_graph_event = GraphEvent(
+                id="graph-evt-phantom-2",
+                subject="Kundentermin",
+                body_text=None,
+                start_at=datetime(2026, 9, 20, 16, 0),
+                end_at=None,
+                location=None,
+                last_modified_at=datetime(2026, 9, 16, 8, 0, tzinfo=UTC),
+            )
+            monkeypatch.setattr(
+                calendar_graph_sync,
+                "fetch_calendar_delta",
+                lambda access_token, *, delta_link, page_limit=200: DeltaCalendarResult(
+                    events=[corrected_graph_event], delta_link="cal-delta-phantom-2"
+                ),
+            )
+
+            def failing_update_event(access_token: str, **kwargs: object) -> None:
+                raise AssertionError(
+                    "update_event() darf fuer ein rein per Pull korrigiertes "
+                    "Event nicht aufgerufen werden (Phantom-Push)"
+                )
+
+            monkeypatch.setattr(calendar_graph_sync, "update_event", failing_update_event)
+
+            calendar_graph_sync.sync_account_calendar(session, account)
+            refreshed = session.get(CalendarEvent, event.id)
+            assert refreshed is not None
+            assert refreshed.start_at == datetime(2026, 9, 20, 16, 0)
+
+            # Zweiter Lauf: gleicher delta-Aufruf (kein neues last_modified_at)
+            # - failing_update_event bleibt scharf geschaltet.
+            calendar_graph_sync.sync_account_calendar(session, account)
+
     def test_push_delete_to_graph_is_best_effort_and_does_not_raise(
         self, session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
     ) -> None:

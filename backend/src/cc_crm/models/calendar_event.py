@@ -75,6 +75,21 @@ class CalendarEvent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # gespiegelt (siehe services/calendar_graph_sync.py). external_graph_
     # event_id ist die stabile Graph-Event-ID fuer Update/Delete-Aufrufe;
     # external_graph_last_synced_at ist die Basis der Last-Write-Wins-
-    # Konfliktloesung (Vergleich mit Graphs lastModifiedDateTime).
+    # Konfliktloesung (Vergleich mit Graphs lastModifiedDateTime) - reiner
+    # Graph-Zeitstempel, NICHT fuer den Push-Trigger verwenden (siehe unten).
     external_graph_event_id: Mapped[str | None] = mapped_column(String(200), index=True)
     external_graph_last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Prod-Vorfall behoben ("Phantom-Push"): updated_at (TimestampMixin,
+    # onupdate=func.now()) wird bei JEDER Spaltenaenderung hochgezaehlt -
+    # auch wenn ein Pull (Graph->CRM) die Werte geschrieben hat, nicht der
+    # Nutzer. Wenn _push_local_changes() dafuer updated_at gegen den
+    # GRAPH-Zeitstempel external_graph_last_synced_at vergleicht, sieht
+    # JEDE Pull-Aenderung wie eine lokale Aenderung aus - der (gerade erst
+    # von Graph korrigierte) Wert wird umgehend wieder zurueckgeschickt.
+    # local_last_synced_at ist die eigene, CRM-interne Uhr fuer genau diesen
+    # Vergleich: sowohl Push als auch Pull setzen sie per func.now() IN
+    # DERSELBEN Schreiboperation wie die Inhaltsfelder, damit sie exakt mit
+    # dem resultierenden updated_at uebereinstimmt (kein Read-Back noetig) -
+    # erst eine ECHTE, spaetere Aenderung laesst updated_at > local_last_
+    # synced_at wieder wahr werden.
+    local_last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

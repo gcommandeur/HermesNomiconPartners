@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from cc_crm.core.time import naive_utc
@@ -98,13 +98,16 @@ def _push_local_changes(session: Session, access_token: str, account: MailAccoun
                     location=event.location,
                 )
                 event.external_graph_event_id = graph_id
-                event.external_graph_last_synced_at = event.updated_at
-            elif event.external_graph_last_synced_at is None or naive_utc(
-                event.updated_at
-            ) > naive_utc(event.external_graph_last_synced_at):
+                event.local_last_synced_at = func.now()
+            elif event.local_last_synced_at is None or naive_utc(event.updated_at) > naive_utc(
+                event.local_last_synced_at
+            ):
                 # Nur pushen, wenn die CRM-Seite seit dem letzten Abgleich
                 # tatsaechlich geaendert wurde - sonst wuerde jeder Lauf
                 # jedes Event erneut ueberschreiben, auch ohne Aenderung.
+                # Vergleich bewusst gegen local_last_synced_at (eigene Uhr),
+                # NICHT gegen external_graph_last_synced_at (Graph-Uhr) - das
+                # war der Phantom-Push-Bug, siehe Kommentar am Modellfeld.
                 update_event(
                     access_token,
                     graph_event_id=event.external_graph_event_id,
@@ -114,7 +117,7 @@ def _push_local_changes(session: Session, access_token: str, account: MailAccoun
                     end_at=event.end_at,
                     location=event.location,
                 )
-                event.external_graph_last_synced_at = event.updated_at
+                event.local_last_synced_at = func.now()
         except GraphApiError:
             logger.warning(
                 "Push von CalendarEvent %s nach Graph fehlgeschlagen", event.id, exc_info=True
@@ -141,6 +144,13 @@ def _pull_graph_changes(session: Session, access_token: str, account: MailAccoun
                 created_by_user_id=account.oauth_connected_by_user_id,
                 external_graph_event_id=graph_event.id,
                 external_graph_last_synced_at=graph_event.last_modified_at,
+                # func.now() statt eines Python-Zeitstempels: landet in
+                # derselben INSERT-Anweisung wie updated_at (TimestampMixin,
+                # server_default=func.now()) und ist dadurch garantiert
+                # identisch - ein frisch von Graph gepulltes Event sieht
+                # sonst beim naechsten Push wie eine lokale Aenderung aus
+                # (Phantom-Push-Bug, siehe Modellfeld-Kommentar).
+                local_last_synced_at=func.now(),
             )
             session.add(event)
             continue
@@ -169,6 +179,10 @@ def _pull_graph_changes(session: Session, access_token: str, account: MailAccoun
             event.notes = graph_event.body_text
             event.location = graph_event.location
             event.external_graph_last_synced_at = graph_event.last_modified_at
+            # Siehe Kommentar oben/am Modellfeld: verhindert, dass diese
+            # Pull-Aenderung beim naechsten Lauf als "lokale Aenderung"
+            # erkannt und postwendend an Graph zurueckgepusht wird.
+            event.local_last_synced_at = func.now()
 
     if result.removed_ids:
         session.query(CalendarEvent).filter(
