@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 
@@ -177,7 +177,15 @@ class DeltaCalendarResult:
     delta_link: str | None = None
 
 
-_EVENT_SELECT = "id,subject,body,start,end,location,lastModifiedDateTime"
+# Fenster fuer die ERSTE Delta-Anfrage einer neuen Synchronisation (nur beim
+# allerersten Lauf ohne gespeicherten delta_link relevant - jede Folge-
+# Anfrage nutzt den zurueckgelieferten @odata.nextLink/@odata.deltaLink
+# unveraendert, der Zeitraum steckt darin bereits verschluesselt, siehe
+# fetch_calendar_delta-Docstring). Grosszuegig bemessen, damit realistische
+# CRM-Termine (Interviews/Quali-Calls Wochen im Voraus, Nachtraege fuer
+# vergangene Termine) sicher im Fenster liegen.
+_CALENDAR_DELTA_WINDOW_PAST_DAYS = 365
+_CALENDAR_DELTA_WINDOW_FUTURE_DAYS = 730
 
 
 def fetch_calendar_delta(
@@ -185,13 +193,39 @@ def fetch_calendar_delta(
 ) -> DeltaCalendarResult:
     """Analog zu fetch_inbox_delta, aber fuer den Standardkalender - hier
     WERDEN Loeschungen ausgewertet (@removed-Marker), das ist die Basis fuer
-    die Graph-->CRM-Loeschungserkennung in services/calendar_graph_sync.py."""
-    url = delta_link or (
-        f"{_GRAPH_ROOT}/me/calendar/events/delta?$select={_EVENT_SELECT}&$top={page_limit}"
-    )
+    die Graph-->CRM-Loeschungserkennung in services/calendar_graph_sync.py.
+
+    WICHTIG (Prod-Vorfall behoben): Kalender-Delta-Query existiert bei
+    Microsoft Graph NUR auf `/me/calendarView/delta` (an ein Zeitfenster
+    gebunden) - ein reiner `/me/events/delta` bzw. `/me/calendar/events/
+    delta` ohne Zeitfenster ist laut Microsoft-Doku nur in der BETA-Version
+    verfuegbar, in v1.0 (siehe _GRAPH_ROOT) nicht. Der vorherige Code nutzte
+    genau diesen nicht existierenden v1.0-Endpoint - der Aufruf schlug fehl,
+    die Exception wurde im Scheduled Job aber nur nach stdout geloggt (siehe
+    scripts/run_graph_sync.py), nicht in einem fuer den Nutzer sichtbaren
+    Feld (anders als MailAccount.sync_error beim Mail-Sync) - dadurch lief
+    der Push CRM->Graph weiter (andere Endpoints, laeuft VOR diesem Aufruf
+    in sync_account_calendar), der Pull Graph->CRM aber nie.
+    `$select` ist bei calendarView/delta laut Microsoft-Doku zudem NICHT
+    unterstuetzt - die Seitengroesse steuert stattdessen der
+    `Prefer: odata.maxpagesize=...`-Header, das Zeitfenster nur die
+    Start-URL der ERSTEN Anfrage (Folge-Links kodieren es bereits)."""
+    if delta_link:
+        url = delta_link
+    else:
+        now = datetime.now(UTC)
+        window_start = now - timedelta(days=_CALENDAR_DELTA_WINDOW_PAST_DAYS)
+        window_end = now + timedelta(days=_CALENDAR_DELTA_WINDOW_FUTURE_DAYS)
+        url = (
+            f"{_GRAPH_ROOT}/me/calendarView/delta"
+            f"?startDateTime={window_start.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            f"&endDateTime={window_end.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+        )
+    headers = _headers(access_token)
+    headers["Prefer"] = f"odata.maxpagesize={page_limit}"
     result = DeltaCalendarResult()
     while url:
-        response = httpx.get(url, headers=_headers(access_token), timeout=30)
+        response = httpx.get(url, headers=headers, timeout=30)
         _raise_for_status(response, "calendar delta")
         body = response.json()
         for item in body.get("value", []):

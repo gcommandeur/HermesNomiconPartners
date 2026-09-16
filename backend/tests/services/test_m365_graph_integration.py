@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 
 import pytest
 from cryptography.fernet import Fernet
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.integrations.microsoft_graph.auth import GraphReauthRequiredError, GraphTokens
@@ -373,6 +374,87 @@ class TestMailSyncGraphProvider:
 
 
 class TestCalendarGraphSync:
+    def test_sync_pushes_new_crm_event_and_pulls_new_outlook_event_in_one_run(
+        self, session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Regressionstest fuer den gemeldeten Prod-Vorfall: Push (CRM->Graph)
+        funktionierte, Pull (Graph->CRM) nicht. Prueft explizit BEIDE
+        Richtungen in einem einzigen sync_account_calendar()-Aufruf, statt
+        wie die uebrigen Tests hier nur eine Richtung isoliert."""
+        monkeypatch.setattr(
+            graph_token_service,
+            "refresh_access_token",
+            lambda *, refresh_token, settings=None: GraphTokens(
+                access_token="access-1",
+                refresh_token="refresh-1",
+                expires_in=3600,
+                scope="Calendars.ReadWrite",
+            ),
+        )
+        from cc_crm.integrations.microsoft_graph.client import DeltaCalendarResult
+
+        create_calls: list[dict[str, object]] = []
+
+        def fake_create_event(access_token: str, **kwargs: object) -> str:
+            create_calls.append(kwargs)
+            return "graph-evt-pushed"
+
+        outlook_event = GraphEvent(
+            id="graph-evt-from-outlook",
+            subject="SYNC-TEST Outlook->CRM",
+            body_text=None,
+            start_at=datetime(2026, 9, 16, 14, 0, tzinfo=UTC),
+            end_at=datetime(2026, 9, 16, 14, 30, tzinfo=UTC),
+            location=None,
+            last_modified_at=datetime(2026, 9, 16, 10, 5, tzinfo=UTC),
+        )
+        monkeypatch.setattr(calendar_graph_sync, "create_event", fake_create_event)
+        monkeypatch.setattr(
+            calendar_graph_sync,
+            "fetch_calendar_delta",
+            lambda access_token, *, delta_link, page_limit=200: DeltaCalendarResult(
+                events=[outlook_event], delta_link="cal-delta-1"
+            ),
+        )
+
+        with session_factory() as session:
+            user = _make_user(session)
+            account = _make_graph_account(session, user_id=user.id)
+            crm_event = CalendarEvent(
+                title="SYNC-TEST bitte ignorieren",
+                start_at=datetime(2026, 9, 16, 14, 0, tzinfo=UTC),
+                end_at=datetime(2026, 9, 16, 14, 30, tzinfo=UTC),
+                owner_user_id=user.id,
+                created_by_user_id=user.id,
+            )
+            session.add(crm_event)
+            session.commit()
+            crm_event_id = crm_event.id
+
+            calendar_graph_sync.sync_account_calendar(session, account)
+
+            # Push: das CRM-eigene Event wurde an Graph geschickt und traegt
+            # jetzt dessen Event-ID.
+            assert len(create_calls) == 1
+            assert create_calls[0]["title"] == "SYNC-TEST bitte ignorieren"
+            refreshed_crm_event = session.get(CalendarEvent, crm_event_id)
+            assert refreshed_crm_event is not None
+            assert refreshed_crm_event.external_graph_event_id == "graph-evt-pushed"
+
+            # Pull: das in Outlook angelegte Event ist jetzt als eigene
+            # CalendarEvent-Zeile im CRM vorhanden - der eigentliche Bug.
+            pulled_event = session.scalar(
+                select(CalendarEvent).where(
+                    CalendarEvent.external_graph_event_id == "graph-evt-from-outlook"
+                )
+            )
+            assert pulled_event is not None
+            assert pulled_event.title == "SYNC-TEST Outlook->CRM"
+            assert pulled_event.owner_user_id == user.id
+
+            all_events = session.scalars(select(CalendarEvent)).all()
+            assert len(all_events) == 2
+
     def test_sync_creates_new_local_event_from_graph_delta(
         self, session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
     ) -> None:
