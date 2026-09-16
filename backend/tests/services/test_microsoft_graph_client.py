@@ -30,7 +30,9 @@ import pytest
 
 from cc_crm.integrations.microsoft_graph.client import (
     GraphApiError,
+    create_event,
     fetch_calendar_delta,
+    update_event,
 )
 
 
@@ -251,3 +253,103 @@ def test_error_response_raises_graph_api_error(monkeypatch: pytest.MonkeyPatch) 
 
     with pytest.raises(GraphApiError, match="Invalid query parameter"):
         fetch_calendar_delta("access-1", delta_link=None)
+
+
+class TestEventPayloadTimezoneHandling:
+    """Zweiter, eigenstaendiger Prod-Bug (zusaetzlich zum Phantom-Push):
+    CalendarEvent.start_at/end_at sind app-weit naive Europe/Berlin-Ziffern,
+    aber Postgres' DateTime(timezone=True)-Spalten liefern beim Auslesen
+    tz-aware Werte zurueck (anders als SQLite - siehe core/time.py::
+    naive_utc()-Docstring). _event_payload() rief bisher blind .isoformat()
+    auf, was bei einem aware Wert einen "+00:00"-Suffix an die (eigentlich
+    schon Berlin-gemeinten) Ziffern haengt, waehrend GLEICHZEITIG "timeZone":
+    "Europe/Berlin" mitgeschickt wird - dieser Widerspruch hat Graph zu einer
+    ZUSAETZLICHEN 2h-Verschiebung beim Schreiben veranlasst (Termine landeten
+    in Outlook 2h weiter verschoben als im CRM gespeichert)."""
+
+    def test_create_event_strips_tzinfo_before_sending_to_graph(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_post(url: str, *, headers: dict[str, str], json: dict, timeout: float):
+            captured["json"] = json
+            return _FakeResponse(201, {"id": "graph-evt-new"})
+
+        monkeypatch.setattr(httpx, "post", fake_post)
+
+        # tz-aware, wie es aus einer Postgres-DateTime(timezone=True)-Spalte
+        # zurueckkommt - die Ziffern (14:00) sind bereits die gewollte
+        # Berlin-Ortszeit, tzinfo=UTC ist hier nur ein Artefakt des DB-
+        # Rundwegs, keine echte UTC-Aussage.
+        aware_start = datetime(2026, 9, 16, 14, 0, tzinfo=UTC)
+        aware_end = datetime(2026, 9, 16, 14, 30, tzinfo=UTC)
+
+        graph_id = create_event(
+            "access-1",
+            title="Kundentermin",
+            body_text=None,
+            start_at=aware_start,
+            end_at=aware_end,
+            location=None,
+        )
+
+        assert graph_id == "graph-evt-new"
+        payload = captured["json"]
+        assert payload["start"]["dateTime"] == "2026-09-16T14:00:00"
+        assert payload["end"]["dateTime"] == "2026-09-16T14:30:00"
+        assert payload["start"]["timeZone"] == "Europe/Berlin"
+        # Kein Offset-Suffix - genau das hat die zusaetzliche Verschiebung
+        # verursacht.
+        assert "+" not in payload["start"]["dateTime"]
+        assert "+" not in payload["end"]["dateTime"]
+
+    def test_update_event_strips_tzinfo_before_sending_to_graph(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_patch(url: str, *, headers: dict[str, str], json: dict, timeout: float):
+            captured["json"] = json
+            return _FakeResponse(200, {})
+
+        monkeypatch.setattr(httpx, "patch", fake_patch)
+
+        update_event(
+            "access-1",
+            graph_event_id="graph-evt-1",
+            title="Kundentermin",
+            body_text=None,
+            start_at=datetime(2026, 9, 16, 14, 0, tzinfo=UTC),
+            end_at=None,
+            location=None,
+        )
+
+        payload = captured["json"]
+        assert payload["start"]["dateTime"] == "2026-09-16T14:00:00"
+        assert payload["end"]["dateTime"] == "2026-09-16T14:00:00"
+
+    def test_create_event_leaves_naive_datetimes_unchanged(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Der Normalfall (naive Eingabe, z.B. aus SQLite oder einem frisch
+        im Python-Prozess erzeugten Wert) darf sich durch die Absicherung
+        nicht aendern."""
+        captured: dict[str, object] = {}
+
+        def fake_post(url: str, *, headers: dict[str, str], json: dict, timeout: float):
+            captured["json"] = json
+            return _FakeResponse(201, {"id": "graph-evt-new"})
+
+        monkeypatch.setattr(httpx, "post", fake_post)
+
+        create_event(
+            "access-1",
+            title="Kundentermin",
+            body_text=None,
+            start_at=datetime(2026, 9, 16, 14, 0),
+            end_at=None,
+            location=None,
+        )
+
+        assert captured["json"]["start"]["dateTime"] == "2026-09-16T14:00:00"

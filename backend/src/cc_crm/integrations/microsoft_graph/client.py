@@ -287,6 +287,25 @@ def fetch_calendar_delta(
     return result
 
 
+def _naive_isoformat(value: datetime) -> str:
+    """CalendarEvent.start_at/end_at sind app-weit naive Europe/Berlin-
+    Wanduhrzeit-Ziffern (siehe _BERLIN_TZ-Kommentar oben). ABER: Postgres'
+    DateTime(timezone=True)-Spalten liefern beim Auslesen tz-aware Werte
+    zurueck (anders als SQLite, das tzinfo auf dem Rundweg verwirft - siehe
+    core/time.py::naive_utc()-Docstring) - typischerweise mit UTC-tzinfo,
+    OBWOHL die gespeicherten Ziffern Berlin-Ortszeit bedeuten. Ein blankes
+    .isoformat() auf so einem Wert haengt einen "+00:00"-Suffix an unsere
+    Berlin-Ziffern, waehrend der Payload GLEICHZEITIG "timeZone": "Europe/
+    Berlin" behauptet - dieser Widerspruch hat Graph dazu gebracht, beim
+    Schreiben eine ZUSAETZLICHE Verschiebung einzubauen (Prod-Vorfall:
+    Termine landeten in Outlook 2h weiter verschoben als im CRM). Deshalb
+    hier immer zuerst tzinfo entfernen (NICHT konvertieren - die Ziffern
+    sind bereits die gewollte Berlin-Ortszeit), dann erst isoformat()."""
+    if value.tzinfo is not None:
+        value = value.replace(tzinfo=None)
+    return value.isoformat()
+
+
 def _event_payload(
     *,
     title: str,
@@ -299,8 +318,8 @@ def _event_payload(
     return {
         "subject": title,
         "body": {"contentType": "Text", "content": body_text or ""},
-        "start": {"dateTime": start_at.isoformat(), "timeZone": "Europe/Berlin"},
-        "end": {"dateTime": effective_end.isoformat(), "timeZone": "Europe/Berlin"},
+        "start": {"dateTime": _naive_isoformat(start_at), "timeZone": "Europe/Berlin"},
+        "end": {"dateTime": _naive_isoformat(effective_end), "timeZone": "Europe/Berlin"},
         "location": {"displayName": location} if location else None,
     }
 
