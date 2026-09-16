@@ -10,12 +10,23 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import httpx
 
 from cc_crm.core.errors import BusinessRuleError
 
 _GRAPH_ROOT = "https://graph.microsoft.com/v1.0"
+
+# CalendarEvent.start_at/end_at werden in der gesamten App (Modell, Frontend,
+# manuell per "Termin anlegen" angelegte Termine) als naive Europe/Berlin-
+# Wanduhrzeit-Ziffern behandelt, nie als UTC. Graph liefert start/end als
+# {"dateTime": "...", "timeZone": "..."} OHNE Offset/Z-Suffix in der
+# angegebenen Zeitzone - da nirgends ein `Prefer: outlook.timezone=...`-
+# Header gesetzt wird, ist das defaultmaessig "UTC". Prod-Vorfall: die rohen
+# UTC-Ziffern wurden 1:1 als Berlin-Ziffern uebernommen -> 2h Differenz im
+# Sommer/CEST (Termin um 16:00 Berlin/14:00 UTC wurde als 14:00 gespeichert).
+_BERLIN_TZ = ZoneInfo("Europe/Berlin")
 
 
 class GraphApiError(BusinessRuleError):
@@ -156,6 +167,25 @@ def _parse_graph_datetime(value: str | None) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+def _parse_graph_event_datetime(value: str | None, timezone_name: str | None) -> datetime | None:
+    """Wie _parse_graph_datetime, aber speziell fuer Kalender-start/end: die
+    Ziffern werden in der von Graph mitgelieferten Zeitzone (Default "UTC",
+    siehe Kommentar bei _BERLIN_TZ) interpretiert und nach Europe/Berlin
+    konvertiert, dann tzinfo wieder entfernt - so passen sie zur
+    naive-Berlin-Ziffern-Konvention, die CalendarEvent.start_at/end_at
+    ueberall sonst in der App hat."""
+    if not value:
+        return None
+    if value.endswith("Z"):
+        # Ein Z-Suffix ist bereits ein eindeutiger UTC-Zeitpunkt - die
+        # mitgelieferte timeZone (i.d.R. "UTC") ist dann redundant.
+        aware = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    else:
+        naive = datetime.fromisoformat(value)
+        aware = naive.replace(tzinfo=ZoneInfo(timezone_name or "UTC"))
+    return aware.astimezone(_BERLIN_TZ).replace(tzinfo=None)
+
+
 # --- Kalender ----------------------------------------------------------
 
 
@@ -234,15 +264,19 @@ def fetch_calendar_delta(
                 continue
             start = item.get("start") or {}
             end = item.get("end") or {}
+            start_at = _parse_graph_event_datetime(start.get("dateTime"), start.get("timeZone"))
+            if start_at is None:
+                # Ohne Start-Zeit ist das Event fuer den CRM-Kalender nicht
+                # verwertbar (start_at ist nicht nullable) - ueberspringen
+                # statt mit einem falschen Ersatzwert zu speichern.
+                continue
             result.events.append(
                 GraphEvent(
                     id=item["id"],
                     subject=item.get("subject") or "",
                     body_text=(item.get("body") or {}).get("content"),
-                    start_at=_parse_graph_datetime(start.get("dateTime")),
-                    end_at=_parse_graph_datetime(end.get("dateTime"))
-                    if end.get("dateTime")
-                    else None,
+                    start_at=start_at,
+                    end_at=_parse_graph_event_datetime(end.get("dateTime"), end.get("timeZone")),
                     location=(item.get("location") or {}).get("displayName"),
                     last_modified_at=_parse_graph_datetime(item.get("lastModifiedDateTime")),
                 )

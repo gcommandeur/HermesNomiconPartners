@@ -128,9 +128,97 @@ def test_a_newly_created_outlook_event_is_returned(monkeypatch: pytest.MonkeyPat
     event = result.events[0]
     assert event.id == "graph-evt-outlook-1"
     assert event.subject == "SYNC-TEST Outlook->CRM"
+    # 14:00 UTC ist im September (CEST, UTC+2) 16:00 Berliner Ortszeit - genau
+    # der Prod-Vorfall "Termine 2h zurueck", siehe test_calendar_event_times_
+    # are_converted_from_utc_to_berlin_wall_clock unten fuer den direkten Test.
+    assert event.start_at == datetime(2026, 9, 16, 16, 0, 0)
+    assert event.end_at == datetime(2026, 9, 16, 16, 30, 0)
     assert event.last_modified_at == datetime(2026, 9, 16, 10, 5, 0, 123456, tzinfo=UTC)
     assert result.delta_link == "https://graph.example/delta-next"
     assert result.removed_ids == []
+
+
+def test_calendar_event_times_are_converted_from_utc_to_berlin_wall_clock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Der eigentliche Prod-Bug ("Termine sind 2h zurueck"): Graph liefert
+    start/end ohne Offset in der mitgelieferten timeZone (Default "UTC", da
+    kein `Prefer: outlook.timezone=...` gesetzt wird) - die rohen Ziffern
+    duerfen NICHT 1:1 als CalendarEvent.start_at/end_at (= Berlin-Wanduhrzeit
+    ueberall sonst in der App) uebernommen werden, sondern muessen erst nach
+    Europe/Berlin konvertiert werden."""
+
+    def fake_get(url: str, *, headers: dict[str, str], timeout: float) -> _FakeResponse:
+        return _FakeResponse(
+            200,
+            {
+                "value": [
+                    {
+                        "id": "graph-evt-tz-1",
+                        "subject": "Kundentermin",
+                        "body": {"contentType": "text", "content": None},
+                        # Kein Z-Suffix, timeZone explizit "UTC" - das reale
+                        # Graph-Format ohne Prefer-Header.
+                        "start": {"dateTime": "2026-09-16T14:00:00.0000000", "timeZone": "UTC"},
+                        "end": {"dateTime": "2026-09-16T14:30:00.0000000", "timeZone": "UTC"},
+                        "lastModifiedDateTime": "2026-09-16T10:05:00.0000000Z",
+                    }
+                ],
+                "@odata.deltaLink": "https://graph.example/delta-next",
+            },
+        )
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+
+    result = fetch_calendar_delta("access-1", delta_link=None)
+
+    event = result.events[0]
+    # CEST (UTC+2) im September - 14:00 UTC muss als 16:00 Berlin ankommen,
+    # nicht als 14:00 (das waere der Bug).
+    assert event.start_at == datetime(2026, 9, 16, 16, 0, 0)
+    assert event.end_at == datetime(2026, 9, 16, 16, 30, 0)
+
+
+def test_calendar_event_times_respect_non_utc_graph_timezone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Falls Graph doch mal eine andere Zeitzone als UTC mitliefert (z.B. weil
+    der Postfach-Nutzer eine abweichende Zeitzone eingestellt hat), muss die
+    Konvertierung ueber DIESE Zeitzone laufen, nicht blind UTC annehmen."""
+
+    def fake_get(url: str, *, headers: dict[str, str], timeout: float) -> _FakeResponse:
+        return _FakeResponse(
+            200,
+            {
+                "value": [
+                    {
+                        "id": "graph-evt-tz-2",
+                        "subject": "Termin",
+                        "body": {"contentType": "text", "content": None},
+                        # Bereits in Berlin-Ortszeit - darf NICHT nochmal
+                        # verschoben werden.
+                        "start": {
+                            "dateTime": "2026-09-16T16:00:00.0000000",
+                            "timeZone": "Europe/Berlin",
+                        },
+                        "end": {
+                            "dateTime": "2026-09-16T16:30:00.0000000",
+                            "timeZone": "Europe/Berlin",
+                        },
+                        "lastModifiedDateTime": "2026-09-16T10:05:00.0000000Z",
+                    }
+                ],
+                "@odata.deltaLink": "https://graph.example/delta-next",
+            },
+        )
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+
+    result = fetch_calendar_delta("access-1", delta_link=None)
+
+    event = result.events[0]
+    assert event.start_at == datetime(2026, 9, 16, 16, 0, 0)
+    assert event.end_at == datetime(2026, 9, 16, 16, 30, 0)
 
 
 def test_removed_marker_is_reported_as_a_deletion(monkeypatch: pytest.MonkeyPatch) -> None:
