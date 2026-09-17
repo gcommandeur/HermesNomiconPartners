@@ -17,6 +17,13 @@ Dry-Run per Default (zeigt nur alt -> neu je Termin), --commit fuer die
 echte Ausfuehrung - gleiches Muster wie scripts/fix_contact_data_quality_
 20260916.py und scripts/merge_kanzlei_duplikate.py.
 
+SICHERHEITSVORAUSSETZUNG (nicht optional): vor jedem --commit-Lauf wird
+der Vorher-Zustand (CRM + Graph) fuer ALLE uebergebenen Termine in
+backups/calendar_incident_pre_fix_<timestamp>.json geschrieben. Schlaegt
+dieser Schreibvorgang fehl, bricht das Skript VOR jeder Aenderung ab - ohne
+dieses Rollback-Artefakt gibt es keinen Weg zurueck, falls sich die
+10h-Annahme fuer irgendeinen Termin als falsch erweist.
+
 Reihenfolge pro Termin: erst CRM-DB schreiben (inkl. local_last_synced_at
 in derselben Transaktion, damit ein spaeterer Sync-Lauf das nicht wieder
 als neue lokale Aenderung missversteht), DANACH Graph per PATCH
@@ -26,11 +33,24 @@ Termin als korrigiert.
 WICHTIG: der 8. beim Vorfall gefundene Termin (CalendarEvent efc2f327-...,
 leerer Titel, Datum 29.08. lange vor dem Vorfall) gehoert NICHT in dieses
 Skript - der braucht Einzelfallpruefung, keine pauschale -10h-Korrektur
-(siehe Vorfalls-Notizen).
+(siehe scripts/investigate_recurring_series_20260916.py).
+
+VORAUSSETZUNG: der Scheduled Job "graph-sync-job" darf waehrend dieses
+Laufs NICHT gleichzeitig aktiv sein (er wuerde sonst mitten in den
+Schreibvorgang hineinsynct und die gerade korrigierten Werte erneut
+verschieben koennen - genau so ist der urspruengliche Nachlaufschaden
+entstanden). Vor der Ausfuehrung sicherstellen, dass entweder der Job
+selbst pausiert ist, oder dass das Postfach (is_active=false) den Job
+weiterhin uebersprungen haette - PLUS zusaetzlich pruefen, ob ein
+deaktiviertes Postfach ueberhaupt noch einen gueltigen Zugriffstoken
+liefert (get_valid_access_token() braucht kein is_active=true, aber falls
+der Token-Refresh trotzdem fehlschlaegt, das Postfach nur fuer die Dauer
+dieses Laufs reaktivieren, NACHDEM der Job pausiert wurde).
 
 Usage (von backend/, mit aktivierter venv, im Backend-Container):
 
-    # Dry-Run (Default) - zeigt nur an, was passieren wuerde.
+    # Dry-Run (Default) - zeigt nur an, was passieren wuerde, schreibt aber
+    # trotzdem schon das Backup-Artefakt (harmlos, rein lesend erzeugt).
     python scripts/fix_calendar_incident_times_20260916.py \
         --mail-account info@commandeurconsulting.de \
         --graph-event-id <id-darya-chyzh> \
@@ -50,8 +70,11 @@ Usage (von backend/, mit aktivierter venv, im Backend-Container):
 from __future__ import annotations
 
 import argparse
+import json
 import sys
-from datetime import timedelta
+import uuid
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -62,7 +85,6 @@ from sqlalchemy.orm import Session  # noqa: E402
 from cc_crm.infrastructure.database.session import SessionLocal  # noqa: E402
 from cc_crm.integrations.microsoft_graph.client import (  # noqa: E402
     GraphApiError,
-    GraphEvent,
     get_event,
     update_event,
 )
@@ -72,45 +94,123 @@ from cc_crm.models.mail import MailAccount  # noqa: E402
 from cc_crm.services.graph_token_service import get_valid_access_token  # noqa: E402
 
 _INCIDENT_SHIFT = timedelta(hours=10)
+_BACKUP_DIR = Path(__file__).resolve().parent.parent / "backups"
 
 
-def _correct_one(
-    session: Session,
-    *,
-    access_token: str,
-    graph_event_id: str,
-    apply: bool,
-) -> bool:
-    """Gibt True zurueck, wenn der Termin (im Dry-Run: hypothetisch)
-    korrigiert wurde, False bei einem Ueberspringen/Fehler."""
+@dataclass
+class _PreState:
+    graph_event_id: str
+    crm_event_id: str | None
+    crm_title: str | None
+    crm_start_at: str | None
+    crm_end_at: str | None
+    graph_subject: str | None
+    graph_start_at: str | None
+    graph_end_at: str | None
+    graph_last_modified_at: str | None
+    corrected_start_at: str | None
+    corrected_end_at: str | None
+    error: str | None
+
+
+def _gather_pre_state(session: Session, *, access_token: str, graph_event_id: str) -> _PreState:
+    """Rein lesend - ermittelt CRM- und Graph-Stand fuer EINEN Termin, ohne
+    irgendetwas zu schreiben. Basis sowohl fuer das Backup-Artefakt als auch
+    fuer die Dry-Run-Anzeige."""
     event = session.scalar(
         select(CalendarEvent).where(CalendarEvent.external_graph_event_id == graph_event_id)
     )
     if event is None:
-        print(f"  UEBERSPRUNGEN {graph_event_id}: kein CalendarEvent mit dieser Graph-ID im CRM.")
-        return False
+        return _PreState(
+            graph_event_id=graph_event_id,
+            crm_event_id=None,
+            crm_title=None,
+            crm_start_at=None,
+            crm_end_at=None,
+            graph_subject=None,
+            graph_start_at=None,
+            graph_end_at=None,
+            graph_last_modified_at=None,
+            corrected_start_at=None,
+            corrected_end_at=None,
+            error="kein CalendarEvent mit dieser Graph-ID im CRM gefunden",
+        )
 
     try:
-        graph_event: GraphEvent | None = get_event(access_token, graph_event_id=graph_event_id)
+        graph_event = get_event(access_token, graph_event_id=graph_event_id)
     except GraphApiError as exc:
-        print(f"  UEBERSPRUNGEN {graph_event_id} (CRM {event.id}): Graph-Lesefehler: {exc}")
-        return False
+        return _PreState(
+            graph_event_id=graph_event_id,
+            crm_event_id=str(event.id),
+            crm_title=event.title,
+            crm_start_at=str(event.start_at),
+            crm_end_at=str(event.end_at),
+            graph_subject=None,
+            graph_start_at=None,
+            graph_end_at=None,
+            graph_last_modified_at=None,
+            corrected_start_at=None,
+            corrected_end_at=None,
+            error=f"Graph-Lesefehler: {exc}",
+        )
     if graph_event is None:
-        print(f"  UEBERSPRUNGEN {graph_event_id} (CRM {event.id}): in Graph nicht (mehr) gefunden.")
-        return False
+        return _PreState(
+            graph_event_id=graph_event_id,
+            crm_event_id=str(event.id),
+            crm_title=event.title,
+            crm_start_at=str(event.start_at),
+            crm_end_at=str(event.end_at),
+            graph_subject=None,
+            graph_start_at=None,
+            graph_end_at=None,
+            graph_last_modified_at=None,
+            corrected_start_at=None,
+            corrected_end_at=None,
+            error="in Graph nicht (mehr) gefunden (404)",
+        )
 
     corrected_start = graph_event.start_at - _INCIDENT_SHIFT
     corrected_end = (graph_event.end_at - _INCIDENT_SHIFT) if graph_event.end_at else None
-
-    print(f"  Termin {event.id} ({event.title!r}), Graph-ID {graph_event_id}")
-    print(
-        f"    Graph/CRM aktuell (korrumpiert): "
-        f"start={graph_event.start_at} end={graph_event.end_at}"
+    return _PreState(
+        graph_event_id=graph_event_id,
+        crm_event_id=str(event.id),
+        crm_title=event.title,
+        crm_start_at=str(event.start_at),
+        crm_end_at=str(event.end_at),
+        graph_subject=graph_event.subject,
+        graph_start_at=str(graph_event.start_at),
+        graph_end_at=str(graph_event.end_at),
+        graph_last_modified_at=str(graph_event.last_modified_at),
+        corrected_start_at=str(corrected_start),
+        corrected_end_at=str(corrected_end) if corrected_end else None,
+        error=None,
     )
-    print(f"    Korrigiert (aktuell -10h):       start={corrected_start} end={corrected_end}")
 
-    if not apply:
-        return True
+
+def _write_backup(states: list[_PreState]) -> Path:
+    _BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    path = _BACKUP_DIR / f"calendar_incident_pre_fix_{timestamp}.json"
+    path.write_text(
+        json.dumps([asdict(s) for s in states], indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    return path
+
+
+def _apply_one(session: Session, *, access_token: str, state: _PreState) -> bool:
+    """Schreibt die per _gather_pre_state() bereits berechnete Korrektur -
+    fetcht Graph NICHT erneut, damit exakt das geschrieben wird, was im
+    Backup-Artefakt dokumentiert ist (kein TOCTOU zwischen Anzeige und
+    Schreiben)."""
+    assert state.error is None
+    assert state.crm_event_id is not None
+    event = session.get(CalendarEvent, uuid.UUID(state.crm_event_id))
+    assert event is not None
+
+    corrected_start = datetime.fromisoformat(state.corrected_start_at)  # type: ignore[arg-type]
+    corrected_end = (
+        datetime.fromisoformat(state.corrected_end_at) if state.corrected_end_at else None
+    )
 
     event.start_at = corrected_start
     event.end_at = corrected_end
@@ -124,7 +224,7 @@ def _correct_one(
     try:
         update_event(
             access_token,
-            graph_event_id=graph_event_id,
+            graph_event_id=state.graph_event_id,
             title=event.title,
             body_text=event.notes,
             start_at=corrected_start,
@@ -173,20 +273,53 @@ def main() -> None:
 
         access_token = get_valid_access_token(session, account)
 
-        print(f"=== {'Anwenden' if args.commit else 'Dry-Run'} ===")
-        results = [
-            _correct_one(
-                session, access_token=access_token, graph_event_id=gid, apply=args.commit
-            )
+        print("=== Vorher-Zustand ermitteln (rein lesend) ===")
+        states = [
+            _gather_pre_state(session, access_token=access_token, graph_event_id=gid)
             for gid in args.graph_event_id
         ]
 
+        try:
+            backup_path = _write_backup(states)
+        except OSError as exc:
+            print(f"FEHLER: Backup-Datei konnte nicht geschrieben werden ({exc}) - ABBRUCH.")
+            print("Ohne Rollback-Artefakt wird NICHTS geschrieben.")
+            return
+        print(f"Vorher-Zustand gesichert: {backup_path}")
+        print()
+
+        for state in states:
+            print(f"  Graph-ID {state.graph_event_id}")
+            if state.error:
+                print(f"    UEBERSPRUNGEN: {state.error}")
+                continue
+            print(f"    CRM-Event:   {state.crm_event_id} ({state.crm_title!r})")
+            print(
+                f"    Aktuell (korrumpiert): start={state.graph_start_at} "
+                f"end={state.graph_end_at}"
+            )
+            print(
+                f"    Korrigiert (-10h):     start={state.corrected_start_at} "
+                f"end={state.corrected_end_at}"
+            )
+
+        if not args.commit:
+            print()
+            print("Dry-Run - nichts geschrieben. Mit --commit erneut ausfuehren.")
+            return
+
+        print()
+        print("=== Anwenden ===")
+        results = []
+        for state in states:
+            if state.error:
+                results.append(False)
+                continue
+            results.append(_apply_one(session, access_token=access_token, state=state))
+
     ok = sum(1 for r in results if r)
-    status = "korrigiert" if args.commit else "waeren korrigiert worden"
     print()
-    print(f"{ok}/{len(results)} Termine {status}.")
-    if not args.commit:
-        print("Dry-Run - nichts geschrieben. Mit --commit erneut ausfuehren.")
+    print(f"{ok}/{len(states)} Termine korrigiert.")
 
 
 if __name__ == "__main__":

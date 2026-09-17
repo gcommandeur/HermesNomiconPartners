@@ -57,6 +57,11 @@ tmp/
 temp/
 _cleanup_backup_legacy/
 
+# Rollback-Artefakte von Vorfall-Korrektur-Skripten (z.B.
+# scripts/fix_calendar_incident_times_20260916.py) - enthalten
+# Kandidaten-/Kalenderdaten, gehoeren nie ins Repo.
+backend/backups/
+
 .claude/settings.local.json
 
 # DigitalOcean App-Spec-Exports (doctl apps spec get) - enthalten

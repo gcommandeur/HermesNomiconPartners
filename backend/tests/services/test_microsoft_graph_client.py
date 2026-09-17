@@ -33,6 +33,9 @@ from cc_crm.integrations.microsoft_graph.client import (
     create_event,
     fetch_calendar_delta,
     get_event,
+    get_event_raw,
+    list_series_instances,
+    list_series_masters,
     update_event,
 )
 
@@ -392,3 +395,87 @@ class TestGetEvent:
         monkeypatch.setattr(httpx, "get", fake_get)
 
         assert get_event("access-1", graph_event_id="graph-evt-gone") is None
+
+
+class TestRecurringSeriesDiagnostics:
+    """Fuer die Population-B-Untersuchung (Vorfall vom 2026-09-16): pruefen,
+    ob wiederkehrende Serien vom Vorfall veraendert wurden - calendarView/
+    delta (fetch_calendar_delta) expandiert Serien in Vorkommen und liefert
+    dabei keinen seriesMaster-Eintrag, ein veraenderter Master faellt also
+    durchs normale Delta-Raster."""
+
+    def test_get_event_raw_returns_series_fields(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        def fake_get(url: str, *, headers: dict[str, str], params: dict, timeout: float):
+            assert url.endswith("/me/events/graph-evt-occ")
+            return _FakeResponse(
+                200,
+                {
+                    "id": "graph-evt-occ",
+                    "subject": "",
+                    "type": "occurrence",
+                    "seriesMasterId": "graph-series-1",
+                    "lastModifiedDateTime": "2026-09-16T15:54:34.0947520Z",
+                },
+            )
+
+        monkeypatch.setattr(httpx, "get", fake_get)
+
+        result = get_event_raw("access-1", graph_event_id="graph-evt-occ")
+
+        assert result is not None
+        assert result["type"] == "occurrence"
+        assert result["seriesMasterId"] == "graph-series-1"
+
+    def test_list_series_masters_filters_by_type_and_follows_next_link(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[dict] = []
+
+        def fake_get(url: str, *, headers: dict[str, str], params: dict | None, timeout: float):
+            calls.append({"url": url, "params": params})
+            if len(calls) == 1:
+                assert params["$filter"] == "type eq 'seriesMaster'"
+                return _FakeResponse(
+                    200,
+                    {
+                        "value": [{"id": "series-1", "subject": "CV OUTs"}],
+                        "@odata.nextLink": "https://graph.example/next-page",
+                    },
+                )
+            return _FakeResponse(200, {"value": [{"id": "series-2", "subject": "Follow Ups"}]})
+
+        monkeypatch.setattr(httpx, "get", fake_get)
+
+        results = list_series_masters("access-1")
+
+        assert [r["id"] for r in results] == ["series-1", "series-2"]
+        assert len(calls) == 2
+        # Der zweite Aufruf nutzt die nextLink-URL direkt, ohne die
+        # $filter-Parameter erneut anzuhaengen (die stecken schon in der
+        # URL selbst).
+        assert calls[1]["url"] == "https://graph.example/next-page"
+        assert calls[1]["params"] is None
+
+    def test_list_series_instances_passes_time_window(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_get(url: str, *, headers: dict[str, str], params: dict, timeout: float):
+            captured["url"] = url
+            captured["params"] = params
+            return _FakeResponse(
+                200, {"value": [{"id": "occ-1", "type": "exception", "subject": "CV OUTs"}]}
+            )
+
+        monkeypatch.setattr(httpx, "get", fake_get)
+
+        results = list_series_instances(
+            "access-1",
+            series_master_id="series-1",
+            start=datetime(2026, 9, 1),
+            end=datetime(2026, 9, 30),
+        )
+
+        assert results[0]["type"] == "exception"
+        assert captured["url"].endswith("/me/events/series-1/instances")
+        assert captured["params"]["startDateTime"] == "2026-09-01T00:00:00Z"
+        assert captured["params"]["endDateTime"] == "2026-09-30T00:00:00Z"

@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -413,3 +414,68 @@ def get_event(access_token: str, *, graph_event_id: str) -> GraphEvent | None:
         location=(item.get("location") or {}).get("displayName"),
         last_modified_at=_parse_graph_datetime(item.get("lastModifiedDateTime")),
     )
+
+
+def get_event_raw(access_token: str, *, graph_event_id: str) -> dict[str, Any] | None:
+    """Wie get_event(), aber gibt die volle Graph-JSON-Antwort zurueck statt
+    sie in ein GraphEvent zu parsen - fuer Diagnosezwecke, bei denen Felder
+    wie `type`/`seriesMasterId`/`recurrence` gebraucht werden, die GraphEvent
+    nicht abbildet (die normale Sync-Pipeline braucht sie nicht). Siehe
+    scripts/investigate_recurring_series_20260916.py."""
+    response = httpx.get(
+        f"{_GRAPH_ROOT}/me/events/{graph_event_id}",
+        headers=_headers(access_token),
+        params={
+            "$select": "id,subject,type,seriesMasterId,recurrence,start,end,lastModifiedDateTime"
+        },
+        timeout=30,
+    )
+    if response.status_code == 404:
+        return None
+    _raise_for_status(response, "get event (raw)")
+    result: dict[str, Any] = response.json()
+    return result
+
+
+def list_series_masters(access_token: str) -> list[dict[str, Any]]:
+    """Listet alle wiederkehrenden Serien-Master im Standardkalender (GET
+    /me/events?$filter=type eq 'seriesMaster') - Diagnosezweck: pruefen, ob
+    eine Serie waehrend des Vorfallsfensters veraendert wurde. calendarView/
+    delta (siehe fetch_calendar_delta) expandiert Serien in einzelne
+    Vorkommen und liefert dabei KEINEN seriesMaster-Eintrag selbst - ein
+    veraenderter Serien-Master faellt deshalb durchs Delta-Raster."""
+    results: list[dict[str, Any]] = []
+    url: str | None = f"{_GRAPH_ROOT}/me/events"
+    params: dict[str, Any] | None = {
+        "$filter": "type eq 'seriesMaster'",
+        "$select": "id,subject,lastModifiedDateTime,recurrence",
+        "$top": 200,
+    }
+    while url:
+        response = httpx.get(url, headers=_headers(access_token), params=params, timeout=30)
+        _raise_for_status(response, "list series masters")
+        body = response.json()
+        results.extend(body.get("value", []))
+        url = body.get("@odata.nextLink")
+        params = None  # nextLink enthaelt bereits alle Parameter, nicht erneut mitschicken.
+    return results
+
+
+def list_series_instances(
+    access_token: str, *, series_master_id: str, start: datetime, end: datetime
+) -> list[dict[str, Any]]:
+    """Listet die konkreten Vorkommen (inkl. Exceptions) einer Serie in
+    einem Zeitfenster - GET /me/events/{id}/instances."""
+    response = httpx.get(
+        f"{_GRAPH_ROOT}/me/events/{series_master_id}/instances",
+        headers=_headers(access_token),
+        params={
+            "startDateTime": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "endDateTime": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "$select": "id,subject,type,start,end,lastModifiedDateTime",
+        },
+        timeout=30,
+    )
+    _raise_for_status(response, "list series instances")
+    result: list[dict[str, Any]] = response.json().get("value", [])
+    return result
