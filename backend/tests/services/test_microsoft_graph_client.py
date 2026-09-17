@@ -32,6 +32,7 @@ from cc_crm.integrations.microsoft_graph.client import (
     GraphApiError,
     create_event,
     fetch_calendar_delta,
+    get_event,
     update_event,
 )
 
@@ -353,3 +354,41 @@ class TestEventPayloadTimezoneHandling:
         )
 
         assert captured["json"]["start"]["dateTime"] == "2026-09-16T14:00:00"
+
+
+class TestGetEvent:
+    def test_returns_event_parsed_via_the_same_logic_as_delta_query(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_get(url: str, *, headers: dict[str, str], params: dict, timeout: float):
+            assert url.endswith("/me/events/graph-evt-single")
+            return _FakeResponse(
+                200,
+                {
+                    "id": "graph-evt-single",
+                    "subject": "Kundentermin",
+                    "body": {"contentType": "text", "content": "Notizen"},
+                    "start": {"dateTime": "2026-08-29T05:00:00.0000000", "timeZone": "UTC"},
+                    "end": {"dateTime": "2026-08-29T05:30:00.0000000", "timeZone": "UTC"},
+                    "lastModifiedDateTime": "2026-09-16T15:54:34.0947520Z",
+                },
+            )
+
+        monkeypatch.setattr(httpx, "get", fake_get)
+
+        event = get_event("access-1", graph_event_id="graph-evt-single")
+
+        assert event is not None
+        assert event.id == "graph-evt-single"
+        assert event.subject == "Kundentermin"
+        # UTC 05:00 im August (noch CEST) -> 07:00 Berlin.
+        assert event.start_at == datetime(2026, 8, 29, 7, 0, 0)
+        assert event.end_at == datetime(2026, 8, 29, 7, 30, 0)
+
+    def test_returns_none_for_unknown_event(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        def fake_get(url: str, *, headers: dict[str, str], params: dict, timeout: float):
+            return _FakeResponse(404, {"error": {"message": "not found"}})
+
+        monkeypatch.setattr(httpx, "get", fake_get)
+
+        assert get_event("access-1", graph_event_id="graph-evt-gone") is None

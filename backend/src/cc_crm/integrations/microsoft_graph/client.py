@@ -379,3 +379,37 @@ def delete_event(access_token: str, *, graph_event_id: str) -> None:
     # aus Sicht des Aufrufers trotzdem ein erfolgreiches "ist jetzt weg".
     if response.status_code not in (204, 404):
         _raise_for_status(response, "delete event")
+
+
+def get_event(access_token: str, *, graph_event_id: str) -> GraphEvent | None:
+    """Liest ein einzelnes Event per ID (ausserhalb einer Delta-Query) -
+    fuer gezielte Einzelfall-Diagnose/-Korrektur (siehe scripts/diagnose_
+    graph_calendar_corruption_20260916.py und scripts/fix_calendar_
+    incident_times_20260916.py). Nutzt bewusst dieselbe _parse_graph_event_
+    datetime()-Logik wie fetch_calendar_delta(), damit ein hier gelesener
+    start_at/end_at exakt so interpretiert wird wie beim normalen Pull -
+    keine zweite, potenziell abweichende Parsing-Implementierung."""
+    response = httpx.get(
+        f"{_GRAPH_ROOT}/me/events/{graph_event_id}",
+        headers=_headers(access_token),
+        params={"$select": "id,subject,body,start,end,location,lastModifiedDateTime"},
+        timeout=30,
+    )
+    if response.status_code == 404:
+        return None
+    _raise_for_status(response, "get event")
+    item = response.json()
+    start = item.get("start") or {}
+    end = item.get("end") or {}
+    start_at = _parse_graph_event_datetime(start.get("dateTime"), start.get("timeZone"))
+    if start_at is None:
+        return None
+    return GraphEvent(
+        id=item["id"],
+        subject=item.get("subject") or "",
+        body_text=(item.get("body") or {}).get("content"),
+        start_at=start_at,
+        end_at=_parse_graph_event_datetime(end.get("dateTime"), end.get("timeZone")),
+        location=(item.get("location") or {}).get("displayName"),
+        last_modified_at=_parse_graph_datetime(item.get("lastModifiedDateTime")),
+    )

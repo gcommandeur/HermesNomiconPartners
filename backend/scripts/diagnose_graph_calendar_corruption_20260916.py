@@ -36,38 +36,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from typing import Any
-
-import httpx  # noqa: E402
 from sqlalchemy import select  # noqa: E402
 
 from cc_crm.infrastructure.database.session import SessionLocal  # noqa: E402
+from cc_crm.integrations.microsoft_graph.client import GraphApiError, get_event  # noqa: E402
 from cc_crm.models.calendar_event import CalendarEvent  # noqa: E402
 from cc_crm.models.enums import MailAccountProvider  # noqa: E402
 from cc_crm.models.mail import MailAccount  # noqa: E402
 from cc_crm.services.graph_token_service import get_valid_access_token  # noqa: E402
 
-_GRAPH_ROOT = "https://graph.microsoft.com/v1.0"
-
 _INCIDENT_START = datetime(2026, 9, 16, 14, 28, tzinfo=UTC)
-
-
-def _fetch_graph_event(access_token: str, graph_event_id: str) -> dict[str, Any] | None:
-    """GET /me/events/{id} - funktioniert auch fuer per calendarView
-    expandierte Serien-Vorkommen-IDs. Gibt None zurueck, wenn Graph das
-    Event nicht (mehr) kennt (404) - dann bitte manuell nachsehen, ob die
-    Serie zwischenzeitlich anders aussieht."""
-    response = httpx.get(
-        f"{_GRAPH_ROOT}/me/events/{graph_event_id}",
-        headers={"Authorization": f"Bearer {access_token}"},
-        params={"$select": "id,subject,start,end,lastModifiedDateTime,type,seriesMasterId"},
-        timeout=30,
-    )
-    if response.status_code == 404:
-        return None
-    response.raise_for_status()
-    result: dict[str, Any] = response.json()
-    return result
 
 
 def main() -> None:
@@ -138,7 +116,7 @@ def main() -> None:
         print()
         header = (
             f"{'CRM-Event-ID':38} {'Graph-Event-ID':40} {'CRM start_at':22} "
-            f"{'Graph start (dateTime)':30} {'Graph timeZone':16}"
+            f"{'Graph start (Berlin, geparst)':30}"
         )
         print(header)
         print("-" * len(header))
@@ -147,29 +125,39 @@ def main() -> None:
             graph_id = event.external_graph_event_id
             assert graph_id is not None
             try:
-                graph_data = _fetch_graph_event(access_token, graph_id)
-            except httpx.HTTPStatusError as exc:
-                print(
-                    f"{event.id!s:38} {graph_id:40} {str(event.start_at):22} "
-                    f"FEHLER: {exc.response.status_code} {exc.response.text[:80]}"
-                )
+                graph_event = get_event(access_token, graph_event_id=graph_id)
+            except GraphApiError as exc:
+                print(f"{event.id!s:38} {graph_id:40} {str(event.start_at):22} FEHLER: {exc}")
                 continue
 
-            if graph_data is None:
+            if graph_event is None:
                 print(
                     f"{event.id!s:38} {graph_id:40} {str(event.start_at):22} "
                     "404 (nicht gefunden)"
                 )
                 continue
 
-            graph_start = graph_data.get("start") or {}
             print(
                 f"{event.id!s:38} {graph_id:40} {str(event.start_at):22} "
-                f"{graph_start.get('dateTime', '?'):30} {graph_start.get('timeZone', '?'):16}"
+                f"{str(graph_event.start_at):30}"
             )
-            print(f"    Titel: {graph_data.get('subject')!r}")
-            print(f"    Graph lastModifiedDateTime: {graph_data.get('lastModifiedDateTime')}")
-            print(f"    CRM  updated_at:            {event.updated_at}")
+            # CRM-seitige Felder mit ausgeben - insbesondere fuer den Fall,
+            # dass Graph inzwischen einen leeren/veraenderten Titel zeigt
+            # (siehe Vorfall vom 2026-09-16: Titel eines Events wurde
+            # geleert) - hier steht der urspruengliche CRM-Inhalt daneben.
+            print(f"    CRM  Titel:    {event.title!r}")
+            print(f"    Graph Titel:   {graph_event.subject!r}")
+            print(f"    CRM  Notizen:  {event.notes!r}")
+            print(f"    Graph Notizen: {(graph_event.body_text or '')[:200]!r}")
+            print(f"    CRM  end_at:   {event.end_at}")
+            print(f"    Graph end_at (Berlin, geparst): {graph_event.end_at}")
+            print(f"    candidate_id:            {event.candidate_id}")
+            print(f"    client_company_id:       {event.client_company_id}")
+            print(f"    candidate_submission_id: {event.candidate_submission_id}")
+            print(f"    source_interview_id:     {event.source_interview_id}")
+            print(f"    CRM  created_at: {event.created_at}")
+            print(f"    CRM  updated_at: {event.updated_at}")
+            print(f"    Graph lastModifiedDateTime: {graph_event.last_modified_at}")
             print()
 
 
