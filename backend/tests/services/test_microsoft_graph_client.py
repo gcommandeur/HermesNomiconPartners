@@ -456,7 +456,9 @@ class TestRecurringSeriesDiagnostics:
         assert calls[1]["url"] == "https://graph.example/next-page"
         assert calls[1]["params"] is None
 
-    def test_list_series_instances_passes_time_window(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_list_series_instances_passes_time_window(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         captured: dict[str, object] = {}
 
         def fake_get(url: str, *, headers: dict[str, str], params: dict, timeout: float):
