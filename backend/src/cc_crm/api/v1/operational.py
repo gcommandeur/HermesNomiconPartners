@@ -43,11 +43,10 @@ router = APIRouter()
 # kann vom Client gefaelscht werden, aber ohne echtes Content-Sniffing ist das
 # ein sinnvoller Kompromiss, der zumindest versehentliche/grob falsche
 # Uploads (falscher Dateityp, keine Absicht zu taeuschen) zuverlaessig faengt.
-_ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".docx", ".doc", ".jpg", ".jpeg", ".png"}
+_ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".docx", ".jpg", ".jpeg", ".png"}
 _ALLOWED_UPLOAD_CONTENT_TYPES = {
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/msword",
     "image/jpeg",
     "image/png",
 }
@@ -56,17 +55,28 @@ _UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MB pro Lese-Schritt
 
 def _validate_upload_type(file: UploadFile) -> None:
     extension = Path(file.filename or "").suffix.lower()
+    if extension == ".doc":
+        # Altes Word-Binaerformat: es gibt keine saubere Konvertierung, die
+        # Bytes lassen sich weder als Text lesen noch per Vision auswerten.
+        # Klar ablehnen statt still Muell zu speichern/auszuwerten.
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=(
+                "Das alte Word-Format (.doc) wird nicht unterstuetzt. Bitte die Datei in Word "
+                "als .docx oder PDF speichern und erneut hochladen."
+            ),
+        )
     if extension not in _ALLOWED_UPLOAD_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Dateityp nicht erlaubt. Erlaubt sind: PDF, DOCX, DOC, JPG, PNG.",
+            detail="Dateityp nicht erlaubt. Erlaubt sind: PDF, DOCX, JPG, PNG.",
         )
     if file.content_type not in _ALLOWED_UPLOAD_CONTENT_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail=(
                 "Dateityp nicht erlaubt (Content-Type passt nicht zur Dateiendung). "
-                "Erlaubt sind: PDF, DOCX, DOC, JPG, PNG."
+                "Erlaubt sind: PDF, DOCX, JPG, PNG."
             ),
         )
 

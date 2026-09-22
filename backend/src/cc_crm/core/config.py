@@ -66,6 +66,15 @@ class Settings(BaseSettings):
     # anpassbar ist (z.B. per Umgebungsvariable CC_CRM_MAX_UPLOAD_SIZE_MB).
     max_upload_size_mb: int = 25
 
+    # CV-Auswertung (services/cv_extraction.py): Liefert pypdf ueber alle Seiten
+    # im Schnitt weniger nicht-leere Zeichen pro Seite als dieser Wert, gilt das
+    # PDF als gescannt (kein brauchbarer Text-Layer) und wird per Vision statt
+    # per Text-Call ausgewertet. Env: CC_CRM_CV_SCAN_MIN_CHARS_PER_PAGE.
+    cv_scan_min_chars_per_page: int = 200
+    # Wie viele Seiten eines gescannten PDFs gerendert und gemeinsam per Vision
+    # ausgelesen werden (Tokenkosten wachsen linear mit der Seitenzahl).
+    cv_vision_max_pages: int = 4
+
     # S3-kompatibler Objektspeicher (z.B. Cloudflare R2, AWS S3, Backblaze B2) für
     # Dokumente - empfohlen für produktiven Betrieb/Hosting, da lokale Dateien bei
     # den meisten Hosting-Plattformen bei jedem Deploy/Neustart verloren gehen.

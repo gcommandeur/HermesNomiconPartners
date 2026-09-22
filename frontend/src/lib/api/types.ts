@@ -769,6 +769,15 @@ export interface CvExtractionSuggestion {
   source_is_agency_profile: boolean;
 }
 
+/** Antwort von POST/GET /candidates/cv-preview: "processing" heisst, ein
+ * gescanntes PDF wird im Hintergrund ausgewertet - das Ergebnis liefert
+ * GET /candidates/cv-preview/{job_id}. */
+export interface CvPreviewResponse extends CvExtractionSuggestion {
+  status: "done" | "processing" | "failed";
+  job_id: string | null;
+  error: string | null;
+}
+
 export interface ClientMatch {
   client: ClientCompany;
   score: number;

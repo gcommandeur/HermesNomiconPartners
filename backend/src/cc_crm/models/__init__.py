@@ -7,6 +7,7 @@ from cc_crm.models.candidate import Candidate
 from cc_crm.models.candidate_pitch_log import CandidatePitchLog
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.contact_person import ContactPerson
+from cc_crm.models.cv_extraction_job import CvExtractionJob
 from cc_crm.models.email_template import EmailTemplate
 from cc_crm.models.job_mandate import JobMandate
 from cc_crm.models.mail import MailAccount, MailMessage
@@ -41,6 +42,7 @@ __all__ = [
     "CandidateSubmission",
     "ClientCompany",
     "ContactPerson",
+    "CvExtractionJob",
     "Document",
     "EmailDraftLog",
     "EmailTemplate",

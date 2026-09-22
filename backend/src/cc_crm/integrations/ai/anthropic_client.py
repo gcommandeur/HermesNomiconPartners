@@ -113,11 +113,34 @@ def generate_text_with_image(
     Bild der Seite umgeht das, da das Modell die Glyphen visuell erkennt statt
     sich auf die (in diesem Fall unzuverlaessige) Zeichen-Kodierung im PDF zu
     verlassen."""
+    return generate_text_with_images(
+        system_prompt=system_prompt,
+        user_message=user_message,
+        images=[(image_base64, image_media_type)],
+        max_tokens=max_tokens,
+        timeout=timeout,
+    )
+
+
+def generate_text_with_images(
+    *,
+    system_prompt: str,
+    user_message: str,
+    images: list[tuple[str, str]],
+    max_tokens: int = 1000,
+    timeout: float = 45.0,
+) -> str:
+    """Wie generate_text_with_image, aber mit mehreren Bildern in einem Request
+    (z.B. die ersten Seiten eines gescannten CVs, siehe cv_extraction.py).
+    `images` sind (base64-Daten, media_type)-Paare in Lesereihenfolge."""
     content: list[dict[str, Any]] = [
         {
             "type": "image",
-            "source": {"type": "base64", "media_type": image_media_type, "data": image_base64},
-        },
-        {"type": "text", "text": user_message},
+            "source": {"type": "base64", "media_type": media_type, "data": data},
+        }
+        for data, media_type in images
     ]
-    return _call_messages_api(system_prompt=system_prompt, content=content, max_tokens=max_tokens)
+    content.append({"type": "text", "text": user_message})
+    return _call_messages_api(
+        system_prompt=system_prompt, content=content, max_tokens=max_tokens, timeout=timeout
+    )

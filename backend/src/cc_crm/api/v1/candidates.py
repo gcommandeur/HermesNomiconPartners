@@ -2,12 +2,12 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, File, Query, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, File, Query, Response, UploadFile, status
 
 from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
 from cc_crm.api.v1.operational import _read_upload_with_size_limit, _validate_upload_type
 from cc_crm.core.config import get_settings
-from cc_crm.models.enums import Abschlussart, CandidateStatus, Rolle
+from cc_crm.models.enums import Abschlussart, CandidateStatus, CvExtractionJobStatus, Rolle
 from cc_crm.repositories.candidates import compute_search_match_fields
 from cc_crm.schemas.candidate import (
     CandidateCreate,
@@ -15,6 +15,7 @@ from cc_crm.schemas.candidate import (
     CandidateUpdate,
     CvExtractionRequest,
     CvExtractionSuggestion,
+    CvPreviewResponse,
 )
 from cc_crm.schemas.pagination import Page
 from cc_crm.schemas.recruiting import AuditLogRead
@@ -29,9 +30,16 @@ from cc_crm.schemas.submission import (
 from cc_crm.services.candidates import CandidateService
 from cc_crm.services.cv_extraction import (
     CV_STRUCTURED_FIELDS,
+    CvSourceKind,
+    classify_cv_source,
     extract_candidate_fields,
     extract_text_from_bytes,
     is_agency_letterhead,
+)
+from cc_crm.services.cv_extraction_jobs import (
+    create_job,
+    get_job_for_user,
+    run_scan_job_in_background,
 )
 from cc_crm.services.operational import DocumentService
 from cc_crm.services.recruiting import RecruitingProcessService
@@ -132,25 +140,59 @@ def create_candidate(
     return CandidateRead.model_validate(CandidateService(session).create(payload))
 
 
-@router.post("/cv-preview", response_model=CvExtractionSuggestion)
-async def preview_cv_fields(file: Annotated[UploadFile, File()]) -> CvExtractionSuggestion:
+@router.post("/cv-preview", response_model=CvPreviewResponse)
+async def preview_cv_fields(
+    file: Annotated[UploadFile, File()],
+    background_tasks: BackgroundTasks,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> CvPreviewResponse:
     """Liest ein CV aus, BEVOR der Kandidat angelegt ist (Anlegen-Formular,
     Nutzer-Feedback: "Felder sollen ausgefuellt werden") - anders als
     /{candidate_id}/cv-extraction gibt es hier noch keinen Kandidaten,
     gegen den "bereits befuellte Felder" geprueft werden koennten, daher
     werden alle erkannten Felder zurueckgegeben (das Frontend uebernimmt sie
     nur in aktuell leere Formularfelder, ueberschreibt also ebenfalls nichts
-    manuell Eingegebenes)."""
+    manuell Eingegebenes).
+
+    Gescannte PDFs (kein brauchbarer Text-Layer) brauchen eine mehrseitige
+    Vision-Auswertung, die das Gateway-Timeout sprengen wuerde: hier kommt
+    sofort status="processing" plus job_id zurueck, das Ergebnis liefert
+    GET /candidates/cv-preview/{job_id}. Alles andere (Text-PDF, DOCX, ein
+    einzelnes Bild) wird wie bisher inline ausgewertet."""
     _validate_upload_type(file)
     max_bytes = get_settings().max_upload_size_mb * 1024 * 1024
     content = await _read_upload_with_size_limit(file, max_bytes)
     filename = file.filename or "cv.pdf"
     cv_text = extract_text_from_bytes(filename, content)
-    extracted = extract_candidate_fields(cv_text, filename=filename, content=content)
+    kind = classify_cv_source(filename, content, cv_text)
+    if kind is CvSourceKind.SCANNED_PDF:
+        job = create_job(session, current_user.id)
+        background_tasks.add_task(run_scan_job_in_background, job.id, filename, content)
+        return CvPreviewResponse(status="processing", job_id=job.id)
+    extracted = extract_candidate_fields(
+        cv_text, filename=filename, content=content, source_kind=kind
+    )
     # CV_STRUCTURED_FIELDS statt Feld-fuer-Feld-Aufzaehlung - siehe Kommentar
     # dort zur zentralen Registry.
     values = {field: extracted.get(field) or None for field in CV_STRUCTURED_FIELDS}
-    return CvExtractionSuggestion(**values, source_is_agency_profile=is_agency_letterhead(cv_text))
+    return CvPreviewResponse.model_validate(
+        {**values, "source_is_agency_profile": is_agency_letterhead(cv_text)}
+    )
+
+
+@router.get("/cv-preview/{job_id}", response_model=CvPreviewResponse)
+def get_cv_preview_result(
+    job_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> CvPreviewResponse:
+    job = get_job_for_user(session, job_id, current_user)
+    if job.status is CvExtractionJobStatus.PROCESSING:
+        return CvPreviewResponse(status="processing", job_id=job.id)
+    if job.status is CvExtractionJobStatus.FAILED:
+        return CvPreviewResponse(status="failed", job_id=job.id, error=job.error)
+    return CvPreviewResponse.model_validate(
+        {**(job.result or {}), "status": "done", "job_id": job.id}
+    )
 
 
 # Muss vor /{candidate_id} registriert sein, sonst faengt die Path-Param-Route

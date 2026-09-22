@@ -21,6 +21,7 @@ import base64
 import json
 import logging
 import re
+from enum import StrEnum
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -28,8 +29,13 @@ from typing import Any
 import docx
 from pypdf import PdfReader
 
+from cc_crm.core.config import get_settings
 from cc_crm.core.errors import AIProviderError
-from cc_crm.integrations.ai.anthropic_client import generate_text, generate_text_with_image
+from cc_crm.integrations.ai.anthropic_client import (
+    generate_text,
+    generate_text_with_image,
+    generate_text_with_images,
+)
 from cc_crm.models.enums import Abschlussart, Rechtsgebiet, Rolle
 from cc_crm.services.synonyms import normalize_terms
 
@@ -433,6 +439,43 @@ schaetzen oder aus der Berufserfahrung ableiten. Sonst null.
   Beratung bzw. eines dortigen Ansprechpartners, nicht der Person)."""
 
 
+IMAGE_SUFFIXES = frozenset({".jpg", ".jpeg", ".png"})
+
+
+class CvSourceKind(StrEnum):
+    """Wie ein hochgeladenes CV-Dokument ausgewertet wird."""
+
+    TEXT = "text"  # PDF/DOCX mit brauchbarem Text-Layer -> Text-Call
+    SCANNED_PDF = "scanned_pdf"  # PDF ohne brauchbaren Text-Layer -> Vision, mehrseitig
+    IMAGE = "image"  # JPG/PNG -> Vision, ein Bild
+
+
+def extract_pdf_pages_text(content: bytes) -> list[str]:
+    reader = PdfReader(BytesIO(content))
+    # "layout" statt des pypdf-Default-Modus: der Default reiht Glyphen oft
+    # strikt nach ihrer Position in der Content-Stream-Reihenfolge auf, was
+    # bei vielen CVs (Kopfzeile mit grosszuegigem Buchstabenabstand, mehr-
+    # spaltige Layouts) zu falsch getrenntem Text fuehrt, z.B. "J a n a
+    # G u ß e r" statt "Jana Gußer" - "layout" rekonstruiert stattdessen die
+    # sichtbare Seitenposition und haelt zusammengehoerige Woerter zusammen.
+    #
+    # Bekannter pypdf-Bug (bestaetigt anhand von 28 real betroffenen CVs):
+    # bei Seiten mit rotierten Text-Elementen (z.B. quer gedrehte
+    # Seitenrand-Vermerke) liefert "layout" fuer die GANZE Seite einen
+    # leeren String, obwohl der Default-Modus denselben Text problemlos
+    # findet. Seiten, die im Layout-Modus leer bleiben, bekommen daher pro
+    # Seite einen Fallback auf den Default-Modus statt die ganze Seite als
+    # "kein Text vorhanden" zu behandeln.
+    pages_text: list[str] = []
+    for page in reader.pages:
+        layout_text = page.extract_text(extraction_mode="layout") or ""
+        if layout_text.strip():
+            pages_text.append(layout_text)
+        else:
+            pages_text.append(page.extract_text() or "")
+    return pages_text
+
+
 def extract_text_from_bytes(filename: str, content: bytes) -> str:
     suffix = Path(filename).suffix.lower()
     if suffix == ".docx":
@@ -441,30 +484,52 @@ def extract_text_from_bytes(filename: str, content: bytes) -> str:
             paragraph.text for paragraph in document.paragraphs if paragraph.text.strip()
         )
     if suffix == ".pdf":
-        reader = PdfReader(BytesIO(content))
-        # "layout" statt des pypdf-Default-Modus: der Default reiht Glyphen oft
-        # strikt nach ihrer Position in der Content-Stream-Reihenfolge auf, was
-        # bei vielen CVs (Kopfzeile mit grosszuegigem Buchstabenabstand, mehr-
-        # spaltige Layouts) zu falsch getrenntem Text fuehrt, z.B. "J a n a
-        # G u ß e r" statt "Jana Gußer" - "layout" rekonstruiert stattdessen die
-        # sichtbare Seitenposition und haelt zusammengehoerige Woerter zusammen.
-        #
-        # Bekannter pypdf-Bug (bestaetigt anhand von 28 real betroffenen CVs):
-        # bei Seiten mit rotierten Text-Elementen (z.B. quer gedrehte
-        # Seitenrand-Vermerke) liefert "layout" fuer die GANZE Seite einen
-        # leeren String, obwohl der Default-Modus denselben Text problemlos
-        # findet. Seiten, die im Layout-Modus leer bleiben, bekommen daher pro
-        # Seite einen Fallback auf den Default-Modus statt die ganze Seite als
-        # "kein Text vorhanden" zu behandeln.
-        pages_text: list[str] = []
-        for page in reader.pages:
-            layout_text = page.extract_text(extraction_mode="layout") or ""
-            if layout_text.strip():
-                pages_text.append(layout_text)
-            else:
-                pages_text.append(page.extract_text() or "")
-        return "\n".join(pages_text)
+        return "\n".join(extract_pdf_pages_text(content))
+    if suffix in IMAGE_SUFFIXES:
+        # Bilddateien haben keinen Text-Layer - die Bytes als UTF-8 zu
+        # dekodieren lieferte nur Muell. Ausgewertet werden sie per Vision
+        # (siehe classify_cv_source/extract_candidate_fields_from_scan).
+        return ""
     return content.decode("utf-8", errors="ignore")
+
+
+def _pdf_page_count(content: bytes) -> int:
+    try:
+        return len(PdfReader(BytesIO(content)).pages)
+    except Exception:  # noqa: BLE001 - defektes PDF: der Text-Pfad meldet den Fehler wie bisher
+        return 0
+
+
+def is_scanned_text(cv_text: str, page_count: int, threshold: int | None = None) -> bool:
+    """True, wenn der extrahierte Text im Schnitt weniger als `threshold`
+    nicht-leere Zeichen pro Seite hat (Default: Setting
+    cv_scan_min_chars_per_page). Whitespace zaehlt nicht mit: der pypdf-
+    Layout-Modus fuellt Seiten mit Leerzeichen auf, ein gescanntes Blatt
+    koennte sonst allein durch Padding ueber die Grenze rutschen."""
+    if page_count <= 0:
+        return False
+    limit = get_settings().cv_scan_min_chars_per_page if threshold is None else threshold
+    non_whitespace_chars = len("".join(cv_text.split()))
+    return non_whitespace_chars / page_count < limit
+
+
+def classify_cv_source(filename: str | None, content: bytes | None, cv_text: str) -> CvSourceKind:
+    """Entscheidet, ob ein Dokument per Text-Call (TEXT) oder direkt per Vision
+    (SCANNED_PDF/IMAGE) ausgewertet wird. Ohne filename/content (z.B. in den
+    Batch-Skripten) bleibt es beim bisherigen Text-Pfad."""
+    if filename is None or content is None:
+        return CvSourceKind.TEXT
+    suffix = Path(filename).suffix.lower()
+    if suffix in IMAGE_SUFFIXES:
+        return CvSourceKind.IMAGE
+    if suffix == ".pdf":
+        pages = _pdf_page_count(content)
+        # Ein von Commandeur erzeugtes Agenturprofil ist immer ein Text-PDF -
+        # traegt es den Briefkopf, wird es nie als Scan behandelt (siehe
+        # Modul-Docstring: die Agenturadresse darf nicht uebernommen werden).
+        if is_scanned_text(cv_text, pages) and not is_agency_letterhead(cv_text):
+            return CvSourceKind.SCANNED_PDF
+    return CvSourceKind.TEXT
 
 
 def is_agency_letterhead(cv_text: str) -> bool:
@@ -478,24 +543,107 @@ def _parse_json_response(raw: str) -> dict[str, Any]:
     return parsed
 
 
-def _render_first_pdf_page_png_base64(content: bytes) -> str:
-    """Rendert die erste PDF-Seite als PNG (base64) fuer den Vision-Fallback.
-    scale=2.0 entspricht ca. 150 DPI - fuer Fliesstext gut lesbar, haelt das
-    Bild (und damit die Tokenkosten des Vision-Calls) aber klein. Kontakt-
-    daten stehen bei einem CV praktisch immer auf der ersten Seite, ein
-    Mehrseiten-Rendering waere unnoetiger Mehraufwand."""
-    import pypdfium2 as pdfium  # lazy: nur fuer den seltenen Fallback noetig
+def _render_pdf_pages_png_base64(content: bytes, max_pages: int) -> list[str]:
+    """Rendert die ersten `max_pages` PDF-Seiten als PNG (base64) fuer die
+    Vision-Auswertung. scale=2.0 entspricht ca. 150 DPI - fuer Fliesstext gut
+    lesbar, haelt die Bilder (und damit die Tokenkosten) aber klein."""
+    import pypdfium2 as pdfium  # lazy: nur fuer Fallback/Scans noetig
 
-    pdf = pdfium.PdfDocument(content)
     try:
-        page = pdf[0]
-        bitmap = page.render(scale=2.0)
-        pil_image = bitmap.to_pil()
-        buffer = BytesIO()
-        pil_image.save(buffer, format="PNG")
-        return base64.b64encode(buffer.getvalue()).decode("ascii")
+        pdf = pdfium.PdfDocument(content)
+    except Exception as exc:  # noqa: BLE001 - pdfium wirft eigene Fehlertypen
+        raise ValueError(f"PDF konnte nicht geoeffnet werden: {exc}") from exc
+    try:
+        images: list[str] = []
+        for index in range(min(max_pages, len(pdf))):
+            bitmap = pdf[index].render(scale=2.0)
+            buffer = BytesIO()
+            bitmap.to_pil().save(buffer, format="PNG")
+            images.append(base64.b64encode(buffer.getvalue()).decode("ascii"))
+        if not images:
+            raise ValueError("PDF enthaelt keine Seiten.")
+        return images
     finally:
         pdf.close()
+
+
+def _render_first_pdf_page_png_base64(content: bytes) -> str:
+    """Erste PDF-Seite als PNG (base64) fuer den Vision-Fallback bei Text-PDFs.
+    Kontaktdaten stehen bei einem CV praktisch immer auf der ersten Seite,
+    ein Mehrseiten-Rendering waere dort unnoetiger Mehraufwand."""
+    return _render_pdf_pages_png_base64(content, 1)[0]
+
+
+_VISION_IMAGE_MAX_EDGE_PX = 2000
+
+
+def _prepare_image_for_vision(content: bytes) -> tuple[str, str]:
+    """JPG/PNG -> (base64, media_type) fuer den Vision-Call. Die Datei wird
+    dabei nicht als Text gelesen, sondern nur kurz normalisiert: EXIF-Drehung
+    (Handyfotos) anwenden, auf max. 2000 px Kantenlaenge verkleinern (die API
+    lehnt Bilder ueber 5 MB ab, Uploads duerfen bis 25 MB gross sein) und
+    Transparenz auf Weiss flachrechnen."""
+    from PIL import Image, ImageOps
+
+    try:
+        with Image.open(BytesIO(content)) as opened:
+            image = ImageOps.exif_transpose(opened)
+            image.thumbnail((_VISION_IMAGE_MAX_EDGE_PX, _VISION_IMAGE_MAX_EDGE_PX))
+            if image.mode in ("RGBA", "LA", "P"):
+                rgba = image.convert("RGBA")
+                flattened = Image.new("RGB", rgba.size, (255, 255, 255))
+                flattened.paste(rgba, mask=rgba.getchannel("A"))
+                image = flattened
+            elif image.mode != "RGB":
+                image = image.convert("RGB")
+            buffer = BytesIO()
+            image.save(buffer, format="JPEG", quality=85)
+    except Exception as exc:  # noqa: BLE001 - Pillow wirft viele Fehlertypen
+        raise ValueError(f"Bild konnte nicht gelesen werden: {exc}") from exc
+    return base64.b64encode(buffer.getvalue()).decode("ascii"), "image/jpeg"
+
+
+def extract_candidate_fields_from_scan(
+    filename: str, content: bytes, *, timeout: float = 40.0
+) -> dict[str, Any]:
+    """Auswertung ohne brauchbaren Text-Layer: gescanntes PDF (die ersten
+    cv_vision_max_pages Seiten, gemeinsam in EINEM Call) oder ein Bild. Gleiches
+    Schema/Prompt wie die Text-Extraktion, nur mit Bildern als Eingabe. Es gibt
+    keinen vorgeschalteten Text-Call - der einzelne Call darf deshalb fast das
+    ganze Gateway-Budget nutzen (Default 40 s inline; der Hintergrundjob in
+    services/cv_extraction_jobs.py uebergibt ein groesseres Timeout).
+
+    Schlaegt Rendering oder LLM-Call fehl, kommt wie beim Text-Pfad ein Dict
+    mit leeren Feldern und llm_fallback_used=True zurueck statt einer
+    Exception (Nutzer-Vorgabe: lieber ein Kandidat ohne vorausgefuellte Felder
+    als gar keiner). Regex-Notfall-Extraktion gibt es hier nicht - ohne Text
+    gibt es nichts zu matchen."""
+    try:
+        if Path(filename).suffix.lower() in IMAGE_SUFFIXES:
+            images = [_prepare_image_for_vision(content)]
+        else:
+            pages = _render_pdf_pages_png_base64(content, get_settings().cv_vision_max_pages)
+            images = [(page, "image/png") for page in pages]
+        raw = generate_text_with_images(
+            system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
+            user_message=(
+                "Lies die Felder aus den Bildern des Lebenslaufs aus "
+                f"({len(images)} Seite(n), in Lesereihenfolge)."
+            ),
+            images=images,
+            max_tokens=2500,
+            timeout=timeout,
+        )
+        data = _parse_json_response(raw)
+    except (AIProviderError, ValueError) as exc:
+        logger.warning("CV-Vision-Auswertung fehlgeschlagen.", exc_info=True)
+        fallback = dict(_EMPTY_STRUCTURED_FIELDS)
+        fallback["llm_fallback_used"] = True
+        fallback["llm_fallback_reason"] = str(exc)[:500]
+        return fallback
+    data = _normalize_extracted_data(data)
+    data["llm_fallback_used"] = False
+    return data
 
 
 def _extract_fields_via_vision(content: bytes) -> dict[str, Any]:
@@ -1112,13 +1260,50 @@ def _extract_contact_fields_via_regex(cv_text: str) -> dict[str, Any]:
     return result
 
 
+def _normalize_extracted_data(data: dict[str, Any]) -> dict[str, Any]:
+    """Defensive Normalisierung der rohen LLM-Antwort - gemeinsam fuer den
+    Text- und den Vision-Pfad."""
+    # Defensiv: das Modell haelt sich fast immer an das Array-Schema, aber
+    # ohne diese Normalisierung wuerde ein fehlendes/falsch typisiertes Feld
+    # (z.B. null statt []) weiter unten beim Speichern (JSON-Spalte, erwartet
+    # eine Liste) zu einem Fehler fuehren statt einfach als "nichts gefunden"
+    # behandelt zu werden.
+    if not isinstance(data.get("fachliche_schwerpunkte"), list):
+        data["fachliche_schwerpunkte"] = []
+    if not isinstance(data.get("edv_kenntnisse"), list):
+        data["edv_kenntnisse"] = []
+    # Synonym-Normalisierung (Deutsch/Englisch, Singular/Plural) - siehe
+    # services/synonyms.py fuer die Begruendung (loest z.B. "Jahresabschluss"
+    # vs. "Jahresabschlüsse" als zwei getrennte Eintraege).
+    data["fachliche_schwerpunkte"] = normalize_terms(data["fachliche_schwerpunkte"])
+    data["edv_kenntnisse"] = normalize_terms(data["edv_kenntnisse"])
+    data["rollen"] = _normalize_rollen(data.get("rollen"))
+    data["abschluesse"] = _normalize_abschluesse(data.get("abschluesse"))
+    data["rechtsgebiete"] = _normalize_rechtsgebiete(data.get("rechtsgebiete"), data["rollen"])
+    data["berufliche_stationen"] = _normalize_berufliche_stationen(data.get("berufliche_stationen"))
+    # Defensive Laengenbegrenzung - siehe _MAX_FIELD_LENGTHS oben.
+    for field_name in ("job_title", "qualification", "ausbildung_titel", "examensnoten"):
+        data[field_name] = _truncate_field(field_name, data.get(field_name))
+    return data
+
+
 def extract_candidate_fields(
-    cv_text: str, *, filename: str | None = None, content: bytes | None = None
+    cv_text: str,
+    *,
+    filename: str | None = None,
+    content: bytes | None = None,
+    source_kind: CvSourceKind | None = None,
 ) -> dict[str, Any]:
     """Fuer Punkt 2 (manueller Einzel-Upload): Name/E-Mail/PLZ/Ort/Telefon/
     Rolle/Qualifikation/Ausbildung. Alle personenbezogenen Felder werden
     zusaetzlich zur Prompt-Instruktion hart auf None gesetzt, wenn der
     Agentur-Briefkopf erkannt wird (siehe Modul-Docstring).
+
+    Gescannte PDFs (kaum Text pro Seite, siehe is_scanned_text) und Bilder
+    (JPG/PNG) gehen direkt auf Vision statt auf den Text-Call (siehe
+    extract_candidate_fields_from_scan). `source_kind` kann der Aufrufer
+    mitgeben, wenn er die Klassifikation schon kennt (spart das erneute
+    Zaehlen der PDF-Seiten); ohne filename/content bleibt es beim Text-Pfad.
 
     filename/content sind optional und nur fuer den Vision-Fallback noetig:
     liefert die text-basierte Extraktion einen oder mehrere der Standard-
@@ -1147,6 +1332,10 @@ def extract_candidate_fields(
     schliessen - ein echter LLM-Erfolg kann fuer ein bestimmtes CV genauso
     legitim leere smarte Felder liefern, wenn dort schlicht nichts zu
     erkennen war."""
+    kind = source_kind or classify_cv_source(filename, content, cv_text)
+    if kind is not CvSourceKind.TEXT and filename is not None and content is not None:
+        return extract_candidate_fields_from_scan(filename, content)
+
     try:
         raw = generate_text(
             system_prompt=_FIELD_EXTRACTION_SYSTEM_PROMPT,
@@ -1193,27 +1382,7 @@ def extract_candidate_fields(
         # durch weitere Fallbacks zu arbeiten).
         fallback_data["llm_fallback_reason"] = str(exc)[:500]
         return fallback_data
-    # Defensiv: das Modell haelt sich fast immer an das Array-Schema, aber
-    # ohne diese Normalisierung wuerde ein fehlendes/falsch typisiertes Feld
-    # (z.B. null statt []) weiter unten beim Speichern (JSON-Spalte, erwartet
-    # eine Liste) zu einem Fehler fuehren statt einfach als "nichts gefunden"
-    # behandelt zu werden.
-    if not isinstance(data.get("fachliche_schwerpunkte"), list):
-        data["fachliche_schwerpunkte"] = []
-    if not isinstance(data.get("edv_kenntnisse"), list):
-        data["edv_kenntnisse"] = []
-    # Synonym-Normalisierung (Deutsch/Englisch, Singular/Plural) - siehe
-    # services/synonyms.py fuer die Begruendung (loest z.B. "Jahresabschluss"
-    # vs. "Jahresabschlüsse" als zwei getrennte Eintraege).
-    data["fachliche_schwerpunkte"] = normalize_terms(data["fachliche_schwerpunkte"])
-    data["edv_kenntnisse"] = normalize_terms(data["edv_kenntnisse"])
-    data["rollen"] = _normalize_rollen(data.get("rollen"))
-    data["abschluesse"] = _normalize_abschluesse(data.get("abschluesse"))
-    data["rechtsgebiete"] = _normalize_rechtsgebiete(data.get("rechtsgebiete"), data["rollen"])
-    data["berufliche_stationen"] = _normalize_berufliche_stationen(data.get("berufliche_stationen"))
-    # Defensive Laengenbegrenzung - siehe _MAX_FIELD_LENGTHS oben.
-    for field_name in ("job_title", "qualification", "ausbildung_titel", "examensnoten"):
-        data[field_name] = _truncate_field(field_name, data.get(field_name))
+    data = _normalize_extracted_data(data)
     data["llm_fallback_used"] = False
 
     agency_profile = is_agency_letterhead(cv_text)

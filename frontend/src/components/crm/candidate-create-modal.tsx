@@ -6,11 +6,11 @@ import { Pencil, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { apiPatch, apiPost, apiUpload } from "@/lib/api/client";
+import { apiGet, apiPatch, apiPost, apiUpload } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { invalidateCandidatesCache, useAssignableUsersCache, useCurrentUser } from "@/lib/api/hooks";
 import { NOTICE_PERIOD_OPTIONS, NOTICE_PERIOD_OTHER } from "@/lib/utils";
-import type { BeruflicheStation, Candidate, CvExtractionSuggestion } from "@/lib/api/types";
+import type { BeruflicheStation, Candidate, CvExtractionSuggestion, CvPreviewResponse } from "@/lib/api/types";
 
 // Ordnet die vom Backend erkannten CV-Felder (siehe
 // cc_crm.services.cv_extraction.extract_candidate_fields) den passenden
@@ -90,6 +90,27 @@ function formFromCandidate(candidate: Candidate): typeof emptyForm {
 }
 
 const emptyStation: BeruflicheStation = { kanzleityp: "", kanzleigroesse: "", dauer_jahre: 0 };
+
+const CV_POLL_INTERVAL_MS = 2_000;
+const CV_POLL_MAX_MS = 180_000;
+// Nur fuer den Demo-Modus von apiGet (dort gibt es keinen Backend-Job).
+const CV_POLL_DEMO_FALLBACK: CvPreviewResponse = {
+  first_name: null, last_name: null, email: null, postal_code: null, city: null, phone: null,
+  job_title: null, qualification: null, ausbildung_titel: null, source_is_agency_profile: false,
+  status: "failed", job_id: null, error: "Gescannte Dokumente werden im Demo-Modus nicht ausgewertet.",
+};
+
+/** Holt das Ergebnis eines Hintergrundjobs fuer gescannte CVs ab (POST
+ * /candidates/cv-preview antwortet dort sofort mit status "processing"). */
+async function pollCvPreviewJob(jobId: string): Promise<CvPreviewResponse> {
+  const deadline = Date.now() + CV_POLL_MAX_MS;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, CV_POLL_INTERVAL_MS));
+    const { data } = await apiGet<CvPreviewResponse>(`/candidates/cv-preview/${jobId}`, CV_POLL_DEMO_FALLBACK);
+    if (data.status !== "processing") return data;
+  }
+  throw new Error("Die Auswertung des gescannten Dokuments dauert ungewöhnlich lange. Bitte später erneut versuchen.");
+}
 
 /** Dropdown mit den gaengigen Kuendigungsfrist-Kombinationen + "Sonstige"
  * (Freitext) statt eines reinen Input - siehe NOTICE_PERIOD_OPTIONS in
@@ -174,6 +195,8 @@ export function CandidateCreateForm({
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvExtracting, setCvExtracting] = useState(false);
   const [cvError, setCvError] = useState<string | null>(null);
+  // Gescanntes PDF: die Auswertung laeuft als Hintergrundjob (siehe pollCvPreviewJob).
+  const [cvScanJobRunning, setCvScanJobRunning] = useState(false);
   // Fuer das sichtbare "was wurde uebernommen"-Panel - Nutzer-Feedback:
   // "Auslesen klappt nur auf dem Feld, nicht direkt auf dem Bildschirm"
   // (der einzeilige Hinweistext zuvor war offenbar nicht auffaellig genug).
@@ -198,7 +221,14 @@ export function CandidateCreateForm({
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const suggestion = await apiUpload<CvExtractionSuggestion>("/candidates/cv-preview", formData);
+      let suggestion = await apiUpload<CvPreviewResponse>("/candidates/cv-preview", formData);
+      if (suggestion.status === "processing" && suggestion.job_id) {
+        setCvScanJobRunning(true);
+        suggestion = await pollCvPreviewJob(suggestion.job_id);
+      }
+      if (suggestion.status === "failed") {
+        throw new Error(suggestion.error || "CV konnte nicht ausgelesen werden.");
+      }
       const applied: Array<{ label: string; value: string }> = [];
       setForm((current) => {
         const updated = { ...current };
@@ -219,6 +249,7 @@ export function CandidateCreateForm({
       setCvError(exception instanceof Error ? exception.message : "CV konnte nicht ausgelesen werden.");
     } finally {
       setCvExtracting(false);
+      setCvScanJobRunning(false);
     }
   }
 
@@ -354,9 +385,14 @@ export function CandidateCreateForm({
             <input ref={cvInputRef} type="file" className="hidden" onChange={handleCvInputChange} />
             <Button type="button" size="sm" variant="outline" onClick={() => cvInputRef.current?.click()} disabled={cvExtracting}>
               <Upload size={14} />
-              {cvExtracting ? "Liest aus…" : "CV hochladen"}
+              {cvExtracting ? (cvScanJobRunning ? "Auswertung läuft…" : "Liest aus…") : "CV hochladen"}
             </Button>
           </div>
+          {cvExtracting && cvScanJobRunning && (
+            <p className="mt-2 text-[#69A7EA]">
+              Gescanntes Dokument erkannt — die Auswertung läuft im Hintergrund und kann bis zu einer Minute dauern.
+            </p>
+          )}
           {cvFile && !cvExtracting && !cvError && (
             <div className="mt-3 rounded-md border border-[#1F5FA8]/30 bg-[#102A4C]/50 p-2.5">
               <p className="flex items-center gap-1.5 font-semibold text-[#69A7EA]">

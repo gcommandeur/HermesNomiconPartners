@@ -1,6 +1,6 @@
 import uuid
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -178,3 +178,16 @@ class CvExtractionSuggestion(BaseModel):
     current_employer_internal: str | None = None
     berufliche_stationen: list[BeruflicheStation] | None = None
     source_is_agency_profile: bool = False
+
+
+class CvPreviewResponse(CvExtractionSuggestion):
+    """Antwort von POST/GET /candidates/cv-preview. `done`: Felder sind
+    gefuellt (Text-PDF, DOCX, Bild). `processing`: gescanntes PDF wird im
+    Hintergrund ausgewertet - der Client holt das Ergebnis per GET
+    /candidates/cv-preview/{job_id} ab. `failed`: Auswertung gescheitert,
+    `error` nennt den Grund (die Datei bleibt fuer den Upload trotzdem
+    nutzbar)."""
+
+    status: Literal["done", "processing", "failed"] = "done"
+    job_id: uuid.UUID | None = None
+    error: str | None = None

@@ -315,3 +315,12 @@ class MailAccountOAuthStatus(StrEnum):
 
     CONNECTED = "connected"
     NEEDS_RECONNECT = "needs_reconnect"
+
+
+class CvExtractionJobStatus(StrEnum):
+    """Status eines Hintergrund-Auswertungsjobs fuer gescannte CVs (siehe
+    models/cv_extraction_job.py)."""
+
+    PROCESSING = "processing"
+    DONE = "done"
+    FAILED = "failed"
