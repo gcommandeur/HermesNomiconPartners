@@ -10,6 +10,7 @@ from cc_crm.models.contact_person import ContactPerson
 from cc_crm.models.cv_extraction_job import CvExtractionJob
 from cc_crm.models.email_template import EmailTemplate
 from cc_crm.models.job_mandate import JobMandate
+from cc_crm.models.login_challenge import LoginChallenge
 from cc_crm.models.mail import MailAccount, MailMessage
 from cc_crm.models.mailing_group import MailingGroup
 from cc_crm.models.note import Note
@@ -28,6 +29,7 @@ from cc_crm.models.sourcing_lead import SourcingLead
 from cc_crm.models.sourcing_run import SourcingRun
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.task import Task
+from cc_crm.models.trusted_device import TrustedDevice
 from cc_crm.models.user import User
 
 __all__ = [
@@ -49,6 +51,7 @@ __all__ = [
     "Fee",
     "Interview",
     "JobMandate",
+    "LoginChallenge",
     "MailAccount",
     "MailMessage",
     "MailingGroup",
@@ -62,5 +65,6 @@ __all__ = [
     "SourcingMetric",
     "SourcingRun",
     "Task",
+    "TrustedDevice",
     "User",
 ]

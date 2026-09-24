@@ -8,8 +8,19 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from cc_crm.api.dependencies import CurrentUser, DatabaseSession
 from cc_crm.core.errors import AuthenticationError, RateLimitExceededError
 from cc_crm.core.rate_limit import client_ip, login_rate_limiter
-from cc_crm.schemas.auth import LoginRequest, LoginResponse, UserRead
-from cc_crm.services.auth import AuthService
+from cc_crm.integrations.email.resend_client import EmailProviderError, send_transactional_email
+from cc_crm.models.login_challenge import CODE_LIFETIME_MINUTES
+from cc_crm.models.user import User
+from cc_crm.schemas.auth import (
+    LoginRequest,
+    LoginResponse,
+    LoginStartResponse,
+    ResendLoginCodeRequest,
+    ResendLoginCodeResponse,
+    UserRead,
+    VerifyLoginRequest,
+)
+from cc_crm.services.auth import AuthService, IssuedChallenge, TrustedLogin
 from cc_crm.services.security_alerts import send_security_alert
 
 logger = logging.getLogger("cc_crm.auth")
@@ -18,8 +29,54 @@ router = APIRouter(prefix="/auth")
 _bearer_scheme = HTTPBearer(auto_error=False)
 
 
-@router.post("/login", response_model=LoginResponse)
-def login(payload: LoginRequest, session: DatabaseSession, request: Request) -> LoginResponse:
+def _user_read(user: User) -> UserRead:
+    return UserRead(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        is_admin=user.is_admin,
+        calendar_feed_token=user.calendar_feed_token,
+    )
+
+
+def _send_login_code(email: str, issued: IssuedChallenge) -> None:
+    """Verschickt den 2FA-Code. Anders als send_security_alert (best-effort)
+    MUSS der Code ankommen - schlaegt der Versand fehl, bekommt der Client
+    einen Fehler statt eines "challenge_required" ohne Aussicht auf einen
+    tatsaechlich zugestellten Code. Eine zusaetzliche interne Warnung geht
+    trotzdem an security_alert_email (falls konfiguriert), damit ein
+    Versandausfall (z.B. Resend-Kontingent aufgebraucht) nicht unbemerkt
+    bleibt."""
+    try:
+        send_transactional_email(
+            to_address=email,
+            subject="Ihr Hermes-CRM-Anmeldecode",
+            body_text=(
+                f"Ihr Anmeldecode lautet: {issued.code}\n\n"
+                f"Der Code ist {CODE_LIFETIME_MINUTES} Minuten gueltig und darf nicht "
+                "weitergegeben werden.\n\n"
+                "Falls Sie diese Anmeldung nicht selbst ausgeloest haben, ignorieren Sie "
+                "diese E-Mail."
+            ),
+        )
+    except EmailProviderError:
+        logger.exception("2FA-Code konnte nicht an %s verschickt werden.", email)
+        threading.Thread(
+            target=send_security_alert,
+            kwargs={
+                "subject": "[Hermes CRM] 2FA-Code-Versand fehlgeschlagen",
+                "body": (
+                    f"Der Versand eines Anmeldecodes an {email} ist fehlgeschlagen - "
+                    "Resend-Konfiguration/-Kontingent pruefen."
+                ),
+            },
+            daemon=True,
+        ).start()
+        raise
+
+
+@router.post("/login", response_model=LoginStartResponse)
+def login(payload: LoginRequest, session: DatabaseSession, request: Request) -> LoginStartResponse:
     ip = client_ip(
         request.headers.get("cf-connecting-ip"),
         request.headers.get("x-forwarded-for"),
@@ -30,12 +87,15 @@ def login(payload: LoginRequest, session: DatabaseSession, request: Request) -> 
         raise RateLimitExceededError(
             "Zu viele fehlgeschlagene Login-Versuche. Bitte in ein paar Minuten erneut versuchen."
         )
+
     try:
-        user, token = AuthService(session).login(payload.email, payload.password)
+        result = AuthService(session).authenticate(
+            payload.email, payload.password, payload.trusted_device_token
+        )
     except AuthenticationError:
         # record_failure() liefert True nur auf dem Versuch, der die Sperre
         # neu ausloest - so geht pro Brute-Force-Ausbruch genau eine Warnung
-        # raus statt einer Mail pro (ohnehin schon 429-blockiertem) Versuch.
+        # raus statt einer Mail pro (ohnehin schon 429-blockierten) Versuch.
         if login_rate_limiter.record_failure(ip):
             logger.warning(
                 "Login-Rate-Limit ausgeloest, Sicherheitswarnung wird verschickt: IP=%s email=%s",
@@ -70,15 +130,41 @@ def login(payload: LoginRequest, session: DatabaseSession, request: Request) -> 
             ).start()
         raise
     login_rate_limiter.record_success(ip)
+
+    if isinstance(result, TrustedLogin):
+        return LoginStartResponse(
+            status="authenticated",
+            token=result.token,
+            user=_user_read(result.user),
+            trusted_device_token=result.trusted_device_token,
+        )
+
+    _send_login_code(result.user.email, result)
+    return LoginStartResponse(
+        status="challenge_required",
+        challenge_id=result.challenge.id,
+        expires_at=result.challenge.expires_at,
+    )
+
+
+@router.post("/login/verify", response_model=LoginResponse)
+def verify_login(payload: VerifyLoginRequest, session: DatabaseSession) -> LoginResponse:
+    auth_service = AuthService(session)
+    user, token, _challenge = auth_service.verify_challenge(payload.challenge_id, payload.code)
+    trusted_device_token = auth_service.issue_trusted_device(user.id)
     return LoginResponse(
-        token=token,
-        user=UserRead(
-            id=user.id,
-            email=user.email,
-            display_name=user.display_name,
-            is_admin=user.is_admin,
-            calendar_feed_token=user.calendar_feed_token,
-        ),
+        token=token, user=_user_read(user), trusted_device_token=trusted_device_token
+    )
+
+
+@router.post("/login/resend", response_model=ResendLoginCodeResponse)
+def resend_login_code(
+    payload: ResendLoginCodeRequest, session: DatabaseSession
+) -> ResendLoginCodeResponse:
+    issued = AuthService(session).resend_challenge(payload.challenge_id)
+    _send_login_code(issued.user.email, issued)
+    return ResendLoginCodeResponse(
+        challenge_id=issued.challenge.id, expires_at=issued.challenge.expires_at
     )
 
 
@@ -94,10 +180,4 @@ def logout(
 
 @router.get("/me", response_model=UserRead)
 def me(current_user: CurrentUser) -> UserRead:
-    return UserRead(
-        id=current_user.id,
-        email=current_user.email,
-        display_name=current_user.display_name,
-        is_admin=current_user.is_admin,
-        calendar_feed_token=current_user.calendar_feed_token,
-    )
+    return _user_read(current_user)

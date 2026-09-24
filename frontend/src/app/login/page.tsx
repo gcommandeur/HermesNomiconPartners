@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { LogIn, ShieldAlert } from "lucide-react";
+import { LogIn, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,7 +15,26 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(event: React.FormEvent) {
+  // Schritt 2 (Code-Eingabe) - nur befuellt, wenn das Backend "challenge_required"
+  // meldet (kein vertrautes Geraet, siehe /api/login/route.ts).
+  const [challengeId, setChallengeId] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const codeInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => setResendCooldown((value) => Math.max(0, value - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  useEffect(() => {
+    if (challengeId) codeInputRef.current?.focus();
+  }, [challengeId]);
+
+  async function handlePasswordSubmit(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError(null);
@@ -23,17 +44,74 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
         throw new Error(data.error ?? "Anmeldung fehlgeschlagen.");
       }
-      router.replace("/");
-      router.refresh();
+      if (data.status === "authenticated") {
+        // Vertrautes Geraet - 2FA-Schritt entfaellt komplett.
+        router.replace("/");
+        router.refresh();
+        return;
+      }
+      setChallengeId(data.challengeId as string);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Anmeldung fehlgeschlagen.");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleCodeSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setVerifying(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/login/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ challengeId, code }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error ?? "Code ist ungültig.");
+      }
+      router.replace("/");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Code ist ungültig.");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function handleResend() {
+    setResending(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/login/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ challengeId }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error ?? "Code konnte nicht erneut verschickt werden.");
+      }
+      setCode("");
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Code konnte nicht erneut verschickt werden.");
+    } finally {
+      setResending(false);
+    }
+  }
+
+  function handleBackToPassword() {
+    setChallengeId(null);
+    setCode("");
+    setError(null);
   }
 
   return (
@@ -44,42 +122,99 @@ export default function LoginPage() {
           <h1 className="text-lg font-semibold text-[#F8FAFC]">Hermes Login</h1>
           <p className="text-center text-xs text-[#94A3B8]">Internes Recruiting-CRM für Commandeur Consulting</p>
         </div>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label className="mb-1 block text-xs text-[#94A3B8]" htmlFor="email">E-Mail</label>
-            <input
-              id="email"
-              type="email"
-              required
-              autoComplete="username"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-md border border-white/10 bg-[#071426] px-3 py-2 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-[#94A3B8]" htmlFor="password">Passwort</label>
-            <input
-              id="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-md border border-white/10 bg-[#071426] px-3 py-2 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]"
-            />
-          </div>
-          {error && (
-            <div className="flex items-center gap-2 rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">
-              <ShieldAlert size={14} />
-              {error}
+
+        {!challengeId ? (
+          <form className="space-y-4" onSubmit={handlePasswordSubmit}>
+            <div>
+              <label className="mb-1 block text-xs text-[#94A3B8]" htmlFor="email">E-Mail</label>
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="username"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="w-full rounded-md border border-white/10 bg-[#071426] px-3 py-2 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]"
+              />
             </div>
-          )}
-          <Button type="submit" disabled={loading} className="w-full">
-            <LogIn size={15} />
-            {loading ? "Anmelden…" : "Anmelden"}
-          </Button>
-        </form>
+            <div>
+              <label className="mb-1 block text-xs text-[#94A3B8]" htmlFor="password">Passwort</label>
+              <input
+                id="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full rounded-md border border-white/10 bg-[#071426] px-3 py-2 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]"
+              />
+            </div>
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">
+                <ShieldAlert size={14} />
+                {error}
+              </div>
+            )}
+            <Button type="submit" disabled={loading} className="w-full">
+              <LogIn size={15} />
+              {loading ? "Anmelden…" : "Anmelden"}
+            </Button>
+          </form>
+        ) : (
+          <form className="space-y-4" onSubmit={handleCodeSubmit}>
+            <div className="flex items-center gap-2 rounded-lg border border-[#1F5FA8]/30 bg-[#102A4C]/50 p-3 text-xs text-[#69A7EA]">
+              <ShieldCheck size={14} />
+              Wir haben einen 6-stelligen Code an {email} geschickt. Der Code ist 15 Minuten gültig.
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-[#94A3B8]" htmlFor="code">Anmeldecode</label>
+              <input
+                id="code"
+                ref={codeInputRef}
+                type="text"
+                inputMode="numeric"
+                pattern="\d{6}"
+                maxLength={6}
+                required
+                autoComplete="one-time-code"
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                className="w-full rounded-md border border-white/10 bg-[#071426] px-3 py-2 text-center text-lg tracking-[0.5em] text-[#F8FAFC] outline-none focus:border-[#1F5FA8]"
+              />
+            </div>
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">
+                <ShieldAlert size={14} />
+                {error}
+              </div>
+            )}
+            <Button type="submit" disabled={verifying || code.length !== 6} className="w-full">
+              <LogIn size={15} />
+              {verifying ? "Prüfe…" : "Code bestätigen"}
+            </Button>
+            <div className="flex items-center justify-between text-xs">
+              <button
+                type="button"
+                onClick={handleBackToPassword}
+                className="text-[#94A3B8] hover:text-[#F8FAFC]"
+              >
+                Zurück
+              </button>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resending || resendCooldown > 0}
+                className="text-[#69A7EA] hover:text-[#8FC1F2] disabled:cursor-not-allowed disabled:text-[#4A5568]"
+              >
+                {resendCooldown > 0
+                  ? `Neuen Code anfordern (${resendCooldown}s)`
+                  : resending
+                    ? "Wird verschickt…"
+                    : "Neuen Code anfordern"}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

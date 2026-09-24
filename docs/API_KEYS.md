@@ -1,6 +1,10 @@
 # API Keys für Agenten und Integrationen
 
 Menschliche Logins (`/api/v1/auth/login`) laufen 24 Stunden und sind an eine Person gebunden.
+Seit 2026-09-24 verlangt der interaktive Login zusaetzlich einen per E-Mail verschickten
+6-stelligen Code (2FA, siehe `services/auth.py`) - API-Keys sind davon **nicht** betroffen:
+`POST /auth/login`, `/login/verify`, `/login/resend` existieren fuer den API-Key-Pfad gar nicht,
+`X-API-Key` authentifiziert weiterhin in einem einzigen Request ueber `ApiKeyService`.
 Für Bots, Agenten und Integrationen (Bullhorn-Sync, kuenftige AI-Matching-Agenten, Webhooks)
 gibt es stattdessen langlebige API-Keys, die als eigener Service-Account authentifizieren.
 

@@ -160,28 +160,34 @@ sichtbar):
 - `CC_CRM_ANTHROPIC_MODEL=claude-sonnet-5`
 - `CC_CRM_CORS_ORIGINS=["https://hermescrm-v9sle.ondigitalocean.app"]`
 
-### Sicherheitswarnungen per E-Mail (Brute-Force-Alarm auf `/auth/login`)
+### Transaktionale E-Mails: 2FA-Login-Codes + Sicherheitswarnungen (Resend)
 
-Seit 2026-08-08 verschickt `services/security_alerts.py` eine E-Mail, sobald
-das Login-Rate-Limit (siehe unten) für eine IP auslöst - pro
-Brute-Force-Ausbruch genau einmal, nicht pro weiterem 429. Ohne die folgenden
-Variablen bleibt das Feature inaktiv (nur ein Log-Eintrag, kein Mail-Versand
-- bricht den Login-Flow also nie):
+Seit 2026-09-24 laufen zwei Dinge über denselben Versandweg
+(`integrations/email/resend_client.py`, HTTP-API von
+[Resend](https://resend.com), KEIN SMTP): der 2FA-Code bei jedem Login
+(`services/auth.py`) und die Brute-Force-Sicherheitswarnung
+(`services/security_alerts.py`, seit 2026-08-08 - verschickt seither pro
+Brute-Force-Ausbruch genau einmal, nicht pro weiterem 429). Bewusst kein
+SMTP über das verbundene M365-Postfach: M365-SMTP-Auth ist bei modernen
+Tenants oft gesperrt, und nach dem Graph-Sync-Vorfall (siehe Abschnitt
+unten) keine weitere M365-Abhängigkeit an dieser Stelle.
 
-- `CC_CRM_SECURITY_ALERT_EMAIL` – Ziel-Adresse (z.B.
-  `gege.commandeur@gmail.com`)
-- `CC_CRM_SMTP_HOST`, `CC_CRM_SMTP_PORT` (Default 587)
-- `CC_CRM_SMTP_USERNAME`, `CC_CRM_SMTP_PASSWORD` (verschlüsselt) – bei Gmail
-  als Absender-Konto: ein
-  [App-Passwort](https://myaccount.google.com/apppasswords) verwenden, nicht
-  das normale Kontopasswort (Gmail verlangt das für SMTP-Login bei aktivierter
-  2FA)
-- `CC_CRM_SMTP_FROM_EMAIL` (optional, sonst `CC_CRM_SMTP_USERNAME`)
-- `CC_CRM_SMTP_USE_TLS=true` (Default; STARTTLS)
+**Pflicht für den Login** (ohne diese beiden Variablen kann sich NIEMAND
+mehr anmelden - der 2FA-Code kann dann nicht verschickt werden):
 
-Alle SMTP-Werte (Host/Port/Username/From) unverschlüsselt lassen, nur
-`CC_CRM_SMTP_PASSWORD` als "Encrypt" markieren - analog zu den übrigen
-Secrets oben.
+- `CC_CRM_RESEND_API_KEY` (verschlüsselt) – API-Key aus dem
+  [Resend-Dashboard](https://resend.com/api-keys)
+- `CC_CRM_RESEND_FROM_EMAIL` – Absenderadresse, z.B.
+  `Hermes CRM <login@notifications.commandeur-consulting.de>` - die
+  Domain muss in Resend verifiziert sein (SPF/DKIM-DNS-Einträge), sonst
+  lehnt Resend den Versand ab
+
+**Optional** (ohne gesetzte Adresse bleibt nur die Sicherheitswarnung
+inaktiv - nur ein Log-Eintrag, kein Mail-Versand, bricht den Login-Flow
+nie):
+
+- `CC_CRM_SECURITY_ALERT_EMAIL` – Ziel-Adresse für Brute-Force-Warnungen
+  (z.B. `gege.commandeur@gmail.com`)
 
 ### Temporäre Variable für einmalige Skript-Läufe: `CC_ARCHIV_REVIEW_CSV_B64`
 

@@ -10,6 +10,14 @@ export const AUTH_COOKIE_NAME = "cc_crm_token";
 // serverseitig laengst abgelaufen ist.
 export const AUTH_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24;
 
+// "Dieses Geraet merken" (2FA-Login, siehe backend/src/cc_crm/services/
+// auth.py::TRUSTED_DEVICE_LIFETIME_DAYS) - eigenes, laenger lebendes Cookie
+// neben dem Session-Cookie. httpOnly wie das Session-Cookie: der Wert ist
+// ein unbeguessbares Token, das serverseitig gegen trusted_devices geprueft
+// wird, kein Grund, ihn dem Browser-JS zugaenglich zu machen.
+export const TRUSTED_DEVICE_COOKIE_NAME = "cc_crm_trusted_device";
+export const TRUSTED_DEVICE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 14;
+
 // Ohne ein explizites Timeout hängt ein server-seitiger fetch() (Server
 // Components/Layout) bei einem falsch konfigurierten/unerreichbaren Backend
 // (z.B. falscher Host, Backend down) am OS-TCP-Timeout (mehrere Minuten) statt

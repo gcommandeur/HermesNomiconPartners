@@ -1,10 +1,45 @@
+import re
 import threading
+import uuid
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.core.rate_limit import MAX_ATTEMPTS, login_rate_limiter
 from tests.conftest import TEST_USER_EMAIL, TEST_USER_PASSWORD
+
+_CODE_RE = re.compile(r"Anmeldecode lautet: (\d{6})")
+
+
+@pytest.fixture(autouse=True)
+def _capture_sent_codes(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, str]]:
+    """2FA-Codes gehen per Resend raus (integrations/email/resend_client.py) -
+    in Tests ist kein API-Key konfiguriert, also wird IMMER gemockt, damit
+    kein Test versehentlich einen echten HTTP-Call macht. Der Klartext-Code
+    steht im Mailtext (siehe api/v1/auth.py::_send_login_code) und wird hier
+    abgegriffen, um ihn in den Tests "einzutippen"."""
+    calls: list[dict[str, str]] = []
+
+    def fake_send_transactional_email(*, to_address: str, subject: str, body_text: str) -> None:
+        calls.append({"to_address": to_address, "subject": subject, "body_text": body_text})
+
+    monkeypatch.setattr(
+        "cc_crm.api.v1.auth.send_transactional_email", fake_send_transactional_email
+    )
+    return calls
+
+
+def _extract_code(calls: list[dict[str, str]]) -> str:
+    match = _CODE_RE.search(calls[-1]["body_text"])
+    assert match is not None, f"Kein Code in der zuletzt 'verschickten' Mail gefunden: {calls[-1]}"
+    return match.group(1)
+
+
+def _start_login(
+    client: TestClient, email: str = TEST_USER_EMAIL, password: str = TEST_USER_PASSWORD
+):
+    return client.post("/api/v1/auth/login", json={"email": email, "password": password})
 
 
 def test_protected_route_requires_bearer_token(client: TestClient) -> None:
@@ -15,28 +50,247 @@ def test_protected_route_requires_bearer_token(client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_login_returns_token_and_me_resolves_user(client: TestClient) -> None:
+def test_login_sends_a_code_and_verify_returns_token_and_me_resolves_user(
+    client: TestClient, _capture_sent_codes: list[dict[str, str]]
+) -> None:
     client.headers.pop("Authorization", None)
 
-    login = client.post(
-        "/api/v1/auth/login",
-        json={"email": TEST_USER_EMAIL, "password": TEST_USER_PASSWORD},
+    start = _start_login(client)
+    assert start.status_code == 200
+    body = start.json()
+    assert body["status"] == "challenge_required"
+    assert body["challenge_id"]
+    assert body["token"] is None
+    assert len(_capture_sent_codes) == 1
+    assert _capture_sent_codes[0]["to_address"] == TEST_USER_EMAIL
+
+    code = _extract_code(_capture_sent_codes)
+    verify = client.post(
+        "/api/v1/auth/login/verify",
+        json={"challenge_id": body["challenge_id"], "code": code},
     )
-    assert login.status_code == 200
-    token = login.json()["token"]
+    assert verify.status_code == 200
+    verify_body = verify.json()
+    token = verify_body["token"]
+    assert verify_body["trusted_device_token"]
 
     me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert me.status_code == 200
     assert me.json()["email"] == TEST_USER_EMAIL
 
 
+def test_wrong_code_is_rejected_and_locks_after_five_attempts(
+    client: TestClient, _capture_sent_codes: list[dict[str, str]]
+) -> None:
+    client.headers.pop("Authorization", None)
+    challenge_id = _start_login(client).json()["challenge_id"]
+
+    for _ in range(5):
+        wrong = client.post(
+            "/api/v1/auth/login/verify",
+            json={"challenge_id": challenge_id, "code": "000000"},
+        )
+        assert wrong.status_code == 401
+
+    locked = client.post(
+        "/api/v1/auth/login/verify",
+        json={"challenge_id": challenge_id, "code": "000000"},
+    )
+    assert locked.status_code == 401
+    assert "Fehlversuche" in locked.json()["detail"]
+
+    # Selbst der RICHTIGE Code wird nach der Sperre nicht mehr angenommen.
+    code = _extract_code(_capture_sent_codes)
+    still_locked = client.post(
+        "/api/v1/auth/login/verify", json={"challenge_id": challenge_id, "code": code}
+    )
+    assert still_locked.status_code == 401
+
+
+def test_expired_code_is_rejected_with_a_clear_message(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from cc_crm.models.login_challenge import LoginChallenge
+
+    client.headers.pop("Authorization", None)
+    challenge_id = _start_login(client).json()["challenge_id"]
+
+    with session_factory() as session:
+        challenge = session.get(LoginChallenge, uuid.UUID(challenge_id))
+        assert challenge is not None
+        challenge.expires_at = datetime.now(UTC) - timedelta(minutes=1)
+        session.commit()
+
+    response = client.post(
+        "/api/v1/auth/login/verify",
+        json={"challenge_id": challenge_id, "code": "123456"},
+    )
+    assert response.status_code == 401
+    assert "abgelaufen" in response.json()["detail"]
+
+
+def test_resend_issues_a_new_code_and_resets_the_attempt_counter(
+    client: TestClient, _capture_sent_codes: list[dict[str, str]]
+) -> None:
+    client.headers.pop("Authorization", None)
+    challenge_id = _start_login(client).json()["challenge_id"]
+
+    for _ in range(4):
+        client.post(
+            "/api/v1/auth/login/verify",
+            json={"challenge_id": challenge_id, "code": "000000"},
+        )
+
+    cooldown = client.post("/api/v1/auth/login/resend", json={"challenge_id": challenge_id})
+    assert cooldown.status_code == 422
+    assert "warten" in cooldown.json()["detail"]
+
+
+def test_resend_after_cooldown_issues_a_working_new_code(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from cc_crm.models.login_challenge import LoginChallenge
+
+    client.headers.pop("Authorization", None)
+    challenge_id = _start_login(client).json()["challenge_id"]
+
+    for _ in range(5):
+        client.post(
+            "/api/v1/auth/login/verify",
+            json={"challenge_id": challenge_id, "code": "000000"},
+        )
+
+    # Cooldown manuell ablaufen lassen statt 60s im Test zu warten.
+    with session_factory() as session:
+        challenge = session.get(LoginChallenge, uuid.UUID(challenge_id))
+        assert challenge is not None
+        challenge.last_sent_at = datetime.now(UTC) - timedelta(seconds=61)
+        session.commit()
+
+    calls: list[dict[str, str]] = []
+
+    def fake_send(*, to_address: str, subject: str, body_text: str) -> None:
+        calls.append({"body_text": body_text})
+
+    import cc_crm.api.v1.auth as auth_module
+
+    old = auth_module.send_transactional_email
+    auth_module.send_transactional_email = fake_send  # type: ignore[assignment]
+    try:
+        resend = client.post("/api/v1/auth/login/resend", json={"challenge_id": challenge_id})
+        assert resend.status_code == 200
+        new_code = _extract_code(calls)
+    finally:
+        auth_module.send_transactional_email = old  # type: ignore[assignment]
+
+    # Der Zaehler wurde durch den Resend zurueckgesetzt - der neue Code wird
+    # angenommen, obwohl vorher schon 5 Fehlversuche liefen.
+    verify = client.post(
+        "/api/v1/auth/login/verify", json={"challenge_id": challenge_id, "code": new_code}
+    )
+    assert verify.status_code == 200
+
+
+def test_a_consumed_code_cannot_be_replayed(
+    client: TestClient, _capture_sent_codes: list[dict[str, str]]
+) -> None:
+    client.headers.pop("Authorization", None)
+    challenge_id = _start_login(client).json()["challenge_id"]
+    code = _extract_code(_capture_sent_codes)
+
+    first = client.post(
+        "/api/v1/auth/login/verify", json={"challenge_id": challenge_id, "code": code}
+    )
+    assert first.status_code == 200
+
+    replay = client.post(
+        "/api/v1/auth/login/verify", json={"challenge_id": challenge_id, "code": code}
+    )
+    assert replay.status_code == 401
+
+
+def test_trusted_device_token_skips_2fa_on_next_login(
+    client: TestClient, _capture_sent_codes: list[dict[str, str]]
+) -> None:
+    client.headers.pop("Authorization", None)
+    challenge_id = _start_login(client).json()["challenge_id"]
+    code = _extract_code(_capture_sent_codes)
+
+    verify = client.post(
+        "/api/v1/auth/login/verify", json={"challenge_id": challenge_id, "code": code}
+    )
+    device_token = verify.json()["trusted_device_token"]
+    assert device_token
+
+    calls_before = len(_capture_sent_codes)
+    second_login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": TEST_USER_EMAIL,
+            "password": TEST_USER_PASSWORD,
+            "trusted_device_token": device_token,
+        },
+    )
+    assert second_login.status_code == 200
+    body = second_login.json()
+    assert body["status"] == "authenticated"
+    assert body["token"]
+    # Kein zweiter Code wurde verschickt - der 2FA-Schritt wurde uebersprungen.
+    assert len(_capture_sent_codes) == calls_before
+
+    me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {body['token']}"})
+    assert me.status_code == 200
+    assert me.json()["email"] == TEST_USER_EMAIL
+
+
+def test_trusted_device_token_is_bound_to_the_issuing_user(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+    _capture_sent_codes: list[dict[str, str]],
+) -> None:
+    """Ein auf einem geteilten Browser hinterlegtes 'Geraet merken'-Cookie
+    darf niemals den 2FA-Schritt fuer einen ANDEREN Account ueberspringen."""
+    from cc_crm.core.security import hash_password
+    from cc_crm.models.user import User
+
+    client.headers.pop("Authorization", None)
+    challenge_id = _start_login(client).json()["challenge_id"]
+    code = _extract_code(_capture_sent_codes)
+    verify = client.post(
+        "/api/v1/auth/login/verify", json={"challenge_id": challenge_id, "code": code}
+    )
+    device_token = verify.json()["trusted_device_token"]
+
+    with session_factory() as session:
+        session.add(
+            User(email="andere@commandeur.example", hashed_password=hash_password("pw123456"))
+        )
+        session.commit()
+
+    calls_before = len(_capture_sent_codes)
+    other_login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "andere@commandeur.example",
+            "password": "pw123456",
+            "trusted_device_token": device_token,
+        },
+    )
+    assert other_login.status_code == 200
+    body = other_login.json()
+    # Falscher Nutzer fuer dieses Geraet -> normaler 2FA-Flow, kein Skip.
+    assert body["status"] == "challenge_required"
+    assert len(_capture_sent_codes) == calls_before + 1
+
+
 def test_login_with_wrong_password_is_rejected(client: TestClient) -> None:
     client.headers.pop("Authorization", None)
 
-    response = client.post(
-        "/api/v1/auth/login",
-        json={"email": TEST_USER_EMAIL, "password": "wrong-password"},
-    )
+    response = _start_login(client, password="wrong-password")
 
     assert response.status_code == 401
 
@@ -46,25 +300,16 @@ def test_login_is_rate_limited_after_repeated_failures(client: TestClient) -> No
     login_rate_limiter.reset()
 
     for _ in range(MAX_ATTEMPTS):
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"email": TEST_USER_EMAIL, "password": "wrong-password"},
-        )
+        response = _start_login(client, password="wrong-password")
         assert response.status_code == 401
 
-    blocked = client.post(
-        "/api/v1/auth/login",
-        json={"email": TEST_USER_EMAIL, "password": "wrong-password"},
-    )
+    blocked = _start_login(client, password="wrong-password")
     assert blocked.status_code == 429
 
     # Auch ein KORREKTES Passwort wird waehrend der Sperre abgelehnt - das
     # Rate-Limit greift vor jedem Passwort-Vergleich, nicht nur bei falschen
     # Versuchen.
-    still_blocked = client.post(
-        "/api/v1/auth/login",
-        json={"email": TEST_USER_EMAIL, "password": TEST_USER_PASSWORD},
-    )
+    still_blocked = _start_login(client)
     assert still_blocked.status_code == 429
 
     login_rate_limiter.reset()
@@ -125,19 +370,13 @@ def test_login_rate_limit_triggers_exactly_one_security_alert(
     )
 
     for _ in range(MAX_ATTEMPTS):
-        client.post(
-            "/api/v1/auth/login",
-            json={"email": TEST_USER_EMAIL, "password": "wrong-password"},
-        )
+        _start_login(client, password="wrong-password")
     assert fired.wait(timeout=2), "Sicherheitswarnung wurde nicht innerhalb von 2s ausgeloest"
     assert len(calls) == 1
     assert TEST_USER_EMAIL in calls[0]["body"]
 
     # Weitere Versuche waehrend der Sperre loesen KEINE erneute Warnung aus.
-    client.post(
-        "/api/v1/auth/login",
-        json={"email": TEST_USER_EMAIL, "password": "wrong-password"},
-    )
+    _start_login(client, password="wrong-password")
     assert len(calls) == 1
 
     login_rate_limiter.reset()
