@@ -21,13 +21,17 @@ _CODE_RE = re.compile(r"Anmeldecode lautet: (\d{6})")
 
 
 @pytest.fixture(autouse=True)
-def _reset_rate_limiters() -> None:
-    """Beide Login-Rate-Limiter sind prozessweite Singletons (siehe
+def _reset_rate_limiters(client: TestClient) -> None:
+    """Alle vier Rate-Limiter sind jetzt DB-gestuetzt (siehe
     core/rate_limit.py) - ohne einen Reset vor JEDEM Test wuerden
-    fehlgeschlagene Login-Versuche aus vorherigen Tests (die alle denselben
-    TEST_USER_EMAIL verwenden) sich ueber die Testdatei hinweg aufsummieren
-    und einzelne, fuer sich genommen korrekte Tests mit einem unerwarteten
-    429 statt 401 scheitern lassen."""
+    fehlgeschlagene Login-/Verify-Versuche aus vorherigen Tests (die alle
+    denselben TEST_USER_EMAIL verwenden) sich ueber die Testdatei hinweg
+    aufsummieren und einzelne, fuer sich genommen korrekte Tests mit einem
+    unerwarteten 429 scheitern lassen. Haengt bewusst explizit von `client`
+    ab (statt nur autouse zu sein): erst `client` biegt SessionLocal auf die
+    isolierte Test-Engine um (siehe tests/conftest.py) - ohne diese
+    Abhaengigkeit koennte reset() vor diesem Umbiegen laufen und gegen die
+    echte lokale Dev-DB fehlschlagen."""
     login_rate_limiter.reset()
     email_login_rate_limiter.reset()
     verify_ip_rate_limiter.reset()

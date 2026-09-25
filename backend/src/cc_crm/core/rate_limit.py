@@ -1,47 +1,79 @@
-"""Einfaches In-Memory-Rate-Limiting fuer den Login-Endpunkt (siehe
-docs/DEPLOYMENT.md, dort bisher als offener Punkt vermerkt - aktuell gibt es
-keinerlei Schutz gegen automatisiertes Passwort-Raten).
+"""DB-gestuetztes Rate-Limiting fuer Login/2FA-Verify (siehe
+docs/DEPLOYMENT.md, dort bisher als offener Punkt vermerkt).
 
-Bewusst kein Redis/externe Infrastruktur: die App laeuft als ein einzelner
-uvicorn-Prozess fuer einen kleinen internen Nutzerkreis - ein simpler,
-prozessinterner Zaehler reicht dafuer voellig aus und ist robuster (keine
-zusaetzliche Abhaengigkeit, kein zusaetzlicher Netzwerk-Fehlerfall) als eine
-externe Rate-Limiting-Bibliothek fuer diesen Massstab.
+Kein Redis noetig: ein reiner Prozess-Zaehler (die fruehere Version dieser
+Datei) haelt keinen Neustart/Deploy durch und wuerde bei mehreren
+gleichzeitig laufenden App-Instanzen pro Instanz getrennt zaehlen, sich
+also effektiv mit der Instanzzahl multiplizieren lassen - beides reale
+Risiken auf DigitalOcean App Platform (Deploys/Skalierung). Die ohnehin
+vorhandene Datenbank (siehe models/rate_limit_attempt.py) reicht fuer dieses
+Zugriffsmuster (wenige Schreibzugriffe, kurze Zeitfenster) voellig aus,
+ohne zusaetzliche Infrastruktur/Abhaengigkeit.
 
-Zaehlt fehlgeschlagene Login-Versuche pro Client-IP in einem gleitenden
-Zeitfenster; bei Ueberschreitung wird der naechste Versuch mit 429 abgelehnt,
-BEVOR ueberhaupt ein Passwort-Vergleich stattfindet (verhindert nicht nur
-Erfolg, sondern auch das Timing-Oracle wiederholter Passwort-Checks). Eine
-erfolgreiche Anmeldung setzt den Zaehler fuer diese IP sofort zurueck.
-"""
+Zaehlt fehlgeschlagene Versuche pro Schluessel (IP/E-Mail/Account) als
+Zeilen in `rate_limit_attempts` in einem gleitenden Zeitfenster; bei
+Ueberschreitung wird der naechste Versuch mit 429 abgelehnt, BEVOR
+ueberhaupt ein Passwort-/Code-Vergleich stattfindet (verhindert nicht nur
+Erfolg, sondern auch das Timing-Oracle wiederholter Vergleiche). Eine
+erfolgreiche Anmeldung/Verifizierung loescht die Zeilen fuer diesen
+Schluessel sofort. Bei jedem Fehlversuch werden beilaeufig alle Zeilen
+aelter als 1 Tag geloescht (kein separater Cron-Job noetig) - grosszuegig
+laenger als jedes einzelne Zeitfenster, damit dieselbe Aufraeum-Regel fuer
+alle vier Zaehler unten passt.
+
+Gleiche oeffentliche Schnittstelle (is_blocked/record_failure/
+record_success/reset) wie die fruehere In-Memory-Version, damit
+api/v1/auth.py unveraendert bleibt - jede Methode oeffnet/schliesst ihre
+eigene kurzlebige DB-Session (ueber das SessionLocal-Modulattribut, nicht
+als direkt importierter Name, damit Tests es wie ueberall sonst im Projekt
+per monkeypatch auf die isolierte Test-Engine umbiegen koennen, siehe
+tests/conftest.py::client)."""
 
 from __future__ import annotations
 
-import threading
-from collections import defaultdict
 from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import delete, func, select
+
+from cc_crm.infrastructure.database import session as db_session_module
+from cc_crm.models.rate_limit_attempt import RateLimitAttempt
 
 MAX_ATTEMPTS = 3
 WINDOW = timedelta(minutes=5)
 
+# Grosszuegig laenger als das laengste unten verwendete Zeitfenster (15 Min)
+# - beim Aufraeumen wird bewusst nicht pro Scope unterschiedlich pariert,
+# ein fester Wert reicht, weil Zeilen aelter als 1 Tag fuer JEDEN Zaehler
+# hier garantiert irrelevant sind.
+_CLEANUP_MAX_AGE = timedelta(days=1)
+
 
 class LoginRateLimiter:
-    def __init__(self, max_attempts: int = MAX_ATTEMPTS, window: timedelta = WINDOW) -> None:
+    def __init__(
+        self, scope: str, max_attempts: int = MAX_ATTEMPTS, window: timedelta = WINDOW
+    ) -> None:
+        self._scope = scope
         self._max_attempts = max_attempts
         self._window = window
-        self._failures: dict[str, list[datetime]] = defaultdict(list)
-        self._lock = threading.Lock()
 
-    def _prune(self, key: str, now: datetime) -> list[datetime]:
+    def _count_recent(self, session, key: str, now: datetime) -> int:  # type: ignore[no-untyped-def]
         cutoff = now - self._window
-        recent = [ts for ts in self._failures[key] if ts >= cutoff]
-        self._failures[key] = recent
-        return recent
+        return int(
+            session.scalar(
+                select(func.count())
+                .select_from(RateLimitAttempt)
+                .where(
+                    RateLimitAttempt.scope == self._scope,
+                    RateLimitAttempt.key == key,
+                    RateLimitAttempt.created_at >= cutoff,
+                )
+            )
+            or 0
+        )
 
     def is_blocked(self, key: str) -> bool:
-        with self._lock:
-            recent = self._prune(key, datetime.now(UTC))
-            return len(recent) >= self._max_attempts
+        with db_session_module.SessionLocal() as session:
+            return self._count_recent(session, key, datetime.now(UTC)) >= self._max_attempts
 
     def record_failure(self, key: str) -> bool:
         """Zaehlt einen Fehlversuch und gibt True zurueck GENAU auf dem
@@ -50,25 +82,39 @@ class LoginRateLimiter:
         Sperre bereits aktiv ist. Damit kann der Aufrufer genau einmal pro
         Brute-Force-Ausbruch eine Sicherheitswarnung verschicken statt bei
         jedem einzelnen weiteren (ohnehin schon 429-blockierten) Versuch."""
-        with self._lock:
-            now = datetime.now(UTC)
-            recent = self._prune(key, now)
-            was_blocked = len(recent) >= self._max_attempts
-            recent.append(now)
-            self._failures[key] = recent
-            return len(recent) >= self._max_attempts and not was_blocked
+        now = datetime.now(UTC)
+        with db_session_module.SessionLocal() as session:
+            recent_count = self._count_recent(session, key, now)
+            was_blocked = recent_count >= self._max_attempts
+            session.add(RateLimitAttempt(scope=self._scope, key=key, created_at=now))
+            # Beilaeufig beim Schreiben aufraeumen statt eines eigenen
+            # Cron-Jobs - jede fehlgeschlagene Anmeldung/Verifizierung ist
+            # ohnehin schon ein Schreibzugriff.
+            session.execute(
+                delete(RateLimitAttempt).where(
+                    RateLimitAttempt.created_at < now - _CLEANUP_MAX_AGE
+                )
+            )
+            session.commit()
+            new_count = recent_count + 1
+            return new_count >= self._max_attempts and not was_blocked
 
     def record_success(self, key: str) -> None:
-        with self._lock:
-            self._failures.pop(key, None)
+        with db_session_module.SessionLocal() as session:
+            session.execute(
+                delete(RateLimitAttempt).where(
+                    RateLimitAttempt.scope == self._scope, RateLimitAttempt.key == key
+                )
+            )
+            session.commit()
 
     def reset(self) -> None:
-        """Nur fuer Tests - leert den gesamten In-Memory-Zustand, damit
-        Tests sich nicht gegenseitig ueber den Prozess-weiten Singleton
-        beeinflussen (dieselbe TestClient-Verbindung meldet immer dieselbe
-        Client-IP)."""
-        with self._lock:
-            self._failures.clear()
+        """Nur fuer Tests - leert den gesamten Zustand DIESES Scopes, damit
+        Tests sich nicht gegenseitig ueber die (in Tests auf die isolierte
+        Test-Engine umgebogene) Tabelle hinweg beeinflussen."""
+        with db_session_module.SessionLocal() as session:
+            session.execute(delete(RateLimitAttempt).where(RateLimitAttempt.scope == self._scope))
+            session.commit()
 
     @property
     def max_attempts(self) -> int:
@@ -79,7 +125,7 @@ class LoginRateLimiter:
         return self._window
 
 
-login_rate_limiter = LoginRateLimiter()
+login_rate_limiter = LoginRateLimiter("login_ip")
 
 # Zweiter, unabhaengiger Zaehler PRO E-MAIL-ADRESSE (Login-Versuch), zusaetzlich
 # zum bisherigen IP-basierten login_rate_limiter oben (Punkt 4 des Auftrags "5
@@ -94,7 +140,9 @@ login_rate_limiter = LoginRateLimiter()
 # je nachdem, welche zuerst ausloest (siehe api/v1/auth.py::login()).
 EMAIL_MAX_ATTEMPTS = 5
 EMAIL_WINDOW = timedelta(minutes=15)
-email_login_rate_limiter = LoginRateLimiter(max_attempts=EMAIL_MAX_ATTEMPTS, window=EMAIL_WINDOW)
+email_login_rate_limiter = LoginRateLimiter(
+    "login_email", max_attempts=EMAIL_MAX_ATTEMPTS, window=EMAIL_WINDOW
+)
 
 
 def email_rate_limit_key(email: str) -> str:
@@ -122,9 +170,11 @@ def email_rate_limit_key(email: str) -> str:
 # verify_challenge()-Aufruf (also vor dem PBKDF2-Hash) geprueft werden.
 VERIFY_MAX_ATTEMPTS = 10
 VERIFY_WINDOW = timedelta(minutes=5)
-verify_ip_rate_limiter = LoginRateLimiter(max_attempts=VERIFY_MAX_ATTEMPTS, window=VERIFY_WINDOW)
+verify_ip_rate_limiter = LoginRateLimiter(
+    "verify_ip", max_attempts=VERIFY_MAX_ATTEMPTS, window=VERIFY_WINDOW
+)
 verify_account_rate_limiter = LoginRateLimiter(
-    max_attempts=VERIFY_MAX_ATTEMPTS, window=VERIFY_WINDOW
+    "verify_account", max_attempts=VERIFY_MAX_ATTEMPTS, window=VERIFY_WINDOW
 )
 
 

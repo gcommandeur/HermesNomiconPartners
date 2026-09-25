@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from cc_crm.core.security import hash_password
+from cc_crm.infrastructure.database import session as db_session_module
 from cc_crm.infrastructure.database.session import get_db_session, register_sqlite_unicode_lower
 from cc_crm.main import create_app
 from cc_crm.models import Base
@@ -45,7 +46,9 @@ def session_factory() -> Generator[sessionmaker[Session], None, None]:
 
 
 @pytest.fixture
-def client(session_factory: sessionmaker[Session]) -> Generator[TestClient, None, None]:
+def client(
+    session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+) -> Generator[TestClient, None, None]:
     app = create_app()
 
     def override_session() -> Generator[Session, None, None]:
@@ -53,6 +56,12 @@ def client(session_factory: sessionmaker[Session]) -> Generator[TestClient, None
             yield session
 
     app.dependency_overrides[get_db_session] = override_session
+    # core/rate_limit.py oeffnet seine eigenen Sessions ausserhalb von
+    # FastAPIs Dependency-Injection direkt ueber SessionLocal (gleiches
+    # Muster wie Hintergrundjobs, siehe test_cv_preview_scan_jobs.py) - ohne
+    # dies wuerden Rate-Limit-Tests in die echte lokale Dev-DB schreiben
+    # statt in diese isolierte Test-Engine.
+    monkeypatch.setattr(db_session_module, "SessionLocal", session_factory)
 
     with session_factory() as session:
         session.add(User(email=TEST_USER_EMAIL, hashed_password=hash_password(TEST_USER_PASSWORD)))
