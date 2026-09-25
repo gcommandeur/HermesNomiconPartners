@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { BottomNav } from "./bottom-nav";
+import { ScreenWatermark } from "@/components/crm/screen-watermark";
 import { cn } from "@/lib/utils";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -11,6 +12,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   return (
     <div>
+      <ScreenWatermark />
       <Sidebar collapsed={collapsed} mobileOpen={mobileOpen} onToggle={() => setCollapsed((v) => !v)} onMobileClose={() => setMobileOpen(false)} />
       <div className={cn("min-h-screen transition-[margin] duration-200", collapsed ? "lg:ml-[76px]" : "lg:ml-[248px]")}>
         <Topbar onMenu={() => setMobileOpen(true)} />

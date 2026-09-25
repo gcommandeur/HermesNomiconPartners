@@ -9,10 +9,30 @@ function escapeCsv(value: unknown) {
   return text;
 }
 
+/** "yyyyMMdd-HHmm" statt toISOString(), damit der Dateiname keine
+ * Doppelpunkte/"T"/"Z" enthaelt (auf Windows in Dateinamen ungueltig bzw.
+ * unschoen). */
+function watermarkTimestamp(): string {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return (
+    `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
+    `-${pad(now.getHours())}${pad(now.getMinutes())}`
+  );
+}
+
 /** Exportiert als CSV-Blob und stoesst den Browser-Download an - wird von
  * ExportActions selbst genutzt, aber auch von einzelnen Zeilen-Export-
  * Buttons (z.B. submission-views.tsx-Tabellenansicht), damit dort nicht die
- * gleiche Blob/Download-Logik dupliziert werden muss. */
+ * gleiche Blob/Download-Logik dupliziert werden muss.
+ *
+ * Vertraulichkeits-Kennzeichnung nur ueber einen Zeitstempel-Suffix im
+ * DATEINAMEN, bewusst NICHT als zusaetzliche Kommentarzeile im CSV-Inhalt
+ * selbst: der Re-Import (services/imports.py::ImportService._parse) liest
+ * JEDE Zeile per csv.DictReader als Datensatz - eine angehaengte
+ * "# Vertraulich ..."-Zeile wuerde beim Re-Import als kaputte/leere
+ * Datenzeile auftauchen (Spaltenzahl passt nicht), statt als Kommentar
+ * erkannt zu werden. Kopfzeile bleibt dadurch ohnehin unangetastet. */
 export function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
   const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
   const csv = [
@@ -23,7 +43,7 @@ export function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${filename}.csv`;
+  link.download = `${filename}_${watermarkTimestamp()}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }

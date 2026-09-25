@@ -1,13 +1,20 @@
+import zipfile
+from io import BytesIO
+
+from docx import Document
+from lxml import etree
 from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.enums import Anrede
 from cc_crm.services.profile_docx_export import (
+    _WATERMARK_TEXT,
     _ZEITRAUM_AUSBILDUNG,
     _ZEITRAUM_CV,
     _header_label,
     _parse_short_profile,
     build_export_filename,
+    generate_profile_docx,
 )
 
 
@@ -168,3 +175,41 @@ def test_build_export_filename_never_contains_uuid_when_candidate_number_missing
 
         assert filename == "Profil.docx"
         assert str(candidate.id) not in filename
+
+
+class TestDiagonalWatermark:
+    """Punkt 1b des Wasserzeichen-Auftrags: echtes diagonales Word-
+    Wasserzeichen (VML-Shape im Header-XML) statt der Fussnoten-Variante.
+    Kann hier nicht in echtem Microsoft Word visuell geprueft werden (siehe
+    Modul-Docstring "nobody on this team can render a .docx to check pixel
+    layout") - diese Tests pruefen stattdessen, was automatisiert pruefbar
+    ist: wohlgeformtes XML in JEDEM Teil des erzeugten .docx-Pakets, den
+    Wasserzeichen-Text im sichtbaren (default) Header, und dass das
+    Ergebnis sich klaglos ueber python-docx selbst wieder oeffnen laesst."""
+
+    def test_generated_docx_is_a_well_formed_ooxml_package(self) -> None:
+        candidate = Candidate(
+            first_name="Anna",
+            last_name="Muster",
+            candidate_number="4456",
+            short_profile=(
+                "## Kandidatin-Nr. 4456\n\n**Kurzprofil**\nDie Kandidatin ist "
+                "Steuerberaterin mit langjähriger Erfahrung.\n"
+            ),
+        )
+        data = generate_profile_docx(candidate)
+
+        with zipfile.ZipFile(BytesIO(data)) as archive:
+            xml_parts = [n for n in archive.namelist() if n.endswith((".xml", ".rels"))]
+            for name in xml_parts:
+                etree.fromstring(archive.read(name))  # raises on malformed XML
+
+            default_header_xml = archive.read("word/header2.xml").decode("utf-8")
+            assert _WATERMARK_TEXT in default_header_xml
+            assert "v:shape" in default_header_xml
+
+        # Muss sich klaglos ueber python-docx selbst wieder oeffnen lassen -
+        # ein Fehler hier waere ein starkes Warnsignal fuer eine kaputte
+        # Datei, auch wenn es kein Ersatz fuer eine echte Word-Pruefung ist.
+        reopened = Document(BytesIO(data))
+        assert len(reopened.sections[0].header.paragraphs) > 0

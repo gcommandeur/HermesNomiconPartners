@@ -33,6 +33,7 @@ from typing import Any
 
 from docx import Document
 from docx.document import Document as DocxDocument
+from docx.oxml import parse_xml
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
@@ -334,6 +335,87 @@ def _fill_labelled_optional_row(template: Paragraph, label: str, value: str) -> 
     return clone
 
 
+_WATERMARK_TEXT = "VERTRAULICH"
+
+# Namensraeume fuer die VML-Wasserzeichen-Form - MUSS im Fragment selbst
+# deklariert werden (nicht ueber docx.oxml.ns.nsdecls, das "v"/"o" nicht
+# kennt), da parse_xml() das Fragment isoliert parst, ohne den Namensraum-
+# Kontext des umgebenden Dokuments.
+_VML_NSDECLS = (
+    'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+    'xmlns:v="urn:schemas-microsoft-com:vml" '
+    'xmlns:o="urn:schemas-microsoft-com:office:office"'
+)
+
+# Exakt die Markup-Struktur, die Word SELBST erzeugt (Einfuegen > Wasserzeichen
+# > Benutzerdefiniertes Wasserzeichen) - ein "v:shape" vom Typ "_x0000_t136"
+# (Word-interner Text-Verlauf-Formtyp), diagonal um 315° gedreht, hellgrau/
+# halbtransparent, hinter dem Fliesstext (negativer z-index). Bewusst die
+# AELTERE VML-Form (w:pict) statt der neueren DrawingML-Variante: die
+# DrawingML-Form braucht einen mc:AlternateContent-Fallback-Wrapper fuer
+# aeltere Word-Versionen, waehrend w:pict von JEDER Word-Version seit 2003
+# nativ gerendert wird - das genaue Gegenteil von "fragil" fuer genau den
+# Zweck (Dokumente gehen an externe Kanzlei-Kontakte, ein "Inhalt muss
+# repariert werden"-Dialog beim Empfaenger waere inakzeptabel).
+_WATERMARK_PARAGRAPH_XML = f"""
+<w:p {_VML_NSDECLS}>
+  <w:pPr><w:pStyle w:val="Header"/></w:pPr>
+  <w:r>
+    <w:pict>
+      <v:shapetype id="_x0000_t136" coordsize="1600,21600" o:spt="136"
+                   adj="10800" path="m@7,0l@8,0m@5,21600l@6,21600e">
+        <v:formulas>
+          <v:f eqn="sum #0 0 10800"/>
+          <v:f eqn="prod #0 2 1"/>
+          <v:f eqn="sum 21600 0 @1"/>
+          <v:f eqn="sum 0 0 @2"/>
+          <v:f eqn="sum 21600 0 @3"/>
+          <v:f eqn="if @0 @3 0"/>
+          <v:f eqn="if @0 21600 @1"/>
+          <v:f eqn="if @0 0 @2"/>
+          <v:f eqn="if @0 @4 21600"/>
+          <v:f eqn="mid @5 @6"/>
+          <v:f eqn="mid @8 @5"/>
+          <v:f eqn="mid @7 @8"/>
+          <v:f eqn="mid @6 @7"/>
+          <v:f eqn="sum @6 0 @5"/>
+        </v:formulas>
+        <v:path textpathok="t" o:connecttype="custom"
+                o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800"
+                o:connectangles="270,180,90,0"/>
+        <v:textpath on="t" fitshape="t"/>
+        <v:handles>
+          <v:h position="#0,bottomRight" xrange="0,21600"/>
+        </v:handles>
+      </v:shapetype>
+      <v:shape id="CcCrmWatermark" o:spid="_x0000_s2049" type="#_x0000_t136"
+               style="position:absolute;margin-left:0;margin-top:0;width:415pt;
+                      height:207.5pt;rotation:315;z-index:-251656192;
+                      mso-position-horizontal:center;
+                      mso-position-horizontal-relative:margin;
+                      mso-position-vertical:center;
+                      mso-position-vertical-relative:margin"
+               o:allowincell="f" fillcolor="silver" stroked="f">
+        <v:fill opacity=".5"/>
+        <v:textpath style="font-family:&quot;Calibri&quot;;font-size:1pt"
+                    string="{_WATERMARK_TEXT}"/>
+      </v:shape>
+    </w:pict>
+  </w:r>
+</w:p>
+"""
+
+
+def _add_diagonal_watermark(doc: DocxDocument) -> None:
+    """Fuegt in JEDEN Section-Header ein echtes diagonales Word-Wasserzeichen
+    ein (siehe _WATERMARK_PARAGRAPH_XML) - eigener zusaetzlicher Absatz,
+    ruehrt die bestehenden Header-Inhalte (Logo/Kandidaten-Nr., siehe
+    _set_header_title) nicht an."""
+    for section in doc.sections:
+        watermark_paragraph = parse_xml(_WATERMARK_PARAGRAPH_XML)
+        section.header._element.append(watermark_paragraph)
+
+
 def _set_header_title(doc: DocxDocument, label: str, number: str) -> None:
     """The candidate-number title lives in the section header - either as a
     plain paragraph or (as in the current Commandeur template) inside a table
@@ -374,6 +456,7 @@ def generate_profile_docx(candidate: Candidate) -> bytes:
     number = candidate.candidate_number or parsed.get("candidate_number") or str(candidate.id)
     label = _header_label(candidate)
     _set_header_title(doc, label, number)
+    _add_diagonal_watermark(doc)
 
     headings = [
         _HEADING_UEBERBLICK,
