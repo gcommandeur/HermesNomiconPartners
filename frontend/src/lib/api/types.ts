@@ -858,6 +858,22 @@ export interface AuditLogEntry {
   new_values: Record<string, unknown> | null;
 }
 
+/** Loeschanfrage (Art. 17 DSGVO), Nachverfolgung um die bestehende
+ * Anonymisierung herum - admin-only, siehe app/einstellungen/loeschanfragen/
+ * page.tsx und Backend models/deletion_request.py. */
+export interface DeletionRequestEntry {
+  id: string;
+  candidate_id: string;
+  requested_at: string;
+  requested_via: string;
+  deadline: string;
+  completed_at: string | null;
+  completed_by_user_id: string | null;
+  candidate_first_name: string;
+  candidate_last_name: string;
+  candidate_number: string | null;
+}
+
 export interface DataResult<T> {
   data: T;
   source: "api" | "demo";

@@ -1,4 +1,4 @@
-from cc_crm.core.rate_limit import LoginRateLimiter, client_ip
+from cc_crm.core.rate_limit import LoginRateLimiter, client_ip, email_rate_limit_key
 
 
 def test_client_ip_prefers_cf_connecting_ip_over_forwarded_for() -> None:
@@ -60,3 +60,26 @@ def test_record_success_resets_failure_count() -> None:
 
     assert limiter.record_failure("1.2.3.4") is False
     assert not limiter.is_blocked("1.2.3.4")
+
+
+def test_email_rate_limit_key_normalizes_case_and_whitespace() -> None:
+    """Punkt 4 des Auftrags "5 Hoch-Punkte umsetzen": ohne Normalisierung
+    liesse sich der Pro-Account-Zaehler durch Gross-/Kleinschreibung der
+    E-Mail-Adresse umgehen - "Foo@Bar.de" und "foo@bar.de" muessen denselben
+    Zaehler treffen."""
+    assert email_rate_limit_key("Foo@Bar.de") == email_rate_limit_key(" foo@bar.de ")
+
+
+def test_email_limiter_blocks_the_same_account_independently_of_ip() -> None:
+    """Der Pro-Account-Zaehler ist ein eigenstaendiger LoginRateLimiter mit
+    eigenen Grenzwerten - er blockt allein aufgrund des E-Mail-Schluessels,
+    unabhaengig davon, von welcher IP aus die Versuche kamen (das Zuordnen
+    zur richtigen IP ist Aufgabe des separaten login_rate_limiter, nicht
+    dieses Zaehlers)."""
+    limiter = LoginRateLimiter(max_attempts=5)
+    key = email_rate_limit_key("opfer@example.com")
+
+    for _ in range(4):
+        assert limiter.record_failure(key) is False
+    assert limiter.record_failure(key) is True
+    assert limiter.is_blocked(key)

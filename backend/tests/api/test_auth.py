@@ -6,10 +6,30 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
-from cc_crm.core.rate_limit import MAX_ATTEMPTS, login_rate_limiter
+from cc_crm.core.rate_limit import (
+    EMAIL_MAX_ATTEMPTS,
+    MAX_ATTEMPTS,
+    email_login_rate_limiter,
+    login_rate_limiter,
+)
 from tests.conftest import TEST_USER_EMAIL, TEST_USER_PASSWORD
 
 _CODE_RE = re.compile(r"Anmeldecode lautet: (\d{6})")
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiters() -> None:
+    """Beide Login-Rate-Limiter sind prozessweite Singletons (siehe
+    core/rate_limit.py) - ohne einen Reset vor JEDEM Test wuerden
+    fehlgeschlagene Login-Versuche aus vorherigen Tests (die alle denselben
+    TEST_USER_EMAIL verwenden) sich ueber die Testdatei hinweg aufsummieren
+    und einzelne, fuer sich genommen korrekte Tests mit einem unerwarteten
+    429 statt 401 scheitern lassen."""
+    login_rate_limiter.reset()
+    email_login_rate_limiter.reset()
+    yield
+    login_rate_limiter.reset()
+    email_login_rate_limiter.reset()
 
 
 @pytest.fixture(autouse=True)
@@ -380,6 +400,68 @@ def test_login_rate_limit_triggers_exactly_one_security_alert(
     assert len(calls) == 1
 
     login_rate_limiter.reset()
+
+
+def test_login_blocks_same_account_attacked_from_many_different_ips(
+    client: TestClient,
+) -> None:
+    """Punkt 4 des Auftrags "5 Hoch-Punkte umsetzen": der bisherige
+    IP-Zaehler allein sieht diesen Angriff NICHT, weil jede einzelne IP fuer
+    sich nur einmal fehlschlaegt (bleibt unter MAX_ATTEMPTS=3 pro IP) - der
+    neue Pro-Account-Zaehler muss trotzdem greifen, sobald EMAIL_MAX_ATTEMPTS
+    fuer denselben Account erreicht ist, egal von wie vielen verschiedenen
+    IPs aus."""
+    client.headers.pop("Authorization", None)
+    login_rate_limiter.reset()
+    email_login_rate_limiter.reset()
+
+    for i in range(EMAIL_MAX_ATTEMPTS):
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": TEST_USER_EMAIL, "password": "wrong-password"},
+            headers={"CF-Connecting-IP": f"203.0.113.{i}"},
+        )
+        assert response.status_code == 401
+
+    blocked = client.post(
+        "/api/v1/auth/login",
+        json={"email": TEST_USER_EMAIL, "password": "wrong-password"},
+        headers={"CF-Connecting-IP": "203.0.113.250"},
+    )
+    assert blocked.status_code == 429
+
+    login_rate_limiter.reset()
+    email_login_rate_limiter.reset()
+
+
+def test_login_still_blocks_different_accounts_from_the_same_ip_as_before(
+    client: TestClient,
+) -> None:
+    """Regressionsschutz: der neue Pro-Account-Zaehler darf die bestehende
+    Pro-IP-Sperre nicht ersetzen/abschwaechen - dieselbe IP, die
+    MAX_ATTEMPTS-mal gegen (hier bewusst) verschiedene, nicht-existente
+    Accounts fehlschlaegt, wird weiterhin ganz normal pro IP gesperrt."""
+    client.headers.pop("Authorization", None)
+    login_rate_limiter.reset()
+    email_login_rate_limiter.reset()
+
+    for i in range(MAX_ATTEMPTS):
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": f"nicht-existent-{i}@example.com", "password": "wrong-password"},
+            headers={"CF-Connecting-IP": "198.51.100.42"},
+        )
+        assert response.status_code == 401
+
+    blocked = client.post(
+        "/api/v1/auth/login",
+        json={"email": "noch-ein-anderer@example.com", "password": "wrong-password"},
+        headers={"CF-Connecting-IP": "198.51.100.42"},
+    )
+    assert blocked.status_code == 429
+
+    login_rate_limiter.reset()
+    email_login_rate_limiter.reset()
 
 
 def test_logout_invalidates_token(client: TestClient) -> None:

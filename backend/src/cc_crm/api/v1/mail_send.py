@@ -102,6 +102,7 @@ def send_single_mail(
         candidate_id=payload.candidate_id,
         client_company_id=payload.client_company_id,
         contact_person_id=payload.contact_person_id,
+        current_user=current_user,
     )
     return MailSendResult(
         id=record.id,
@@ -158,6 +159,7 @@ def send_bulk_mail(
         subject=payload.subject,
         body_text=payload.body_text,
         attachments=attachments,
+        current_user=current_user,
     )
     return MailBulkSendResult(
         sent_count=len(result.sent),

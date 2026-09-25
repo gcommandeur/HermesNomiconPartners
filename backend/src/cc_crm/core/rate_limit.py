@@ -81,6 +81,29 @@ class LoginRateLimiter:
 
 login_rate_limiter = LoginRateLimiter()
 
+# Zweiter, unabhaengiger Zaehler PRO E-MAIL-ADRESSE (Login-Versuch), zusaetzlich
+# zum bisherigen IP-basierten login_rate_limiter oben (Punkt 4 des Auftrags "5
+# Hoch-Punkte umsetzen"). Der bisherige Zaehler schuetzt nicht gegen einen
+# Angriff, der denselben Account ueber viele verschiedene IPs verteilt (z.B.
+# ein Botnetz/Proxy-Pool) - ein solcher Angriff blieb bislang unter dem
+# IP-Limit, weil jede einzelne IP fuer sich nie genug Fehlversuche sammelte.
+# Eigene, groessere Grenzwerte (5 statt 3 Versuche, 15 statt 5 Minuten) als
+# der IP-Zaehler: dieser Zaehler soll gezielten Account-Angriffen begegnen,
+# nicht normale Nutzer schon nach dem dritten Tippfehler ueber ein breiteres
+# Zeitfenster aussperren - beide Sperren greifen unabhaengig voneinander,
+# je nachdem, welche zuerst ausloest (siehe api/v1/auth.py::login()).
+EMAIL_MAX_ATTEMPTS = 5
+EMAIL_WINDOW = timedelta(minutes=15)
+email_login_rate_limiter = LoginRateLimiter(max_attempts=EMAIL_MAX_ATTEMPTS, window=EMAIL_WINDOW)
+
+
+def email_rate_limit_key(email: str) -> str:
+    """Normalisiert die E-Mail-Adresse als Zaehler-Schluessel - ohne dies
+    wuerde "Foo@Bar.de" und "foo@bar.de" als zwei verschiedene Konten
+    gezaehlt und die Sperre liesse sich durch Gross-/Kleinschreibung
+    umgehen."""
+    return email.strip().lower()
+
 
 def client_ip(
     cf_connecting_ip: str | None, forwarded_for: str | None, direct_host: str | None

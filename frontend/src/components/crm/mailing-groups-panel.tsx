@@ -179,7 +179,9 @@ export function MailingGroupsPanel() {
       });
       setBulkSendMessage(
         `${result.sent_count} Mail(s) versendet.` +
-          (result.failed.length > 0 ? ` ${result.failed.length} fehlgeschlagen.` : "") +
+          (result.failed.length > 0
+            ? ` ${result.failed.length} fehlgeschlagen: ${result.failed.join("; ")}`
+            : "") +
           (result.skipped_due_to_daily_limit_count > 0
             ? ` ${result.skipped_due_to_daily_limit_count} wegen Tageslimit übersprungen.`
             : ""),

@@ -146,6 +146,9 @@ export default function EinstellungenPage() {
               <Link href="/einstellungen/audit-log">
                 <Button size="sm" variant="outline">Audit-Log öffnen</Button>
               </Link>
+              <Link href="/einstellungen/loeschanfragen">
+                <Button size="sm" variant="outline">Löschanfragen öffnen</Button>
+              </Link>
             </CardContent>
           </Card>
         )}

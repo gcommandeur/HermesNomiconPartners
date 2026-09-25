@@ -7,7 +7,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from cc_crm.api.dependencies import CurrentUser, DatabaseSession
 from cc_crm.core.errors import AuthenticationError, RateLimitExceededError
-from cc_crm.core.rate_limit import client_ip, login_rate_limiter
+from cc_crm.core.rate_limit import (
+    client_ip,
+    email_login_rate_limiter,
+    email_rate_limit_key,
+    login_rate_limiter,
+)
 from cc_crm.integrations.email.resend_client import EmailProviderError, send_transactional_email
 from cc_crm.models.login_challenge import CODE_LIFETIME_MINUTES
 from cc_crm.models.user import User
@@ -82,10 +87,21 @@ def login(payload: LoginRequest, session: DatabaseSession, request: Request) -> 
         request.headers.get("x-forwarded-for"),
         request.client.host if request.client else None,
     )
+    email_key = email_rate_limit_key(payload.email)
     if login_rate_limiter.is_blocked(ip):
         logger.warning("Login blockiert nach zu vielen Fehlversuchen: IP=%s", ip)
         raise RateLimitExceededError(
             "Zu viele fehlgeschlagene Login-Versuche. Bitte in ein paar Minuten erneut versuchen."
+        )
+    # Zweite, unabhaengige Sperre PRO ACCOUNT (Punkt 4 des Auftrags "5
+    # Hoch-Punkte umsetzen") - faengt einen Angriff auf denselben Account
+    # ueber viele verschiedene IPs ab, den die obige IP-Sperre allein nicht
+    # sieht. Beide Sperren greifen unabhaengig, welche zuerst ausloest.
+    if email_login_rate_limiter.is_blocked(email_key):
+        logger.warning("Login blockiert nach zu vielen Fehlversuchen: E-Mail=%s", email_key)
+        raise RateLimitExceededError(
+            "Zu viele fehlgeschlagene Login-Versuche für dieses Konto. Bitte in ein paar "
+            "Minuten erneut versuchen."
         )
 
     try:
@@ -93,6 +109,9 @@ def login(payload: LoginRequest, session: DatabaseSession, request: Request) -> 
             payload.email, payload.password, payload.trusted_device_token
         )
     except AuthenticationError:
+        # Beide Zaehler bekommen den Fehlversuch, unabhaengig voneinander -
+        # welcher zuerst die Sperre ausloest, blockt (siehe rate_limit.py).
+        email_login_rate_limiter.record_failure(email_key)
         # record_failure() liefert True nur auf dem Versuch, der die Sperre
         # neu ausloest - so geht pro Brute-Force-Ausbruch genau eine Warnung
         # raus statt einer Mail pro (ohnehin schon 429-blockierten) Versuch.
@@ -130,6 +149,7 @@ def login(payload: LoginRequest, session: DatabaseSession, request: Request) -> 
             ).start()
         raise
     login_rate_limiter.record_success(ip)
+    email_login_rate_limiter.record_success(email_key)
 
     if isinstance(result, TrustedLogin):
         return LoginStartResponse(

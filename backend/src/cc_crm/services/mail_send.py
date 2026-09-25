@@ -46,16 +46,21 @@ from email.utils import formataddr, make_msgid
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from cc_crm.core.errors import BusinessRuleError
+from cc_crm.core.errors import BusinessRuleError, ConsentNotGrantedError
 from cc_crm.models.activity import Activity
+from cc_crm.models.candidate import Candidate
 from cc_crm.models.enums import MailAccountProvider, MailDirection, MailMatchStatus
 from cc_crm.models.mail import MailAccount, MailMessage
+from cc_crm.models.user import User
+from cc_crm.repositories.recruiting import AuditLogRepository
 from cc_crm.services.mail_credentials import decrypt_password
 from cc_crm.services.storage import read_document_bytes
 
 logger = logging.getLogger("cc_crm.mail_send")
 
 ACTIVITY_TYPE_EMAIL_SENT = "email_sent"
+AUDIT_ACTION_CANDIDATE_PROFILE_SENT = "candidate_profile_sent"
+AUDIT_ACTION_MAIL_SENT = "mail_sent"
 
 # Gaengige Sent-Ordner-Namen, der Reihe nach probiert (siehe
 # _append_to_sent_via_imaplib) - manche Provider (u.a. der aktuell genutzte
@@ -215,6 +220,72 @@ def _send_via_graph(
     return make_msgid(domain=account.address.rsplit("@", 1)[-1])
 
 
+def _ensure_consent(session: Session, candidate_id: uuid.UUID | None) -> None:
+    """Harter serverseitiger Block (Punkt 1 des Auftrags "5 Hoch-Punkte
+    umsetzen"): candidate.consent_received existierte bislang nur als
+    Datenfeld, wurde aber nirgends geprueft - jeder Mail-Versand mit
+    Kandidatenbezug konnte ein Profil ohne jede Einwilligung verschicken.
+    Greift NUR, wenn ueberhaupt ein candidate_id mitgegeben wurde (Mails an
+    eine Kanzlei/einen Kontakt ohne Kandidatenbezug sind nicht betroffen).
+    Kein Soft-Warning, kein Override - siehe send_bulk() fuer die
+    Pro-Empfaenger-Behandlung im Massenversand."""
+    if candidate_id is None:
+        return
+    candidate = session.get(Candidate, candidate_id)
+    if candidate is None:
+        raise ConsentNotGrantedError(
+            f"Kandidat {candidate_id} nicht gefunden - Versand abgelehnt."
+        )
+    if not candidate.consent_received:
+        raise ConsentNotGrantedError(
+            "Kein Einverständnis des Kandidaten zur Weitergabe erfasst "
+            f"(Kandidat: {candidate.first_name} {candidate.last_name})."
+        )
+
+
+def _record_send_audit_log(
+    session: Session,
+    *,
+    current_user: User | None,
+    candidate_id: uuid.UUID | None,
+    client_company_id: uuid.UUID | None,
+    contact_person_id: uuid.UUID | None,
+    to_address: str,
+    subject: str,
+    mail_message_id: uuid.UUID,
+) -> None:
+    """AuditLog-Eintrag fuer jeden erfolgreichen Mail-Versand (Punkt 2 des
+    Auftrags "5 Hoch-Punkte umsetzen": "wer hat wann welches Profil an wen
+    geschickt") - gleiches Muster wie services/submissions.py::transition()/
+    delete(). entity_type/entity_id zeigen bei Kandidatenbezug auf den
+    Kandidaten selbst, damit der Eintrag automatisch in dessen bestehender
+    Aenderungshistorie (AuditLogRepository.list_for_candidate) auftaucht."""
+    if candidate_id is not None:
+        entity_type = "candidate"
+        entity_id = candidate_id
+        action = AUDIT_ACTION_CANDIDATE_PROFILE_SENT
+    else:
+        entity_type = "mail_message"
+        entity_id = mail_message_id
+        action = AUDIT_ACTION_MAIL_SENT
+    AuditLogRepository(session).create(
+        {
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "action": action,
+            "changed_by": current_user.email if current_user else None,
+            "new_values": {
+                "candidate_id": str(candidate_id) if candidate_id else None,
+                "client_company_id": str(client_company_id) if client_company_id else None,
+                "contact_person_id": str(contact_person_id) if contact_person_id else None,
+                "to_address": to_address,
+                "subject": subject[:240],
+                "mail_message_id": str(mail_message_id),
+            },
+        }
+    )
+
+
 def _start_of_today_utc() -> datetime:
     now = datetime.now(UTC)
     return now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -251,15 +322,27 @@ def send_mail(
     candidate_id: uuid.UUID | None = None,
     client_company_id: uuid.UUID | None = None,
     contact_person_id: uuid.UUID | None = None,
+    current_user: User | None = None,
     smtp_sender: Callable[[MailAccount, str, MIMEMultipart, str], None] = _send_via_smtplib,
     imap_appender: Callable[[MailAccount, str, MIMEMultipart], bool] = _append_to_sent_via_imaplib,
 ) -> MailMessage:
     """Versendet EINE Mail ueber `account`, legt eine Kopie im Sent-Ordner
-    ab und protokolliert Versand (MailMessage) + Aktivitaet (Activity).
-    Wirft DailyLimitReachedError, wenn das Tageslimit des Postfachs bereits
+    ab und protokolliert Versand (MailMessage) + Aktivitaet (Activity) +
+    AuditLog-Eintrag (siehe _record_send_audit_log). Wirft
+    DailyLimitReachedError, wenn das Tageslimit des Postfachs bereits
     erreicht ist - der Versand wird dann gar nicht erst versucht. Ein
     fehlgeschlagenes Sent-Ordner-APPEND ist NICHT fatal (best effort) - der
     Versand selbst ist zu diesem Zeitpunkt bereits erfolgreich abgeschlossen.
+
+    Wirft ConsentNotGrantedError, wenn `candidate_id` gesetzt ist und der
+    Kandidat keine Einwilligung zur Weitergabe erteilt hat (Punkt 1 des
+    Auftrags "5 Hoch-Punkte umsetzen") - diese Pruefung greift VOR dem
+    Tageslimit, damit ein abgelehnter Versand nicht unnoetig das Kontingent
+    des Postfachs verbraucht.
+
+    `current_user` ist der eingeloggte Nutzer, der den Versand ausgeloest
+    hat (Punkt 2 des Auftrags: Audit-Trail) - optional/None fuer
+    Aufrufkontexte ohne eingeloggten Nutzer.
 
     `smtp_sender`/`imap_appender` sind injizierbar (Default: echter
     SMTP-/IMAP-Zugriff) - genau das ist der geforderte Testpfad, der nicht
@@ -267,6 +350,8 @@ def send_mail(
     Funktion selbst irgendein Sonderverhalten fuer Tests braucht."""
     if not account.is_active:
         raise MailSendError(f"Postfach {account.address} ist deaktiviert.")
+
+    _ensure_consent(session, candidate_id)
 
     already_sent = sent_today_count(session, account.id)
     if already_sent >= account.daily_send_limit:
@@ -355,10 +440,23 @@ def send_mail(
         subject=subject[:240],
         details=body_text,
         occurred_at=now,
+        sent_by_user_id=current_user.id if current_user else None,
     )
     session.add(activity)
     session.flush()
     record.created_activity_id = activity.id
+
+    _record_send_audit_log(
+        session,
+        current_user=current_user,
+        candidate_id=candidate_id,
+        client_company_id=client_company_id,
+        contact_person_id=contact_person_id,
+        to_address=to_address,
+        subject=subject,
+        mail_message_id=record.id,
+    )
+
     session.commit()
     session.refresh(record)
     return record
@@ -391,6 +489,7 @@ def send_bulk(
     subject: str,
     body_text: str,
     attachments: list[MailAttachmentRef] | None = None,
+    current_user: User | None = None,
     sleep: Callable[[float], None] = time.sleep,
     smtp_sender: Callable[[MailAccount, str, MIMEMultipart, str], None] = _send_via_smtplib,
     imap_appender: Callable[[MailAccount, str, MIMEMultipart], bool] = _append_to_sent_via_imaplib,
@@ -398,10 +497,15 @@ def send_bulk(
     """Versendet an mehrere Empfaenger nacheinander, mit
     account.send_throttle_seconds Pause ZWISCHEN zwei Sends (nicht vor dem
     allerersten) - schuetzt vor Provider-Sperren bei einem Kanzlei-
-    Streuversand. Ein Fehler bei EINEM Empfaenger (z.B. ungueltige Adresse)
-    bricht den restlichen Lauf NICHT ab (gleiche Robustheit wie beim
-    CV-Backfill/Mail-Sync) - nur das Tageslimit beendet den Lauf vorzeitig,
-    weil ein weiterer Versuch dann ohnehin aussichtslos ist."""
+    Streuversand. Ein Fehler bei EINEM Empfaenger (z.B. ungueltige Adresse
+    ODER fehlende Einwilligung - siehe ConsentNotGrantedError) bricht den
+    restlichen Lauf NICHT ab (gleiche Robustheit wie beim CV-Backfill/
+    Mail-Sync): die Consent-Pruefung aus send_mail() greift pro Empfaenger
+    einzeln, ein fehlendes Einverstaendnis bei EINEM Kandidaten in der
+    Gruppe landet nur fuer diesen in `failed`, alle anderen Empfaenger
+    werden trotzdem bedient (Punkt 1 des Auftrags "5 Hoch-Punkte
+    umsetzen") - nur das Tageslimit beendet den Lauf vorzeitig, weil ein
+    weiterer Versuch dann ohnehin aussichtslos ist."""
     result = BulkSendResult()
     for index, recipient in enumerate(recipients):
         if index > 0:
@@ -418,6 +522,7 @@ def send_bulk(
                 candidate_id=recipient.candidate_id,
                 client_company_id=recipient.client_company_id,
                 contact_person_id=recipient.contact_person_id,
+                current_user=current_user,
                 smtp_sender=smtp_sender,
                 imap_appender=imap_appender,
             )
@@ -426,6 +531,6 @@ def send_bulk(
             result.skipped_due_to_daily_limit.append(recipient)
             result.skipped_due_to_daily_limit.extend(recipients[index + 1 :])
             break
-        except MailSendError as exc:
+        except (MailSendError, ConsentNotGrantedError) as exc:
             result.failed.append((recipient, str(exc)))
     return result

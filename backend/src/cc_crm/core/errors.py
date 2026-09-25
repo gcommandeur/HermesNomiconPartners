@@ -28,6 +28,13 @@ class RateLimitExceededError(CcCrmError):
     pass
 
 
+class ConsentNotGrantedError(CcCrmError):
+    """Kandidat hat keine Einwilligung zur Weitergabe erteilt
+    (candidate.consent_received == False) - harter serverseitiger Block vor
+    jedem Mail-Versand mit Kandidatenbezug (Punkt 1 des Auftrags "5 Hoch-
+    Punkte umsetzen"). HTTP 403, kein Soft-Warning."""
+
+
 class AIProviderError(CcCrmError):
     """Raised when an external AI provider (e.g. Anthropic) is unreachable,
     unconfigured, or returns an unusable response."""

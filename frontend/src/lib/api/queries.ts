@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, TaskResolveOutcome, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, TaskResolveOutcome, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -470,6 +470,24 @@ export async function getAssignableUsers() {
 
 export async function getAuditLogs() {
   return apiGet<AuditLogEntry[]>("/audit-logs", []);
+}
+
+/** Admin-only, siehe app/einstellungen/loeschanfragen/page.tsx (Art. 17
+ * DSGVO Nachverfolgung). `openOnly=false` liefert auch bereits erledigte
+ * Anfragen (Verlaufsansicht). */
+export async function getDeletionRequests(openOnly: boolean) {
+  return apiGet<DeletionRequestEntry[]>(`/deletion-requests?open_only=${openOnly}`, []);
+}
+
+export async function createDeletionRequest(payload: {
+  candidate_id: string;
+  requested_via: string;
+}) {
+  return apiPost<DeletionRequestEntry>("/deletion-requests", payload);
+}
+
+export async function completeDeletionRequest(id: string) {
+  return apiPost<DeletionRequestEntry>(`/deletion-requests/${id}/complete`, {});
 }
 
 /** Offene Sourcing-Leads (pending + possible_duplicate) fuer die Review-Seite

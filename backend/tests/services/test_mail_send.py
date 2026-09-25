@@ -11,11 +11,16 @@ import pytest
 from cryptography.fernet import Fernet
 from sqlalchemy.orm import Session, sessionmaker
 
+from cc_crm.core.errors import ConsentNotGrantedError
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.enums import MailDirection, MailMatchStatus
 from cc_crm.models.mail import MailAccount, MailMessage
+from cc_crm.models.recruiting import AuditLog
+from cc_crm.models.user import User
 from cc_crm.services.mail_send import (
     ACTIVITY_TYPE_EMAIL_SENT,
+    AUDIT_ACTION_CANDIDATE_PROFILE_SENT,
+    AUDIT_ACTION_MAIL_SENT,
     BulkRecipient,
     DailyLimitReachedError,
     MailSendError,
@@ -80,7 +85,9 @@ class TestSendMail:
     ) -> None:
         with session_factory() as session:
             account = _make_account(session)
-            candidate = Candidate(first_name="Anna", last_name="Muster")
+            candidate = Candidate(
+                first_name="Anna", last_name="Muster", consent_received=True
+            )
             session.add(candidate)
             session.commit()
             candidate_id = candidate.id
@@ -406,7 +413,7 @@ def test_activity_created_with_correct_type_and_subject(
 
     with session_factory() as session:
         account = _make_account(session)
-        candidate = Candidate(first_name="Anna", last_name="Muster")
+        candidate = Candidate(first_name="Anna", last_name="Muster", consent_received=True)
         session.add(candidate)
         session.commit()
         candidate_id = candidate.id
@@ -428,3 +435,193 @@ def test_activity_created_with_correct_type_and_subject(
         assert activity.activity_type == ACTIVITY_TYPE_EMAIL_SENT
         assert activity.candidate_id == candidate_id
         assert activity.subject == "Kandidatenprofil Nr. 4456"
+
+
+class TestConsentEnforcement:
+    """Punkt 1 des Auftrags "5 Hoch-Punkte umsetzen": harter serverseitiger
+    Block vor jedem Mail-Versand mit Kandidatenbezug, wenn
+    candidate.consent_received nicht True ist - vorher wurde das Feld
+    nirgends geprueft."""
+
+    def test_send_mail_rejects_when_candidate_has_no_consent(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        with session_factory() as session:
+            account = _make_account(session)
+            candidate = Candidate(
+                first_name="Ohne", last_name="Einwilligung", consent_received=False
+            )
+            session.add(candidate)
+            session.commit()
+            candidate_id = candidate.id
+            transport = _FakeTransport()
+
+            with pytest.raises(ConsentNotGrantedError, match="Kein Einverständnis"):
+                send_mail(
+                    session,
+                    account=account,
+                    to_address="kanzlei@example.com",
+                    subject="Test",
+                    body_text="Text",
+                    candidate_id=candidate_id,
+                    smtp_sender=transport.smtp_sender,
+                    imap_appender=transport.imap_appender,
+                )
+
+            # Kein Versand-Versuch, keine MailMessage - der Block greift, BEVOR
+            # ueberhaupt SMTP kontaktiert wird.
+            assert transport.smtp_calls == []
+            assert session.query(MailMessage).count() == 0
+
+    def test_send_mail_allows_send_without_candidate_id(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        """Mails ohne Kandidatenbezug (z.B. reine Kanzlei-/Kontakt-Mail) sind
+        von der Consent-Pruefung nicht betroffen."""
+        with session_factory() as session:
+            account = _make_account(session)
+            transport = _FakeTransport()
+
+            record = send_mail(
+                session,
+                account=account,
+                to_address="kanzlei@example.com",
+                subject="Test",
+                body_text="Text",
+                smtp_sender=transport.smtp_sender,
+                imap_appender=transport.imap_appender,
+            )
+            assert record.id is not None
+
+    def test_send_bulk_blocks_only_the_recipient_without_consent(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        """Kernanforderung: EIN fehlendes Einverstaendnis in der Gruppe darf
+        weder alle blocken noch alle durchlassen - nur der betroffene
+        Empfaenger landet in `failed`, alle anderen werden trotzdem
+        versendet."""
+        with session_factory() as session:
+            account = _make_account(session)
+            consenting = Candidate(
+                first_name="Mit", last_name="Einwilligung", consent_received=True
+            )
+            refusing = Candidate(
+                first_name="Ohne", last_name="Einwilligung", consent_received=False
+            )
+            session.add_all([consenting, refusing])
+            session.commit()
+            transport = _FakeTransport()
+
+            result = send_bulk(
+                session,
+                account=account,
+                recipients=[
+                    BulkRecipient(to_address="ok@example.com", candidate_id=consenting.id),
+                    BulkRecipient(to_address="blocked@example.com", candidate_id=refusing.id),
+                ],
+                subject="Test",
+                body_text="Text",
+                sleep=lambda _seconds: None,
+                smtp_sender=transport.smtp_sender,
+                imap_appender=transport.imap_appender,
+            )
+
+            assert [m.matched_candidate_id for m in result.sent] == [consenting.id]
+            assert len(result.failed) == 1
+            failed_recipient, failed_message = result.failed[0]
+            assert failed_recipient.to_address == "blocked@example.com"
+            assert "Kein Einverständnis" in failed_message
+
+
+class TestSendAuditTrail:
+    """Punkt 2 des Auftrags "5 Hoch-Punkte umsetzen": Activity.sent_by_user_id
+    + ein AuditLog-Eintrag pro erfolgreichem Versand ("wer hat wann welches
+    Profil an wen geschickt")."""
+
+    def test_activity_records_the_sending_user(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        from cc_crm.models.activity import Activity
+
+        with session_factory() as session:
+            account = _make_account(session)
+            user = User(email="lukas@commandeurconsulting.de", hashed_password="x")
+            session.add(user)
+            session.commit()
+            transport = _FakeTransport()
+
+            record = send_mail(
+                session,
+                account=account,
+                to_address="kanzlei@example.com",
+                subject="Test",
+                body_text="Text",
+                current_user=user,
+                smtp_sender=transport.smtp_sender,
+                imap_appender=transport.imap_appender,
+            )
+
+            activity = session.get(Activity, record.created_activity_id)
+            assert activity is not None
+            assert activity.sent_by_user_id == user.id
+
+    def test_audit_log_written_for_candidate_profile_send(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        with session_factory() as session:
+            account = _make_account(session)
+            user = User(email="lukas@commandeurconsulting.de", hashed_password="x")
+            candidate = Candidate(
+                first_name="Anna", last_name="Muster", consent_received=True
+            )
+            session.add_all([user, candidate])
+            session.commit()
+            transport = _FakeTransport()
+
+            send_mail(
+                session,
+                account=account,
+                to_address="kanzlei@example.com",
+                subject="Kandidatenprofil Nr. 4456",
+                body_text="Text",
+                candidate_id=candidate.id,
+                current_user=user,
+                smtp_sender=transport.smtp_sender,
+                imap_appender=transport.imap_appender,
+            )
+
+            entry = (
+                session.query(AuditLog)
+                .filter_by(entity_type="candidate", entity_id=candidate.id)
+                .filter_by(action=AUDIT_ACTION_CANDIDATE_PROFILE_SENT)
+                .one()
+            )
+            assert entry.changed_by == user.email
+            assert entry.new_values is not None
+            assert entry.new_values["candidate_id"] == str(candidate.id)
+            assert entry.new_values["to_address"] == "kanzlei@example.com"
+
+    def test_audit_log_written_without_candidate_uses_mail_message_entity(
+        self, session_factory: sessionmaker[Session]
+    ) -> None:
+        with session_factory() as session:
+            account = _make_account(session)
+            transport = _FakeTransport()
+
+            record = send_mail(
+                session,
+                account=account,
+                to_address="kontakt@example.com",
+                subject="Test",
+                body_text="Text",
+                smtp_sender=transport.smtp_sender,
+                imap_appender=transport.imap_appender,
+            )
+
+            entry = (
+                session.query(AuditLog)
+                .filter_by(entity_type="mail_message", entity_id=record.id)
+                .filter_by(action=AUDIT_ACTION_MAIL_SENT)
+                .one()
+            )
+            assert entry.changed_by is None

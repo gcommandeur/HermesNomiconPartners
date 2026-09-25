@@ -8,6 +8,7 @@ from cc_crm.core.errors import (
     AuthenticationError,
     BusinessRuleError,
     ConflictError,
+    ConsentNotGrantedError,
     EntityNotFoundError,
     PermissionDeniedError,
     RateLimitExceededError,
@@ -62,6 +63,16 @@ def register_error_handlers(app: FastAPI) -> None:
     async def permission_denied_handler(
         _request: Request,
         exception: PermissionDeniedError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": str(exception)},
+        )
+
+    @app.exception_handler(ConsentNotGrantedError)
+    async def consent_not_granted_handler(
+        _request: Request,
+        exception: ConsentNotGrantedError,
     ) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,

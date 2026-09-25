@@ -10,6 +10,7 @@ import {
   getClients,
   getCockpit,
   getCurrentUser,
+  getDeletionRequests,
   getEmailTemplates,
   getMailAccounts,
   getMailingGroups,
@@ -25,6 +26,7 @@ import type {
   Cockpit,
   CurrentUserInfo,
   DataResult,
+  DeletionRequestEntry,
   EmailTemplate,
   MailAccount,
   MailingGroup,
@@ -179,6 +181,17 @@ export function useAuditLogsCache(enabled: boolean) {
   return useSWR<DataResult<AuditLogEntry[]>>(
     enabled ? "/audit-logs" : null,
     getAuditLogs,
+    swrConfig,
+  );
+}
+
+/** Nur fuer Admins (siehe /einstellungen/loeschanfragen) - offene
+ * Loeschanfragen (Art. 17 DSGVO, Punkt 3 des Auftrags "5 Hoch-Punkte
+ * umsetzen"), sortiert nach Deadline. */
+export function useDeletionRequestsCache(enabled: boolean, openOnly: boolean) {
+  return useSWR<DataResult<DeletionRequestEntry[]>>(
+    enabled ? `/deletion-requests?open_only=${openOnly}` : null,
+    () => getDeletionRequests(openOnly),
     swrConfig,
   );
 }

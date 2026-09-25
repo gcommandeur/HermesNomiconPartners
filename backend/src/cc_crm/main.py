@@ -1,7 +1,7 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from cc_crm.api.error_handlers import register_error_handlers
@@ -17,6 +17,23 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 _DOCS_ENABLED_ENVIRONMENTS = {"local", "development"}
+
+# Basis-CSP fuer eine reine JSON-API ohne eigene HTML-Seiten - das Frontend
+# (Next.js, separates Deployment) laedt selbst keine externen Skripte/Fonts
+# (siehe frontend/src/app/layout.tsx: kein <script>, kein next/font, keine
+# fonts.googleapis.com-Referenz), insofern reicht 'self' ohne Ausnahmen.
+# NUR wenn /docs aktiv ist (lokal/dev, siehe docs_enabled unten) braucht
+# Swagger UI zusaetzlich cdn.jsdelivr.net (Skript/Style) - dort gilt eine
+# bewusst grosszuegigere Policy, damit /docs nicht kaputtgeht; in Produktion
+# ist /docs ohnehin per docs_url=None komplett abgeschaltet.
+_CSP_STRICT = "default-src 'self'; frame-ancestors 'none'"
+_CSP_DOCS = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net; "
+    "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; "
+    "img-src 'self' data: fastapi.tiangolo.com; "
+    "frame-ancestors 'none'"
+)
 
 
 def create_app() -> FastAPI:
@@ -42,6 +59,27 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    csp = _CSP_DOCS if docs_enabled else _CSP_STRICT
+
+    @app.middleware("http")
+    async def security_headers_middleware(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        """Setzt Standard-Sicherheits-Header auf jede Antwort (Punkt 5 des
+        Auftrags "5 Hoch-Punkte umsetzen"). Strict-Transport-Security nur,
+        wenn noch nicht gesetzt - Cloudflare setzt ihn in Produktion
+        teilweise bereits selbst, ein doppelter Header waere zwar
+        unschaedlich, aber unnoetig."""
+        response = await call_next(request)
+        response.headers["Content-Security-Policy"] = csp
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if "strict-transport-security" not in response.headers:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+
     register_error_handlers(app)
     app.include_router(api_router, prefix=settings.api_prefix)
     return app

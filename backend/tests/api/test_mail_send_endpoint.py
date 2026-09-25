@@ -64,9 +64,14 @@ def _create_account(client: TestClient) -> dict:
     return response.json()
 
 
-def _create_candidate(client: TestClient) -> dict:
+def _create_candidate(client: TestClient, *, consent_received: bool = True) -> dict:
     response = client.post(
-        "/api/v1/candidates", json={"first_name": "Test", "last_name": "Empfaenger"}
+        "/api/v1/candidates",
+        json={
+            "first_name": "Test",
+            "last_name": "Empfaenger",
+            "consent_received": consent_received,
+        },
     )
     assert response.status_code == 201, response.text
     return response.json()
