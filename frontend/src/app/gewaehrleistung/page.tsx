@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, ShieldCheck } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/crm/page-header";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,10 +40,6 @@ export default async function WarrantyOverviewPage() {
     <>
       <PageHeader eyebrow="Recruiting-Prozesse" title="Laufende Gewährleistungen" />
       <DemoNotice source={placementsResult.source} error={placementsResult.error} />
-      <div className="mb-5 flex items-center gap-2 rounded-lg border border-white/10 bg-[#0D1B2E]/85 px-3 py-2 text-xs text-[#CBD5E1]">
-        <ShieldCheck size={14} />
-        Placements mit noch laufender Gewährleistung, sortiert nach dem nächstliegenden Ablaufdatum. Abgelaufene Gewährleistungen werden hier nicht mehr angezeigt.
-      </div>
       <div className="space-y-2">
         {placements.map((placement) => {
           const submission = submissionOf(placement.submission_id);

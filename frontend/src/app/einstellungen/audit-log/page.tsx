@@ -67,11 +67,7 @@ export default function AuditLogPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Hermes"
-        title="Audit-Log"
-        description="Sicherheits-/administrativ relevante Aktionen: Rechteänderungen, Löschungen, Passwort-Resets, Feed-Token-Erneuerungen."
-      />
+      <PageHeader eyebrow="Hermes" title="Audit-Log" />
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 8 }).map((_, index) => (

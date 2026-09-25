@@ -41,7 +41,6 @@ function buildWarnings(cockpit: Cockpit): string[] {
       `${count} ${count === 1 ? "Prozess hat" : "Prozesse haben"} Status Offer/Placement ohne erfassten Datensatz - Gehalt/Fee nachtragen.`,
     );
   }
-  warnings.push("Do-not-touch-Kanzleien werden in Mailing/Geo Mapping ausgeschlossen.");
   return warnings;
 }
 

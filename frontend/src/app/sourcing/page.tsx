@@ -9,11 +9,7 @@ import { SourcingRunForm } from "@/components/crm/sourcing-run-form";
 export default function SourcingPage() {
   return (
     <>
-      <PageHeader
-        eyebrow="Talent Sourcing"
-        title="Sourcing"
-        description="Automatisiert gefundene Kandidaten-Vorschläge – erst nach Bestätigung werden daraus echte Kandidaten."
-      />
+      <PageHeader eyebrow="Talent Sourcing" title="Sourcing" />
       <SourcingRunForm />
       <SourcingLeadsTable />
     </>

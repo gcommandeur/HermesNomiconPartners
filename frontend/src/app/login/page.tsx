@@ -120,7 +120,6 @@ export default function LoginPage() {
         <div className="mb-6 flex flex-col items-center gap-3">
           <Image src="/brand/commandeur-mark.png" alt="Commandeur Consulting" width={64} height={64} className="h-16 w-16 object-contain" priority />
           <h1 className="text-lg font-semibold text-[#F8FAFC]">Hermes Login</h1>
-          <p className="text-center text-xs text-[#94A3B8]">Internes Recruiting-CRM für Commandeur Consulting</p>
         </div>
 
         {!challengeId ? (

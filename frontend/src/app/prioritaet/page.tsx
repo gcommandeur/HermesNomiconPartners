@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Target } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/crm/page-header";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,10 +29,6 @@ export default async function PriorityViewPage() {
     <>
       <PageHeader eyebrow="Prozesse" title="Prioritätsansicht" />
       <DemoNotice source={submissionsResult.source} error={submissionsResult.error} />
-      <div className="mb-5 flex items-center gap-2 rounded-lg border border-white/10 bg-[#0D1B2E]/85 px-3 py-2 text-xs text-[#CBD5E1]">
-        <Target size={14} />
-        Offene Prozesse mit berechnetem Closing-Score, sortiert nach closing_probability × erwartetem Honorar.
-      </div>
       <div className="space-y-2">
         {submissions.map((submission) => (
           <Card key={submission.id}>

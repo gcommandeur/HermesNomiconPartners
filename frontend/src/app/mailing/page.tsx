@@ -1,4 +1,3 @@
-import { ShieldCheck } from "lucide-react";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { EmailTemplatesPanel } from "@/components/crm/email-templates-panel";
 import { MailingGroupsPanel } from "@/components/crm/mailing-groups-panel";
@@ -21,7 +20,6 @@ export default async function MailingPage() {
     <>
       <PageHeader eyebrow="Outlook-Entwürfe und Kampagnen" title="Mailing" />
       <DemoNotice source={templates.source} error={templates.error} />
-      <div className="mb-5 flex items-center gap-2 rounded-lg border border-white/10 bg-[#0D1B2E] p-3 text-xs text-[#CBD5E1]"><ShieldCheck size={15} />Nur Text-Vorschau und Kopieren - keine Outlook-Anbindung vorhanden, Versand folgt erst nach expliziter Freigabe und Einrichtung einer echten Integration.</div>
       <div className="space-y-8">
         <MailingGroupsPanel />
         <EmailTemplatesPanel />
