@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.operational import Document
-from scripts import backfill_cv_rollen_und_schwerpunkte as backfill_script
+from scripts.archive import backfill_cv_rollen_und_schwerpunkte as backfill_script
 
 
 def _use_session_factory(

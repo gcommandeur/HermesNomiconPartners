@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.models.candidate import Candidate
-from scripts import backfill_edv_kenntnisse_aus_fachliche_schwerpunkte as edv_script
+from scripts.archive import backfill_edv_kenntnisse_aus_fachliche_schwerpunkte as edv_script
 
 
 def _use_session_factory(

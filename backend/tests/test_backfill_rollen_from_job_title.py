@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.models.candidate import Candidate
-from scripts import backfill_rollen_from_job_title as script
+from scripts.archive import backfill_rollen_from_job_title as script
 
 
 def _use_session_factory(

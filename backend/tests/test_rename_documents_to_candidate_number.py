@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.operational import Document
-from scripts import rename_documents_to_candidate_number as rename_script
+from scripts.archive import rename_documents_to_candidate_number as rename_script
 
 
 def _make_candidate(session: Session, **overrides: object) -> Candidate:

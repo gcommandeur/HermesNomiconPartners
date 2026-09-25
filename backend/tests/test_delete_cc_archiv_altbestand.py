@@ -15,7 +15,7 @@ from cc_crm.models.candidate import Candidate
 from cc_crm.models.enums import SubmissionStatus
 from cc_crm.models.operational import Document
 from cc_crm.models.submission import CandidateSubmission
-from scripts import delete_cc_archiv_altbestand as delete_script
+from scripts.archive import delete_cc_archiv_altbestand as delete_script
 
 
 def _use_session_factory(

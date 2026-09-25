@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.sourcing_lead import SourcingLead
-from scripts import audit_titelschutz_unverified_roles as audit_script
+from scripts.archive import audit_titelschutz_unverified_roles as audit_script
 
 
 def _use_session_factory(

@@ -195,3 +195,14 @@ Candidate, client, job, and submission list endpoints support stable
 `limit`/`offset` pagination and return `items`, `total_count`, `limit`, and
 `offset`. They also expose simple status, region, role, relationship, date, and
 text filters where applicable.
+
+## Scripts
+
+`backend/scripts/` holds generic, repeatedly usable tools (`seed_data.py`,
+`create_api_key.py`, `create_test_user.py`, `backup_to_s3.py`,
+`run_graph_sync.py`, integrity/audit checks, ...). Completed one-off
+actions (dated backfills, historical data imports, incident-specific
+fixes) live in `backend/scripts/archive/` instead, so the top-level
+folder doesn't get buried under runs that already happened - see
+`scripts/archive/README.md` for the exact criteria and the convention for
+archiving future one-off scripts.

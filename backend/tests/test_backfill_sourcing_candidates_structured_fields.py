@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.enums import SourcingLeadStatus, SourcingSourceType
 from cc_crm.models.sourcing_lead import SourcingLead
-from scripts import backfill_sourcing_candidates_structured_fields as backfill_script
+from scripts.archive import backfill_sourcing_candidates_structured_fields as backfill_script
 
 
 def _use_session_factory(

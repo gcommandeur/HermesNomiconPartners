@@ -11,7 +11,7 @@ from cc_crm.models.recruiting import AuditLog
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.task import Task
 from cc_crm.services.submissions import AUTO_FOLLOW_UP_DESCRIPTION
-from scripts import cleanup_stale_followup_tasks as cleanup_script
+from scripts.archive import cleanup_stale_followup_tasks as cleanup_script
 
 
 def _use_session_factory(

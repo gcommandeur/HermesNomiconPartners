@@ -25,7 +25,7 @@ from cc_crm.models.note import Note
 from cc_crm.models.operational import Document
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.task import Task
-from scripts import merge_kanzlei_duplikate as script
+from scripts.archive import merge_kanzlei_duplikate as script
 
 
 @pytest.fixture(autouse=True)

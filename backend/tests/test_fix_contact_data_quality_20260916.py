@@ -21,7 +21,7 @@ from cc_crm.models.enums import MailDirection, MailMatchStatus
 from cc_crm.models.mail import MailAccount, MailMessage
 from cc_crm.models.mailing_group import MailingGroup
 from cc_crm.models.submission import CandidateSubmission
-from scripts import fix_contact_data_quality_20260916 as script
+from scripts.archive import fix_contact_data_quality_20260916 as script
 
 
 @pytest.fixture(autouse=True)

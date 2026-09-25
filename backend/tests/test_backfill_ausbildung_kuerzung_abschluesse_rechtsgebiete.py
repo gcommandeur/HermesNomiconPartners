@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.models.candidate import Candidate
-from scripts import backfill_ausbildung_kuerzung_abschluesse_rechtsgebiete as script
+from scripts.archive import backfill_ausbildung_kuerzung_abschluesse_rechtsgebiete as script
 
 
 def _use_session_factory(

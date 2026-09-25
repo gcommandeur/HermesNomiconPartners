@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.models.candidate import Candidate
-from scripts import cleanup_rechtsgebiete_non_legal_roles as script
+from scripts.archive import cleanup_rechtsgebiete_non_legal_roles as script
 
 
 def _use_session_factory(

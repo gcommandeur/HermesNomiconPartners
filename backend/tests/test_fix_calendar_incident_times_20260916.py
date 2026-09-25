@@ -31,7 +31,7 @@ from cc_crm.models.enums import MailAccountOAuthStatus, MailAccountProvider
 from cc_crm.models.mail import MailAccount
 from cc_crm.models.user import User
 from cc_crm.services import graph_token_service
-from scripts import fix_calendar_incident_times_20260916 as script
+from scripts.archive import fix_calendar_incident_times_20260916 as script
 
 _KEY = Fernet.generate_key().decode()
 
