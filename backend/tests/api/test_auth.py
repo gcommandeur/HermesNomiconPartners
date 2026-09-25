@@ -9,8 +9,11 @@ from sqlalchemy.orm import Session, sessionmaker
 from cc_crm.core.rate_limit import (
     EMAIL_MAX_ATTEMPTS,
     MAX_ATTEMPTS,
+    VERIFY_MAX_ATTEMPTS,
     email_login_rate_limiter,
     login_rate_limiter,
+    verify_account_rate_limiter,
+    verify_ip_rate_limiter,
 )
 from tests.conftest import TEST_USER_EMAIL, TEST_USER_PASSWORD
 
@@ -27,9 +30,13 @@ def _reset_rate_limiters() -> None:
     429 statt 401 scheitern lassen."""
     login_rate_limiter.reset()
     email_login_rate_limiter.reset()
+    verify_ip_rate_limiter.reset()
+    verify_account_rate_limiter.reset()
     yield
     login_rate_limiter.reset()
     email_login_rate_limiter.reset()
+    verify_ip_rate_limiter.reset()
+    verify_account_rate_limiter.reset()
 
 
 @pytest.fixture(autouse=True)
@@ -125,6 +132,76 @@ def test_wrong_code_is_rejected_and_locks_after_five_attempts(
         "/api/v1/auth/login/verify", json={"challenge_id": challenge_id, "code": code}
     )
     assert still_locked.status_code == 401
+
+
+def test_verify_rate_limit_blocks_after_many_attempts_across_different_challenges(
+    client: TestClient,
+    _capture_sent_codes: list[dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Punkt 2 des Auftrags "3 Mittel-Punkte umsetzen": der bestehende
+    Pro-Challenge-Zaehler (MAX_CODE_ATTEMPTS=5) greift nicht, wenn ein
+    Angreifer (der das Passwort schon kennt) einfach immer wieder eine neue
+    Challenge erzeugt - jeder Verify-Versuch haette sonst einen teuren
+    PBKDF2-Hash ausgeloest, egal wie viele verschiedene challenge_ids
+    verwendet werden. Zaehlt hier ueber VERIFY_MAX_ATTEMPTS verschiedene,
+    valide Challenges hinweg."""
+    client.headers.pop("Authorization", None)
+
+    from cc_crm.services import auth as auth_service_module
+
+    # verify_password wird auch fuer den normalen Passwort-Check in
+    # authenticate() verwendet (_start_login() ruft es also selbst schon
+    # einmal pro Iteration auf) - hier zaehlt nur, wie oft es waehrend des
+    # VERIFY-Schritts selbst aufgerufen wird, daher ein Delta je Iteration
+    # statt eines globalen Gesamtzaehlers.
+    call_count = {"n": 0}
+    original_verify_password = auth_service_module.verify_password
+
+    def counting_verify_password(code: str, hashed: str) -> bool:
+        call_count["n"] += 1
+        return original_verify_password(code, hashed)
+
+    monkeypatch.setattr(auth_service_module, "verify_password", counting_verify_password)
+
+    for _ in range(VERIFY_MAX_ATTEMPTS):
+        challenge_id = _start_login(client).json()["challenge_id"]
+        before_verify = call_count["n"]
+        response = client.post(
+            "/api/v1/auth/login/verify",
+            json={"challenge_id": challenge_id, "code": "000000"},
+        )
+        assert response.status_code == 401
+        assert call_count["n"] == before_verify + 1
+
+    # Der naechste Versuch - mit einer wiederum frischen, gueltigen
+    # Challenge - wird jetzt blockiert, OHNE dass ueberhaupt noch ein
+    # PBKDF2-Hash fuer den Code berechnet wird (Kernanforderung: das Limit
+    # muss VOR dem teuren Vergleich greifen).
+    blocked_challenge_id = _start_login(client).json()["challenge_id"]
+    before_blocked = call_count["n"]
+    blocked = client.post(
+        "/api/v1/auth/login/verify",
+        json={"challenge_id": blocked_challenge_id, "code": "000000"},
+    )
+    assert blocked.status_code == 429
+    assert call_count["n"] == before_blocked
+
+
+def test_verify_rate_limit_does_not_block_normal_two_factor_login(
+    client: TestClient, _capture_sent_codes: list[dict[str, str]]
+) -> None:
+    """Regressionsschutz: ein einzelner, korrekter Verify-Versuch bleibt
+    weiterhin ganz normal moeglich - das neue Limit betrifft nur exzessive
+    Versuchsserien."""
+    client.headers.pop("Authorization", None)
+    challenge_id = _start_login(client).json()["challenge_id"]
+    code = _extract_code(_capture_sent_codes)
+
+    verify = client.post(
+        "/api/v1/auth/login/verify", json={"challenge_id": challenge_id, "code": code}
+    )
+    assert verify.status_code == 200
 
 
 def test_expired_code_is_rejected_with_a_clear_message(

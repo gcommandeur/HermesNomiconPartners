@@ -189,6 +189,15 @@ class AuthService:
         self.session.refresh(challenge)
         return IssuedChallenge(challenge=challenge, user=user, code=code)
 
+    def peek_challenge_user_id(self, challenge_id: uuid.UUID) -> uuid.UUID | None:
+        """Liest NUR die user_id einer Challenge, ohne den Code zu pruefen
+        (kein PBKDF2-Hash) - Grundlage fuer den Pro-Account-Rate-Limiter am
+        Verify-Endpoint (Punkt 2 des Auftrags "3 Mittel-Punkte umsetzen"):
+        muss VOR dem teuren Hash-Vergleich aufgerufen werden, damit ein
+        blockierter Angreifer gar keine PBKDF2-Berechnung mehr ausloest."""
+        challenge = self.session.get(LoginChallenge, challenge_id)
+        return challenge.user_id if challenge is not None else None
+
     def verify_challenge(
         self, challenge_id: uuid.UUID, code: str
     ) -> tuple[User, str, LoginChallenge]:

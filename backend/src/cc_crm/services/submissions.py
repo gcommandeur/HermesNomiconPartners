@@ -1,10 +1,13 @@
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
+from sqlalchemy import update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session
 
-from cc_crm.core.errors import BusinessRuleError, ConflictError
+from cc_crm.core.errors import BusinessRuleError, ConflictError, EntityNotFoundError
 from cc_crm.models.enums import SubmissionStatus, TaskPriority, TaskStatus
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.user import User
@@ -265,7 +268,21 @@ class CandidateSubmissionService(
         *,
         commit: bool = True,
     ) -> CandidateSubmission:
-        submission = self.get(entity_id)
+        # SELECT ... FOR UPDATE (Punkt 1 des Auftrags "3 Mittel-Punkte
+        # umsetzen"): ohne Row-Lock konnten zwei gleichzeitige Requests auf
+        # denselben Prozess beide gegen denselben (veralteten) Status
+        # pruefen und beide durchschreiben (z.B. doppelte Placement/Fee-
+        # Eintraege). Eine zweite, gleichzeitige transition() wartet jetzt
+        # hier, bis die erste committet hat, und sieht dann den bereits
+        # aktualisierten Status. Auf Postgres (Produktion) sperrt das den
+        # Datensatz echt; auf SQLite (lokale Tests) ist die Klausel
+        # wirkungslos - deshalb zusaetzlich die bedingte UPDATE-Klausel
+        # unten (WHERE status = old_status), die auch ohne echten Row-Lock
+        # zuverlaessig einen sauberen ConflictError statt eines stillen
+        # doppelten Schreibens liefert.
+        submission = self.submissions.get_for_update(entity_id)
+        if submission is None:
+            raise EntityNotFoundError(f"{self.entity_name} not found")
         old_status = submission.status
         if payload.status not in ALLOWED_TRANSITIONS.get(old_status, set()):
             raise BusinessRuleError(
@@ -312,7 +329,33 @@ class CandidateSubmissionService(
             # time a submission reaches CV_OUT instead.
             values["submitted_at"] = now
         try:
-            updated = self.submissions.update(submission, values)
+            # Bedingtes UPDATE (WHERE status = old_status) statt eines
+            # blinden setattr()+flush() - schuetzt zusaetzlich zu SELECT
+            # ... FOR UPDATE oben davor, dass eine zweite, gleichzeitige
+            # transition() (auf einer DB ohne wirksames Row-Lock, siehe
+            # get_for_update()) den Status stillschweigend ueberschreibt:
+            # rowcount == 0 bedeutet, jemand anderes hat den Status bereits
+            # veraendert, seit wir ihn gelesen haben - dann klarer
+            # Konflikt-Fehler statt eines doppelten Schreibens.
+            result = cast(
+                "CursorResult[Any]",
+                self.session.execute(
+                    update(CandidateSubmission)
+                    .where(
+                        CandidateSubmission.id == submission.id,
+                        CandidateSubmission.status == old_status,
+                    )
+                    .values(**values)
+                ),
+            )
+            if result.rowcount == 0:
+                raise ConflictError(
+                    "Der Prozess wurde inzwischen von einer anderen Anfrage aktualisiert - "
+                    "bitte neu laden und erneut versuchen."
+                )
+            self.session.flush()
+            self.session.refresh(submission)
+            updated = submission
             details = f"{old_status.value} -> {payload.status.value}"
             if payload.cancellation_reason:
                 details = f"{details}: {payload.cancellation_reason.value}"

@@ -52,6 +52,56 @@ def test_upload_rejects_file_over_size_limit(client: TestClient) -> None:
     )
 
 
+def test_upload_rejects_pdf_extension_with_forged_content(client: TestClient) -> None:
+    """Punkt 3 des Auftrags "3 Mittel-Punkte umsetzen": Dateiendung UND
+    Content-Type sind beide vom Client frei waehlbar - ein Angreifer
+    koennte z.B. beliebigen Code mit einer .pdf-Endung und dem passenden
+    Content-Type hochladen. Der echte Signatur-Check auf die ersten Bytes
+    muss das trotzdem ablehnen."""
+    candidate_id = _create_candidate(client)
+
+    response = client.post(
+        "/api/v1/documents/upload",
+        data={"owner_type": "candidate", "owner_id": candidate_id, "document_type": "cv"},
+        files={"file": ("cv.pdf", b"#!/bin/sh\necho pwned\n", "application/pdf")},
+    )
+
+    assert response.status_code == 400
+    assert "Dateiinhalt" in response.json()["detail"]
+
+
+def test_upload_rejects_docx_extension_with_forged_content(client: TestClient) -> None:
+    """DOCX ist technisch ein ZIP-Archiv (PK-Signatur) - reiner Text mit
+    .docx-Endung darf nicht durchgehen."""
+    candidate_id = _create_candidate(client)
+
+    response = client.post(
+        "/api/v1/documents/upload",
+        data={"owner_type": "candidate", "owner_id": candidate_id, "document_type": "cv"},
+        files={
+            "file": (
+                "cv.docx",
+                b"Das ist nur Text, kein echtes DOCX/ZIP.",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    )
+
+    assert response.status_code == 400
+
+
+def test_upload_rejects_image_extension_with_forged_content(client: TestClient) -> None:
+    candidate_id = _create_candidate(client)
+
+    response = client.post(
+        "/api/v1/documents/upload",
+        data={"owner_type": "candidate", "owner_id": candidate_id, "document_type": "cv"},
+        files={"file": ("foto.png", b"not a real png", "image/png")},
+    )
+
+    assert response.status_code == 400
+
+
 def test_upload_accepts_normal_pdf(client: TestClient) -> None:
     candidate_id = _create_candidate(client)
 
@@ -64,6 +114,59 @@ def test_upload_accepts_normal_pdf(client: TestClient) -> None:
     assert response.status_code == 201
     body = response.json()
     assert body["content_type"] == "application/pdf"
+
+
+def test_upload_accepts_valid_docx(client: TestClient) -> None:
+    """Regressionsschutz zum neuen Signatur-Check: ein echtes DOCX (ZIP-
+    Container mit PK-Signatur) muss weiterhin normal funktionieren."""
+    from io import BytesIO
+
+    import docx
+
+    document = docx.Document()
+    document.add_paragraph("Testinhalt")
+    buffer = BytesIO()
+    document.save(buffer)
+    candidate_id = _create_candidate(client)
+
+    response = client.post(
+        "/api/v1/documents/upload",
+        data={"owner_type": "candidate", "owner_id": candidate_id, "document_type": "contract"},
+        files={
+            "file": (
+                "vertrag.docx",
+                buffer.getvalue(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    )
+    assert response.status_code == 201
+
+
+def test_upload_accepts_valid_jpg_and_png(client: TestClient) -> None:
+    from io import BytesIO
+
+    from PIL import Image
+
+    candidate_id = _create_candidate(client)
+
+    jpg_buffer = BytesIO()
+    Image.new("RGB", (10, 10), "white").save(jpg_buffer, format="JPEG")
+    jpg_response = client.post(
+        "/api/v1/documents/upload",
+        data={"owner_type": "candidate", "owner_id": candidate_id, "document_type": "contract"},
+        files={"file": ("foto.jpg", jpg_buffer.getvalue(), "image/jpeg")},
+    )
+    assert jpg_response.status_code == 201
+
+    png_buffer = BytesIO()
+    Image.new("RGB", (10, 10), "white").save(png_buffer, format="PNG")
+    png_response = client.post(
+        "/api/v1/documents/upload",
+        data={"owner_type": "candidate", "owner_id": candidate_id, "document_type": "contract"},
+        files={"file": ("foto.png", png_buffer.getvalue(), "image/png")},
+    )
+    assert png_response.status_code == 201
 
 
 def test_cv_upload_is_named_after_last_and_first_name(client: TestClient) -> None:

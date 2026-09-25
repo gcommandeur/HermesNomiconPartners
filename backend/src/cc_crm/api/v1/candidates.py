@@ -5,7 +5,11 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, BackgroundTasks, File, Query, Response, UploadFile, status
 
 from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
-from cc_crm.api.v1.operational import _read_upload_with_size_limit, _validate_upload_type
+from cc_crm.api.v1.operational import (
+    _read_upload_with_size_limit,
+    _validate_upload_signature,
+    _validate_upload_type,
+)
 from cc_crm.core.config import get_settings
 from cc_crm.models.enums import Abschlussart, CandidateStatus, CvExtractionJobStatus, Rolle
 from cc_crm.repositories.candidates import compute_search_match_fields
@@ -160,9 +164,10 @@ async def preview_cv_fields(
     sofort status="processing" plus job_id zurueck, das Ergebnis liefert
     GET /candidates/cv-preview/{job_id}. Alles andere (Text-PDF, DOCX, ein
     einzelnes Bild) wird wie bisher inline ausgewertet."""
-    _validate_upload_type(file)
+    extension = _validate_upload_type(file)
     max_bytes = get_settings().max_upload_size_mb * 1024 * 1024
     content = await _read_upload_with_size_limit(file, max_bytes)
+    _validate_upload_signature(extension, content)
     filename = file.filename or "cv.pdf"
     cv_text = extract_text_from_bytes(filename, content)
     kind = classify_cv_source(filename, content, cv_text)

@@ -184,3 +184,12 @@ def test_doc_upload_is_rejected_on_document_upload_too(client: TestClient) -> No
 
     assert response.status_code == 415
     assert ".docx" in response.json()["detail"]
+
+
+def test_cv_preview_rejects_pdf_extension_with_forged_content(client: TestClient) -> None:
+    """Punkt 3 des Auftrags "3 Mittel-Punkte umsetzen": derselbe Magic-
+    Bytes-Check wie bei /documents/upload gilt auch fuer den zweiten
+    Upload-Pfad (/candidates/cv-preview, siehe api/v1/candidates.py)."""
+    response = _post(client, "cv.pdf", b"kein echtes PDF", "application/pdf")
+
+    assert response.status_code == 400

@@ -12,6 +12,8 @@ from cc_crm.core.rate_limit import (
     email_login_rate_limiter,
     email_rate_limit_key,
     login_rate_limiter,
+    verify_account_rate_limiter,
+    verify_ip_rate_limiter,
 )
 from cc_crm.integrations.email.resend_client import EmailProviderError, send_transactional_email
 from cc_crm.models.login_challenge import CODE_LIFETIME_MINUTES
@@ -168,9 +170,40 @@ def login(payload: LoginRequest, session: DatabaseSession, request: Request) -> 
 
 
 @router.post("/login/verify", response_model=LoginResponse)
-def verify_login(payload: VerifyLoginRequest, session: DatabaseSession) -> LoginResponse:
+def verify_login(
+    payload: VerifyLoginRequest, session: DatabaseSession, request: Request
+) -> LoginResponse:
+    ip = client_ip(
+        request.headers.get("cf-connecting-ip"),
+        request.headers.get("x-forwarded-for"),
+        request.client.host if request.client else None,
+    )
     auth_service = AuthService(session)
-    user, token, _challenge = auth_service.verify_challenge(payload.challenge_id, payload.code)
+    # Nur die user_id lesen (kein PBKDF2-Hash) - Punkt 2 des Auftrags "3
+    # Mittel-Punkte umsetzen": das Rate-Limit MUSS vor dem teuren
+    # Code-Vergleich greifen, sonst waere das Limit selbst wirkungslos
+    # gegen den CPU-DoS-Vektor (viele Challenges, viele Verify-Versuche).
+    account_key = auth_service.peek_challenge_user_id(payload.challenge_id)
+    if verify_ip_rate_limiter.is_blocked(ip) or (
+        account_key is not None and verify_account_rate_limiter.is_blocked(str(account_key))
+    ):
+        raise RateLimitExceededError(
+            "Zu viele Verify-Versuche. Bitte in ein paar Minuten erneut versuchen."
+        )
+
+    try:
+        user, token, _challenge = auth_service.verify_challenge(
+            payload.challenge_id, payload.code
+        )
+    except AuthenticationError:
+        verify_ip_rate_limiter.record_failure(ip)
+        if account_key is not None:
+            verify_account_rate_limiter.record_failure(str(account_key))
+        raise
+    verify_ip_rate_limiter.record_success(ip)
+    if account_key is not None:
+        verify_account_rate_limiter.record_success(str(account_key))
+
     trusted_device_token = auth_service.issue_trusted_device(user.id)
     return LoginResponse(
         token=token, user=_user_read(user), trusted_device_token=trusted_device_token

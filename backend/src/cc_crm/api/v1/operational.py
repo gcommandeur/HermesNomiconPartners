@@ -53,7 +53,7 @@ _ALLOWED_UPLOAD_CONTENT_TYPES = {
 _UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MB pro Lese-Schritt
 
 
-def _validate_upload_type(file: UploadFile) -> None:
+def _validate_upload_type(file: UploadFile) -> str:
     extension = Path(file.filename or "").suffix.lower()
     if extension == ".doc":
         # Altes Word-Binaerformat: es gibt keine saubere Konvertierung, die
@@ -77,6 +77,46 @@ def _validate_upload_type(file: UploadFile) -> None:
             detail=(
                 "Dateityp nicht erlaubt (Content-Type passt nicht zur Dateiendung). "
                 "Erlaubt sind: PDF, DOCX, JPG, PNG."
+            ),
+        )
+    return extension
+
+
+# Magic-Bytes der ersten paar Bytes je erlaubtem Dateityp (Punkt 3 des
+# Auftrags "3 Mittel-Punkte umsetzen"): Dateiendung UND vom Client
+# mitgeschickter Content-Type (siehe _validate_upload_type oben) sind
+# beide frei faelschbar - dieser Check prueft den TATSAECHLICHEN
+# Dateiinhalt. DOCX ist technisch ein ZIP-Archiv (OOXML), daher dieselbe
+# ZIP-Signatur wie bei jedem .zip - "PK\x03\x04" deckt den ganz
+# ueberwiegenden Regelfall (lokaler Datei-Header) ab, "PK\x05\x06"/
+# "PK\x07\x08" sind seltene, aber gueltige ZIP-Varianten (leeres/verteiltes
+# Archiv). Bewusst KEINE externe Dependency (z.B. python-magic) - die
+# erlaubten Typen sind fest und klein genug, dass eine simple Bytes-
+# Pruefung ausreicht und keine zusaetzliche System-Abhaengigkeit
+# (libmagic) im Docker-Image braucht.
+_ALLOWED_UPLOAD_SIGNATURES: dict[str, tuple[bytes, ...]] = {
+    ".pdf": (b"%PDF-",),
+    ".docx": (b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"),
+    ".jpg": (b"\xff\xd8\xff",),
+    ".jpeg": (b"\xff\xd8\xff",),
+    ".png": (b"\x89PNG\r\n\x1a\n",),
+}
+
+
+def _validate_upload_signature(extension: str, content: bytes) -> None:
+    """Muss NACH dem Einlesen der Datei (siehe _read_upload_with_size_limit)
+    und VOR jedem Speichern aufgerufen werden. Ergaenzt die bestehende
+    Endungs-/Content-Type-Pruefung (Defense in Depth), ersetzt sie nicht."""
+    expected_signatures = _ALLOWED_UPLOAD_SIGNATURES.get(extension)
+    if expected_signatures is None:
+        return
+    if not any(content.startswith(signature) for signature in expected_signatures):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Dateiinhalt passt nicht zur angegebenen Dateiendung "
+                f"({extension}) - die Datei scheint beschädigt oder falsch "
+                "benannt zu sein."
             ),
         )
 
@@ -229,9 +269,10 @@ async def upload_document(
     file: Annotated[UploadFile, File()],
     uploaded_by: Annotated[str | None, Form()] = None,
 ) -> DocumentRead:
-    _validate_upload_type(file)
+    extension = _validate_upload_type(file)
     max_bytes = get_settings().max_upload_size_mb * 1024 * 1024
     content = await _read_upload_with_size_limit(file, max_bytes)
+    _validate_upload_signature(extension, content)
     original_filename = file.filename or "datei"
 
     upload_filename = original_filename

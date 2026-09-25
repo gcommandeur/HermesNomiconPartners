@@ -22,6 +22,21 @@ class CandidateSubmissionRepository(SQLAlchemyRepository[CandidateSubmission]):
     def __init__(self, session: Session) -> None:
         super().__init__(session, CandidateSubmission)
 
+    def get_for_update(self, entity_id: uuid.UUID) -> CandidateSubmission | None:
+        """Wie get(), aber mit SELECT ... FOR UPDATE (Punkt 1 des Auftrags
+        "3 Mittel-Punkte umsetzen": Race Condition bei Status-Wechseln) -
+        haelt den Datensatz waehrend der gesamten transition() ab dem
+        ersten Lesen gesperrt, damit eine zweite, gleichzeitige transition()
+        auf denselben Prozess wartet, statt gegen denselben veralteten
+        Status zu pruefen. Auf SQLite (kein Row-Level-Lock) ist die Klausel
+        wirkungslos (von SQLAlchemy dort stillschweigend ignoriert) - siehe
+        services/submissions.py::transition() fuer den zusaetzlichen,
+        DB-unabhaengigen Schutz per bedingtem UPDATE."""
+        statement = select(CandidateSubmission).where(
+            CandidateSubmission.id == entity_id
+        ).with_for_update()
+        return self.session.scalars(statement).first()
+
     def list_for_candidate(
         self,
         candidate_id: uuid.UUID,

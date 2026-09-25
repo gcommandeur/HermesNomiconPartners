@@ -105,6 +105,29 @@ def email_rate_limit_key(email: str) -> str:
     return email.strip().lower()
 
 
+# Rate-Limiter fuer POST /auth/login/verify (Punkt 2 des Auftrags "3 Mittel-
+# Punkte umsetzen"): der bestehende MAX_CODE_ATTEMPTS-Zaehler (siehe
+# models/login_challenge.py) begrenzt Fehlversuche nur INNERHALB EINER
+# Challenge (max. 5) - er greift nicht, wenn ein Angreifer, der bereits das
+# richtige Passwort kennt, einfach viele neue Challenges erzeugt (jeder
+# erfolgreiche /auth/login-Aufruf erstellt eine neue) und dann viele
+# Verify-Versuche auf unterschiedliche challenge_ids verteilt. Jeder Versuch
+# hasht den eingegebenen Code mit PBKDF2 (260k Iterationen, siehe
+# core/security.py) - ohne ein zaehlerbasiertes Limit UEBER Challenges
+# hinweg liesse sich der Server damit gezielt mit PBKDF2-Berechnungen
+# belasten (CPU-DoS). Zwei unabhaengige Zaehler nach demselben Muster wie
+# login_rate_limiter/email_login_rate_limiter oben: pro IP UND pro
+# angefragtem Nutzer-Account (aus der Challenge aufgeloest, siehe
+# AuthService.peek_challenge_user_id) - beide MUESSEN vor dem eigentlichen
+# verify_challenge()-Aufruf (also vor dem PBKDF2-Hash) geprueft werden.
+VERIFY_MAX_ATTEMPTS = 10
+VERIFY_WINDOW = timedelta(minutes=5)
+verify_ip_rate_limiter = LoginRateLimiter(max_attempts=VERIFY_MAX_ATTEMPTS, window=VERIFY_WINDOW)
+verify_account_rate_limiter = LoginRateLimiter(
+    max_attempts=VERIFY_MAX_ATTEMPTS, window=VERIFY_WINDOW
+)
+
+
 def client_ip(
     cf_connecting_ip: str | None, forwarded_for: str | None, direct_host: str | None
 ) -> str:
