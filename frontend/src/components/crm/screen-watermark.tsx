@@ -22,22 +22,25 @@ function escapeForSvg(text: string): string {
 const TILE_WIDTH = 460;
 const TILE_HEIGHT = 260;
 
-// 0.01 statt der urspruenglichen 0.05: bei 0.05 war der Text auf dem
-// dunklen Hintergrund (#050B14) mit blossem Auge klar lesbar (per
-// Screenshot bestaetigt) - das Wasserzeichen soll aber nur ein forensischer
-// Hinweis sein (bei einem geleakten Screenshot per Kontrast-/Gamma-
-// Anhebung rekonstruierbar), kein im Normalbetrieb sichtbares Muster.
-// Per Canvas-Pixelmessung (getImageData) auf genau diesem Hintergrund
-// geprueft: 0.01 liefert noch einen klaren, von 0 verschiedenen Farbabstand
-// zum Hintergrund (~3 von 255 pro Kanal) - tiefere Werte (0.008/0.006)
-// rundeten im Test auf denselben Pixelwert wie 0.01 herunter, brachten also
-// KEINE zusaetzliche Unsichtbarkeit, nur einen kleineren (und damit
-// bruechigeren) Abstand fuer die spaetere Rekonstruktion. 0.01 ist deshalb
-// der kleinste in diesem Bereich sinnvolle Wert, nicht nur ein
-// Kompromisswert. Bleibt WEISS (nicht Hintergrundfarbe) - sonst waere der
-// Abstand bei jeder Kontraststufe exakt 0, nicht nur mit blossem Auge
-// unsichtbar.
-const WATERMARK_OPACITY = 0.01;
+// Auf Nutzer-Vorgabe nochmals unter die vorherigen 0.01 gesenkt. Per
+// Canvas-Pixelmessung (getImageData) auf dem echten Hintergrund (#050B14)
+// systematisch durchgetestet:
+//   0.01           -> +3 von 255 pro Kanal Farbabstand zum Hintergrund
+//   0.005 bis 0.002 -> +1 von 255 pro Kanal (das absolute Minimum, das der
+//                       Browser beim Rendern ueberhaupt noch als
+//                       eigenstaendigen, vom Hintergrund unterscheidbaren
+//                       Pixelwert rundet)
+//   ab ca. 0.0015   -> +0, der gerenderte Pixel ist EXAKT identisch mit dem
+//                       Hintergrund - das Wasserzeichen existiert an diesem
+//                       Punkt nicht mehr, auch nicht theoretisch, keine
+//                       Bildbearbeitung kann etwas aus einem identischen
+//                       Pixel rekonstruieren.
+// 0.005 ist damit das obere (robustere) Ende des noch ueberhaupt wirksamen
+// Bereichs - liefert denselben minimalen Farbabstand wie 0.002, mit etwas
+// mehr Puffer gegen Rendering-/Antialiasing-Schwankungen. Bleibt WEISS
+// (nicht Hintergrundfarbe) - sonst waere der Abstand bei jeder Kontraststufe
+// exakt 0, nicht nur mit blossem Auge unsichtbar.
+const WATERMARK_OPACITY = 0.005;
 
 function buildTiledWatermarkSvg(label: string): string {
   const escaped = escapeForSvg(label);
@@ -53,7 +56,7 @@ function buildTiledWatermarkSvg(label: string): string {
 }
 
 /** Bildschirm-Wasserzeichen ueber jeder authentifizierten Seite - KEIN
- * Kopierschutz, nur ein forensischer Hinweis: bei ~1% Deckkraft (siehe
+ * Kopierschutz, nur ein forensischer Hinweis: bei ~0.5% Deckkraft (siehe
  * WATERMARK_OPACITY oben) ist der Text im normalen Betrieb fuer das blosse
  * Auge praktisch nicht wahrnehmbar, bleibt aber als winziger, aber
  * messbarer Farbunterschied zum Hintergrund erhalten und laesst sich aus
@@ -63,13 +66,18 @@ function buildTiledWatermarkSvg(label: string): string {
  * sehr hoher z-index auch ueber Modals - genau das soll ja
  * mit-"fotografiert" werden).
  *
- * GRENZEN (ehrlich, kein wasserdichtes Verfahren): staerkere JPEG-
- * Kompression, eine ungewoehnliche Bildschirm-/Kamera-Farbkalibrierung oder
- * ein sehr aggressiver Weiterverarbeitungsschritt (z.B. erneutes
- * Screenshotten eines bereits komprimierten Fotos) koennen den ohnehin
- * winzigen Farbunterschied zusaetzlich abschwaechen oder ganz verschlucken -
- * das ist ein pragmatischer Kompromiss zwischen Unauffaelligkeit und
- * Rekonstruierbarkeit, keine forensisch garantierte Rueckverfolgung.
+ * GRENZEN (ehrlich, kein wasserdichtes Verfahren): bei 0.005 betraegt der
+ * Farbabstand zum Hintergrund nur noch +1 von 255 pro Kanal - das absolute
+ * Minimum, das ueberhaupt noch als eigener Pixelwert gerendert wird (siehe
+ * Messwerte oben). JEDE verlustbehaftete Kompression (schon normales JPEG,
+ * nicht erst starke), eine abweichende Bildschirm-/Kamera-Farbkalibrierung
+ * oder ein erneutes Screenshotten/Fotografieren eines bereits komprimierten
+ * Bildes kann diesen einen Schritt vollstaendig verschlucken. Verlaesslich
+ * rekonstruierbar ist das nur aus einem unkomprimierten/verlustfreien
+ * Screenshot (PNG) mit gezielter Tonwert-/Kurven-Anhebung, nicht aus einem
+ * bereits verschickten/hochgeladenen Foto. Bewusste Entscheidung fuer
+ * maximale Unauffaelligkeit auf Kosten der Rekonstruierbarkeit - keine
+ * forensisch garantierte Rueckverfolgung.
  *
  * Wird NUR in AppShell eingehaengt (siehe layout/app-shell.tsx) - die
  * Login-Seite rendert AppShell gar nicht erst (siehe
