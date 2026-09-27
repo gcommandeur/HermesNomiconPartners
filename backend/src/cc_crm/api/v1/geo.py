@@ -15,6 +15,8 @@ def geo_mapping_results(session: DatabaseSession) -> list[GeoMappingResult]:
 
 
 @router.get("/geocode", response_model=GeocodeResult)
-def geocode_place(query: Annotated[str, Query(min_length=1)]) -> GeocodeResult:
-    latitude, longitude = resolve_place_query(query)
+def geocode_place(
+    session: DatabaseSession, query: Annotated[str, Query(min_length=1)]
+) -> GeocodeResult:
+    latitude, longitude = resolve_place_query(session, query)
     return GeocodeResult(latitude=latitude, longitude=longitude)

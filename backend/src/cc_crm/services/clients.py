@@ -61,7 +61,7 @@ class ClientCompanyService(CrudService[ClientCompany, ClientCompanyCreate, Clien
             raise EntityNotFoundError("Candidate not found")
 
         center_lat, center_lng = resolve_place_query(
-            f"{candidate.postal_code or ''} {candidate.city or ''}".strip()
+            self.session, f"{candidate.postal_code or ''} {candidate.city or ''}".strip()
         )
         if center_lat is None or center_lng is None:
             raise BusinessRuleError(
@@ -73,7 +73,9 @@ class ClientCompanyService(CrudService[ClientCompany, ClientCompanyCreate, Clien
         in_radius: list[tuple[ClientCompany, float]] = []
         unresolved: list[ClientCompany] = []
         for client in clients:
-            lat, lng = candidate_coordinates(client.city, client.postal_code, str(client.id))
+            lat, lng = candidate_coordinates(
+                self.session, client.city, client.postal_code, str(client.id)
+            )
             if lat is None or lng is None:
                 unresolved.append(client)
                 continue

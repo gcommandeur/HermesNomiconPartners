@@ -523,7 +523,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         offset: int,
         limit: int,
     ) -> tuple[Sequence[Candidate], int]:
-        center_lat, center_lng = resolve_place_query(plz_ort)
+        center_lat, center_lng = resolve_place_query(self.session, plz_ort)
         if center_lat is None or center_lng is None:
             # Zentrum nicht aufloesbar (unbekannter Ort/PLZ) - 0 Treffer statt
             # den Filter stillschweigend zu ignorieren, sonst wirkt er kaputt
@@ -556,7 +556,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         in_radius: list[Candidate] = []
         for candidate in candidates:
             cand_lat, cand_lng = candidate_coordinates(
-                candidate.city, candidate.postal_code, str(candidate.id)
+                self.session, candidate.city, candidate.postal_code, str(candidate.id)
             )
             if cand_lat is None or cand_lng is None:
                 # Kandidat ohne aufloesbare Koordinaten faellt bei einem

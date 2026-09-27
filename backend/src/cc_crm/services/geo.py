@@ -11,11 +11,13 @@ from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.contact_person import ContactPerson
 from cc_crm.models.enums import JobStatus
 from cc_crm.models.job_mandate import JobMandate
+from cc_crm.models.postal_locality import PostalLocality
 from cc_crm.schemas.geo import GeoMappingResult
 
-# Centroids for German cities used in seed data / typical client input. This is a
-# static lookup, not a live geocoding call - no API key required. See
-# docs/GEO_MAPPING.md for how to plug in a real geocoding provider later.
+# Centroids for German cities used in seed data / typical client input, AND
+# als letzter Fallback, falls eine PLZ in postal_localities keine Koordinaten
+# hat (siehe _postal_locality_coordinates() unten - die eigentliche, PLZ-
+# genaue Quelle seit der PLZ-Koordinaten-Erweiterung). Kein API-Key noetig.
 CITY_COORDINATES: dict[str, tuple[float, float]] = {
     "muenchen": (48.1372, 11.5755),
     "münchen": (48.1372, 11.5755),
@@ -63,8 +65,40 @@ def _jitter(seed: str, spread: float = 0.06) -> tuple[float, float]:
     return dx, dy
 
 
+def _postal_locality_coordinates(
+    session: Session, postal_code: str | None, city: str | None = None
+) -> tuple[float, float] | None:
+    """Echte, PLZ-genaue Koordinaten aus postal_localities (siehe PLZ-
+    Koordinaten-Erweiterung) - deutlich praeziser als die vorherige Stadt-/
+    PLZ-Zonen-Naeherung (CITY_COORDINATES/PLZ_ZONE_COORDINATES bleiben nur
+    als Fallback fuer PLZ ohne Koordinaten-Treffer, siehe candidate_
+    coordinates()/resolve_place_query() unten).
+
+    Mehrere Zeilen fuer dieselbe PLZ sind moeglich (Stadtbezirke/Ortsteile) -
+    bei bekanntem Ortsnamen wird zuerst eine Zeile mit uebereinstimmendem
+    locality gesucht, sonst die erste Zeile mit gesetzten Koordinaten fuer
+    diese PLZ genommen."""
+    if not postal_code or len(postal_code) != 5 or not postal_code.isdigit():
+        return None
+    statement = select(PostalLocality).where(
+        PostalLocality.postal_code == postal_code,
+        PostalLocality.latitude.is_not(None),
+        PostalLocality.longitude.is_not(None),
+    )
+    rows = session.scalars(statement).all()
+    if not rows:
+        return None
+    if city:
+        city_normalized = city.strip().lower()
+        for row in rows:
+            if row.locality.strip().lower() == city_normalized:
+                return row.latitude, row.longitude  # type: ignore[return-value]
+    first = rows[0]
+    return first.latitude, first.longitude  # type: ignore[return-value]
+
+
 def candidate_coordinates(
-    city: str | None, postal_code: str | None, seed: str
+    session: Session, city: str | None, postal_code: str | None, seed: str
 ) -> tuple[float | None, float | None]:
     """Oeffentlicher Name fuer die frueher private _coordinates() - wird
     bereits ausserhalb dieses Moduls gebraucht (services/vacancy_matching.py
@@ -72,8 +106,14 @@ def candidate_coordinates(
     den Kandidaten-eigenen PLZ+Umkreis-Filter) und war davor nur per
     Unterstrich-Konvention-Bruch importiert. Gilt fuer Kandidat UND Kanzlei
     gleichermassen (city/postal_code/seed sind generisch), der Name betont
-    hier den Hauptverwendungszweck."""
-    base = CITY_COORDINATES.get((city or "").strip().lower())
+    hier den Hauptverwendungszweck.
+
+    Reihenfolge seit der PLZ-Koordinaten-Erweiterung: zuerst exakte PLZ aus
+    postal_localities, erst wenn das nichts liefert Fallback auf die
+    groebere Stadt-/PLZ-Zonen-Naeherung."""
+    base = _postal_locality_coordinates(session, postal_code, city)
+    if base is None:
+        base = CITY_COORDINATES.get((city or "").strip().lower())
     if base is None and postal_code:
         base = PLZ_ZONE_COORDINATES.get(postal_code[:1])
     if base is None:
@@ -85,14 +125,16 @@ def candidate_coordinates(
 _DIGITS_RE = re.compile(r"\d+")
 
 
-def resolve_place_query(query: str | None) -> tuple[float | None, float | None]:
+def resolve_place_query(
+    session: Session, query: str | None
+) -> tuple[float | None, float | None]:
     """Resolves a free-text place query (city name, postal code, or 'PLZ Ort')
-    to approximate lat/lng, using the same static city/PLZ-zone lookup as
-    candidate_coordinates() above. Used both by the /geo-mapping/geocode
-    endpoint (Ort/PLZ-Eingabe als Umkreis-Zentrum, siehe geo-results-table.tsx)
-    and by the Vakanz->Kandidaten-Matching (services/vacancy_matching.py), wo
-    die Vakanz nur ein freies location-Textfeld statt getrennter city/
-    postal_code-Spalten hat.
+    to precise lat/lng, using postal_localities first and falling back to the
+    same static city/PLZ-zone lookup as candidate_coordinates() above. Used
+    both by the /geo-mapping/geocode endpoint (Ort/PLZ-Eingabe als Umkreis-
+    Zentrum, siehe geo-results-table.tsx) and by der Vakanz->Kandidaten-
+    Matching (services/vacancy_matching.py), wo die Vakanz nur ein freies
+    location-Textfeld statt getrennter city/postal_code-Spalten hat.
 
     Bewusst OHNE den _jitter()-Offset von candidate_coordinates(): der
     Jitter existiert nur, damit mehrere Kandidaten-/Kanzlei-Pins in derselben
@@ -106,7 +148,9 @@ def resolve_place_query(query: str | None) -> tuple[float | None, float | None]:
     digits = "".join(_DIGITS_RE.findall(cleaned))
     postal_code = digits if len(digits) >= 5 else None
     city_part = _DIGITS_RE.sub(" ", cleaned).strip(" ,-")
-    base = CITY_COORDINATES.get(city_part.lower())
+    base = _postal_locality_coordinates(session, postal_code, city_part or None)
+    if base is None:
+        base = CITY_COORDINATES.get(city_part.lower())
     if base is None and postal_code:
         base = PLZ_ZONE_COORDINATES.get(postal_code[:1])
     if base is None:
@@ -163,7 +207,9 @@ class GeoMappingService:
                 "Ort unbekannt"
             )
             tags = [tag for tag in [client.focus, client.region] if tag]
-            lat, lng = candidate_coordinates(client.city, client.postal_code, str(client.id))
+            lat, lng = candidate_coordinates(
+                self.session, client.city, client.postal_code, str(client.id)
+            )
             items.append(
                 GeoMappingResult(
                     id=str(client.id),

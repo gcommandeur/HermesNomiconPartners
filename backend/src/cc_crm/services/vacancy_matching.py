@@ -78,7 +78,7 @@ class VacancyMatchingService:
     def find_matches(self, job_id: uuid.UUID, *, limit: int = 50) -> list[CandidateMatchRead]:
         job = self.jobs.get(job_id)
         job_tokens = _tokens(job.title, job.qualifications, job.description, *(job.must_have or []))
-        job_lat, job_lng = resolve_place_query(job.location)
+        job_lat, job_lng = resolve_place_query(self.session, job.location)
 
         candidates: Sequence[Candidate] = self.candidates.list(offset=0, limit=5000)
 
@@ -86,7 +86,9 @@ class VacancyMatchingService:
         for candidate in candidates:
             if candidate.status in EXCLUDED_CANDIDATE_STATUSES:
                 continue
-            score, reasons, in_radius = self._score(job, job_tokens, job_lat, job_lng, candidate)
+            score, reasons, in_radius = self._score(
+                self.session, job, job_tokens, job_lat, job_lng, candidate
+            )
             if in_radius is False:
                 # Ausserhalb des Vakanz-Umkreises und beide Seiten hatten
                 # aufloesbare Koordinaten - laut Nutzer-Vorgabe ausschliessen,
@@ -106,6 +108,7 @@ class VacancyMatchingService:
 
     @staticmethod
     def _score(
+        session: Session,
         job: JobMandate,
         job_tokens: set[str],
         job_lat: float | None,
@@ -123,7 +126,7 @@ class VacancyMatchingService:
         in_radius: bool | None = None
         if job_lat is not None and job_lng is not None:
             cand_lat, cand_lng = candidate_coordinates(
-                candidate.city, candidate.postal_code, str(candidate.id)
+                session, candidate.city, candidate.postal_code, str(candidate.id)
             )
             if cand_lat is not None and cand_lng is not None:
                 distance_km = haversine_km(job_lat, job_lng, cand_lat, cand_lng)
