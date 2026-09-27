@@ -7,7 +7,6 @@ import type { GeoMappingResult } from "@/lib/api/types";
 const GERMANY_CENTER: [number, number] = [51.1657, 10.4515];
 
 function colorFor(item: GeoMappingResult): string {
-  if (item.kind === "candidate") return "#69A7EA";
   if (item.status === "blocked") return "#EF4444";
   if (item.status === "active") return "#22C55E";
   return "#94A3B8";
@@ -38,7 +37,7 @@ export function GeoMap({ results }: { results: GeoMappingResult[] }) {
           <Popup>
             <strong>{item.name}</strong>
             <br />
-            {item.kind === "candidate" ? "Kandidat/in" : "Kanzlei"} · {item.location}
+            Kanzlei · {item.location}
           </Popup>
         </CircleMarker>
       ))}

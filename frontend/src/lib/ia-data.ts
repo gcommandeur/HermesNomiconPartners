@@ -16,9 +16,9 @@ export const demoVacancies: Vacancy[] = [
   { id: "v-3", title: "Tax Consultant Corporate Tax", client_company_id: null, location: "Frankfurt", search_radius_km: 50, qualifications: "BWL / Steuern", experience: "2+ Jahre", salary_min: 65000, salary_max: 82000, fee_percentage: null, work_model: "Remote möglich", description: "Suchprofil für mehrere passende Kanzleien im Rhein-Main-Gebiet.", must_have: ["Corporate Tax", "Tax Compliance"], nice_to_have: ["DATEV", "Englisch"], status: "draft", priority: "normal", created_at: date(8), updated_at: date(0) },
 ];
 
+// Geo Mapping ist eine reine Kanzleien-Umkreissuche - keine Kandidaten-Demo-
+// Eintraege mehr (siehe GeoMappingResult-Typ).
 export const demoGeoResults: GeoMappingResult[] = [
-  { id: "geo-c-1", kind: "candidate", name: "Anna Weber", location: "70173 Stuttgart", postal_code: "70173", latitude: null, longitude: null, status: "active", tags: ["M&A Tax", "95k", "3 Monate"], mailing_ready: true },
-  { id: "geo-c-5", kind: "candidate", name: "Lea Fischer", location: "60311 Frankfurt", postal_code: "60311", latitude: null, longitude: null, status: "active", tags: ["Corporate Tax", "Kurzprofil offen"], mailing_ready: true },
-  { id: "geo-cl-1", kind: "client", name: "BlueTax Partners", location: "70173 Stuttgart", postal_code: "70173", latitude: null, longitude: null, status: "active", tags: ["Vertrag aktiv", "Tax Advisory"], mailing_ready: true },
-  { id: "geo-cl-4", kind: "client", name: "Zollern Consulting", location: "72336 Balingen", postal_code: "72336", latitude: null, longitude: null, status: "blocked", tags: ["Do-not-touch"], mailing_ready: false },
+  { id: "geo-cl-1", name: "BlueTax Partners", location: "70173 Stuttgart", postal_code: "70173", latitude: null, longitude: null, status: "active", tags: ["Vertrag aktiv", "Tax Advisory"], mailing_ready: true },
+  { id: "geo-cl-4", name: "Zollern Consulting", location: "72336 Balingen", postal_code: "72336", latitude: null, longitude: null, status: "blocked", tags: ["Do-not-touch"], mailing_ready: false },
 ];

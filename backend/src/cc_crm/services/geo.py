@@ -7,7 +7,6 @@ from collections import Counter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.contact_person import ContactPerson
 from cc_crm.models.enums import JobStatus
@@ -130,44 +129,15 @@ def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 
 
 class GeoMappingService:
-    """Aggregates Kandidaten/Kanzleien for the Geo Mapping list, map and filters."""
+    """Aggregates Kanzleien for die Geo-Mapping-Liste, Karte und Filter -
+    reine Kanzleien-Umkreissuche (die kandidatenzentrierte Umkreissuche
+    uebernimmt die "CV Out"-Kampagne direkt am Kandidaten)."""
 
     def __init__(self, session: Session) -> None:
         self.session = session
 
     def results(self) -> list[GeoMappingResult]:
         items: list[GeoMappingResult] = []
-        candidates = self.session.scalars(select(Candidate)).all()
-        for candidate in candidates:
-            location = (
-                ", ".join(part for part in [candidate.postal_code, candidate.city] if part)
-                or "Ort unbekannt"
-            )
-            tags = [tag for tag in [candidate.qualification, candidate.job_title] if tag]
-            lat, lng = candidate_coordinates(
-                candidate.city, candidate.postal_code, str(candidate.id)
-            )
-            items.append(
-                GeoMappingResult(
-                    id=str(candidate.id),
-                    kind="candidate",
-                    name=f"{candidate.first_name} {candidate.last_name}",
-                    location=location,
-                    postal_code=candidate.postal_code,
-                    latitude=lat,
-                    longitude=lng,
-                    status=candidate.status.value,
-                    tags=tags,
-                    mailing_ready=candidate.status.value not in {"blocked", "archived"},
-                    email=candidate.email,
-                    role=candidate.job_title,
-                    qualification=candidate.qualification,
-                    salary_expectation=candidate.salary_expectation,
-                    notice_period=candidate.notice_period,
-                    available_from=candidate.available_from,
-                    remote_preference=candidate.remote_teilzeit_wuensche,
-                )
-            )
 
         # Primaerer Ansprechpartner je Kanzlei (is_primary, sonst der erste
         # gefundene) und Anzahl offener Vakanzen (JobStatus.OPEN) - einmalig
@@ -197,7 +167,6 @@ class GeoMappingService:
             items.append(
                 GeoMappingResult(
                     id=str(client.id),
-                    kind="client",
                     name=client.name,
                     location=location,
                     postal_code=client.postal_code,

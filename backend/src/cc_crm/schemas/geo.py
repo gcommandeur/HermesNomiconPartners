@@ -1,6 +1,3 @@
-from datetime import date
-from typing import Literal
-
 from pydantic import BaseModel
 
 
@@ -14,8 +11,12 @@ class GeocodeResult(BaseModel):
 
 
 class GeoMappingResult(BaseModel):
+    """Geo Mapping ist seit der Vereinfachung eine reine Kanzleien-
+    Umkreissuche (die kandidatenzentrierte Umkreissuche uebernimmt die neue
+    "CV Out"-Kampagne direkt am Kandidaten) - kein `kind`-Feld mehr noetig,
+    jedes Ergebnis ist implizit eine Kanzlei."""
+
     id: str
-    kind: Literal["candidate", "client"]
     name: str
     location: str
     postal_code: str | None
@@ -26,17 +27,7 @@ class GeoMappingResult(BaseModel):
     mailing_ready: bool
     email: str | None = None
 
-    # Kandidaten-spezifische Filterfelder (bei kind="client" immer None) -
-    # echte Modellfelder aus models/candidate.py, keine erfundenen Werte.
-    role: str | None = None
-    qualification: str | None = None
-    salary_expectation: str | None = None
-    notice_period: str | None = None
-    available_from: date | None = None
-    remote_preference: str | None = None
-
-    # Kanzlei-spezifische Filterfelder (bei kind="candidate" immer None) -
-    # echte Modellfelder aus models/client_company.py bzw. abgeleitet aus
+    # Echte Modellfelder aus models/client_company.py bzw. abgeleitet aus
     # contact_persons/job_mandates.
     terms_status: str | None = None
     fee_tier: str | None = None

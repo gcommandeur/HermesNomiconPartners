@@ -51,6 +51,11 @@ function distinctValues(results: GeoMappingResult[], pick: (item: GeoMappingResu
   return Array.from(values).sort((a, b) => a.localeCompare(b, "de"));
 }
 
+/** Geo Mapping ist eine reine Kanzleien-Umkreissuche (Auftrag "Geo Mapping
+ * auf reine Kanzleien-Suche reduzieren") - die frueher kandidatenzentrierte
+ * Umkreissuche (zweite Spalte, eigene Kandidaten-Filter) uebernimmt jetzt die
+ * "CV Out"-Kampagne direkt am Kandidaten. `results` enthaelt deshalb nur noch
+ * Kanzleien (siehe GeoMappingResult-Typ, kein `kind`-Feld mehr). */
 export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
@@ -59,18 +64,13 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
-  // Gemeinsame Filter, gelten fuer Kandidaten UND Kanzleien gleichzeitig
-  // (Phase 6) - additiv: jede Auswahl bleibt bestehen, wenn eine andere
-  // Filteroption dazukommt (keine der folgenden useState-Aenderungen setzt
-  // eine andere zurueck).
   const [placeQuery, setPlaceQuery] = useState("");
   const [radiusEnabled, setRadiusEnabled] = useState(false);
   const [radiusKm, setRadiusKm] = useState("25");
-  // Der getippte Ort/PLZ-Wert selbst dient als Umkreis-Zentrum (statt der
-  // fruehere "bestehenden Kandidaten/Kanzlei auswaehlen"-Dropdown) - wird
-  // per Backend-Endpunkt (GET /geo-mapping/geocode, gleiche Stadt/PLZ-Zonen-
-  // Logik wie services/geo.py::resolve_place_query) aufgeloest, debounced
-  // damit nicht bei jedem Tastenanschlag ein Request rausgeht.
+  // Der getippte Ort/PLZ-Wert selbst dient als Umkreis-Zentrum - wird per
+  // Backend-Endpunkt (GET /geo-mapping/geocode, gleiche Stadt/PLZ-Zonen-Logik
+  // wie services/geo.py::resolve_place_query) aufgeloest, debounced damit
+  // nicht bei jedem Tastenanschlag ein Request rausgeht.
   const [resolvedCenter, setResolvedCenter] = useState<{ latitude: number; longitude: number } | null>(null);
   const [geocoding, setGeocoding] = useState(false);
 
@@ -101,26 +101,15 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
     };
   }, [placeQuery, radiusEnabled]);
 
-  // Kandidaten-spezifische Filter.
-  const [candidateSearch, setCandidateSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [qualificationFilter, setQualificationFilter] = useState("");
-  const [noticePeriodFilter, setNoticePeriodFilter] = useState("");
-  const [availableOnly, setAvailableOnly] = useState(false);
-
-  // Kanzleien-spezifische Filter.
   const [clientSearch, setClientSearch] = useState("");
   const [termsStatusFilter, setTermsStatusFilter] = useState("");
   const [feeTierFilter, setFeeTierFilter] = useState("");
   const [activeVacanciesOnly, setActiveVacanciesOnly] = useState(false);
 
-  const roleOptions = useMemo(() => distinctValues(results, (item) => item.role), [results]);
-  const qualificationOptions = useMemo(() => distinctValues(results, (item) => item.qualification), [results]);
-  const noticePeriodOptions = useMemo(() => distinctValues(results, (item) => item.notice_period), [results]);
   const termsStatusOptions = useMemo(() => distinctValues(results, (item) => item.terms_status), [results]);
   const feeTierOptions = useMemo(() => distinctValues(results, (item) => item.fee_tier), [results]);
 
-  // Gemeinsamer Ort/PLZ- und Umkreis-Filter, unabhaengig von Kandidat/Kanzlei.
+  // Gemeinsamer Ort/PLZ- und Umkreis-Filter.
   function matchesSharedFilters(item: GeoMappingResult): boolean {
     // Bei aktiver, erfolgreich aufgeloester Umkreissuche dient placeQuery
     // NUR als Umkreis-Zentrum - der Substring-Textfilter wuerde sonst
@@ -142,29 +131,9 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
     return true;
   }
 
-  const candidateResults = useMemo(() => {
-    const term = candidateSearch.trim().toLowerCase();
-    const todayIso = new Date().toISOString().slice(0, 10);
-    return results.filter((item) => {
-      if (item.kind !== "candidate") return false;
-      if (!matchesSharedFilters(item)) return false;
-      if (term) {
-        const haystack = [item.name, item.role, item.qualification].filter(Boolean).join(" ").toLowerCase();
-        if (!haystack.includes(term)) return false;
-      }
-      if (roleFilter && item.role !== roleFilter) return false;
-      if (qualificationFilter && item.qualification !== qualificationFilter) return false;
-      if (noticePeriodFilter && item.notice_period !== noticePeriodFilter) return false;
-      if (availableOnly && item.available_from && item.available_from > todayIso) return false;
-      return true;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [results, candidateSearch, roleFilter, qualificationFilter, noticePeriodFilter, availableOnly, placeQuery, radiusEnabled, resolvedCenter, radiusKm]);
-
   const clientResults = useMemo(() => {
     const term = clientSearch.trim().toLowerCase();
     return results.filter((item) => {
-      if (item.kind !== "client") return false;
       if (!matchesSharedFilters(item)) return false;
       if (term) {
         const haystack = [item.name, ...item.tags].filter(Boolean).join(" ").toLowerCase();
@@ -178,18 +147,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results, clientSearch, termsStatusFilter, feeTierFilter, activeVacanciesOnly, placeQuery, radiusEnabled, resolvedCenter, radiusKm]);
 
-  const candidatePagination = usePagination(candidateResults);
   const clientPagination = usePagination(clientResults);
-
-  // Die Karte zeigt dieselbe gefilterte Menge wie die Tabellen darunter -
-  // vorher bekam sie ungefiltert alle Datensaetze uebergeben (eigene
-  // Komponente in page.tsx mit result.data), wodurch beim Eintippen eines
-  // Orts/einer PLZ die Tabelle korrekt schrumpfte, die Karte aber weiterhin
-  // ausnahmslos alle Pins zeigte.
-  const mapResults = useMemo(
-    () => [...candidateResults, ...clientResults],
-    [candidateResults, clientResults],
-  );
 
   const selectedItems = useMemo(
     () => results.filter((item) => selectedIds.has(item.id)),
@@ -220,7 +178,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
     setError(null);
     try {
       const recipients: MailingRecipient[] = selectedItems.map((item) => ({
-        kind: item.kind,
+        kind: "client",
         id: item.id,
         name: item.name,
         email: item.email ?? null,
@@ -240,103 +198,18 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   const selectClass = "h-9 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-2.5 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
   const labelClass = "mb-1 block text-[10px] uppercase tracking-wider text-[#94A3B8]";
 
-  function renderColumn(
-    kindLabel: string,
-    items: GeoMappingResult[],
-    pagination: ReturnType<typeof usePagination<GeoMappingResult>>,
-  ) {
-    const allVisibleSelected = pagination.pageItems.length > 0 && pagination.pageItems.every((item) => selectedIds.has(item.id));
-    return (
-      <div className="min-w-0">
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">{kindLabel} ({items.length})</h3>
-        {/* Mobile (<lg): Karten statt der 7-spaltigen Tabelle, siehe
-         * candidates-table.tsx fuer denselben Fix + Begruendung (Nutzer-
-         * Feedback "mobile Version nicht passend") - Checkbox-Auswahl fuer
-         * "ins Mailing uebernehmen" bleibt erhalten. */}
-        <div className="space-y-2 lg:hidden">
-          {pagination.pageItems.map((item) => (
-            <label
-              key={item.id}
-              className="flex items-start gap-3 rounded-lg border border-white/10 bg-[#12243A] p-3"
-            >
-              <input
-                type="checkbox"
-                className="mt-1 shrink-0"
-                checked={selectedIds.has(item.id)}
-                onChange={() => toggle(item.id)}
-                aria-label={`${item.name} auswählen`}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="min-w-0 truncate text-sm font-semibold text-[#D8DADF]">{item.name}</p>
-                  <StatusPill status={item.status} />
-                </div>
-                <p className="mt-0.5 truncate text-xs text-[#94A3B8]">
-                  {item.location}{item.postal_code ? ` · ${item.postal_code}` : ""}
-                </p>
-                {item.tags.length > 0 && (
-                  <div className="mt-1.5 flex flex-wrap gap-1">
-                    {item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-[#102A4C]/70 px-2 py-1 text-[10px] text-[#CBD5E1]">{tag}</span>)}
-                  </div>
-                )}
-                <p className="mt-1.5 text-[11px] text-[#8a9095]">{item.mailing_ready ? "übertragbar" : "gesperrt"}</p>
-              </div>
-            </label>
-          ))}
-          {items.length === 0 && (
-            <p className="py-8 text-center text-xs text-[#8a9095]">Keine Ergebnisse.</p>
-          )}
-        </div>
-        <div className="hidden lg:block">
-        <DataTable headers={["", "Name", "Standort", "PLZ", "Status", "Tags", "Mailing"]}>
-          {pagination.pageItems.map((item) => (
-            <tr key={item.id} className="hover:bg-[#203A5A]/35">
-              <td className="w-8 px-4 py-3.5">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(item.id)}
-                  onChange={() => toggle(item.id)}
-                  aria-label={`${item.name} auswählen`}
-                />
-              </td>
-              <td className="px-4 py-3.5 font-semibold text-[#D8DADF]">{item.name}</td>
-              <td className="px-4 py-3.5">{item.location}</td>
-              <td className="px-4 py-3.5">{item.postal_code ?? "—"}</td>
-              <td className="px-4 py-3.5"><StatusPill status={item.status} /></td>
-              <td className="px-4 py-3.5"><div className="flex flex-wrap gap-1">{item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-[#102A4C]/70 px-2 py-1 text-[10px] text-[#CBD5E1]">{tag}</span>)}</div></td>
-              <td className="px-4 py-3.5">{item.mailing_ready ? "übertragbar" : "gesperrt"}</td>
-            </tr>
-          ))}
-          {items.length === 0 && (
-            <tr><td colSpan={7} className="px-4 py-8 text-center text-xs text-[#8a9095]">Keine Ergebnisse.</td></tr>
-          )}
-        </DataTable>
-        </div>
-        <PaginationControls page={pagination.page} pageCount={pagination.pageCount} onChange={pagination.setPage} />
-        {pagination.pageItems.length > 0 && (
-          <label className="mt-2 flex items-center gap-1.5 text-xs text-[#8a9095]">
-            <input type="checkbox" checked={allVisibleSelected} onChange={() => toggleAllVisible(pagination.pageItems)} />
-            Alle auf dieser Seite auswählen
-          </label>
-        )}
-      </div>
-    );
-  }
+  const allVisibleSelected = clientPagination.pageItems.length > 0 && clientPagination.pageItems.every((item) => selectedIds.has(item.id));
 
   return (
     <>
       <Card className="mb-5 min-h-[360px] overflow-hidden p-0">
-        <GeoMapLoader results={mapResults} />
+        <GeoMapLoader results={clientResults} />
       </Card>
 
-      {/* Gemeinsamer Ort/PLZ-Filter (Phase 6) - echte Freitext-Adress-/
-       * Ortssuche, keine reine Radius-Eingabe mehr. Bewusst OHNE Autocomplete-
-       * Dropdown (fruehere <datalist>-Variante zeigte pro Ort zwei fast
-       * identische Eintraege - "80331" UND "80331, München" - was wie
-       * doppelte/uebermaessige Vorschlaege wirkte; die Karte oben zeigt die
-       * Treffer ohnehin schon visuell). Die Umkreissuche bleibt bestehen,
-       * ist aber eine separat aktivierbare Zusatzoption
-       * ("Umkreissuche aktivieren"). */}
+      {/* Gemeinsamer Ort/PLZ-Filter - echte Freitext-Adress-/Ortssuche, keine
+       * reine Radius-Eingabe. Bewusst OHNE Autocomplete-Dropdown (die Karte
+       * oben zeigt die Treffer ohnehin schon visuell). Die Umkreissuche ist
+       * eine separat aktivierbare Zusatzoption ("Umkreissuche aktivieren"). */}
       <Card className="mb-3">
         <CardContent>
           <div className="mb-3 flex items-center gap-2"><MapPin size={15} className="text-[#D8DADF]" /><h2 className="text-sm font-semibold">Ort / PLZ</h2></div>
@@ -386,82 +259,108 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <div>
-          <Card className="mb-3">
-            <CardContent>
-              <div className="mb-3 flex items-center gap-2"><SlidersHorizontal size={15} className="text-[#D8DADF]" /><h2 className="text-sm font-semibold">Kandidaten-Filter</h2></div>
-              <div className="space-y-3">
-                <FilterBar placeholder="Rolle, Qualifikation oder Name suchen" value={candidateSearch} onChange={setCandidateSearch} />
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className={labelClass}>Rolle</label>
-                    <select className={selectClass} value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-                      <option value="">Alle</option>
-                      {roleOptions.map((value) => <option key={value} value={value}>{value}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelClass}>Qualifikation</label>
-                    <select className={selectClass} value={qualificationFilter} onChange={(e) => setQualificationFilter(e.target.value)}>
-                      <option value="">Alle</option>
-                      {qualificationOptions.map((value) => <option key={value} value={value}>{value}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelClass}>Kündigungsfrist</label>
-                    <select className={selectClass} value={noticePeriodFilter} onChange={(e) => setNoticePeriodFilter(e.target.value)}>
-                      <option value="">Alle</option>
-                      {noticePeriodOptions.map((value) => <option key={value} value={value}>{value}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex items-end pb-0.5">
-                    <label className="flex items-center gap-2 text-xs text-[#CBD5E1]">
-                      <input type="checkbox" checked={availableOnly} onChange={(e) => setAvailableOnly(e.target.checked)} />
-                      Nur aktuell verfügbar
-                    </label>
-                  </div>
-                </div>
+      <Card className="mb-3">
+        <CardContent>
+          <div className="mb-3 flex items-center gap-2"><SlidersHorizontal size={15} className="text-[#D8DADF]" /><h2 className="text-sm font-semibold">Kanzleien-Filter</h2></div>
+          <div className="space-y-3">
+            <FilterBar placeholder="Name oder Tag suchen" value={clientSearch} onChange={setClientSearch} />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>AGB-Status</label>
+                <select className={selectClass} value={termsStatusFilter} onChange={(e) => setTermsStatusFilter(e.target.value)}>
+                  <option value="">Alle</option>
+                  {termsStatusOptions.map((value) => <option key={value} value={value}>{termsStatusLabel(value)}</option>)}
+                </select>
               </div>
-            </CardContent>
-          </Card>
-          {renderColumn("Kandidaten", candidateResults, candidatePagination)}
-        </div>
+              <div>
+                <label className={labelClass}>Honorar-Stufe</label>
+                <select className={selectClass} value={feeTierFilter} onChange={(e) => setFeeTierFilter(e.target.value)}>
+                  <option value="">Alle</option>
+                  {feeTierOptions.map((value) => <option key={value} value={value}>{FEE_TIER_LABELS[value] ?? value}</option>)}
+                </select>
+              </div>
+              <div className="flex items-end pb-0.5">
+                <label className="flex items-center gap-2 text-xs text-[#CBD5E1]">
+                  <input type="checkbox" checked={activeVacanciesOnly} onChange={(e) => setActiveVacanciesOnly(e.target.checked)} />
+                  Nur mit aktiven Vakanzen
+                </label>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <div>
-          <Card className="mb-3">
-            <CardContent>
-              <div className="mb-3 flex items-center gap-2"><SlidersHorizontal size={15} className="text-[#D8DADF]" /><h2 className="text-sm font-semibold">Kanzleien-Filter</h2></div>
-              <div className="space-y-3">
-                <FilterBar placeholder="Name oder Tag suchen" value={clientSearch} onChange={setClientSearch} />
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className={labelClass}>AGB-Status</label>
-                    <select className={selectClass} value={termsStatusFilter} onChange={(e) => setTermsStatusFilter(e.target.value)}>
-                      <option value="">Alle</option>
-                      {termsStatusOptions.map((value) => <option key={value} value={value}>{termsStatusLabel(value)}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelClass}>Honorar-Stufe</label>
-                    <select className={selectClass} value={feeTierFilter} onChange={(e) => setFeeTierFilter(e.target.value)}>
-                      <option value="">Alle</option>
-                      {feeTierOptions.map((value) => <option key={value} value={value}>{FEE_TIER_LABELS[value] ?? value}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex items-end pb-0.5">
-                    <label className="flex items-center gap-2 text-xs text-[#CBD5E1]">
-                      <input type="checkbox" checked={activeVacanciesOnly} onChange={(e) => setActiveVacanciesOnly(e.target.checked)} />
-                      Nur mit aktiven Vakanzen
-                    </label>
-                  </div>
-                </div>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Kanzleien ({clientResults.length})</h3>
+      {/* Mobile (<lg): Karten statt der 7-spaltigen Tabelle, siehe
+       * candidates-table.tsx fuer denselben Fix + Begruendung (Nutzer-
+       * Feedback "mobile Version nicht passend") - Checkbox-Auswahl fuer
+       * "ins Mailing uebernehmen" bleibt erhalten. */}
+      <div className="space-y-2 lg:hidden">
+        {clientPagination.pageItems.map((item) => (
+          <label
+            key={item.id}
+            className="flex items-start gap-3 rounded-lg border border-white/10 bg-[#12243A] p-3"
+          >
+            <input
+              type="checkbox"
+              className="mt-1 shrink-0"
+              checked={selectedIds.has(item.id)}
+              onChange={() => toggle(item.id)}
+              aria-label={`${item.name} auswählen`}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <p className="min-w-0 truncate text-sm font-semibold text-[#D8DADF]">{item.name}</p>
+                <StatusPill status={item.status} />
               </div>
-            </CardContent>
-          </Card>
-          {renderColumn("Kanzleien", clientResults, clientPagination)}
-        </div>
+              <p className="mt-0.5 truncate text-xs text-[#94A3B8]">
+                {item.location}{item.postal_code ? ` · ${item.postal_code}` : ""}
+              </p>
+              {item.tags.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-[#102A4C]/70 px-2 py-1 text-[10px] text-[#CBD5E1]">{tag}</span>)}
+                </div>
+              )}
+              <p className="mt-1.5 text-[11px] text-[#8a9095]">{item.mailing_ready ? "übertragbar" : "gesperrt"}</p>
+            </div>
+          </label>
+        ))}
+        {clientResults.length === 0 && (
+          <p className="py-8 text-center text-xs text-[#8a9095]">Keine Ergebnisse.</p>
+        )}
       </div>
+      <div className="hidden lg:block">
+        <DataTable headers={["", "Name", "Standort", "PLZ", "Status", "Tags", "Mailing"]}>
+          {clientPagination.pageItems.map((item) => (
+            <tr key={item.id} className="hover:bg-[#203A5A]/35">
+              <td className="w-8 px-4 py-3.5">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(item.id)}
+                  onChange={() => toggle(item.id)}
+                  aria-label={`${item.name} auswählen`}
+                />
+              </td>
+              <td className="px-4 py-3.5 font-semibold text-[#D8DADF]">{item.name}</td>
+              <td className="px-4 py-3.5">{item.location}</td>
+              <td className="px-4 py-3.5">{item.postal_code ?? "—"}</td>
+              <td className="px-4 py-3.5"><StatusPill status={item.status} /></td>
+              <td className="px-4 py-3.5"><div className="flex flex-wrap gap-1">{item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-[#102A4C]/70 px-2 py-1 text-[10px] text-[#CBD5E1]">{tag}</span>)}</div></td>
+              <td className="px-4 py-3.5">{item.mailing_ready ? "übertragbar" : "gesperrt"}</td>
+            </tr>
+          ))}
+          {clientResults.length === 0 && (
+            <tr><td colSpan={7} className="px-4 py-8 text-center text-xs text-[#8a9095]">Keine Ergebnisse.</td></tr>
+          )}
+        </DataTable>
+      </div>
+      <PaginationControls page={clientPagination.page} pageCount={clientPagination.pageCount} onChange={clientPagination.setPage} />
+      {clientPagination.pageItems.length > 0 && (
+        <label className="mt-2 flex items-center gap-1.5 text-xs text-[#8a9095]">
+          <input type="checkbox" checked={allVisibleSelected} onChange={() => toggleAllVisible(clientPagination.pageItems)} />
+          Alle auf dieser Seite auswählen
+        </label>
+      )}
 
       {modalOpen && (
         <Modal title="Auswahl ins Mailing übernehmen" eyebrow={`${selectedIds.size} Empfänger:innen`} onClose={() => setModalOpen(false)}>
