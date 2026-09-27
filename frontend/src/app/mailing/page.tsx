@@ -13,15 +13,20 @@ export const dynamic = "force-dynamic";
 // client-seitig per SWR gecached (siehe useEmailTemplatesCache) statt als
 // statischer Prop durchgereicht - dieser Server-Fetch dient nur noch dazu,
 // im Demo-Modus (kein Backend erreichbar) den DemoNotice-Banner zu zeigen.
-export default async function MailingPage() {
+export default async function MailingPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ group?: string }>;
+}) {
   const templates = await getEmailTemplates();
+  const { group } = (await searchParams) ?? {};
 
   return (
     <>
       <PageHeader eyebrow="Outlook-Entwürfe und Kampagnen" title="Mailing" />
       <DemoNotice source={templates.source} error={templates.error} />
       <div className="space-y-8">
-        <MailingGroupsPanel />
+        <MailingGroupsPanel initialPreviewGroupId={group ?? null} />
         <EmailTemplatesPanel />
       </div>
     </>

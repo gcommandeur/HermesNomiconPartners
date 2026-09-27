@@ -317,6 +317,35 @@ export interface MailingGroup extends Entity {
   template_key?: string | null;
 }
 
+// "CV Out"-Kampagne (Radius-Umkreissuche ab Kandidat, siehe
+// GET /candidates/{id}/cv-out-targets) - nicht zu verwechseln mit dem
+// bestehenden CV-Out-Status im Matching-/Submission-Tab (candidate-matching-
+// panel.tsx), das ist eine reine Pipeline-Statusmarkierung ohne Mailversand.
+export interface CvOutContact {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role_title: string | null;
+  is_primary: boolean;
+}
+
+export interface CvOutTargetClient {
+  id: string;
+  name: string;
+  location: string;
+  postal_code: string | null;
+  status: string;
+  distance_km: number;
+  contacts: CvOutContact[];
+}
+
+export interface CvOutTargetsResult {
+  candidate_id: string;
+  radius_km: number;
+  targets: CvOutTargetClient[];
+}
+
 export interface CandidateSubmission extends Entity {
   candidate_id: string;
   client_company_id: string | null;

@@ -22,7 +22,15 @@ function renderTemplate(text: string, values: Record<string, string>): string {
 
 const selectClass = "h-9 rounded-md border border-white/10 bg-[#071426] px-2 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
 
-export function MailingGroupsPanel() {
+export function MailingGroupsPanel({
+  initialPreviewGroupId = null,
+}: {
+  /** Oeffnet die Vorschau/Versand-Vorlage direkt fuer diese Gruppe (z.B.
+   * "?group=<id>" von der CV-Out-Kampagne am Kandidaten aus, siehe
+   * cv-out-campaign-modal.tsx) - erspart den zusaetzlichen Klick auf
+   * "Vorschau" nach dem Anlegen der Gruppe. */
+  initialPreviewGroupId?: string | null;
+}) {
   const { data, isLoading } = useMailingGroupsCache();
   const groups = useMemo(() => data?.data ?? [], [data]);
   // Live aus dem selben SWR-Key wie EmailTemplatesPanel - eine dort
@@ -31,7 +39,7 @@ export function MailingGroupsPanel() {
   const { data: templatesResult, isLoading: templatesLoading } = useEmailTemplatesCache();
   const templates = useMemo(() => templatesResult?.data ?? [], [templatesResult]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [previewGroupId, setPreviewGroupId] = useState<string | null>(null);
+  const [previewGroupId, setPreviewGroupId] = useState<string | null>(initialPreviewGroupId);
   const [previewTemplateKey, setPreviewTemplateKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);

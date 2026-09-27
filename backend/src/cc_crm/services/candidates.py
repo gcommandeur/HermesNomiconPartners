@@ -8,8 +8,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from cc_crm.core.config import get_settings
+from cc_crm.core.errors import ConsentNotGrantedError
 from cc_crm.models.candidate import Candidate
-from cc_crm.models.enums import Abschlussart, CandidateStatus, Rolle
+from cc_crm.models.client_company import ClientCompany
+from cc_crm.models.contact_person import ContactPerson
+from cc_crm.models.enums import Abschlussart, CandidateStatus, ClientStatus, Rolle
 from cc_crm.models.recruiting import AuditLog
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.user import User
@@ -19,6 +22,7 @@ from cc_crm.repositories.operational import DocumentRepository
 from cc_crm.repositories.recruiting import AuditLogRepository
 from cc_crm.schemas.candidate import CandidateCreate, CandidateUpdate, CvExtractionSuggestion
 from cc_crm.services.base import CrudService
+from cc_crm.services.clients import ClientCompanyService
 from cc_crm.services.cv_extraction import (
     CV_STRUCTURED_FIELDS,
     derive_rollen_from_text,
@@ -572,6 +576,69 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         page = list(in_radius[offset : offset + limit])
         self._attach_ghosting_flags(page)
         return page, total
+
+    def cv_out_targets(
+        self, entity_id: uuid.UUID, *, radius_km: int
+    ) -> list[tuple[ClientCompany, float, list[ContactPerson]]]:
+        """CV-Out-Kampagne (Auftrag '"CV Out"-Kampagne am Kandidaten'):
+        Kanzleien im Umkreis des Kandidaten, die fuer einen Mailing-Versand
+        infrage kommen - reine Lesefunktion, legt noch keine MailingGroup an
+        (das macht das Frontend erst nach Bestaetigung der Auswahl per
+        POST /mailing-groups, gleiches Muster wie geo-results-table.tsx::
+        createGroupFromSelection).
+
+        Wiederverwendet list_near_candidate() aus services/clients.py
+        (gleiches Zentrum, gleiche Distanzberechnung, keine neue Geo-Logik),
+        filtert das Ergebnis danach:
+        - Kanzleien mit Status BLOCKED ("Gesperrt", rot) fallen raus -
+          Nutzer-Vorgabe, nie kontaktieren.
+        - Kanzleien ohne mindestens einen Kontakt mit E-Mail-Adresse fallen
+          raus (ohne E-Mail waere dort ohnehin niemand mailingfaehig).
+        Pro verbleibender Kanzlei werden NUR die Kontakte MIT E-Mail-Adresse
+        zurueckgegeben (Auftrag: "Liste mit vorausgewaehlten Kontaktpersonen,
+        nur mit E-Mail"), Hauptkontakt (is_primary) zuerst.
+
+        Consent-Check (candidate.consent_received) greift hier VOR der
+        Umkreissuche: services/mail_send.py::_ensure_consent prueft
+        candidate.consent_received nur, wenn ein candidate_id im
+        Versand-Kontext mitgegeben wird - beim CV-Out-Mailing sind die
+        Empfaenger aber Kanzlei-Kontakte (kind="contact"), nicht der
+        Kandidat selbst, daher greift dieser bestehende Check beim
+        eigentlichen Bulk-Versand NICHT automatisch. Damit die
+        Consent-Vorgabe trotzdem unveraendert aktiv bleibt (Auftrag:
+        "Consent-Check bleibt unveraendert aktiv"), wird sie hier am
+        eigentlichen Einstiegspunkt der Kampagne erzwungen: ohne
+        Einwilligung wird die Kampagne gar nicht erst angeboten."""
+        candidate = self.get(entity_id)
+        if not candidate.consent_received:
+            raise ConsentNotGrantedError(
+                "Kein Einverständnis des Kandidaten zur Weitergabe erfasst "
+                f"(Kandidat: {candidate.first_name} {candidate.last_name})."
+            )
+
+        in_radius, _unresolved = ClientCompanyService(self.session).list_near_candidate(
+            entity_id, radius_km=radius_km
+        )
+
+        targets: list[tuple[ClientCompany, float, list[ContactPerson]]] = []
+        for client, distance in in_radius:
+            if client.status == ClientStatus.BLOCKED:
+                continue
+            contacts = list(
+                self.session.scalars(
+                    select(ContactPerson)
+                    .where(
+                        ContactPerson.client_company_id == client.id,
+                        ContactPerson.email.is_not(None),
+                    )
+                    .order_by(ContactPerson.is_primary.desc(), ContactPerson.last_name)
+                ).all()
+            )
+            if not contacts:
+                continue
+            targets.append((client, distance, contacts))
+
+        return targets
 
     def reactivation_candidates(self, threshold_months: int | None = None) -> Sequence[Candidate]:
         months = (

@@ -18,6 +18,7 @@ import { AnonymousProfilePanel } from "@/components/crm/anonymous-profile-panel"
 import { DocumentPanel } from "@/components/crm/document-panel";
 import { CandidateEditModal } from "@/components/crm/candidate-create-modal";
 import { AddToMailingButton } from "@/components/crm/add-to-mailing-button";
+import { CvOutCampaignButton } from "@/components/crm/cv-out-campaign-modal";
 import { MailComposeButton } from "@/components/crm/mail-compose-modal";
 import { RegisterRecentCandidate } from "@/components/crm/register-recent-candidate";
 import { CandidateSubmissionStages } from "@/components/crm/candidate-submission-stages";
@@ -132,6 +133,10 @@ export default async function CandidateDetailPage({
               placeholderValues={{ candidate: `${candidate.first_name} ${candidate.last_name}` }}
             />
           )}
+          <CvOutCampaignButton
+            candidateId={candidate.id}
+            candidateName={`${candidate.first_name} ${candidate.last_name}`}
+          />
           <CandidateEditModal candidate={candidate} />
         </div>
       </div>

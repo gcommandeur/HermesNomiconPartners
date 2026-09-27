@@ -21,6 +21,7 @@ from cc_crm.schemas.candidate import (
     CvExtractionSuggestion,
     CvPreviewResponse,
 )
+from cc_crm.schemas.cv_out import CvOutContact, CvOutTargetClient, CvOutTargetsResult
 from cc_crm.schemas.pagination import Page
 from cc_crm.schemas.recruiting import AuditLogRead
 from cc_crm.schemas.submission import (
@@ -259,6 +260,49 @@ def get_candidate_history(candidate_id: uuid.UUID, session: DatabaseSession) -> 
     eigene Kandidaten-Historie ist regulärer Bestandteil des Profils."""
     entries = CandidateService(session).history(candidate_id)
     return [AuditLogRead.model_validate(entry) for entry in entries]
+
+
+@router.get("/{candidate_id}/cv-out-targets", response_model=CvOutTargetsResult)
+def get_candidate_cv_out_targets(
+    candidate_id: uuid.UUID,
+    session: DatabaseSession,
+    # Gleiche Stufen/Grenzen wie der bestehende Kanzlei-Umkreisfilter (siehe
+    # api/v1/clients.py::list_clients_near_candidate).
+    radius_km: Annotated[int, Query(ge=1, le=500)],
+) -> CvOutTargetsResult:
+    """CV-Out-Kampagne: Kanzleien im Umkreis des Kandidaten mit
+    mailingfaehigen Kontakten (nicht gesperrt, mind. ein Kontakt mit
+    E-Mail) - siehe CandidateService.cv_out_targets fuer Consent-Check und
+    Filterlogik. Legt noch keine MailingGroup an, das passiert erst nach
+    Bestaetigung der Auswahl im Frontend."""
+    targets = CandidateService(session).cv_out_targets(candidate_id, radius_km=radius_km)
+    return CvOutTargetsResult(
+        candidate_id=str(candidate_id),
+        radius_km=radius_km,
+        targets=[
+            CvOutTargetClient(
+                id=str(client.id),
+                name=client.name,
+                location=", ".join(part for part in [client.postal_code, client.city] if part)
+                or "Ort unbekannt",
+                postal_code=client.postal_code,
+                status=client.status.value,
+                distance_km=round(distance, 1),
+                contacts=[
+                    CvOutContact(
+                        id=str(contact.id),
+                        first_name=contact.first_name,
+                        last_name=contact.last_name,
+                        email=contact.email or "",
+                        role_title=contact.role_title,
+                        is_primary=contact.is_primary,
+                    )
+                    for contact in contacts
+                ],
+            )
+            for client, distance, contacts in targets
+        ],
+    )
 
 
 @router.post("/{candidate_id}/anonymize", response_model=CandidateRead)
