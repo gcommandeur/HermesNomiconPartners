@@ -10,10 +10,16 @@ import {
   Mail,
   Map,
   Settings,
+  Trophy,
   Users,
 } from "lucide-react";
 
-export const primaryNavigation = [
+export const primaryNavigation: {
+  label: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  adminOnly?: boolean;
+}[] = [
   { label: "Übersicht", href: "/", icon: LayoutDashboard },
   // Eigener "Reaktivierung"-Menuepunkt entfernt (Phase L.2): der
   // "Erneut kontaktieren"-Filter auf /kandidaten (Phase K.3) deckt dieselbe
@@ -30,6 +36,9 @@ export const primaryNavigation = [
   { label: "Geo Mapping", href: "/geo-mapping", icon: Map },
   { label: "Mailing", href: "/mailing", icon: Mail },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  // Nur fuer Admins sichtbar (siehe sidebar.tsx) - gleiche Sichtbarkeits-
+  // logik wie der Administration-Block in einstellungen/page.tsx.
+  { label: "Geschäftsführung", href: "/geschaeftsfuehrung", icon: Trophy, adminOnly: true },
 ];
 
 export const utilityNavigation = [

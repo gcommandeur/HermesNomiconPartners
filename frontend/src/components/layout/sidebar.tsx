@@ -12,6 +12,7 @@ import {
   subscribeRecentCandidates,
   type RecentCandidate,
 } from "@/lib/recent-candidates";
+import { useCurrentUser } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
 
 type NavigationItem = (typeof primaryNavigation)[number];
@@ -36,6 +37,13 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
     setRecentCandidates(getRecentCandidatesSnapshot());
     return subscribeRecentCandidates(() => setRecentCandidates(getRecentCandidatesSnapshot()));
   }, []);
+
+  // "Geschäftsführung" ist admin-only (gleiche Sichtbarkeitslogik wie der
+  // Administration-Block in einstellungen/page.tsx) - vor dem Laden von
+  // useCurrentUser() sicherheitshalber ausgeblendet statt kurz aufzublitzen.
+  const { data: meData } = useCurrentUser();
+  const isAdmin = meData?.data.is_admin ?? false;
+  const visiblePrimaryNavigation = primaryNavigation.filter((item) => !item.adminOnly || isAdmin);
 
   const renderItem = (item: NavigationItem) => {
     const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -97,7 +105,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
         </div>
 
         <nav className="scrollbar-subtle flex-1 space-y-1 overflow-y-auto px-3 py-5">
-          {primaryNavigation.map((item) => (
+          {visiblePrimaryNavigation.map((item) => (
             <div key={item.href}>
               {renderItem(item)}
               {/* Zuletzt geoeffnete Kandidaten (Phase L.3, Bullhorn-Vorbild):

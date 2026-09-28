@@ -4,6 +4,7 @@ import useSWR, { type SWRConfiguration } from "swr";
 import { mutate } from "swr";
 import {
   getAdminUsers,
+  getAppSettings,
   getAssignableUsers,
   getAuditLogs,
   getCalendarEvents,
@@ -12,13 +13,17 @@ import {
   getCurrentUser,
   getDeletionRequests,
   getEmailTemplates,
+  getKpiPointRules,
+  getKpiRanking,
   getMailAccounts,
   getMailingGroups,
   getReactivationCandidates,
+  getTeamKpis,
   type CalendarEventQuery,
 } from "./queries";
 import type {
   AdminUser,
+  AppSettings,
   AuditLogEntry,
   Candidate,
   CalendarEvent,
@@ -28,8 +33,11 @@ import type {
   DataResult,
   DeletionRequestEntry,
   EmailTemplate,
+  KpiPointRule,
+  KpiRankingResult,
   MailAccount,
   MailingGroup,
+  TeamKpiOverview,
   UserBrief,
 } from "./types";
 
@@ -192,6 +200,48 @@ export function useDeletionRequestsCache(enabled: boolean, openOnly: boolean) {
   return useSWR<DataResult<DeletionRequestEntry[]>>(
     enabled ? `/deletion-requests?open_only=${openOnly}` : null,
     () => getDeletionRequests(openOnly),
+    swrConfig,
+  );
+}
+
+/** Nur fuer Admins (siehe /einstellungen/kpi-punkte) - die 7 Punkte-Regeln
+ * der KPI-Pipeline. */
+export function useKpiPointRulesCache(enabled: boolean) {
+  return useSWR<DataResult<KpiPointRule[]>>(
+    enabled ? "/admin/kpi-point-rules" : null,
+    getKpiPointRules,
+    swrConfig,
+  );
+}
+
+/** Nur fuer Admins (siehe /einstellungen/kpi-punkte) - Ranking-Widget-
+ * Voreinstellung (Metrik/Zeitraum). */
+export function useAppSettingsCache(enabled: boolean) {
+  return useSWR<DataResult<AppSettings>>(
+    enabled ? "/admin/app-settings" : null,
+    getAppSettings,
+    swrConfig,
+  );
+}
+
+/** Nur fuer Admins (siehe /geschaeftsfuehrung) - Stufen-Ist-Werte + Punkte
+ * je Mitarbeiter fuer den gewaehlten Zeitraum. */
+export function useTeamKpisCache(period: string, enabled: boolean) {
+  return useSWR<DataResult<TeamKpiOverview>>(
+    enabled ? `/team-kpis?period=${period}` : null,
+    () => getTeamKpis(period),
+    swrConfig,
+  );
+}
+
+/** Fuer ALLE eingeloggten Nutzer (Live-Ranking-Widget im Cockpit, bewusst
+ * kein Admin-Gate - Nutzer-Vorgabe: "Recruiter sollen sich untereinander
+ * sehen koennen"). period/metric undefined laesst die Server-Voreinstellung
+ * (app_settings) greifen. */
+export function useKpiRankingCache(period: string | undefined, metric: string | undefined) {
+  return useSWR<DataResult<KpiRankingResult>>(
+    `/kpi-ranking?period=${period ?? ""}&metric=${metric ?? ""}`,
+    () => getKpiRanking(period, metric),
     swrConfig,
   );
 }

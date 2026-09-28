@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, TaskResolveOutcome, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, AppSettings, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -477,6 +477,32 @@ export async function getAssignableUsers() {
 
 export async function getAuditLogs() {
   return apiGet<AuditLogEntry[]>("/audit-logs", []);
+}
+
+export async function getKpiPointRules() {
+  return apiGet<KpiPointRule[]>("/admin/kpi-point-rules", []);
+}
+
+export async function getAppSettings() {
+  return apiGet<AppSettings>("/admin/app-settings", {
+    kpi_ranking_metric: "points",
+    kpi_ranking_period: "week",
+  });
+}
+
+export async function getTeamKpis(period: string) {
+  return apiGet<TeamKpiOverview>(`/team-kpis?period=${period}`, { period, members: [] });
+}
+
+export async function getKpiRanking(period?: string, metric?: string) {
+  const params = new URLSearchParams();
+  if (period) params.set("period", period);
+  if (metric) params.set("metric", metric);
+  const query = params.toString();
+  return apiGet<KpiRankingResult>(
+    `/kpi-ranking${query ? `?${query}` : ""}`,
+    { period: period ?? "week", metric: metric ?? "points", entries: [] },
+  );
 }
 
 /** Admin-only, siehe app/einstellungen/loeschanfragen/page.tsx (Art. 17

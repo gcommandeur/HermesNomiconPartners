@@ -149,6 +149,9 @@ export default function EinstellungenPage() {
               <Link href="/einstellungen/loeschanfragen">
                 <Button size="sm" variant="outline">Löschanfragen öffnen</Button>
               </Link>
+              <Link href="/einstellungen/kpi-punkte">
+                <Button size="sm" variant="outline">KPI-Punkte öffnen</Button>
+              </Link>
             </CardContent>
           </Card>
         )}

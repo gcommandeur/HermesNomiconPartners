@@ -237,3 +237,20 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   }
   return response.json() as Promise<T>;
 }
+
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(apiUrl(path), {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(await authHeader()),
+    },
+    body: JSON.stringify(body),
+    signal: timeoutSignal(),
+  });
+  if (!response.ok) {
+    throw new Error(await errorMessageFromResponse(response));
+  }
+  return response.json() as Promise<T>;
+}

@@ -1068,3 +1068,44 @@ export interface MailSendResult {
 export interface MailOAuthStartResult {
   authorization_url: string;
 }
+
+// KPI-Punkte-System + Geschaeftsfuehrer-Ansicht + Live-Ranking (Auftrag
+// "Geschaeftsfuehrer-Ansicht + KPI-Punkte-System + Live-Ranking") - `stage`
+// ist einer der 7 STAGE_KEYS-Werte aus backend/src/cc_crm/services/
+// kpi_scoring.py, siehe stage-labels.ts fuer die deutschen Anzeigenamen.
+export interface KpiPointRule {
+  stage: string;
+  points: number;
+}
+
+export interface AppSettings {
+  kpi_ranking_metric: string;
+  kpi_ranking_period: "day" | "week";
+}
+
+export interface TeamMemberKpis {
+  user_id: string;
+  display_name: string;
+  stages: Record<string, number>;
+  points: number;
+  // Immer null bis Soll-Werte pro Mitarbeiter spezifiziert sind (Nutzer-
+  // Vorgabe: nicht raten) - Spalte im Frontend trotzdem vorbereitet.
+  target: null;
+}
+
+export interface TeamKpiOverview {
+  period: string;
+  members: TeamMemberKpis[];
+}
+
+export interface KpiRankingEntry {
+  user_id: string;
+  display_name: string;
+  value: number;
+}
+
+export interface KpiRankingResult {
+  period: string;
+  metric: string;
+  entries: KpiRankingEntry[];
+}
