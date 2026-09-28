@@ -161,6 +161,99 @@ def test_admin_can_create_event_for_another_user(
     assert created["id"] in [item["id"] for item in colleague_list]
 
 
+def test_missing_end_at_defaults_to_30_minutes_after_start(client: TestClient) -> None:
+    created = client.post(
+        "/api/v1/calendar-events",
+        json={"title": "Kurzer Anruf", "start_at": "2026-09-28T10:00:00"},
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["end_at"] == "2026-09-28T10:30:00"
+
+
+def test_end_at_before_minimum_duration_is_rejected(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/calendar-events",
+        json={
+            "title": "Zu kurzer Termin",
+            "start_at": "2026-09-28T10:00:00",
+            "end_at": "2026-09-28T10:10:00",
+        },
+    )
+    assert response.status_code == 422, response.text
+    assert "30 Minuten" in response.json()["detail"]
+
+
+def test_end_at_before_start_at_is_rejected(client: TestClient) -> None:
+    """Regressionstest fuer den Prod-Vorfall vom 2026-09-28 (Termin
+    "Eric Bömicke"): end_at vor start_at wurde vom Graph-Push dauerhaft mit
+    400 abgelehnt und liess den Sync fuer dieses Event stillschweigend
+    scheitern - so etwas darf gar nicht erst gespeichert werden koennen."""
+    response = client.post(
+        "/api/v1/calendar-events",
+        json={
+            "title": "Vertauschte Zeiten",
+            "start_at": "2026-09-28T10:00:00",
+            "end_at": "2026-09-28T09:00:00",
+        },
+    )
+    assert response.status_code == 422, response.text
+
+
+def test_end_at_exactly_at_minimum_duration_is_accepted(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/calendar-events",
+        json={
+            "title": "Genau 30 Minuten",
+            "start_at": "2026-09-28T10:00:00",
+            "end_at": "2026-09-28T10:30:00",
+        },
+    )
+    assert response.status_code == 201, response.text
+
+
+def test_update_moving_only_start_at_is_checked_against_stored_end_at(
+    client: TestClient,
+) -> None:
+    """Ein Update, das nur start_at aendert, darf die Mindestdauer-Pruefung
+    nicht umgehen - sie muss gegen das bereits gespeicherte end_at laufen,
+    nicht nur gegen die im Payload gesendeten Felder."""
+    event = client.post(
+        "/api/v1/calendar-events",
+        json={
+            "title": "Termin",
+            "start_at": "2026-09-28T10:00:00",
+            "end_at": "2026-09-28T10:30:00",
+        },
+    ).json()
+
+    response = client.patch(
+        f"/api/v1/calendar-events/{event['id']}",
+        json={"start_at": "2026-09-28T10:25:00"},
+    )
+    assert response.status_code == 422, response.text
+    assert "30 Minuten" in response.json()["detail"]
+
+
+def test_update_moving_only_end_at_is_checked_against_stored_start_at(
+    client: TestClient,
+) -> None:
+    event = client.post(
+        "/api/v1/calendar-events",
+        json={
+            "title": "Termin",
+            "start_at": "2026-09-28T10:00:00",
+            "end_at": "2026-09-28T10:30:00",
+        },
+    ).json()
+
+    response = client.patch(
+        f"/api/v1/calendar-events/{event['id']}",
+        json={"end_at": "2026-09-28T10:05:00"},
+    )
+    assert response.status_code == 422, response.text
+
+
 def test_non_admin_cannot_set_owner_user_id(client: TestClient, second_user_token: str) -> None:
     """Ein Normalnutzer, der versucht per Body-Feld fuer einen anderen Nutzer
     anzulegen, wird serverseitig ignoriert - der Termin gehoert trotzdem ihm."""

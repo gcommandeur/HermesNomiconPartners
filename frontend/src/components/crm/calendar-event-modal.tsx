@@ -24,6 +24,25 @@ const EVENT_TYPE_OPTIONS: { value: CalendarEventType; label: string }[] = [
   { value: "other", label: "Sonstiges" },
 ];
 
+// Muss mit MINIMUM_EVENT_DURATION_MINUTES in backend/src/cc_crm/services/
+// calendar_events.py uebereinstimmen - das Backend erzwingt die Mindestdauer
+// ohnehin serverseitig (fehlt end_at, wird es dort genauso berechnet; liegt
+// es darunter, lehnt es mit 422 ab), hier nur, damit der Nutzer den Fehler
+// sofort im Formular sieht statt erst nach dem Server-Roundtrip.
+const MINIMUM_EVENT_DURATION_MINUTES = 30;
+
+/** Addiert Minuten auf einen <input type="datetime-local">-Wert (kein
+ * TZ-Suffix, immer lokale Wanduhrzeit) - reine lokale Feld-Arithmetik ohne
+ * UTC-Konvertierung, anders als das ISO-String-Problem in
+ * toDatetimeLocalValue() oben betrifft das hier nicht. */
+function addMinutesToDatetimeLocal(value: string, minutes: number): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  date.setMinutes(date.getMinutes() + minutes);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 /** ISO-Datetime aus dem Backend (z.B. "2026-08-05T14:00:00") direkt auf die
  * ersten 16 Zeichen kuerzen statt ueber ein Date-Objekt zu gehen - vermeidet
  * eine Zeitzonen-Reinterpretation durch JS (siehe Backend-Kommentar in
@@ -151,6 +170,15 @@ export function CalendarEventModal({
     try {
       if (!form.title.trim()) throw new Error("Bitte einen Titel angeben.");
       if (!form.start_at) throw new Error("Bitte einen Start-Zeitpunkt angeben.");
+      if (form.end_at) {
+        const startMs = new Date(form.start_at).getTime();
+        const endMs = new Date(form.end_at).getTime();
+        if (endMs - startMs < MINIMUM_EVENT_DURATION_MINUTES * 60 * 1000) {
+          throw new Error(
+            `Ende muss mindestens ${MINIMUM_EVENT_DURATION_MINUTES} Minuten nach dem Start liegen.`,
+          );
+        }
+      }
 
       const payload = {
         title: form.title.trim(),
@@ -244,7 +272,17 @@ export function CalendarEventModal({
               type="datetime-local"
               required
               value={form.start_at}
-              onChange={(e) => set("start_at", e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setForm((current) => ({
+                  ...current,
+                  start_at: value,
+                  // Nur vorbefuellen, solange das Ende noch leer ist - kein
+                  // Pflichtfeld, nur ein sinnvoller Default (Nutzer-Vorgabe:
+                  // "jeder Termin soll standardmaessig mind. 30 Min blocken").
+                  end_at: current.end_at || addMinutesToDatetimeLocal(value, MINIMUM_EVENT_DURATION_MINUTES),
+                }));
+              }}
             />
           </div>
           <div>

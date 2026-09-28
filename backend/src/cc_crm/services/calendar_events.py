@@ -1,10 +1,10 @@
 import uuid
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
 
-from cc_crm.core.errors import PermissionDeniedError
+from cc_crm.core.errors import BusinessRuleError, PermissionDeniedError
 from cc_crm.models.calendar_event import CalendarEvent
 from cc_crm.models.enums import CalendarEventType
 from cc_crm.models.user import User
@@ -12,6 +12,34 @@ from cc_crm.repositories.calendar_events import CalendarEventRepository
 from cc_crm.schemas.calendar_event import CalendarEventCreate, CalendarEventUpdate
 from cc_crm.services.base import CrudService
 from cc_crm.services.calendar_graph_sync import push_delete_to_graph
+
+# Prod-Vorfall 2026-09-28: ein Termin mit end_at VOR start_at wurde vom
+# Microsoft-Graph-Push dauerhaft mit 400 abgelehnt und liess den Kalender-Sync
+# fuer dieses Event bei jedem Job-Lauf stillschweigend scheitern (nur
+# logger.warning in calendar_graph_sync.py::_push_local_changes). end_at bleibt
+# absichtlich nullable (siehe models/calendar_event.py) - hier wird stattdessen
+# IMMER ein sinnvolles end_at erzwungen: fehlt es, wird es aus start_at
+# berechnet; liegt ein mitgegebenes end_at zu nah an oder vor start_at, wird
+# das abgelehnt statt es stillschweigend zu korrigieren, damit der Nutzer die
+# Diskrepanz bewusst sieht (Nutzer-Vorgabe).
+MINIMUM_EVENT_DURATION_MINUTES = 30
+
+
+def apply_minimum_duration(start_at: datetime, end_at: datetime | None) -> datetime:
+    """Oeffentliche Modulfunktion (nicht privat), da auch services/
+    recruiting.py::_create_calendar_event_for_interview automatisch erzeugte
+    Interview-Termine denselben Mindestdauer-Regeln unterwerfen muss - dort
+    wird end_at bislang gar nicht gesetzt, faellt also ebenfalls unter den
+    "kein end_at angegeben"-Fall unten."""
+    minimum_end_at = start_at + timedelta(minutes=MINIMUM_EVENT_DURATION_MINUTES)
+    if end_at is None:
+        return minimum_end_at
+    if end_at < minimum_end_at:
+        raise BusinessRuleError(
+            f"Ende muss mindestens {MINIMUM_EVENT_DURATION_MINUTES} Minuten "
+            "nach dem Start liegen."
+        )
+    return end_at
 
 
 class CalendarEventService(CrudService[CalendarEvent, CalendarEventCreate, CalendarEventUpdate]):
@@ -56,6 +84,7 @@ class CalendarEventService(CrudService[CalendarEvent, CalendarEventCreate, Calen
         values = payload.model_dump(exclude={"owner_user_id"})
         values["owner_user_id"] = owner_user_id
         values["created_by_user_id"] = current_user.id
+        values["end_at"] = apply_minimum_duration(payload.start_at, payload.end_at)
         entity = self.repository.create(values)
         self.session.commit()
         return entity
@@ -70,7 +99,20 @@ class CalendarEventService(CrudService[CalendarEvent, CalendarEventCreate, Calen
     ) -> CalendarEvent:
         event = self.get(event_id)
         self._check_access(event, current_user)
-        return self.update(event_id, payload)
+        values = payload.model_dump(exclude_unset=True)
+        if "start_at" in values or "end_at" in values:
+            # CalendarEventUpdate macht alle Felder optional - fehlt eines der
+            # beiden im Payload, muss gegen den bereits gespeicherten Wert
+            # geprueft werden (gemergter Zustand), nicht nur gegen die im
+            # Payload gesendeten Felder, sonst liesse sich die Mindestdauer-
+            # Pruefung durch ein Update umgehen, das nur start_at ODER nur
+            # end_at aendert.
+            merged_start_at = values.get("start_at", event.start_at)
+            merged_end_at = values.get("end_at", event.end_at)
+            values["end_at"] = apply_minimum_duration(merged_start_at, merged_end_at)
+        updated = self.repository.update(event, values)
+        self.session.commit()
+        return updated
 
     def delete_for_user(self, event_id: uuid.UUID, current_user: User) -> None:
         event = self.get(event_id)

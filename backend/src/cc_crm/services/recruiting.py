@@ -54,6 +54,7 @@ from cc_crm.schemas.submission import (
     CandidateSubmissionRead,
     CandidateSubmissionTransition,
 )
+from cc_crm.services.calendar_events import apply_minimum_duration
 from cc_crm.services.submissions import CandidateSubmissionService
 from cc_crm.services.warranty import WarrantyService
 
@@ -447,6 +448,7 @@ class RecruitingProcessService:
             title=title,
             event_type=CalendarEventType.INTERVIEW,
             start_at=interview.scheduled_at,
+            end_at=apply_minimum_duration(interview.scheduled_at, None),
             location=interview.location_or_link,
             notes=interview.notes,
             owner_user_id=current_user.id,
