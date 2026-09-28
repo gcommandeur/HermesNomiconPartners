@@ -2,6 +2,12 @@
 
 ## Bullhorn (echte REST-API-Anbindung)
 
+**Status (Stand 2026-09-28): nicht aktiv.** In der Produktions-App auf DigitalOcean ist kein
+einziger `BULLHORN_*`-Env-Var gesetzt - der Adapter kann dort technisch gar nicht laufen und
+wurde nie gegen einen echten Bullhorn-Tenant getestet (siehe Hinweis weiter unten). Der Code
+bleibt bewusst erhalten, falls die Integration spaeter doch gebraucht wird, ist aber aktuell
+nicht in Benutzung und sollte nicht als aktive Funktion beworben werden.
+
 Bullhorn bietet eine dokumentierte REST-API mit OAuth2-Login. Der Adapter liegt unter
 `backend/src/cc_crm/integrations/bullhorn/`.
 
