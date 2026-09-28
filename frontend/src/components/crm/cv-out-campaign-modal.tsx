@@ -70,7 +70,18 @@ export function CvOutCampaignModal({
         new Set(result.data.targets.flatMap((client) => client.contacts.map((c) => c.id))),
       );
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Umkreissuche fehlgeschlagen.");
+      const message = exception instanceof Error ? exception.message : "Umkreissuche fehlgeschlagen.";
+      // ConsentNotGrantedError (backend/src/cc_crm/core/errors.py) liefert
+      // immer den Text "Kein Einverständnis ..." - Erkennung ueber diese
+      // Teilzeichenkette statt eines eigenen Fehlercodes, da apiGet/getCvOutTargets
+      // (siehe lib/api/queries.ts) nur die Fehlermeldung durchreicht, nicht den
+      // HTTP-Status (gleiches Musters wie die bestehenden Backend-Tests, die
+      // ebenfalls per Teilstring auf "Einverständnis" pruefen statt auf 403).
+      setError(
+        message.includes("Einverständnis")
+          ? `Für ${candidateName} liegt noch keine Einwilligung zur Weitergabe vor. Bitte im Kandidaten-Profil unter „Bearbeiten“ die Einwilligung erfassen.`
+          : message,
+      );
     } finally {
       setSearching(false);
     }

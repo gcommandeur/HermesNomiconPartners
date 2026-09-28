@@ -204,6 +204,10 @@ export function CandidateCreateForm({
   const [dragActive, setDragActive] = useState(false);
   const dragCounter = useRef(0);
   const cvInputRef = useRef<HTMLInputElement>(null);
+  // Bool statt string, deshalb bewusst ausserhalb des string-typisierten
+  // `form`-State gehalten (dessen generischer set()-Setter nur strings
+  // erwartet) - gleiches Muster wie cvFile/dragActive oben.
+  const [consentReceived, setConsentReceived] = useState(candidate?.consent_received ?? false);
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -303,6 +307,7 @@ export function CandidateCreateForm({
       );
       const payload = {
         ...stringFields,
+        consent_received: consentReceived,
         fachliche_schwerpunkte: form.fachliche_schwerpunkte
           .split(",").map((item) => item.trim()).filter(Boolean),
         edv_kenntnisse: form.edv_kenntnisse
@@ -446,6 +451,21 @@ export function CandidateCreateForm({
           <option value="herr">Herr</option>
           <option value="divers">Divers</option>
         </select>
+      </div>
+      <div>
+        <label className="flex items-center gap-2 text-sm text-[#F8FAFC]">
+          <input
+            type="checkbox"
+            className="size-4 accent-[#1F5FA8]"
+            checked={consentReceived}
+            onChange={(e) => setConsentReceived(e.target.checked)}
+          />
+          Einwilligung für CV-Out-Kampagne erhalten
+        </label>
+        <p className="mt-1 text-xs text-[#94A3B8]">
+          Einwilligung zur Weitergabe des Profils an Kanzleien liegt vor - ohne diese kann die
+          CV-Out-Kampagne (Kandidaten-Detailseite) nicht ausgelöst werden.
+        </p>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label className={labelClass}>Rolle</label><Input value={form.job_title} onChange={(e) => set("job_title", e.target.value)} /></div>

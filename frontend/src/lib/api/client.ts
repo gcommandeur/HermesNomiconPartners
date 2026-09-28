@@ -96,7 +96,7 @@ export async function apiGet<T>(path: string, fallback: T): Promise<DataResult<T
       cache: "no-store",
       signal: timeoutSignal(),
     });
-    if (!response.ok) throw new Error(`API antwortet mit ${response.status}`);
+    if (!response.ok) throw new Error(await errorMessageFromResponse(response));
     return { data: (await response.json()) as T, source: "api" };
   } catch (error) {
     if (error instanceof DOMException && error.name === "TimeoutError") {
