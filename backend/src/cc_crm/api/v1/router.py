@@ -13,6 +13,7 @@ from cc_crm.api.v1.deletion_requests import router as deletion_requests_router
 from cc_crm.api.v1.geo import router as geo_router
 from cc_crm.api.v1.imports import router as imports_router
 from cc_crm.api.v1.jobs import router as jobs_router
+from cc_crm.api.v1.kpi import router as kpi_router
 from cc_crm.api.v1.mail_accounts import public_router as mail_accounts_public_router
 from cc_crm.api.v1.mail_accounts import router as mail_accounts_router
 from cc_crm.api.v1.mail_send import router as mail_send_router
@@ -50,6 +51,7 @@ protected_router.include_router(candidates_router, tags=["candidates"])
 protected_router.include_router(clients_router, tags=["clients"])
 protected_router.include_router(contacts_router, tags=["contacts"])
 protected_router.include_router(jobs_router, tags=["vacancies"])
+protected_router.include_router(kpi_router, tags=["kpi"])
 protected_router.include_router(matching_router, tags=["candidate-matching"])
 protected_router.include_router(profile_generator_router, tags=["profile-generator"])
 protected_router.include_router(nl_search_router, tags=["nl-search"])
