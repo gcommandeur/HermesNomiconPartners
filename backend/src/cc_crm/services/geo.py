@@ -4,7 +4,7 @@ import re
 import uuid
 from collections import Counter
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from cc_crm.models.client_company import ClientCompany
@@ -39,6 +39,54 @@ CITY_COORDINATES: dict[str, tuple[float, float]] = {
     "bremen": (53.0793, 8.8017),
     "dortmund": (51.5136, 7.4653),
     "dresden": (51.0504, 13.7373),
+    # Ergaenzt nach der Wiesbaden-Regression (200km-Umkreissuche lieferte 0
+    # Treffer, weil diese Mittelstaedte weder hier noch - bei fehlender
+    # postal_localities-Koordinate fuer die konkret eingegebene PLZ - ueber
+    # den neuen Ortsnamen-Fallback aufloesbar waren) - reines Sicherheitsnetz
+    # fuer den Fall, dass eine Stadt auch in postal_localities gar nicht
+    # vorkommt, dieselbe grobe Praezision wie die urspruengliche Liste oben.
+    "wiesbaden": (50.0782, 8.2398),
+    "mainz": (49.9929, 8.2473),
+    "bonn": (50.7374, 7.0982),
+    "augsburg": (48.3705, 10.8978),
+    "bielefeld": (52.0302, 8.5325),
+    "karlsruhe": (49.0069, 8.4037),
+    "freiburg": (47.9990, 7.8421),
+    "muenster": (51.9607, 7.6261),
+    "münster": (51.9607, 7.6261),
+    "wuerzburg": (49.7913, 9.9534),
+    "würzburg": (49.7913, 9.9534),
+    "regensburg": (49.0134, 12.1016),
+    "heidelberg": (49.3988, 8.6724),
+    "darmstadt": (49.8728, 8.6512),
+    "kassel": (51.3127, 9.4797),
+    "trier": (49.7596, 6.6441),
+    "koblenz": (50.3569, 7.5890),
+    "saarbruecken": (49.2401, 6.9969),
+    "saarbrücken": (49.2401, 6.9969),
+    "potsdam": (52.3906, 13.0645),
+    "erfurt": (50.9848, 11.0299),
+    "rostock": (54.0887, 12.1400),
+    "kiel": (54.3233, 10.1228),
+    "luebeck": (53.8655, 10.6866),
+    "lübeck": (53.8655, 10.6866),
+    "braunschweig": (52.2689, 10.5268),
+    "chemnitz": (50.8278, 12.9214),
+    "halle": (51.4825, 11.9691),
+    "magdeburg": (52.1205, 11.6276),
+    "ulm": (48.3984, 9.9916),
+    "reutlingen": (48.4914, 9.2043),
+    "goettingen": (51.5413, 9.9158),
+    "göttingen": (51.5413, 9.9158),
+    "paderborn": (51.7189, 8.7575),
+    "ingolstadt": (48.7665, 11.4258),
+    "wolfsburg": (52.4227, 10.7865),
+    "fuerth": (49.4769, 10.9887),
+    "fürth": (49.4769, 10.9887),
+    "erlangen": (49.5897, 11.0119),
+    "siegen": (50.8748, 8.0243),
+    "jena": (50.9271, 11.5892),
+    "hildesheim": (52.1508, 9.9511),
 }
 
 # Fallback centroid per first PLZ digit (Germany's postal code zones), used
@@ -65,6 +113,32 @@ def _jitter(seed: str, spread: float = 0.06) -> tuple[float, float]:
     return dx, dy
 
 
+def _locality_coordinates_by_name(
+    session: Session, city_normalized: str
+) -> tuple[float, float] | None:
+    """Ortsnamen-Fallback ueber den `locality`-Index (siehe models/
+    postal_locality.py) - case-insensitive exakter Namensvergleich (kein
+    LIKE/Teilstring, um z.B. 'Wiesbaden' nicht faelschlich mit 'Wiesbaden-
+    Biebrich' zu verwechseln). Deckt zwei Faelle ab, die die reine PLZ-
+    Abfrage in _postal_locality_coordinates() strukturell nicht abdecken
+    kann (Regression nach dem Praezisions-Fix, siehe dessen Docstring):
+    (a) eine reine Ortsnamen-Suche ohne PLZ-Ziffern, (b) eine PLZ, deren
+    eigene Zeile keine Koordinate hat, aber eine ANDERE Zeile mit demselben
+    Ortsnamen (typischerweise eine Nachbar-PLZ derselben Stadt) schon -
+    fuer eine ohnehin nicht strassengenaue Umkreissuche eine voellig
+    ausreichende Ersatzkoordinate (ueblicherweise <5km Unterschied), klar
+    praeziser als der PLZ_ZONE_COORDINATES-Fallback (100+ km moeglich)."""
+    statement = select(PostalLocality).where(
+        func.lower(PostalLocality.locality) == city_normalized,
+        PostalLocality.latitude.is_not(None),
+        PostalLocality.longitude.is_not(None),
+    )
+    row = session.scalars(statement).first()
+    if row is None:
+        return None
+    return row.latitude, row.longitude  # type: ignore[return-value]
+
+
 def _postal_locality_coordinates(
     session: Session, postal_code: str | None, city: str | None = None
 ) -> tuple[float, float] | None:
@@ -77,24 +151,52 @@ def _postal_locality_coordinates(
     Mehrere Zeilen fuer dieselbe PLZ sind moeglich (Stadtbezirke/Ortsteile) -
     bei bekanntem Ortsnamen wird zuerst eine Zeile mit uebereinstimmendem
     locality gesucht, sonst die erste Zeile mit gesetzten Koordinaten fuer
-    diese PLZ genommen."""
-    if not postal_code or len(postal_code) != 5 or not postal_code.isdigit():
-        return None
-    statement = select(PostalLocality).where(
-        PostalLocality.postal_code == postal_code,
-        PostalLocality.latitude.is_not(None),
-        PostalLocality.longitude.is_not(None),
-    )
-    rows = session.scalars(statement).all()
-    if not rows:
-        return None
-    if city:
-        city_normalized = city.strip().lower()
-        for row in rows:
-            if row.locality.strip().lower() == city_normalized:
-                return row.latitude, row.longitude  # type: ignore[return-value]
-    first = rows[0]
-    return first.latitude, first.longitude  # type: ignore[return-value]
+    diese PLZ genommen.
+
+    Regressions-Fix (nach dem Praezisions-Fix in 3acc0cb fiel z.B. Wiesbaden
+    komplett auf 0 Treffer statt auf den Zonen-Fallback zurueckzufallen -
+    NICHT weil precise=False jetzt zu streng waere, sondern weil diese
+    Funktion selbst zu eng abgefragt hat, siehe drei Luecken unten):
+    - Hat die exakte PLZ KEINE eigene Koordinatenzeile, aber die Tabelle
+      kennt trotzdem einen Ortsnamen dafuer (Zeile ohne Koordinate, z.B. aus
+      der OSM-Quelle), wird ueber diesen Namen per _locality_coordinates_
+      by_name() nach einer Nachbar-PLZ mit Koordinate gesucht.
+    - Ist gar keine (gueltige) PLZ gegeben, aber ein Ortsname (reine
+      Namenssuche, z.B. "Wiesbaden" ohne Ziffern), wird direkt per Namen
+      gesucht statt die Tabelle komplett zu umgehen und sofort auf
+      CITY_COORDINATES/Zone zu springen."""
+    valid_postal_code = bool(postal_code and len(postal_code) == 5 and postal_code.isdigit())
+    city_normalized = city.strip().lower() if city else None
+
+    if valid_postal_code:
+        statement = select(PostalLocality).where(
+            PostalLocality.postal_code == postal_code,
+            PostalLocality.latitude.is_not(None),
+            PostalLocality.longitude.is_not(None),
+        )
+        rows = session.scalars(statement).all()
+        if rows:
+            if city_normalized:
+                for row in rows:
+                    if row.locality.strip().lower() == city_normalized:
+                        return row.latitude, row.longitude  # type: ignore[return-value]
+            first = rows[0]
+            return first.latitude, first.longitude  # type: ignore[return-value]
+
+        # Exakte PLZ hat keine eigene Koordinate - falls kein Ortsname
+        # mitgegeben wurde, ueber eine beliebige (auch koordinatenlose)
+        # Zeile fuer diese PLZ herausfinden, wie der Ort heisst.
+        if not city_normalized:
+            name_row = session.scalars(
+                select(PostalLocality).where(PostalLocality.postal_code == postal_code)
+            ).first()
+            if name_row is not None:
+                city_normalized = name_row.locality.strip().lower()
+
+    if city_normalized:
+        return _locality_coordinates_by_name(session, city_normalized)
+
+    return None
 
 
 def candidate_coordinates(

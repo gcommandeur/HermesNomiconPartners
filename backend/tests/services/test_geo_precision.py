@@ -4,8 +4,10 @@ Illingen/Saar-Vorfall). Testet candidate_coordinates()/resolve_place_query()
 direkt statt ueber die API, da genau diese beiden Funktionen die Ursache
 des Bugs waren (die Radius-Filterung selbst war bereits korrekt)."""
 
+import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
+from cc_crm.models.postal_locality import PostalLocality
 from cc_crm.services.geo import candidate_coordinates, resolve_place_query
 
 
@@ -100,3 +102,70 @@ def test_resolve_place_query_has_no_jitter_regardless(
         first = resolve_place_query(session, "München")
         second = resolve_place_query(session, "München")
     assert first == second
+
+
+# --- Regressionstests: Wiesbaden-Vorfall (200km-Suche lieferte 0 Treffer) ---
+#
+# Die drei folgenden Tests seeden postal_localities direkt, um genau die
+# Luecke nachzustellen, die den Regressions-Bug ausgeloest hat: eine PLZ ohne
+# eigene Koordinate, deren Stadt aber ueber eine ANDERE PLZ-Zeile mit
+# Koordinate bekannt ist - realistisch fuer Wiesbaden (PLZ 65193 ohne
+# Koordinatentreffer in der Geonames-Quelle, Nachbar-PLZ 65183 mit Treffer).
+
+
+def _seed_wiesbaden(session: Session) -> None:
+    # 65193 hat bewusst KEINE Koordinate (bildet die reale Luecke nach),
+    # 65183 hat eine - beide tragen denselben Ortsnamen.
+    session.add_all(
+        [
+            PostalLocality(postal_code="65193", locality="Wiesbaden"),
+            PostalLocality(
+                postal_code="65183", locality="Wiesbaden", latitude=50.0825, longitude=8.2398
+            ),
+        ]
+    )
+    session.commit()
+
+
+def test_postal_code_without_own_coordinate_falls_back_to_sibling_same_city(
+    session_factory: sessionmaker[Session],
+) -> None:
+    """Ursache 1+2 des Regressions-Bugs: PLZ 65193 hat keine eigene
+    Koordinate, aber die Tabelle kennt den Ortsnamen ueber diese Zeile -
+    darueber wird jetzt die Koordinate der Nachbar-PLZ 65183 (gleiche Stadt)
+    gefunden, mit precise=True (klar praeziser als der Zonen-Fallback)."""
+    with session_factory() as session:
+        _seed_wiesbaden(session)
+        lat, lng, precise = candidate_coordinates(
+            session, "Wiesbaden", "65193", "seed-wi", apply_jitter=False
+        )
+    assert precise is True
+    assert lat == pytest.approx(50.0825, abs=0.001)
+    assert lng == pytest.approx(8.2398, abs=0.001)
+
+
+def test_pure_city_name_search_uses_postal_localities_not_zone_fallback(
+    session_factory: sessionmaker[Session],
+) -> None:
+    """Ursache 3 des Regressions-Bugs: eine reine Ortsnamen-Suche ohne PLZ-
+    Ziffern ("Wiesbaden") darf postal_localities nicht mehr komplett
+    umgehen - muss denselben praezisen Treffer liefern wie die PLZ-Suche,
+    nicht auf CITY_COORDINATES/Zone zurueckfallen."""
+    with session_factory() as session:
+        _seed_wiesbaden(session)
+        lat, lng, precise = resolve_place_query(session, "Wiesbaden")
+    assert precise is True
+    assert lat == pytest.approx(50.0825, abs=0.01)
+    assert lng == pytest.approx(8.2398, abs=0.01)
+
+
+def test_precision_fix_does_not_reopen_illingen_regression(
+    session_factory: sessionmaker[Session],
+) -> None:
+    """Explizite Nicht-Regression: der neue Ortsnamen-Fallback darf den
+    Illingen/Saar-Fall nicht wieder oeffnen - eine PLZ ohne jede
+    postal_localities-Zeile (auch ohne Koordinate) bleibt precise=False."""
+    with session_factory() as session:
+        _seed_wiesbaden(session)  # unabhaengige Daten fuer eine andere Stadt
+        lat, lng, precise = candidate_coordinates(session, "Illingen", "66557", "seed-il")
+    assert precise is False
