@@ -35,7 +35,15 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # fuer alle Alt-Kandidaten (per Migration nicht befuellt) und wird ab
     # jetzt nur noch gesetzt, wenn cv_available echt (neu) auf True wechselt
     # (siehe CandidateService.update()) - Analytics zaehlt nur Zeilen mit
-    # gesetztem Wert.
+    # gesetztem Wert. Seit dem "CV In faelschlich nicht gezaehlt"-Bugfix
+    # (Fall Lorenz Hafner) wird das AUCH beim Anlegen gestempelt, wenn
+    # cv_available direkt mit True mitgegeben wird (siehe CandidateService.
+    # create()) - vorher blieb es fuer solche Kandidaten faelschlich fuer
+    # immer NULL, da nur update() den False->True-Uebergang beobachtete und
+    # ein direkt angelegter Kandidat diesen Uebergang nie durchlaeuft.
+    # scripts/backfill_cv_in_recorded_at.py holt betroffene Bestandsfaelle
+    # nach (nur Kandidaten nach dem 2026-07-15-Cutoff, die Alt-Kandidaten-
+    # Ausnahme selbst bleibt unangetastet).
     cv_in_recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     short_profile: Mapped[str | None] = mapped_column(Text)
     consent_received: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

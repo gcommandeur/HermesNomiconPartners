@@ -708,11 +708,28 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         job_title, aber bisher NICHTS leitete rollen daraus ab, anders als
         beim CV-Upload). Ergaenzt NUR, ueberschreibt NIE - greift
         ausschliesslich, wenn rollen nach dem Erstellen noch leer ist
-        (siehe _maybe_derive_rollen)."""
+        (siehe _maybe_derive_rollen).
+
+        Stempelt AUSSERDEM cv_in_recorded_at, wenn der Kandidat direkt MIT
+        cv_available=True angelegt wird (Bugfix "CV In-Analytics zaehlt
+        frisch angelegte Kandidaten mit CV nicht mit", konkreter Fall:
+        Lorenz Hafner). update() unten stempelt das Feld schon seit laengerem
+        beim False->True-Uebergang waehrend einer Bearbeitung - ein direkt
+        MIT gesetztem cv_available angelegter Kandidat durchlaeuft diesen
+        Uebergang aber nie (es gibt kein "vorher"), cv_in_recorded_at blieb
+        bisher faelschlich fuer immer NULL, obwohl der CV nachweislich
+        brandneu ist. Bewusst OHNE die was_cv_available-Vorher-Pruefung aus
+        update(): bei der Anlage gibt es kein "vorher", jeder mit gesetztem
+        CV-Flag angelegte Kandidat soll gezaehlt werden - siehe auch den
+        Backfill in scripts/backfill_cv_in_recorded_at.py fuer bereits vor
+        diesem Fix betroffene Kandidaten."""
         if not payload.candidate_number:
             payload = payload.model_copy(update={"candidate_number": self._next_candidate_number()})
         entity = super().create(payload)
         self._maybe_derive_rollen(entity)
+        if entity.cv_available and entity.cv_in_recorded_at is None:
+            entity.cv_in_recorded_at = datetime.now(UTC)
+            self.session.commit()
         return entity
 
 
