@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown, Ghost, History, ShieldAlert, X } from "lucide-react";
 import { FilterBar } from "@/components/crm/filter-bar";
 import { DataTable } from "@/components/crm/data-table";
 import { StatusPill } from "@/components/crm/status-pill";
+import { CandidateQuickViewDrawer } from "@/components/crm/candidate-quickview-drawer";
 import { ExportActions } from "@/components/crm/export-actions";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { ErrorState } from "@/components/crm/error-state";
@@ -194,6 +194,12 @@ export function CandidatesTable() {
   const currentUserId = currentUserData?.data.id;
   const [sortKey, setSortKey] = useState<string | null>("candidate_number");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  // Kandidat oeffnet im seitlichen Quickview-Panel statt per echter
+  // Navigation zur Detailseite (Nutzer-Vorgabe: "im anderen Subfenster",
+  // Liste bleibt gemountet) - vorher unmountete ein <Link>-Klick diese
+  // Komponente komplett, alle Filter/Suche/Sortierung gingen beim
+  // Zurueknavigieren verloren. Gleiches Muster wie submission-views.tsx.
+  const [quickViewCandidateId, setQuickViewCandidateId] = useState<string | null>(null);
 
   function handleSort(key: string) {
     if (sortKey === key) {
@@ -345,6 +351,9 @@ export function CandidatesTable() {
   const displayedPage = reactivationOnly ? reactivationPage : page;
   const displayedPageCount = reactivationOnly ? reactivationPageCount : (aiResults ? 1 : pageCount);
   const displayedSetPage = reactivationOnly ? setReactivationPage : setPage;
+  const quickViewCandidate = quickViewCandidateId
+    ? displayedCandidates.find((candidate) => candidate.id === quickViewCandidateId) ?? null
+    : null;
 
   const exportRows = useMemo(() => displayedCandidates.map((candidate) => ({
     Name: `${candidate.first_name} ${candidate.last_name}`,
@@ -514,10 +523,11 @@ export function CandidatesTable() {
        * spaltenweise. */}
       <div className="space-y-2 lg:hidden">
         {displayedCandidates.map((candidate) => (
-          <Link
+          <button
             key={candidate.id}
-            href={`/kandidaten/${candidate.id}`}
-            className="block rounded-lg border border-white/10 bg-[#12243A] p-3 active:bg-[#203A5A]/35"
+            type="button"
+            onClick={() => setQuickViewCandidateId(candidate.id)}
+            className="block w-full rounded-lg border border-white/10 bg-[#12243A] p-3 text-left active:bg-[#203A5A]/35"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -558,7 +568,7 @@ export function CandidatesTable() {
                 )}
               </p>
             )}
-          </Link>
+          </button>
         ))}
         {displayedCandidates.length === 0 && (
           <p className="py-8 text-center text-xs text-[#94A3B8]">Keine Kandidaten gefunden.</p>
@@ -585,7 +595,7 @@ export function CandidatesTable() {
         {displayedCandidates.map((candidate) => (
           <tr key={candidate.id} className="hover:bg-[#203A5A]/35">
             <td className="px-4 py-3.5 text-xs text-[#94A3B8]">{candidate.candidate_number ?? "—"}</td>
-            <td className="px-4 py-3.5"><Link href={`/kandidaten/${candidate.id}`} className="font-semibold text-[#D8DADF] hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</Link>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-[#e4aeb4]" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[11px] text-[#94A3B8]">Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</p>
+            <td className="px-4 py-3.5"><button type="button" onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-[#D8DADF] hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</button>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-[#e4aeb4]" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[11px] text-[#94A3B8]">Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</p>
               {/* Nachvollziehbarkeit der Freitextsuche (Punkt 5) - nur
                * gesetzt, wenn `search` aktiv ist (siehe Backend
                * repositories/candidates.py::compute_search_match_fields). */}
@@ -629,6 +639,12 @@ export function CandidatesTable() {
       </div>
       <PaginationControls page={displayedPage} pageCount={displayedPageCount} onChange={displayedSetPage} />
       <p className="mt-3 text-xs text-[#8a9095]">{displayedCandidates.length} von {displayedTotal} Kandidaten</p>
+
+      <CandidateQuickViewDrawer
+        candidate={quickViewCandidate}
+        onClose={() => setQuickViewCandidateId(null)}
+        backTo="kandidaten"
+      />
     </>
   );
 }

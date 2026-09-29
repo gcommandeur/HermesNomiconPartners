@@ -13,9 +13,15 @@ import { formatDate, rolleLabel } from "@/lib/utils";
 export function CandidateQuickViewDrawer({
   candidate,
   onClose,
+  backTo = "prozesse",
 }: {
   candidate: Candidate | null;
   onClose: () => void;
+  /** Wert fuer den `from`-Query-Param der Detailseite (steuert dort den
+   * kontextabhaengigen Zurueck-Link, siehe app/kandidaten/[id]/page.tsx) -
+   * Default "prozesse" haelt den bestehenden Aufrufer (submission-views.tsx)
+   * unveraendert, candidates-table.tsx uebergibt "kandidaten". */
+  backTo?: string;
 }) {
   if (!candidate) return null;
 
@@ -76,7 +82,7 @@ export function CandidateQuickViewDrawer({
 
         <div className="mt-auto flex justify-end border-t border-white/10 pt-4">
           <Link
-            href={`/kandidaten/${candidate.id}?from=prozesse`}
+            href={`/kandidaten/${candidate.id}?from=${backTo}`}
             className="inline-flex items-center gap-1.5 rounded-md border border-[#1F5FA8]/40 bg-[#153A66]/45 px-3 py-1.5 text-xs text-[#c5dcfa] hover:bg-[#153A66]/70"
           >
             Vollständiges Profil öffnen <ArrowUpRight size={13} />
