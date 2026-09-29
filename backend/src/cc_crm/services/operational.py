@@ -57,6 +57,7 @@ class DocumentService(CrudService[Document, DocumentCreate, EmptyUpdate]):
         values["has_generic_filename"] = has_generic_filename(payload.filename)
         try:
             entity = self.repository.create(values)
+            self._mark_cv_available_if_needed(entity)
             self.session.commit()
             return entity
         except IntegrityError as exception:
@@ -65,6 +66,36 @@ class DocumentService(CrudService[Document, DocumentCreate, EmptyUpdate]):
         except Exception:
             self.session.rollback()
             raise
+
+    def _mark_cv_available_if_needed(self, document: Document) -> None:
+        """Setzt Candidate.cv_available (+ cv_in_recorded_at), sobald ein
+        CV-Dokument fuer diesen Kandidaten hochgeladen wird - zentral hier
+        statt im API-Endpunkt (api/v1/operational.py::upload_document),
+        damit es unabhaengig vom Aufruf-Pfad greift (z.B. auch fuer
+        kuenftige Upload-Wege). Bugfix "CV-Dokument-Upload setzt
+        cv_available nicht": die documents-Tabelle (echte Datei-Uploads,
+        document_type='cv') ist komplett getrennt vom reinen Anzeige-/
+        Analytics-Flag Candidate.cv_available - ein hochgeladenes CV setzte
+        dieses Flag bisher NIE automatisch, "CV In" haengt bislang
+        ausschliesslich vom manuellen Anhaken der Checkbox im Bearbeiten-
+        Formular ab (Live-Befund Produktion: 9 Kandidaten mit CV-Dokument,
+        aber cv_available=False, u.a. der urspruenglich gemeldete Fall
+        Lorenz Hafner). Ergaenzt die beiden bestehenden Stempel-Pfade
+        (CandidateService.create()/update()) um einen dritten, bisher
+        fehlenden - alle drei bleiben unveraendert bestehen.
+
+        Idempotent: greift nur, wenn cv_available noch False ist (kein
+        erneutes Ueberschreiben bei einem zweiten CV-Upload desselben
+        Kandidaten) bzw. nur, wenn cv_in_recorded_at noch None ist."""
+        if document.owner_type != "candidate" or document.document_type != "cv":
+            return
+        candidate = self.session.get(Candidate, document.owner_id)
+        if candidate is None:
+            return
+        if not candidate.cv_available:
+            candidate.cv_available = True
+        if candidate.cv_in_recorded_at is None:
+            candidate.cv_in_recorded_at = datetime.now(UTC)
 
 
 class SourcingMetricService(CrudService[SourcingMetric, SourcingMetricCreate, EmptyUpdate]):
