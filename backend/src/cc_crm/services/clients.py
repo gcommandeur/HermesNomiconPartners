@@ -60,10 +60,15 @@ class ClientCompanyService(CrudService[ClientCompany, ClientCompanyCreate, Clien
         if candidate is None:
             raise EntityNotFoundError("Candidate not found")
 
-        center_lat, center_lng = resolve_place_query(
+        center_lat, center_lng, center_precise = resolve_place_query(
             self.session, f"{candidate.postal_code or ''} {candidate.city or ''}".strip()
         )
-        if center_lat is None or center_lng is None:
+        if center_lat is None or center_lng is None or not center_precise:
+            # Nur ueber den groben PLZ_ZONE_COORDINATES-Fallback aufloesbar
+            # zaehlt wie "gar nicht aufloesbar" (kann 100+ km danebenliegen,
+            # siehe geo.py::resolve_place_query-Docstring) - sonst wuerde die
+            # Umkreissuche ein Zentrum benutzen, das den Kandidaten in
+            # Wahrheit falsch verortet.
             raise BusinessRuleError(
                 "Kandidat hat keine auflösbare PLZ/Ort - Umkreissuche nicht möglich."
             )
@@ -73,10 +78,13 @@ class ClientCompanyService(CrudService[ClientCompany, ClientCompanyCreate, Clien
         in_radius: list[tuple[ClientCompany, float]] = []
         unresolved: list[ClientCompany] = []
         for client in clients:
-            lat, lng = candidate_coordinates(
-                self.session, client.city, client.postal_code, str(client.id)
+            # apply_jitter=False: keine Kartenversatz-Streuung in einer
+            # Distanzberechnung fuer einen harten Radius-Filter (siehe
+            # geo.py::candidate_coordinates-Docstring).
+            lat, lng, precise = candidate_coordinates(
+                self.session, client.city, client.postal_code, str(client.id), apply_jitter=False
             )
-            if lat is None or lng is None:
+            if lat is None or lng is None or not precise:
                 unresolved.append(client)
                 continue
             distance = haversine_km(center_lat, center_lng, lat, lng)

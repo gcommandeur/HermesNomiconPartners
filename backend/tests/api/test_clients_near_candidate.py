@@ -120,16 +120,41 @@ def test_unresolvable_clients_are_listed_separately_not_dropped(client: TestClie
     assert unresolved_ids == [unresolvable["id"]]
 
 
-def test_candidate_center_uses_postal_code_when_city_is_unresolvable(
+def test_zone_fallback_only_client_is_unresolved_not_a_match(client: TestClient) -> None:
+    """Gleiche Praezisions-Regel wie fuer das Suchzentrum: eine Kanzlei, deren
+    Koordinate nur ueber die grobe Zonen-Naeherung aufloesbar ist, zaehlt
+    NICHT als Treffer, selbst wenn der Zonen-Zentroid zufaellig nah am
+    Suchzentrum liegt - landet stattdessen in `unresolved`, wie ein
+    Kandidat/Kanzlei ganz ohne aufloesbare Koordinaten."""
+    candidate = _create_candidate(client, "Anna", city="München")
+    zone_only = _create_client_company(
+        client, "Kanzlei Nur-Zone", city="Nirgendwostadt", postal_code="85999"
+    )
+
+    response = client.get(f"/api/v1/clients/near-candidate/{candidate['id']}?radius_km=500")
+
+    body = response.json()
+    in_radius_ids = [item["client"]["id"] for item in body["in_radius"]]
+    unresolved_ids = [item["id"] for item in body["unresolved"]]
+    assert zone_only["id"] not in in_radius_ids
+    assert zone_only["id"] in unresolved_ids
+
+
+def test_candidate_center_via_zone_fallback_only_is_rejected(
     client: TestClient,
 ) -> None:
-    """Ein Kandidat ohne bekannten Stadtnamen, aber mit PLZ, muss trotzdem
-    ein Zentrum liefern (PLZ-Zonen-Fallback in resolve_place_query())."""
+    """Regressionstest fuer den Illingen/Saar-Vorfall (Umkreissuche-
+    Praezisions-Fix): ein Kandidat ohne bekannten Stadtnamen, dessen PLZ nur
+    ueber die grobe PLZ_ZONE_COORDINATES-Naeherung aufloesbar ist (in dieser
+    leeren Test-DB jede PLZ ohne postal_localities-Zeile), darf NICHT mehr
+    als gueltiges Umkreis-Zentrum akzeptiert werden - die Zonen-Naeherung
+    kann 100+ km danebenliegen (ein Punkt pro erster PLZ-Ziffer fuer ganz
+    Deutschland), das war vorher faelschlich als "aufgeloest" durchgegangen.
+    Frueheres Verhalten (200 + Treffer ueber den Zonen-Fallback) war genau
+    der Bug, den dieser Fix behebt."""
     candidate = _create_candidate(client, "Anna", city="Nirgendwostadt", postal_code="80331")
-    nearby = _create_client_company(client, "Kanzlei Muenchen", city="München")
+    _create_client_company(client, "Kanzlei Muenchen", city="München")
 
     response = client.get(f"/api/v1/clients/near-candidate/{candidate['id']}?radius_km=50")
 
-    assert response.status_code == 200, response.text
-    ids = [item["client"]["id"] for item in response.json()["in_radius"]]
-    assert ids == [nearby["id"]]
+    assert response.status_code == 422, response.text

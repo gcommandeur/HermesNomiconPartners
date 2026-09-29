@@ -78,7 +78,15 @@ class VacancyMatchingService:
     def find_matches(self, job_id: uuid.UUID, *, limit: int = 50) -> list[CandidateMatchRead]:
         job = self.jobs.get(job_id)
         job_tokens = _tokens(job.title, job.qualifications, job.description, *(job.must_have or []))
-        job_lat, job_lng = resolve_place_query(self.session, job.location)
+        job_lat, job_lng, job_precise = resolve_place_query(self.session, job.location)
+        if not job_precise:
+            # Nur ueber die grobe PLZ_ZONE_COORDINATES-Naeherung aufloesbar
+            # (kann 100+ km danebenliegen, siehe geo.py::resolve_place_query-
+            # Docstring) - fuer den Umkreis-Filter unten wie "gar nicht
+            # aufloesbar" behandeln, sonst koennten Kandidaten anhand eines
+            # strukturell falsch verorteten Vakanz-Zentrums faelschlich
+            # ausgeschlossen werden.
+            job_lat, job_lng = None, None
 
         candidates: Sequence[Candidate] = self.candidates.list(offset=0, limit=5000)
 
@@ -125,10 +133,21 @@ class VacancyMatchingService:
 
         in_radius: bool | None = None
         if job_lat is not None and job_lng is not None:
-            cand_lat, cand_lng = candidate_coordinates(
-                session, candidate.city, candidate.postal_code, str(candidate.id)
+            # apply_jitter=False: keine Kartenversatz-Streuung in einer
+            # Distanzberechnung fuer einen Umkreis-Filter (siehe geo.py::
+            # candidate_coordinates-Docstring). precise=False (nur ueber die
+            # grobe Zonen-Naeherung aufloesbar) zaehlt wie "gar nicht
+            # aufloesbar" - der Kandidat bleibt dann regulaer (ohne Regions-
+            # Bonus) im Ergebnis, statt anhand einer 100+ km ungenauen
+            # Koordinate faelschlich aus- oder eingeschlossen zu werden.
+            cand_lat, cand_lng, cand_precise = candidate_coordinates(
+                session,
+                candidate.city,
+                candidate.postal_code,
+                str(candidate.id),
+                apply_jitter=False,
             )
-            if cand_lat is not None and cand_lng is not None:
+            if cand_lat is not None and cand_lng is not None and cand_precise:
                 distance_km = haversine_km(job_lat, job_lng, cand_lat, cand_lng)
                 in_radius = distance_km <= job.search_radius_km
                 if in_radius:

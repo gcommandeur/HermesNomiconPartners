@@ -98,8 +98,13 @@ def _postal_locality_coordinates(
 
 
 def candidate_coordinates(
-    session: Session, city: str | None, postal_code: str | None, seed: str
-) -> tuple[float | None, float | None]:
+    session: Session,
+    city: str | None,
+    postal_code: str | None,
+    seed: str,
+    *,
+    apply_jitter: bool = True,
+) -> tuple[float | None, float | None, bool]:
     """Oeffentlicher Name fuer die frueher private _coordinates() - wird
     bereits ausserhalb dieses Moduls gebraucht (services/vacancy_matching.py
     fuer den Vakanz->Kandidaten-Umkreis-Filter, services/candidates.py fuer
@@ -109,17 +114,43 @@ def candidate_coordinates(
     hier den Hauptverwendungszweck.
 
     Reihenfolge seit der PLZ-Koordinaten-Erweiterung: zuerst exakte PLZ aus
-    postal_localities, erst wenn das nichts liefert Fallback auf die
-    groebere Stadt-/PLZ-Zonen-Naeherung."""
+    postal_localities, erst wenn das nichts liefert Fallback auf CITY_
+    COORDINATES, erst wenn auch das nichts liefert Fallback auf die grobe
+    PLZ_ZONE_COORDINATES-Naeherung (ein einziger Punkt pro erster PLZ-Ziffer
+    fuer ganz Deutschland - kann 100+ km danebenliegen, siehe Vorfall
+    "Illingen/Saar (PLZ 66557, Zone '6') faelschlich im 25km-Radius um
+    Wiesbaden").
+
+    Gibt zusaetzlich `precise` zurueck: True nur fuer die ersten beiden,
+    PLZ-/Stadt-genauen Quellen, False fuer den Zonen-Fallback (und wenn gar
+    keine Koordinate aufloesbar war, zusammen mit lat=lng=None). Ein harter
+    Umkreis-Filter (candidates.py::_list_filtered_by_radius, vacancy_
+    matching.py, clients.py::list_near_candidate) MUSS `precise=False`
+    genauso wie `None` behandeln (raus aus den Ergebnissen) - alles andere
+    wuerde Kandidaten anhand einer strukturell zu groben Naeherung ein-/
+    ausschliessen, kein Rundungsfehler.
+
+    `apply_jitter` steuert den deterministischen Kartenversatz (_jitter,
+    bis zu ~0.06 Grad ≈ 5-7km): nur fuer die Kartendarstellung sinnvoll
+    (GeoMappingService.results(), verhindert exakt uebereinanderliegende
+    Pins), in JEDER Distanzberechnung fuer einen harten Radius-Filter muss
+    er False sein - sonst kann derselbe Kandidat je nach Seed um bis zu 5-7km
+    verschoben werden und bei einem knappen Radius inkonsistent rein-/
+    rausfallen."""
     base = _postal_locality_coordinates(session, postal_code, city)
+    precise = base is not None
     if base is None:
         base = CITY_COORDINATES.get((city or "").strip().lower())
+        precise = base is not None
     if base is None and postal_code:
         base = PLZ_ZONE_COORDINATES.get(postal_code[:1])
+        precise = False
     if base is None:
-        return None, None
+        return None, None, False
+    if not apply_jitter:
+        return round(base[0], 5), round(base[1], 5), precise
     dx, dy = _jitter(seed)
-    return round(base[0] + dx, 5), round(base[1] + dy, 5)
+    return round(base[0] + dx, 5), round(base[1] + dy, 5), precise
 
 
 _DIGITS_RE = re.compile(r"\d+")
@@ -127,7 +158,7 @@ _DIGITS_RE = re.compile(r"\d+")
 
 def resolve_place_query(
     session: Session, query: str | None
-) -> tuple[float | None, float | None]:
+) -> tuple[float | None, float | None, bool]:
     """Resolves a free-text place query (city name, postal code, or 'PLZ Ort')
     to precise lat/lng, using postal_localities first and falling back to the
     same static city/PLZ-zone lookup as candidate_coordinates() above. Used
@@ -141,21 +172,31 @@ def resolve_place_query(
     Stadt auf der Karte nicht exakt uebereinander liegen - fuer ein Umkreis-
     Zentrum wuerde er die Suche unnoetig (und nicht nachvollziehbar) vom
     echten Stadt-Mittelpunkt wegverschieben.
+
+    Gibt zusaetzlich `precise` zurueck (siehe candidate_coordinates()
+    Docstring) - ein SUCHZENTRUM aus dem groben Zonen-Fallback ist fuer einen
+    harten Umkreis-Filter genauso ungeeignet wie eine unpraezise Kandidaten-/
+    Kanzlei-Koordinate: die Aufrufer in candidates.py/clients.py behandeln
+    `precise=False` daher wie "kein Zentrum aufloesbar" (0 Treffer statt
+    eines irrefuehrenden groben Zentrums).
     """
     cleaned = (query or "").strip()
     if not cleaned:
-        return None, None
+        return None, None, False
     digits = "".join(_DIGITS_RE.findall(cleaned))
     postal_code = digits if len(digits) >= 5 else None
     city_part = _DIGITS_RE.sub(" ", cleaned).strip(" ,-")
     base = _postal_locality_coordinates(session, postal_code, city_part or None)
+    precise = base is not None
     if base is None:
         base = CITY_COORDINATES.get(city_part.lower())
+        precise = base is not None
     if base is None and postal_code:
         base = PLZ_ZONE_COORDINATES.get(postal_code[:1])
+        precise = False
     if base is None:
-        return None, None
-    return round(base[0], 5), round(base[1], 5)
+        return None, None, False
+    return round(base[0], 5), round(base[1], 5), precise
 
 
 def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -207,7 +248,11 @@ class GeoMappingService:
                 "Ort unbekannt"
             )
             tags = [tag for tag in [client.focus, client.region] if tag]
-            lat, lng = candidate_coordinates(
+            # Kartendarstellung, kein Umkreis-Filter - Jitter bleibt hier
+            # bewusst aktiv (verhindert uebereinanderliegende Pins), die
+            # Praezision der Koordinatenquelle spielt fuer eine reine Anzeige
+            # keine Rolle.
+            lat, lng, _precise = candidate_coordinates(
                 self.session, client.city, client.postal_code, str(client.id)
             )
             items.append(

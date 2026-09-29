@@ -527,11 +527,16 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         offset: int,
         limit: int,
     ) -> tuple[Sequence[Candidate], int]:
-        center_lat, center_lng = resolve_place_query(self.session, plz_ort)
-        if center_lat is None or center_lng is None:
-            # Zentrum nicht aufloesbar (unbekannter Ort/PLZ) - 0 Treffer statt
-            # den Filter stillschweigend zu ignorieren, sonst wirkt er kaputt
-            # (Nutzer-Vorgabe) bzw. taeuscht ungefilterte Ergebnisse vor.
+        center_lat, center_lng, center_precise = resolve_place_query(self.session, plz_ort)
+        if center_lat is None or center_lng is None or not center_precise:
+            # Zentrum nicht aufloesbar ODER nur ueber die grobe PLZ_ZONE_
+            # COORDINATES-Naeherung aufloesbar (siehe geo.py::
+            # resolve_place_query-Docstring - die Zonen-Naeherung kann 100+ km
+            # danebenliegen, ist fuer einen harten Radius-Filter also genauso
+            # ungeeignet wie "gar nicht aufloesbar") - 0 Treffer statt den
+            # Filter stillschweigend zu ignorieren, sonst wirkt er kaputt
+            # (Nutzer-Vorgabe) bzw. taeuscht ungefilterte oder faelschlich
+            # irrefuehrende Ergebnisse vor.
             return [], 0
 
         # Alle UEBRIGEN Filter (status/rollen/search/owner/...) laufen weiter
@@ -559,15 +564,26 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
 
         in_radius: list[Candidate] = []
         for candidate in candidates:
-            cand_lat, cand_lng = candidate_coordinates(
-                self.session, candidate.city, candidate.postal_code, str(candidate.id)
+            # apply_jitter=False: eine Distanzberechnung fuer einen harten
+            # Radius-Filter darf nicht vom deterministischen Karten-Versatz
+            # (bis zu ~0.06 Grad ≈ 5-7km) beeinflusst werden, sonst koennte
+            # derselbe Kandidat bei einem knappen Radius inkonsistent rein-/
+            # rausfallen (siehe geo.py::candidate_coordinates-Docstring).
+            cand_lat, cand_lng, cand_precise = candidate_coordinates(
+                self.session,
+                candidate.city,
+                candidate.postal_code,
+                str(candidate.id),
+                apply_jitter=False,
             )
-            if cand_lat is None or cand_lng is None:
-                # Kandidat ohne aufloesbare Koordinaten faellt bei einem
-                # AKTIVEN Radius-Filter raus (anders als beim Vakanzen-
-                # Matching, wo das nur ein Bonus-Kriterium ist und
-                # unaufloesbare Kandidaten regulaer mitgezaehlt werden -
-                # hier ist es ein expliziter Filter, sonst wirkt er kaputt).
+            if cand_lat is None or cand_lng is None or not cand_precise:
+                # Kandidat ohne aufloesbare ODER nur ueber die grobe Zonen-
+                # Naeherung aufloesbare Koordinaten faellt bei einem AKTIVEN
+                # Radius-Filter raus (anders als beim Vakanzen-Matching, wo
+                # das nur ein Bonus-Kriterium ist und unaufloesbare
+                # Kandidaten regulaer mitgezaehlt werden - hier ist es ein
+                # expliziter Filter, sonst wirkt er kaputt bzw. liefert
+                # strukturell falsche Treffer wie beim Illingen/Saar-Vorfall).
                 continue
             if haversine_km(center_lat, center_lng, cand_lat, cand_lng) <= radius_km:
                 in_radius.append(candidate)

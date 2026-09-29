@@ -413,3 +413,40 @@ class TestRadiusFilter:
         response = client.get("/api/v1/candidates?plz_ort=München")
 
         assert response.json()["total_count"] == 2
+
+    def test_zone_fallback_only_candidate_is_excluded_even_if_apparently_close(
+        self, client: TestClient
+    ) -> None:
+        """Regressionstest fuer den Illingen/Saar-Vorfall: ein Kandidat, dessen
+        PLZ keine Zeile in postal_localities hat und dessen Ortsname nicht in
+        CITY_COORDINATES bekannt ist, faellt auf die grobe PLZ_ZONE_
+        COORDINATES-Naeherung zurueck (ein Punkt pro erster PLZ-Ziffer fuer
+        ganz Deutschland). PLZ_ZONE_COORDINATES["8"] liegt zufaellig fast
+        exakt auf CITY_COORDINATES["muenchen"] - genau diese Art "zufaellig
+        nah am echten Zentrum" fuehrte beim echten Vorfall (Zone "6" ≈
+        Frankfurt statt Illingen/Saar, ~150km entfernt) zu falschen Treffern.
+        Der Kandidat darf trotzdem NICHT als Treffer zaehlen."""
+        self._create(client, "Anna", city="Nirgendwostadt", postal_code="85999")
+
+        response = client.get("/api/v1/candidates?plz_ort=München&radius_km=500")
+
+        assert response.json()["items"] == []
+        assert response.json()["total_count"] == 0
+
+    def test_zone_fallback_only_search_center_returns_zero_not_false_matches(
+        self, client: TestClient
+    ) -> None:
+        """Ein Suchzentrum, das nur ueber die grobe Zonen-Naeherung aufloesbar
+        ist, darf keine falschen Treffer liefern - 0 Ergebnisse statt eines
+        irrefuehrend groben Zentrums (gleiche Regel wie ein komplett
+        unaufloesbares Zentrum, siehe test_unresolvable_center_returns_
+        zero_results_not_everyone)."""
+        self._create(client, "Anna", city="München")
+
+        # "66557" hat in diesem Test keine postal_localities-Zeile (leere
+        # Test-DB) und keinen bekannten Ortsnamen - loest nur ueber Zone "6"
+        # auf.
+        response = client.get("/api/v1/candidates?plz_ort=66557&radius_km=500")
+
+        assert response.json()["items"] == []
+        assert response.json()["total_count"] == 0
