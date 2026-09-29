@@ -29,7 +29,12 @@ from cc_crm.services.cv_extraction import (
     extract_candidate_fields,
     is_agency_letterhead,
 )
-from cc_crm.services.geo import candidate_coordinates, haversine_km, resolve_place_query
+from cc_crm.services.geo import (
+    candidate_coordinates,
+    haversine_km,
+    load_postal_locality_index,
+    resolve_place_query,
+)
 from cc_crm.services.profile_docx_export import persist_anonymous_profile_document
 from cc_crm.services.storage import delete_document_bytes
 
@@ -562,6 +567,14 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             limit=MAX_RADIUS_FILTER_CANDIDATES,
         )
 
+        # EINMAL fuer den gesamten Radius-Filter geladen statt pro Kandidat
+        # eine eigene DB-Query (N+1-Query-Problem, siehe geo.py::
+        # PostalLocalityIndex-Docstring - fiel erst auf, seit postal_
+        # localities in Produktion befuellt ist und diese Schleife
+        # ueberhaupt erreicht wird; bei ~2.900 Kandidaten waren das bis zu
+        # ~5.800 sequenzielle Roundtrips, der Request timete aus).
+        index = load_postal_locality_index(self.session)
+
         in_radius: list[Candidate] = []
         for candidate in candidates:
             # apply_jitter=False: eine Distanzberechnung fuer einen harten
@@ -575,6 +588,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
                 candidate.postal_code,
                 str(candidate.id),
                 apply_jitter=False,
+                index=index,
             )
             if cand_lat is None or cand_lng is None or not cand_precise:
                 # Kandidat ohne aufloesbare ODER nur ueber die grobe Zonen-

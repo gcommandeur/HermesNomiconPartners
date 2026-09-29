@@ -22,7 +22,13 @@ from cc_crm.models.job_mandate import JobMandate
 from cc_crm.schemas.candidate import CandidateRead
 from cc_crm.schemas.vacancy_matching import CandidateMatchRead
 from cc_crm.services.candidates import CandidateService
-from cc_crm.services.geo import candidate_coordinates, haversine_km, resolve_place_query
+from cc_crm.services.geo import (
+    PostalLocalityIndex,
+    candidate_coordinates,
+    haversine_km,
+    load_postal_locality_index,
+    resolve_place_query,
+)
 from cc_crm.services.jobs import JobMandateService
 from cc_crm.services.matching import _tokens
 
@@ -90,12 +96,18 @@ class VacancyMatchingService:
 
         candidates: Sequence[Candidate] = self.candidates.list(offset=0, limit=5000)
 
+        # EINMAL pro Matching-Lauf geladen statt pro Kandidat eine eigene
+        # DB-Query (N+1-Query-Problem, siehe geo.py::PostalLocalityIndex-
+        # Docstring) - nur, wenn ueberhaupt ein Vakanz-Zentrum aufloesbar
+        # ist, sonst wird _score() die Koordinate ohnehin nie nachschlagen.
+        index = load_postal_locality_index(self.session) if job_lat is not None else None
+
         matches: list[CandidateMatchRead] = []
         for candidate in candidates:
             if candidate.status in EXCLUDED_CANDIDATE_STATUSES:
                 continue
             score, reasons, in_radius = self._score(
-                self.session, job, job_tokens, job_lat, job_lng, candidate
+                self.session, job, job_tokens, job_lat, job_lng, candidate, index
             )
             if in_radius is False:
                 # Ausserhalb des Vakanz-Umkreises und beide Seiten hatten
@@ -122,6 +134,7 @@ class VacancyMatchingService:
         job_lat: float | None,
         job_lng: float | None,
         candidate: Candidate,
+        index: PostalLocalityIndex | None = None,
     ) -> tuple[int, list[str], bool | None]:
         score = 0
         reasons: list[str] = []
@@ -146,6 +159,7 @@ class VacancyMatchingService:
                 candidate.postal_code,
                 str(candidate.id),
                 apply_jitter=False,
+                index=index,
             )
             if cand_lat is not None and cand_lng is not None and cand_precise:
                 distance_km = haversine_km(job_lat, job_lng, cand_lat, cand_lng)

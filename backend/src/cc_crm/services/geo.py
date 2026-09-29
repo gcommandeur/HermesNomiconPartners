@@ -3,6 +3,7 @@ import math
 import re
 import uuid
 from collections import Counter
+from dataclasses import dataclass, field
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -113,8 +114,67 @@ def _jitter(seed: str, spread: float = 0.06) -> tuple[float, float]:
     return dx, dy
 
 
+@dataclass
+class PostalLocalityIndex:
+    """Einmal pro Request/Batch-Lauf ueber load_postal_locality_index()
+    geladener In-Memory-Index ueber die komplette postal_localities-Tabelle
+    (24k Zeilen, trivial klein fuer eine einzelne Query) - ersetzt N
+    Einzel-SELECTs pro Kandidat/Kanzlei in einer Radius-Such-Schleife
+    (candidates.py::_list_filtered_by_radius, clients.py::
+    list_near_candidate, vacancy_matching.py::find_matches) durch GENAU
+    EINE Query vorher. War bis zur Erstbefuellung von postal_localities in
+    Produktion unsichtbar (die Tabelle war leer, resolve_place_query() gab
+    fuer das Suchzentrum sofort None zurueck, die Kandidatenschleife wurde
+    also nie erreicht) - N+1-Query-Problem, ~2.900-5.800 sequenzielle
+    DB-Roundtrips fuer eine einzelne Suche, fuehrte zu Request-Timeouts.
+
+    Bildet exakt dieselbe Auswahllogik nach wie die Live-Query-Pfade in
+    _postal_locality_coordinates()/_locality_coordinates_by_name() (siehe
+    dort) - reines Performance-Refactoring, kein Verhaltensunterschied.
+    Optional: alle Aufrufer, die den Index nicht durchreichen (der einzelne
+    /geo-mapping/geocode-Endpoint, GeoMappingService.results() - laeuft nur
+    ueber Kanzleien, deutlich kleinere Menge, kein akuter Performance-Druck),
+    behalten unveraendert die Live-Query pro Aufruf."""
+
+    # PLZ -> Liste (locality, lat, lng) NUR fuer Zeilen MIT Koordinate,
+    # gleiche Auswahllogik wie bisher (siehe _postal_locality_coordinates).
+    by_postal_code: dict[str, list[tuple[str, float, float]]] = field(default_factory=dict)
+    # PLZ -> Ortsname der ERSTEN Zeile fuer diese PLZ, UNABHAENGIG von
+    # Koordinate - fuer den Fall "PLZ ohne eigene Koordinate, aber Ortsname
+    # bekannt" (siehe _postal_locality_coordinates).
+    by_postal_code_any_locality: dict[str, str] = field(default_factory=dict)
+    # kleingeschriebener Ortsname -> (lat, lng) der ERSTEN Zeile mit
+    # gesetzter Koordinate fuer diesen Namen (siehe
+    # _locality_coordinates_by_name).
+    by_locality_lower: dict[str, tuple[float, float]] = field(default_factory=dict)
+
+
+def load_postal_locality_index(session: Session) -> PostalLocalityIndex:
+    """Laedt die komplette postal_localities-Tabelle in EINER Query und
+    baut die drei Lookup-Strukturen aus PostalLocalityIndex auf - vor einer
+    Radius-Such-Schleife EINMAL aufrufen, nicht pro Kandidat/Kanzlei (siehe
+    PostalLocalityIndex-Docstring fuer das N+1-Problem, das das behebt)."""
+    index = PostalLocalityIndex()
+    rows = session.execute(
+        select(
+            PostalLocality.postal_code,
+            PostalLocality.locality,
+            PostalLocality.latitude,
+            PostalLocality.longitude,
+        )
+    ).all()
+    for postal_code, locality, lat, lng in rows:
+        index.by_postal_code_any_locality.setdefault(postal_code, locality)
+        if lat is None or lng is None:
+            continue
+        index.by_postal_code.setdefault(postal_code, []).append((locality, lat, lng))
+        locality_lower = locality.strip().lower()
+        index.by_locality_lower.setdefault(locality_lower, (lat, lng))
+    return index
+
+
 def _locality_coordinates_by_name(
-    session: Session, city_normalized: str
+    session: Session, city_normalized: str, *, index: PostalLocalityIndex | None = None
 ) -> tuple[float, float] | None:
     """Ortsnamen-Fallback ueber den `locality`-Index (siehe models/
     postal_locality.py) - case-insensitive exakter Namensvergleich (kein
@@ -127,7 +187,12 @@ def _locality_coordinates_by_name(
     Ortsnamen (typischerweise eine Nachbar-PLZ derselben Stadt) schon -
     fuer eine ohnehin nicht strassengenaue Umkreissuche eine voellig
     ausreichende Ersatzkoordinate (ueblicherweise <5km Unterschied), klar
-    praeziser als der PLZ_ZONE_COORDINATES-Fallback (100+ km moeglich)."""
+    praeziser als der PLZ_ZONE_COORDINATES-Fallback (100+ km moeglich).
+
+    `index`: siehe PostalLocalityIndex - wenn gesetzt, reines Dict-Lookup
+    (kein DB-Zugriff mehr), sonst die urspruengliche Live-Query."""
+    if index is not None:
+        return index.by_locality_lower.get(city_normalized)
     statement = select(PostalLocality).where(
         func.lower(PostalLocality.locality) == city_normalized,
         PostalLocality.latitude.is_not(None),
@@ -140,7 +205,11 @@ def _locality_coordinates_by_name(
 
 
 def _postal_locality_coordinates(
-    session: Session, postal_code: str | None, city: str | None = None
+    session: Session,
+    postal_code: str | None,
+    city: str | None = None,
+    *,
+    index: PostalLocalityIndex | None = None,
 ) -> tuple[float, float] | None:
     """Echte, PLZ-genaue Koordinaten aus postal_localities (siehe PLZ-
     Koordinaten-Erweiterung) - deutlich praeziser als die vorherige Stadt-/
@@ -164,37 +233,52 @@ def _postal_locality_coordinates(
     - Ist gar keine (gueltige) PLZ gegeben, aber ein Ortsname (reine
       Namenssuche, z.B. "Wiesbaden" ohne Ziffern), wird direkt per Namen
       gesucht statt die Tabelle komplett zu umgehen und sofort auf
-      CITY_COORDINATES/Zone zu springen."""
+      CITY_COORDINATES/Zone zu springen.
+
+    `index`: siehe PostalLocalityIndex/load_postal_locality_index() - wenn
+    gesetzt, reines Dict-Lookup statt Live-Query (fuer Radius-Such-Schleifen
+    ueber viele Kandidaten/Kanzleien, siehe deren Docstring)."""
     valid_postal_code = bool(postal_code and len(postal_code) == 5 and postal_code.isdigit())
     city_normalized = city.strip().lower() if city else None
 
     if valid_postal_code:
-        statement = select(PostalLocality).where(
-            PostalLocality.postal_code == postal_code,
-            PostalLocality.latitude.is_not(None),
-            PostalLocality.longitude.is_not(None),
-        )
-        rows = session.scalars(statement).all()
+        assert postal_code is not None  # fuer mypy - schon durch valid_postal_code geprueft
+        if index is not None:
+            rows = index.by_postal_code.get(postal_code, [])
+        else:
+            statement = select(PostalLocality).where(
+                PostalLocality.postal_code == postal_code,
+                PostalLocality.latitude.is_not(None),
+                PostalLocality.longitude.is_not(None),
+            )
+            rows = [
+                (row.locality, row.latitude, row.longitude)  # type: ignore[misc]
+                for row in session.scalars(statement).all()
+            ]
         if rows:
             if city_normalized:
-                for row in rows:
-                    if row.locality.strip().lower() == city_normalized:
-                        return row.latitude, row.longitude  # type: ignore[return-value]
-            first = rows[0]
-            return first.latitude, first.longitude  # type: ignore[return-value]
+                for locality, lat, lng in rows:
+                    if locality.strip().lower() == city_normalized:
+                        return lat, lng
+            _first_locality, first_lat, first_lng = rows[0]
+            return first_lat, first_lng
 
         # Exakte PLZ hat keine eigene Koordinate - falls kein Ortsname
         # mitgegeben wurde, ueber eine beliebige (auch koordinatenlose)
         # Zeile fuer diese PLZ herausfinden, wie der Ort heisst.
         if not city_normalized:
-            name_row = session.scalars(
-                select(PostalLocality).where(PostalLocality.postal_code == postal_code)
-            ).first()
-            if name_row is not None:
-                city_normalized = name_row.locality.strip().lower()
+            if index is not None:
+                any_locality = index.by_postal_code_any_locality.get(postal_code)
+            else:
+                name_row = session.scalars(
+                    select(PostalLocality).where(PostalLocality.postal_code == postal_code)
+                ).first()
+                any_locality = name_row.locality if name_row is not None else None
+            if any_locality is not None:
+                city_normalized = any_locality.strip().lower()
 
     if city_normalized:
-        return _locality_coordinates_by_name(session, city_normalized)
+        return _locality_coordinates_by_name(session, city_normalized, index=index)
 
     return None
 
@@ -206,6 +290,7 @@ def candidate_coordinates(
     seed: str,
     *,
     apply_jitter: bool = True,
+    index: PostalLocalityIndex | None = None,
 ) -> tuple[float | None, float | None, bool]:
     """Oeffentlicher Name fuer die frueher private _coordinates() - wird
     bereits ausserhalb dieses Moduls gebraucht (services/vacancy_matching.py
@@ -238,8 +323,13 @@ def candidate_coordinates(
     Pins), in JEDER Distanzberechnung fuer einen harten Radius-Filter muss
     er False sein - sonst kann derselbe Kandidat je nach Seed um bis zu 5-7km
     verschoben werden und bei einem knappen Radius inkonsistent rein-/
-    rausfallen."""
-    base = _postal_locality_coordinates(session, postal_code, city)
+    rausfallen.
+
+    `index`: siehe PostalLocalityIndex/load_postal_locality_index() - vor
+    einer Radius-Such-Schleife ueber viele Kandidaten/Kanzleien EINMAL
+    laden und hier durchreichen (kein DB-Zugriff mehr pro Aufruf), sonst
+    (Default) unveraendert die bisherige Live-Query pro Aufruf."""
+    base = _postal_locality_coordinates(session, postal_code, city, index=index)
     precise = base is not None
     if base is None:
         base = CITY_COORDINATES.get((city or "").strip().lower())
@@ -259,7 +349,10 @@ _DIGITS_RE = re.compile(r"\d+")
 
 
 def resolve_place_query(
-    session: Session, query: str | None
+    session: Session,
+    query: str | None,
+    *,
+    index: PostalLocalityIndex | None = None,
 ) -> tuple[float | None, float | None, bool]:
     """Resolves a free-text place query (city name, postal code, or 'PLZ Ort')
     to precise lat/lng, using postal_localities first and falling back to the
@@ -281,6 +374,11 @@ def resolve_place_query(
     Kanzlei-Koordinate: die Aufrufer in candidates.py/clients.py behandeln
     `precise=False` daher wie "kein Zentrum aufloesbar" (0 Treffer statt
     eines irrefuehrenden groben Zentrums).
+
+    `index`: siehe PostalLocalityIndex/load_postal_locality_index() - fuer
+    Aufrufer, die ohnehin schon einen Index fuer die nachfolgende
+    Radius-Schleife geladen haben (z.B. Suchzentrum-Aufloesung direkt davor),
+    hier durchreichen statt einer zusaetzlichen Live-Query.
     """
     cleaned = (query or "").strip()
     if not cleaned:
@@ -288,7 +386,7 @@ def resolve_place_query(
     digits = "".join(_DIGITS_RE.findall(cleaned))
     postal_code = digits if len(digits) >= 5 else None
     city_part = _DIGITS_RE.sub(" ", cleaned).strip(" ,-")
-    base = _postal_locality_coordinates(session, postal_code, city_part or None)
+    base = _postal_locality_coordinates(session, postal_code, city_part or None, index=index)
     precise = base is not None
     if base is None:
         base = CITY_COORDINATES.get(city_part.lower())

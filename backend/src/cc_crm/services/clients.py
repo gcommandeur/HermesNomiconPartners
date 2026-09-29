@@ -12,7 +12,12 @@ from cc_crm.repositories.clients import ClientCompanyRepository
 from cc_crm.repositories.recruiting import AuditLogRepository
 from cc_crm.schemas.client_company import ClientCompanyCreate, ClientCompanyUpdate
 from cc_crm.services.base import CrudService
-from cc_crm.services.geo import candidate_coordinates, haversine_km, resolve_place_query
+from cc_crm.services.geo import (
+    candidate_coordinates,
+    haversine_km,
+    load_postal_locality_index,
+    resolve_place_query,
+)
 from cc_crm.services.name_matching import (
     SIMILARITY_THRESHOLD,
     name_similarity,
@@ -75,6 +80,11 @@ class ClientCompanyService(CrudService[ClientCompany, ClientCompanyCreate, Clien
 
         clients, _ = self.clients.filtered(status=status, limit=MAX_RADIUS_FILTER_CLIENTS)
 
+        # EINMAL fuer die gesamte Umkreissuche geladen statt pro Kanzlei
+        # eine eigene DB-Query (N+1-Query-Problem, siehe geo.py::
+        # PostalLocalityIndex-Docstring).
+        index = load_postal_locality_index(self.session)
+
         in_radius: list[tuple[ClientCompany, float]] = []
         unresolved: list[ClientCompany] = []
         for client in clients:
@@ -82,7 +92,12 @@ class ClientCompanyService(CrudService[ClientCompany, ClientCompanyCreate, Clien
             # Distanzberechnung fuer einen harten Radius-Filter (siehe
             # geo.py::candidate_coordinates-Docstring).
             lat, lng, precise = candidate_coordinates(
-                self.session, client.city, client.postal_code, str(client.id), apply_jitter=False
+                self.session,
+                client.city,
+                client.postal_code,
+                str(client.id),
+                apply_jitter=False,
+                index=index,
             )
             if lat is None or lng is None or not precise:
                 unresolved.append(client)
