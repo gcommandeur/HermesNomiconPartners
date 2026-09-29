@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { mutate } from "swr";
-import { Check, Copy, RefreshCw, Users } from "lucide-react";
+import { CalendarDays, Check, Copy, RefreshCw, Users } from "lucide-react";
 import { PageHeader } from "@/components/crm/page-header";
 import { ErrorState } from "@/components/crm/error-state";
 import { ErrorBanner } from "@/components/crm/error-banner";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { Button } from "@/components/ui/button";
 import { apiBaseUrl, apiPost } from "@/lib/api/client";
 import { useCurrentUser } from "@/lib/api/hooks";
@@ -66,17 +66,13 @@ export default function EinstellungenPage() {
       <PageHeader eyebrow="Hermes" title="Einstellungen" />
 
       <div className="space-y-5">
-        <Card>
-          <CardHeader>
-            <div>
-              <h2 className="font-semibold">Kalender mit Outlook synchronisieren</h2>
-              <p className="mt-1 text-xs text-[#94A3B8]">
-                Persönlicher, schreibgeschützter Kalender-Feed - zeigt nur deine eigenen Termine
-                aus Hermes CRM (Interviews, Quali Calls, sonstige Termine).
-              </p>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <CollapsibleSection
+          title="Kalender mit Outlook synchronisieren"
+          description="Persönlicher, schreibgeschützter Kalender-Feed - zeigt nur deine eigenen Termine aus Hermes CRM (Interviews, Quali Calls, sonstige Termine)."
+          icon={<CalendarDays size={16} className="mt-0.5 text-[#69A7EA]" />}
+          defaultOpen
+        >
+          <div className="space-y-4">
             <div>
               <label className="mb-1 block text-xs text-[#94A3B8]">Deine persönliche Feed-URL</label>
               <div className="flex gap-2">
@@ -125,18 +121,17 @@ export default function EinstellungenPage() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleSection>
 
         {user.is_admin && (
-          <Card>
-            <CardHeader>
-              <div>
-                <h2 className="flex items-center gap-2 font-semibold"><Users size={16} />Administration</h2>
-                <p className="mt-1 text-xs text-[#94A3B8]">Nutzer, Postfächer und Protokolle verwalten.</p>
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
+          <CollapsibleSection
+            title="Administration"
+            description="Nutzer, Postfächer und Protokolle verwalten."
+            icon={<Users size={16} className="mt-0.5 text-[#69A7EA]" />}
+            defaultOpen={false}
+          >
+            <div className="flex flex-wrap gap-2">
               <Link href="/einstellungen/nutzer">
                 <Button size="sm" variant="outline">Nutzerverwaltung öffnen</Button>
               </Link>
@@ -152,8 +147,8 @@ export default function EinstellungenPage() {
               <Link href="/einstellungen/kpi-punkte">
                 <Button size="sm" variant="outline">KPI-Punkte öffnen</Button>
               </Link>
-            </CardContent>
-          </Card>
+            </div>
+          </CollapsibleSection>
         )}
       </div>
     </>
