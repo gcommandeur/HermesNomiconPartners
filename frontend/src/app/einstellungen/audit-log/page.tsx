@@ -10,6 +10,7 @@ import { formatDateTime } from "@/lib/utils";
 const ACTION_LABELS: Record<string, string> = {
   admin_fields_changed: "Admin-Recht/Status geändert",
   deleted: "Gelöscht",
+  updated: "Bearbeitet",
   password_reset: "Passwort zurückgesetzt",
   calendar_feed_token_rotated: "Kalender-Feed-Token neu generiert",
 };

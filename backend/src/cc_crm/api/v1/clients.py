@@ -147,9 +147,10 @@ def update_client(
     client_id: uuid.UUID,
     payload: ClientCompanyUpdate,
     session: DatabaseSession,
+    current_user: CurrentUser,
 ) -> ClientCompanyRead:
     return ClientCompanyRead.model_validate(
-        ClientCompanyService(session).update(client_id, payload)
+        ClientCompanyService(session).update(client_id, payload, current_user)
     )
 
 

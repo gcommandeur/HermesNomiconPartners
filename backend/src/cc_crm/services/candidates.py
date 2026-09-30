@@ -21,6 +21,7 @@ from cc_crm.repositories.notes import NoteRepository
 from cc_crm.repositories.operational import DocumentRepository
 from cc_crm.repositories.recruiting import AuditLogRepository
 from cc_crm.schemas.candidate import CandidateCreate, CandidateUpdate, CvExtractionSuggestion
+from cc_crm.services.audit_diff import changed_values
 from cc_crm.services.base import CrudService
 from cc_crm.services.clients import ClientCompanyService
 from cc_crm.services.cv_extraction import (
@@ -214,8 +215,21 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         was_cv_available = before.cv_available
         was_rollen_unbestaetigt = before.rollen_unbestaetigt
         old_rollen = list(before.rollen)
+        old_values, new_values = changed_values(before, payload.model_dump(exclude_unset=True))
 
         updated = super().update(entity_id, payload)
+        if new_values:
+            self.audit_logs.create(
+                {
+                    "entity_type": "candidate",
+                    "entity_id": updated.id,
+                    "action": "updated",
+                    "changed_by": current_user.email if current_user else None,
+                    "old_values": old_values,
+                    "new_values": new_values,
+                }
+            )
+            self.session.commit()
         if updated.cv_available and not was_cv_available and updated.cv_in_recorded_at is None:
             updated.cv_in_recorded_at = datetime.now(UTC)
             self.session.commit()

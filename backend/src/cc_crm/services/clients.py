@@ -11,6 +11,7 @@ from cc_crm.models.user import User
 from cc_crm.repositories.clients import ClientCompanyRepository
 from cc_crm.repositories.recruiting import AuditLogRepository
 from cc_crm.schemas.client_company import ClientCompanyCreate, ClientCompanyUpdate
+from cc_crm.services.audit_diff import changed_values
 from cc_crm.services.base import CrudService
 from cc_crm.services.geo import (
     candidate_coordinates,
@@ -108,6 +109,29 @@ class ClientCompanyService(CrudService[ClientCompany, ClientCompanyCreate, Clien
 
         in_radius.sort(key=lambda pair: pair[1])
         return in_radius, unresolved
+
+    def update(
+        self,
+        entity_id: uuid.UUID,
+        payload: ClientCompanyUpdate,
+        current_user: User | None = None,
+    ) -> ClientCompany:
+        before = self.get(entity_id)
+        old_values, new_values = changed_values(before, payload.model_dump(exclude_unset=True))
+        updated = super().update(entity_id, payload)
+        if new_values:
+            self.audit_logs.create(
+                {
+                    "entity_type": "client_company",
+                    "entity_id": updated.id,
+                    "action": "updated",
+                    "changed_by": current_user.email if current_user else None,
+                    "old_values": old_values,
+                    "new_values": new_values,
+                }
+            )
+            self.session.commit()
+        return updated
 
     def delete(self, entity_id: uuid.UUID, current_user: User | None = None) -> None:
         # Loeschung ist sicherheits-/nachvollziehbarkeitsrelevant (Punkt 2 des

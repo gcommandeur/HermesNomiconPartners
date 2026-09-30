@@ -23,6 +23,7 @@ from cc_crm.schemas.submission import (
     CandidateSubmissionUpdate,
     ClosingScoreInput,
 )
+from cc_crm.services.audit_diff import changed_values
 from cc_crm.services.base import CrudService
 from cc_crm.services.candidates import CandidateService
 from cc_crm.services.clients import ClientCompanyService
@@ -240,9 +241,11 @@ class CandidateSubmissionService(
         self,
         entity_id: uuid.UUID,
         payload: CandidateSubmissionUpdate,
+        current_user: User | None = None,
     ) -> CandidateSubmission:
         submission = self.get(entity_id)
         values = payload.model_dump(exclude_unset=True)
+        old_values, new_values = changed_values(submission, values)
         client_company_id = values.get("client_company_id", submission.client_company_id)
         if "client_company_id" in values and client_company_id is not None:
             self.clients.get(client_company_id)
@@ -255,6 +258,17 @@ class CandidateSubmissionService(
         values["last_activity_at"] = now
         try:
             updated = self.submissions.update(submission, values)
+            if new_values:
+                self.audit_logs.create(
+                    {
+                        "entity_type": "candidate_submission",
+                        "entity_id": updated.id,
+                        "action": "updated",
+                        "changed_by": current_user.email if current_user else None,
+                        "old_values": old_values,
+                        "new_values": new_values,
+                    }
+                )
             self.session.commit()
             return updated
         except Exception:

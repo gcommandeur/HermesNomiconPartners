@@ -107,9 +107,10 @@ def update_submission(
     submission_id: uuid.UUID,
     payload: CandidateSubmissionUpdate,
     session: DatabaseSession,
+    current_user: CurrentUser,
 ) -> CandidateSubmissionRead:
     return CandidateSubmissionRead.model_validate(
-        CandidateSubmissionService(session).update(submission_id, payload)
+        CandidateSubmissionService(session).update(submission_id, payload, current_user)
     )
 
 
