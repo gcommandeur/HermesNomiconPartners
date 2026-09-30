@@ -124,6 +124,26 @@ export async function getSubmissions() {
   return fetchAllPages<CandidateSubmission>("/submissions", demoSubmissions);
 }
 
+/** Nur die Prozesse eines Kandidaten (serverseitiger candidate_id-Filter) -
+ * die Kandidatendetailseite lud vorher ALLE Prozesse und filterte danach. */
+export async function getSubmissionsForCandidate(candidateId: string) {
+  return fetchAllPages<CandidateSubmission>(
+    `/submissions?candidate_id=${candidateId}`,
+    demoSubmissions.filter((item) => item.candidate_id === candidateId),
+  );
+}
+
+/** Laedt gezielt die angegebenen Kanzleien einzeln statt des kompletten
+ * Kanzleibestands (vorher mehrere tausend Datensaetze nur fuer ein paar
+ * Namen auf der Kandidatendetailseite). */
+export async function getClientsByIds(clientIds: string[]): Promise<ClientCompany[]> {
+  const unique = [...new Set(clientIds)];
+  const results = await Promise.all(
+    unique.map((id) => apiGet<ClientCompany | null>(`/clients/${id}`, null)),
+  );
+  return results.flatMap((result) => (result.data ? [result.data] : []));
+}
+
 export async function getPriorityView() {
   return apiGet<CandidateSubmission[]>("/submissions/priority-view", []);
 }

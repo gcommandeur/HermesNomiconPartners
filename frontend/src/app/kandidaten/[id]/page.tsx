@@ -5,10 +5,10 @@ import {
   getActivitiesForCandidate,
   getCandidate,
   getCandidateHistory,
-  getClients,
+  getClientsByIds,
   getDocumentsForOwner,
   getNotesForCandidate,
-  getSubmissions,
+  getSubmissionsForCandidate,
   getTasksForCandidate,
 } from "@/lib/api/queries";
 import { StatusPill } from "@/components/crm/status-pill";
@@ -54,10 +54,13 @@ export default async function CandidateDetailPage({
     : from === "prozesse"
       ? { href: "/prozesse", label: "Zurück zu Prozesse" }
       : { href: "/kandidaten", label: "Zur Kandidatenliste" };
-  const [result, submissionsResult, clientsResult, activitiesResult, tasksResult, documentsResult, notesResult, historyResult] = await Promise.all([
+  // Nur die Prozesse DIESES Kandidaten und danach nur die darin referenzierten
+  // Kanzleien laden - vorher wurden hier ALLE Prozesse und ALLE Kanzleien
+  // (mehrere tausend, seitenweise nacheinander) geladen, nur um ein paar
+  // Kanzleinamen anzuzeigen (~10s Ladezeit).
+  const [result, submissionsResult, activitiesResult, tasksResult, documentsResult, notesResult, historyResult] = await Promise.all([
     getCandidate(id),
-    getSubmissions(),
-    getClients(),
+    getSubmissionsForCandidate(id),
     getActivitiesForCandidate(id),
     getTasksForCandidate(id),
     getDocumentsForOwner("candidate", id),
@@ -68,12 +71,15 @@ export default async function CandidateDetailPage({
   if (!candidate) notFound();
 
   const submissions = submissionsResult.data.filter((item) => item.candidate_id === candidate.id);
+  const clients = await getClientsByIds(
+    submissions.flatMap((item) => (item.client_company_id ? [item.client_company_id] : [])),
+  );
   const activities = activitiesResult.data;
   const tasks = tasksResult.data;
   const documents = documentsResult.data;
   const notes = notesResult.data;
   const history = historyResult.data;
-  const clientName = (clientId: string | null) => clientId ? (clientsResult.data.find((client) => client.id === clientId)?.name ?? "Kanzlei") : "Kanzlei offen";
+  const clientName = (clientId: string | null) => clientId ? (clients.find((client) => client.id === clientId)?.name ?? "Kanzlei") : "Kanzlei offen";
   const anonymousProfile = candidate.short_profile ?? [
     `${candidate.job_title ?? "Kandidat/in"} mit Schwerpunkt ${candidate.summary ?? "Steuern / Beratung"}.`,
     `Region: ${candidate.city ?? candidate.postal_code ?? "offen"}.`,
@@ -154,7 +160,7 @@ export default async function CandidateDetailPage({
 
       {submissions.length > 0 && (
         <div className="mb-6 space-y-4 border-b border-white/10 pb-6">
-          <CandidateSubmissionStages submissions={submissions} clients={clientsResult.data} />
+          <CandidateSubmissionStages submissions={submissions} clients={clients} />
         </div>
       )}
 

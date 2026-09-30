@@ -709,6 +709,7 @@ export function CandidatesTable() {
         candidate={quickViewCandidate}
         onClose={() => setQuickViewCandidateId(null)}
         backTo="kandidaten"
+        backHref={searchParams.toString() ? `/kandidaten?${searchParams.toString()}` : "/kandidaten"}
       />
     </>
   );

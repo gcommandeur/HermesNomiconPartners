@@ -14,6 +14,7 @@ export function CandidateQuickViewDrawer({
   candidate,
   onClose,
   backTo = "prozesse",
+  backHref,
 }: {
   candidate: Candidate | null;
   onClose: () => void;
@@ -22,8 +23,15 @@ export function CandidateQuickViewDrawer({
    * Default "prozesse" haelt den bestehenden Aufrufer (submission-views.tsx)
    * unveraendert, candidates-table.tsx uebergibt "kandidaten". */
   backTo?: string;
+  /** Voller Rueckweg inkl. Filter-Query (z.B. "/kandidaten?plz=41199&radius=25")
+   * - wird als `back` an die Detailseite durchgereicht, damit "Zur
+   * Kandidatenliste" die gefilterte Liste wiederherstellt. */
+  backHref?: string;
 }) {
   if (!candidate) return null;
+  const profileHref = `/kandidaten/${candidate.id}?from=${backTo}${
+    backHref ? `&back=${encodeURIComponent(backHref)}` : ""
+  }`;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -82,7 +90,7 @@ export function CandidateQuickViewDrawer({
 
         <div className="mt-auto flex justify-end border-t border-white/10 pt-4">
           <Link
-            href={`/kandidaten/${candidate.id}?from=${backTo}`}
+            href={profileHref}
             className="inline-flex items-center gap-1.5 rounded-md border border-[#1F5FA8]/40 bg-[#153A66]/45 px-3 py-1.5 text-xs text-[#c5dcfa] hover:bg-[#153A66]/70"
           >
             Vollständiges Profil öffnen <ArrowUpRight size={13} />
