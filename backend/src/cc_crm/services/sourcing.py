@@ -13,6 +13,7 @@ import re
 import time
 import unicodedata
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
 from difflib import SequenceMatcher
 
@@ -32,6 +33,13 @@ from cc_crm.schemas.sourcing import SourcingLeadCreate, SourcingRunResult
 from cc_crm.services import kanzlei_team_scrape, steuerberater_verzeichnis, wpk_berufsregister
 from cc_crm.services.candidates import CandidateService
 from cc_crm.services.cv_extraction import derive_rollen_from_text
+from cc_crm.services.geo import (
+    candidate_coordinates,
+    haversine_km,
+    load_postal_locality_index,
+    postal_codes_within_radius,
+    resolve_place_query,
+)
 from cc_crm.services.name_matching import (
     SIMILARITY_THRESHOLD,
     name_similarity,
@@ -164,6 +172,32 @@ def scan_team_pages_in_background(client_company_ids: list[uuid.UUID], run_id: u
     Kanzlei wird nicht mitten drin abgebrochen, erst die naechste Iteration
     startet nicht mehr. DB-gestuetzt statt In-Memory-Flag, da Stop-Kommando
     und Hintergrund-Lauf in unterschiedlichen Sessions/Requests laufen."""
+    _process_in_background(
+        run_id,
+        client_company_ids,
+        lambda service, company_id: service.run_kanzlei_team_scrape(company_id),
+    )
+
+
+def search_areas_in_background(
+    source_type: SourcingSourceType, postal_codes: list[str], run_id: uuid.UUID
+) -> None:
+    """Umkreissuche der Verzeichnis-Quellen: eine Anfrage pro PLZ im Umkreis,
+    mit demselben Fortschritt/Stop-Mechanismus wie der Team-Scan."""
+
+    def step(service: "SourcingService", postal_code: str) -> SourcingRunResult:
+        if source_type == SourcingSourceType.STEUERBERATERVERZEICHNIS:
+            return service.run_steuerberater_search(postal_code)
+        return service.run_wpk_search(postal_code)
+
+    _process_in_background(run_id, postal_codes, step)
+
+
+def _process_in_background[T](
+    run_id: uuid.UUID,
+    items: list[T],
+    step: Callable[["SourcingService", T], SourcingRunResult],
+) -> None:
     from cc_crm.infrastructure.database.session import SessionLocal
 
     with SessionLocal() as session:
@@ -171,7 +205,7 @@ def scan_team_pages_in_background(client_company_ids: list[uuid.UUID], run_id: u
         run = session.get(SourcingRun, run_id)
         if run is None:
             return
-        for index, company_id in enumerate(client_company_ids):
+        for index, item in enumerate(items):
             if index > 0:
                 time.sleep(DIRECTORY_REQUEST_PAUSE_SECONDS)
             session.refresh(run)
@@ -180,7 +214,7 @@ def scan_team_pages_in_background(client_company_ids: list[uuid.UUID], run_id: u
                 run.finished_at = datetime.now(UTC)
                 session.commit()
                 return
-            result = service.run_kanzlei_team_scrape(company_id)
+            result = step(service, item)
             run.processed = index + 1
             run.leads_created += result.created
             session.commit()
@@ -499,6 +533,55 @@ class SourcingService:
                 time.sleep(DIRECTORY_REQUEST_PAUSE_SECONDS)
             _merge_results(total, self.run_kanzlei_team_scrape(company_id))
         return total
+
+    def _resolve_center(self, center: str) -> tuple[float, float]:
+        lat, lng, precise = resolve_place_query(self.session, center)
+        # Nur ueber den groben PLZ-Zonen-Fallback aufloesbar zaehlt wie "gar
+        # nicht" (kann 100+ km danebenliegen, siehe geo.py).
+        if lat is None or lng is None or not precise:
+            raise BusinessRuleError(f"'{center}' ist als Umkreis-Zentrum nicht auflösbar.")
+        return lat, lng
+
+    def postal_codes_around(self, center: str, radius_km: int) -> list[str]:
+        lat, lng = self._resolve_center(center)
+        postal_codes = postal_codes_within_radius(
+            load_postal_locality_index(self.session), lat, lng, radius_km
+        )
+        if not postal_codes:
+            raise BusinessRuleError(f"Keine PLZ im Umkreis von {radius_km} km um '{center}'.")
+        return postal_codes
+
+    def company_ids_around(self, center: str, radius_km: int) -> list[uuid.UUID]:
+        """Kanzleien mit Website im Umkreis, naechste zuerst. Kanzleien ohne
+        praezise aufloesbare PLZ/Ort fallen raus (gleiche Regel wie
+        clients.py::list_near_candidate)."""
+        lat, lng = self._resolve_center(center)
+        index = load_postal_locality_index(self.session)
+        companies = self.session.scalars(
+            select(ClientCompany).where(
+                ClientCompany.website.isnot(None), ClientCompany.website != ""
+            )
+        ).all()
+        in_radius: list[tuple[float, uuid.UUID]] = []
+        for company in companies:
+            company_lat, company_lng, precise = candidate_coordinates(
+                self.session,
+                company.city,
+                company.postal_code,
+                str(company.id),
+                apply_jitter=False,
+                index=index,
+            )
+            if company_lat is None or company_lng is None or not precise:
+                continue
+            distance = haversine_km(lat, lng, company_lat, company_lng)
+            if distance <= radius_km:
+                in_radius.append((distance, company.id))
+        if not in_radius:
+            raise BusinessRuleError(
+                f"Keine Kanzlei mit Website im Umkreis von {radius_km} km um '{center}'."
+            )
+        return [company_id for _, company_id in sorted(in_radius)]
 
     def _record_lead_result(self, result: SourcingRunResult, payload: SourcingLeadCreate) -> None:
         lead = self.create_lead(payload)

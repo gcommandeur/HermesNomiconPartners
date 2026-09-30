@@ -26,31 +26,36 @@ const SOURCE_OPTIONS: { value: RunSource; label: string; hint: string }[] = [
     value: "steuerberaterverzeichnis",
     label: "Steuerberaterverzeichnis",
     hint:
-      "PLZ oder Orte (kommagetrennt, max. 20) – findet alle dort bestellten Steuerberater:innen " +
-      "im amtlichen Verzeichnis der Bundessteuerberaterkammer.",
+      "PLZ oder Orte (kommagetrennt, max. 20) – oder eine PLZ/ein Ort plus Umkreis. Findet alle " +
+      "dort bestellten Steuerberater:innen im amtlichen Verzeichnis der Bundessteuerberaterkammer.",
   },
   {
     value: "wpk_berufsregister",
     label: "WPK-Berufsregister",
     hint:
-      "PLZ oder Orte (kommagetrennt, max. 20) – findet Wirtschaftsprüfer:innen und vereidigte " +
-      "Buchprüfer:innen im öffentlichen Berufsregister der Wirtschaftsprüferkammer.",
+      "PLZ oder Orte (kommagetrennt, max. 20) – oder eine PLZ/ein Ort plus Umkreis. Findet " +
+      "Wirtschaftsprüfer:innen und vereidigte Buchprüfer:innen im Berufsregister der WPK.",
   },
   {
     value: "kanzlei_team_page",
     label: "Kanzlei-Team-Seiten",
     hint:
-      "Durchsucht die Websites aller im CRM erfassten Kanzleien mit hinterlegter Website nach " +
-      "Team-/Mitarbeiter-Seiten und extrahiert die dort genannten Personen (KI-Extraktion). " +
-      "Läuft im Hintergrund – gefundene Leads erscheinen nach und nach in der Liste.",
+      "Durchsucht die Websites der im CRM erfassten Kanzleien nach Team-/Mitarbeiter-Seiten und " +
+      "extrahiert die dort genannten Personen (KI-Extraktion) – ohne Umkreis alle Kanzleien, mit " +
+      "Umkreis nur die Kanzleien rund um die PLZ/den Ort.",
   },
 ];
+
+// Max. 50 km: die Verzeichnisse kennen nur exakte PLZ, 50 km sind bereits
+// bis ~400 Einzelanfragen (~15 min im Hintergrund).
+const RADIUS_OPTIONS = ["10", "25", "50"];
 
 /** Startet einen manuellen Sourcing-Lauf (kein Cron - bewusst nur per
  * Button, siehe Backend POST /sourcing/run). */
 export function SourcingRunForm() {
   const [source, setSource] = useState<RunSource>("steuerberaterverzeichnis");
   const [input, setInput] = useState("");
+  const [radiusKm, setRadiusKm] = useState("");
   const [running, setRunning] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [result, setResult] = useState<SourcingRunResult | null>(null);
@@ -68,12 +73,17 @@ export function SourcingRunForm() {
   const activeRun = statusData?.data?.status === "running" ? statusData.data : null;
 
   const isTeamScrape = source === "kanzlei_team_page";
+  const isRadius = radiusKm !== "";
   const areas = input
     .split(/[,;\n]/)
     .map((value) => value.trim())
     .filter(Boolean);
-  const canRun = !running && !activeRun && (isTeamScrape || (areas.length > 0 && areas.length <= 20));
+  const inputValid = isRadius
+    ? areas.length === 1
+    : isTeamScrape || (areas.length > 0 && areas.length <= 20);
+  const canRun = !running && !activeRun && inputValid;
   const selectedOption = SOURCE_OPTIONS.find((option) => option.value === source);
+  const runUnit = activeRun?.source_type === "kanzlei_team_page" ? "Kanzleien" : "PLZ";
 
   async function handleStop() {
     setStopping(true);
@@ -94,13 +104,16 @@ export function SourcingRunForm() {
     setError(null);
     setResult(null);
     try {
-      const body = isTeamScrape
-        ? { source_type: source, scan_all_companies: true }
-        : { source_type: source, plz_or_ort: areas };
-      // Verlaengertes Timeout: der Verzeichnis-Lauf ist synchron und macht
-      // pro Gebiet einen externen Request mit hoeflicher Pause (~2s/Gebiet,
-      // max. 20 Gebiete) - das Standard-8s-Timeout von apiPost waere zu
-      // knapp. Der Team-Scan antwortet dagegen sofort (Background-Task).
+      const body = isRadius
+        ? { source_type: source, center: areas[0], radius_km: Number(radiusKm) }
+        : isTeamScrape
+          ? { source_type: source, scan_all_companies: true }
+          : { source_type: source, plz_or_ort: areas };
+      // Verlaengertes Timeout: der Verzeichnis-Lauf ohne Umkreis ist synchron
+      // und macht pro Gebiet einen externen Request mit hoeflicher Pause
+      // (~2s/Gebiet, max. 20 Gebiete) - das Standard-8s-Timeout von apiPost
+      // waere zu knapp. Umkreissuche und Team-Scan antworten dagegen sofort
+      // (Background-Task).
       const runResult = await apiPost<SourcingRunResult>("/sourcing/run", body, 120_000);
       setResult(runResult);
       // Leads-Liste sofort aktualisieren (gleicher SWR-Key wie in
@@ -121,7 +134,8 @@ export function SourcingRunForm() {
         {activeRun && (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[#1F5FA8]/40 bg-[#1F5FA8]/15 px-2.5 py-0.5 text-[11px] font-medium text-[#8FB4E3]">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#8FB4E3]" />
-            Läuft: {activeRun.processed}/{activeRun.total} Kanzleien
+            Läuft: {activeRun.processed}/{activeRun.total} {runUnit}
+            {activeRun.leads_created > 0 && ` · ${activeRun.leads_created} neue Leads`}
             {activeRun.stop_requested && " · wird gestoppt…"}
           </span>
         )}
@@ -144,15 +158,32 @@ export function SourcingRunForm() {
             </option>
           ))}
         </select>
-        {!isTeamScrape && (
+        {(!isTeamScrape || isRadius) && (
           <input
             value={input}
             disabled={!!activeRun}
             onChange={(event) => setInput(event.target.value)}
-            placeholder="z.B. 70173, 80331, Würzburg"
+            placeholder={isRadius ? "PLZ oder Ort, z.B. 70191" : "z.B. 70173, 80331, Würzburg"}
             className="h-9 w-full max-w-md rounded-md border border-white/15 bg-white/5 px-3 text-sm text-[#D8DADF] placeholder:text-[#5b6167] focus:outline-none focus:ring-2 focus:ring-[#1F5FA8]/30 disabled:opacity-50"
           />
         )}
+        <select
+          value={radiusKm}
+          disabled={!!activeRun}
+          onChange={(event) => {
+            setRadiusKm(event.target.value);
+            setResult(null);
+            setError(null);
+          }}
+          className="h-9 rounded-md border border-white/15 bg-[#0D1B2E] px-2 text-sm text-[#D8DADF] focus:outline-none focus:ring-2 focus:ring-[#1F5FA8]/30 disabled:opacity-50"
+        >
+          <option value="">{isTeamScrape ? "Alle Kanzleien" : "Kein Umkreis"}</option>
+          {RADIUS_OPTIONS.map((km) => (
+            <option key={km} value={km}>
+              Umkreis {km} km
+            </option>
+          ))}
+        </select>
         {activeRun ? (
           <Button
             size="sm"
@@ -166,21 +197,32 @@ export function SourcingRunForm() {
         ) : (
           <Button size="sm" disabled={!canRun} onClick={() => void handleRun()}>
             <Play size={14} />
-            {running ? "Lauf läuft…" : isTeamScrape ? "Alle Kanzleien scannen" : "Lauf starten"}
+            {running
+              ? "Lauf läuft…"
+              : isRadius
+                ? "Umkreissuche starten"
+                : isTeamScrape
+                  ? "Alle Kanzleien scannen"
+                  : "Lauf starten"}
           </Button>
         )}
       </div>
-      {areas.length > 20 && !isTeamScrape && (
+      {!isRadius && areas.length > 20 && !isTeamScrape && (
         <p className="mt-2 text-xs text-[#e4aeb4]">Maximal 20 Gebiete pro Lauf.</p>
+      )}
+      {isRadius && areas.length > 1 && (
+        <p className="mt-2 text-xs text-[#e4aeb4]">Für die Umkreissuche genau eine PLZ oder einen Ort angeben.</p>
       )}
       <ErrorBanner message={error} className="mt-3" />
       {result && (
         <div className="mt-3 rounded-md border border-[#1F5FA8]/30 bg-[#1F5FA8]/10 p-3 text-xs text-[#CBD5E1]">
           {result.background_started > 0 ? (
             <>
-              Team-Scan für {result.background_started} Kanzleien mit Website im Hintergrund
-              gestartet – gefundene Leads erscheinen nach und nach in der Liste unten
-              (Seite später neu laden).
+              {isTeamScrape
+                ? `Team-Scan für ${result.background_started} Kanzleien mit Website`
+                : `Umkreissuche über ${result.background_started} PLZ`}{" "}
+              im Hintergrund gestartet – gefundene Leads erscheinen nach und nach in der Liste
+              unten (Seite später neu laden).
             </>
           ) : (
             <>

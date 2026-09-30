@@ -41,16 +41,36 @@ class SourcingRunRequest(BaseModel):
     # ... oder alle erfassten Kanzleien mit Website (als Background-Task,
     # Ergebnis erscheint fortlaufend in der Lead-Liste).
     scan_all_companies: bool = False
+    # Umkreissuche fuer JEDE Quelle (Alternative zu den Feldern oben):
+    # Verzeichnis-Quellen fragen alle PLZ im Umkreis ab, der Team-Scan
+    # nimmt nur Kanzleien im Umkreis. Laeuft immer im Hintergrund, da schon
+    # 25 km je nach Region 70-150 PLZ bedeuten. Max. 50 km (bis ~400 PLZ,
+    # ~15 min).
+    center: str | None = Field(default=None, min_length=1, max_length=120)
+    radius_km: int | None = Field(default=None, ge=1, le=50)
+
+    @property
+    def is_radius_search(self) -> bool:
+        return self.center is not None and self.radius_km is not None
 
     @model_validator(mode="after")
     def _validate_source_params(self) -> Self:
+        if (self.center is None) != (self.radius_km is None):
+            raise ValueError("center und radius_km nur gemeinsam angeben")
         if self.source_type in _AREA_SOURCES:
-            if not self.plz_or_ort:
-                raise ValueError("plz_or_ort ist fuer diese Quelle erforderlich")
-        elif self.source_type == SourcingSourceType.KANZLEI_TEAM_PAGE:
-            if not self.client_company_ids and not self.scan_all_companies:
+            if not self.plz_or_ort and not self.is_radius_search:
                 raise ValueError(
-                    "kanzlei_team_page braucht client_company_ids oder scan_all_companies"
+                    "plz_or_ort oder center+radius_km ist fuer diese Quelle erforderlich"
+                )
+        elif self.source_type == SourcingSourceType.KANZLEI_TEAM_PAGE:
+            if (
+                not self.client_company_ids
+                and not self.scan_all_companies
+                and not self.is_radius_search
+            ):
+                raise ValueError(
+                    "kanzlei_team_page braucht client_company_ids, scan_all_companies "
+                    "oder center+radius_km"
                 )
         else:
             # BRAK-Anwaltsverzeichnis: Listen-Suche waere zwar moeglich, wird

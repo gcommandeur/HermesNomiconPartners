@@ -399,6 +399,20 @@ def resolve_place_query(
     return round(base[0], 5), round(base[1], 5), precise
 
 
+def postal_codes_within_radius(
+    index: PostalLocalityIndex, center_lat: float, center_lng: float, radius_km: float
+) -> list[str]:
+    """Alle PLZ mit eigener Koordinate im Umkreis, naechste zuerst - fuer
+    Quellen ohne eigene Umkreissuche (Steuerberaterverzeichnis, WPK), die
+    nur exakt eine PLZ pro Anfrage kennen. Nimmt pro PLZ dieselbe erste
+    Koordinatenzeile wie _postal_locality_coordinates()."""
+    distances = [
+        (haversine_km(center_lat, center_lng, rows[0][1], rows[0][2]), postal_code)
+        for postal_code, rows in index.by_postal_code.items()
+    ]
+    return [postal_code for distance, postal_code in sorted(distances) if distance <= radius_km]
+
+
 def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """Grosskreis-Distanz in km zwischen zwei Koordinaten - gleiche Formel wie
     haversineKm() in frontend/geo-results-table.tsx, hier serverseitig fuer

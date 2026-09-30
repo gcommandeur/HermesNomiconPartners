@@ -14,7 +14,11 @@ from cc_crm.schemas.sourcing import (
     SourcingRunResult,
     SourcingRunStatusRead,
 )
-from cc_crm.services.sourcing import SourcingService, scan_team_pages_in_background
+from cc_crm.services.sourcing import (
+    SourcingService,
+    scan_team_pages_in_background,
+    search_areas_in_background,
+)
 
 router = APIRouter(prefix="/sourcing")
 
@@ -32,6 +36,19 @@ def run_sourcing(
     da hunderte Kanzlei-Websites + LLM-Aufrufe jeden HTTP-Timeout sprengen -
     die Antwort meldet dann nur die Anzahl gestarteter Kanzlei-Scans."""
     service = SourcingService(session)
+    if payload.is_radius_search:
+        assert payload.center is not None and payload.radius_km is not None
+        if payload.source_type == SourcingSourceType.KANZLEI_TEAM_PAGE:
+            company_ids = service.company_ids_around(payload.center, payload.radius_km)
+            run = service.start_run(payload.source_type, total=len(company_ids))
+            background_tasks.add_task(scan_team_pages_in_background, company_ids, run.id)
+            return SourcingRunResult(background_started=len(company_ids), run_id=run.id)
+        postal_codes = service.postal_codes_around(payload.center, payload.radius_km)
+        run = service.start_run(payload.source_type, total=len(postal_codes))
+        background_tasks.add_task(
+            search_areas_in_background, payload.source_type, postal_codes, run.id
+        )
+        return SourcingRunResult(background_started=len(postal_codes), run_id=run.id)
     if payload.source_type == SourcingSourceType.KANZLEI_TEAM_PAGE:
         if payload.scan_all_companies:
             company_ids = list(
