@@ -2,7 +2,7 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Date, Enum, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, Numeric, String, Text, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cc_crm.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -58,6 +58,11 @@ class ClientCompany(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     guarantee_period_months: Mapped[int] = mapped_column(Integer, default=6, nullable=False)
     payment_terms_days: Mapped[int] = mapped_column(Integer, default=14, nullable=False)
     special_terms: Mapped[str | None] = mapped_column(Text)
+    # Von einem Nicht-Admin neu angelegt, Freigabe durch die GF steht aus
+    # (siehe models/approval_request.py).
+    approval_pending: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false(), nullable=False
+    )
     commercial_notes: Mapped[str | None] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)
 

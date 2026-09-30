@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiPatch } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/crm/error-banner";
+import { invalidatePendingApprovals } from "@/components/crm/approval-pending-notice";
 import type { ClientCompany, HonorarStufe } from "@/lib/api/types";
 
 const labelClass = "mb-1 block text-xs text-[#777d83]";
@@ -57,6 +58,7 @@ export function ClientHonorarEditor({ client }: { client: ClientCompany }) {
       });
       setEditing(false);
       router.refresh();
+      void invalidatePendingApprovals("client_company", client.id);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Konnte nicht gespeichert werden.");
     } finally {

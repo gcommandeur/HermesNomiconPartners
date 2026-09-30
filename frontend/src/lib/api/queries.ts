@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, AppSettings, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, AppSettings, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -507,6 +507,36 @@ export async function getAppSettings() {
   return apiGet<AppSettings>("/admin/app-settings", {
     kpi_ranking_metric: "points",
     kpi_ranking_period: "week",
+  });
+}
+
+export async function getApprovalRequests() {
+  return apiGet<ApprovalRequest[]>("/approval-requests?status=pending", []);
+}
+
+export async function getPendingApprovalsFor(entityType: "client_company" | "fee", entityId: string) {
+  return apiGet<ApprovalRequest[]>(`/approval-requests/for/${entityType}/${entityId}`, []);
+}
+
+export async function approveApprovalRequest(id: string) {
+  return apiPost<ApprovalRequest>(`/approval-requests/${id}/approve`, {});
+}
+
+export async function rejectApprovalRequest(id: string, decisionNote: string | null) {
+  return apiPost<ApprovalRequest>(`/approval-requests/${id}/reject`, { decision_note: decisionNote });
+}
+
+export async function getPlacementFees(placementId: string) {
+  return apiGet<Fee[]>(`/placements/${placementId}/fees`, []);
+}
+
+export async function createDraftFee(placementId: string, amountNet: number) {
+  return apiPost<Fee>(`/placements/${placementId}/fees`, { amount_net: amountNet });
+}
+
+export async function changeInvoiceStatus(feeId: string, invoiceStatus: InvoiceStatus) {
+  return apiPost<InvoiceStatusChangeResult>(`/fees/${feeId}/invoice-status`, {
+    invoice_status: invoiceStatus,
   });
 }
 

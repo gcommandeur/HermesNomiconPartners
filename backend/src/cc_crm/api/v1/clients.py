@@ -121,7 +121,9 @@ def create_client(
 ) -> ClientCompanyRead:
     if payload.owner_user_id is None:
         payload = payload.model_copy(update={"owner_user_id": current_user.id})
-    return ClientCompanyRead.model_validate(ClientCompanyService(session).create(payload))
+    return ClientCompanyRead.model_validate(
+        ClientCompanyService(session).create(payload, current_user)
+    )
 
 
 @router.get("/{client_id}", response_model=ClientCompanyRead)

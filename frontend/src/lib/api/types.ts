@@ -231,6 +231,44 @@ export interface ClientCompany extends Entity {
   /** Zustaendiger Mitarbeiter (Komfort-Filter "Meine Kanzleien", KEINE
    * Sichtbarkeitsgrenze - siehe Backend models/client_company.py::owner_user_id). */
   owner_user_id?: string | null;
+  /** Von einem Nicht-Admin angelegt, Freigabe durch die GF steht aus. */
+  approval_pending?: boolean;
+}
+
+export type ApprovalKind = "new_client" | "honorar_change" | "invoice_issue";
+
+export interface ApprovalRequest {
+  id: string;
+  entity_type: "client_company" | "fee";
+  entity_id: string;
+  kind: ApprovalKind;
+  status: "pending" | "approved" | "rejected";
+  requested_by: string | null;
+  requested_at: string;
+  old_values: Record<string, unknown> | null;
+  proposed_values: Record<string, unknown> | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  entity_label: string | null;
+}
+
+export type InvoiceStatus = "draft" | "issued" | "due" | "paid" | "cancelled";
+
+export interface Fee extends Entity {
+  placement_id: string;
+  amount_net: string;
+  vat_rate: string;
+  amount_gross: string;
+  invoice_status: InvoiceStatus;
+  invoice_date: string | null;
+  payment_due_date: string | null;
+  paid_at: string | null;
+}
+
+export interface InvoiceStatusChangeResult {
+  fee: Fee;
+  approval_request: ApprovalRequest | null;
 }
 
 export interface ClientDuplicateCandidate {

@@ -7,6 +7,7 @@ import { StatusPill } from "@/components/crm/status-pill";
 import { ClientHonorarEditor } from "@/components/crm/client-honorar-editor";
 import { DocumentPanel } from "@/components/crm/document-panel";
 import { ClientEditModal } from "@/components/crm/client-create-modal";
+import { ApprovalPendingNotice } from "@/components/crm/approval-pending-notice";
 import { AddToMailingButton } from "@/components/crm/add-to-mailing-button";
 import { MailComposeButton } from "@/components/crm/mail-compose-modal";
 import { contactName, formatCurrency, formatDate, termsStatusLabel } from "@/lib/utils";
@@ -39,6 +40,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           </div>
           <h1 className="text-3xl font-semibold tracking-[-.035em]">{client.name}</h1>
           <p className="mt-2 text-sm text-[#CBD5E1]">{client.focus ?? "Fokus offen"} · {client.region ?? client.city ?? "Region offen"}</p>
+          <ApprovalPendingNotice entityType="client_company" entityId={client.id} />
         </div>
         <div className="flex flex-wrap items-center gap-4 text-xs text-[#CBD5E1]">
           {client.email && <span className="flex items-center gap-1.5"><Mail size={14} />{client.email}</span>}

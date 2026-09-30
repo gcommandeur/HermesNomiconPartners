@@ -3,7 +3,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 
-from cc_crm.api.dependencies import DatabaseSession
+from cc_crm.api.dependencies import CurrentUser, DatabaseSession
+from cc_crm.core.errors import BusinessRuleError
+from cc_crm.models.enums import InvoiceStatus
 from cc_crm.schemas.recruiting import (
     FeeCreate,
     FeedbackRead,
@@ -12,6 +14,7 @@ from cc_crm.schemas.recruiting import (
     OfferRead,
     PlacementRead,
 )
+from cc_crm.services.approvals import needs_approval
 from cc_crm.services.recruiting import RecruitingProcessService
 
 router = APIRouter()
@@ -74,7 +77,14 @@ def create_fee(
     placement_id: uuid.UUID,
     payload: FeeCreate,
     session: DatabaseSession,
+    current_user: CurrentUser,
 ) -> FeeRead:
+    # Sonst liesse sich die Freigabe fuer "Rechnung stellen" umgehen, indem
+    # die Fee direkt als gestellt angelegt wird.
+    if needs_approval(current_user) and payload.invoice_status != InvoiceStatus.DRAFT:
+        raise BusinessRuleError(
+            "Neue Rechnungen starten als Entwurf - das Stellen erfordert eine Freigabe."
+        )
     return FeeRead.model_validate(
         RecruitingProcessService(session).create_fee(placement_id, payload)
     )

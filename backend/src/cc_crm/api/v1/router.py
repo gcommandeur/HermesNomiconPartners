@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from cc_crm.api.dependencies import get_current_user
 from cc_crm.api.v1.activities import router as activities_router
+from cc_crm.api.v1.approvals import router as approvals_router
 from cc_crm.api.v1.audit_logs import router as audit_logs_router
 from cc_crm.api.v1.auth import router as auth_router
 from cc_crm.api.v1.calendar_events import router as calendar_events_router
@@ -52,6 +53,7 @@ protected_router.include_router(clients_router, tags=["clients"])
 protected_router.include_router(contacts_router, tags=["contacts"])
 protected_router.include_router(jobs_router, tags=["vacancies"])
 protected_router.include_router(kpi_router, tags=["kpi"])
+protected_router.include_router(approvals_router, tags=["approvals"])
 protected_router.include_router(matching_router, tags=["candidate-matching"])
 protected_router.include_router(profile_generator_router, tags=["profile-generator"])
 protected_router.include_router(nl_search_router, tags=["nl-search"])

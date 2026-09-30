@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { createPlacement, deletePlacement, getPlacement, updatePlacement } from "@/lib/api/queries";
+import { InvoiceSection } from "@/components/crm/invoice-section";
 import type { Placement, PlacementStatus } from "@/lib/api/types";
 
 const labelClass = "mb-1 block text-xs text-[#94A3B8]";
@@ -339,6 +340,7 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
           </Button>
         </div>
       </form>
+      {placement && <InvoiceSection placement={placement} />}
     </div>
   );
 }

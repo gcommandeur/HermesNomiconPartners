@@ -3,6 +3,7 @@ import {
   BriefcaseBusiness,
   Building2,
   CalendarDays,
+  ClipboardCheck,
   ContactRound,
   KanbanSquare,
   UserRoundSearch,
@@ -39,6 +40,7 @@ export const primaryNavigation: {
   // Nur fuer Admins sichtbar (siehe sidebar.tsx) - gleiche Sichtbarkeits-
   // logik wie der Administration-Block in einstellungen/page.tsx.
   { label: "Geschäftsführung", href: "/geschaeftsfuehrung", icon: Trophy, adminOnly: true },
+  { label: "Freigaben", href: "/freigaben", icon: ClipboardCheck, adminOnly: true },
 ];
 
 export const utilityNavigation = [

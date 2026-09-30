@@ -90,7 +90,7 @@ class ClientCompanyUpdate(BaseModel):
 
 
 class ClientCompanyRead(ClientCompanyBase, EntityRead):
-    pass
+    approval_pending: bool = False
 
 
 class ClientDuplicateCandidate(BaseModel):

@@ -1,6 +1,7 @@
 from cc_crm.models.activity import Activity
 from cc_crm.models.api_key import ApiKey
 from cc_crm.models.app_setting import AppSetting
+from cc_crm.models.approval_request import ApprovalRequest
 from cc_crm.models.auth import AuthSession
 from cc_crm.models.base import Base
 from cc_crm.models.calendar_event import CalendarEvent
@@ -40,6 +41,7 @@ __all__ = [
     "Activity",
     "ApiKey",
     "AppSetting",
+    "ApprovalRequest",
     "AuditLog",
     "AuthSession",
     "Base",

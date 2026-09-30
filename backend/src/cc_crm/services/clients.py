@@ -11,7 +11,8 @@ from cc_crm.models.user import User
 from cc_crm.repositories.clients import ClientCompanyRepository
 from cc_crm.repositories.recruiting import AuditLogRepository
 from cc_crm.schemas.client_company import ClientCompanyCreate, ClientCompanyUpdate
-from cc_crm.services.audit_diff import changed_values
+from cc_crm.services.approvals import HONORAR_FIELDS, ApprovalService, needs_approval
+from cc_crm.services.audit_diff import changed_values, json_safe
 from cc_crm.services.base import CrudService
 from cc_crm.services.geo import (
     candidate_coordinates,
@@ -110,6 +111,33 @@ class ClientCompanyService(CrudService[ClientCompany, ClientCompanyCreate, Clien
         in_radius.sort(key=lambda pair: pair[1])
         return in_radius, unresolved
 
+    def create(
+        self, payload: ClientCompanyCreate, current_user: User | None = None
+    ) -> ClientCompany:
+        """Von einem Nicht-Admin angelegt: Kanzlei entsteht (sonst gaebe es
+        nichts freizugeben), traegt aber approval_pending bis zur Freigabe
+        durch die GF (services/approvals.py)."""
+        created = super().create(payload)
+        if needs_approval(current_user):
+            assert current_user is not None
+            created.approval_pending = True
+            ApprovalService(self.session).request(
+                entity_type="client_company",
+                entity_id=created.id,
+                kind="new_client",
+                requested_by=current_user,
+                proposed_values=json_safe(
+                    {
+                        "name": created.name,
+                        "city": created.city,
+                        "postal_code": created.postal_code,
+                        **{field: getattr(created, field) for field in sorted(HONORAR_FIELDS)},
+                    }
+                ),
+            )
+            self.session.commit()
+        return created
+
     def update(
         self,
         entity_id: uuid.UUID,
@@ -117,7 +145,27 @@ class ClientCompanyService(CrudService[ClientCompany, ClientCompanyCreate, Clien
         current_user: User | None = None,
     ) -> ClientCompany:
         before = self.get(entity_id)
-        old_values, new_values = changed_values(before, payload.model_dump(exclude_unset=True))
+        values = payload.model_dump(exclude_unset=True)
+        if needs_approval(current_user):
+            # Honorar-Aenderungen eines Nicht-Admins wirken erst nach
+            # Freigabe; alle anderen Felder sofort.
+            assert current_user is not None
+            honorar_old, honorar_new = changed_values(
+                before, {key: value for key, value in values.items() if key in HONORAR_FIELDS}
+            )
+            values = {key: value for key, value in values.items() if key not in HONORAR_FIELDS}
+            payload = ClientCompanyUpdate.model_validate(values)
+            if honorar_new:
+                ApprovalService(self.session).request(
+                    entity_type="client_company",
+                    entity_id=before.id,
+                    kind="honorar_change",
+                    requested_by=current_user,
+                    old_values=honorar_old,
+                    proposed_values=honorar_new,
+                )
+                self.session.commit()
+        old_values, new_values = changed_values(before, values)
         updated = super().update(entity_id, payload)
         if new_values:
             self.audit_logs.create(

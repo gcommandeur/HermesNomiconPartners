@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiPatch, apiPost } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/crm/error-banner";
+import { invalidatePendingApprovals } from "@/components/crm/approval-pending-notice";
 import { invalidateClientsCache, useAssignableUsersCache, useCurrentUser } from "@/lib/api/hooks";
 import { checkClientDuplicate } from "@/lib/api/queries";
 import type { ClientCompany, ClientDuplicateCandidate } from "@/lib/api/types";
@@ -110,6 +111,7 @@ export function ClientCreateForm({
       if (!isEdit) setForm(emptyForm);
       router.refresh();
       void invalidateClientsCache();
+      void invalidatePendingApprovals("client_company", result.id);
       onDone(result);
     } catch (exception) {
       setError(

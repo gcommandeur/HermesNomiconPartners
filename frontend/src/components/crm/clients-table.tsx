@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { FilterBar } from "@/components/crm/filter-bar";
 import { DataTable } from "@/components/crm/data-table";
 import { StatusPill } from "@/components/crm/status-pill";
+import { Badge } from "@/components/ui/badge";
 import { ExportActions } from "@/components/crm/export-actions";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { ErrorState } from "@/components/crm/error-state";
@@ -236,7 +237,7 @@ export function ClientsTable() {
             const client = row.client;
             return (
               <tr key={client.id} className="hover:bg-[#203A5A]/35">
-                <td className="px-4 py-3.5"><Link href={`/kanzleien/${client.id}`} className="font-semibold text-[#D8DADF] hover:text-white hover:underline">{client.name}</Link><div className="mt-1"><StatusPill status={client.status} /></div></td>
+                <td className="px-4 py-3.5"><Link href={`/kanzleien/${client.id}`} className="font-semibold text-[#D8DADF] hover:text-white hover:underline">{client.name}</Link><div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusPill status={client.status} />{client.approval_pending && <Badge tone="amber">Freigabe ausstehend</Badge>}</div></td>
                 <td className="px-4 py-3.5">{client.region ?? client.city ?? client.postal_code ?? "—"}</td>
                 <td className="px-4 py-3.5 text-[#CBD5E1]">{client.company_size ?? client.size ?? "—"}</td>
                 <td className="px-4 py-3.5">{client.focus ?? "—"}</td>
@@ -292,7 +293,7 @@ export function ClientsTable() {
               {isExpanded &&
                 locations.map((client) => (
                   <tr key={client.id} className="bg-[#0D1B2E]/40 hover:bg-[#203A5A]/35">
-                    <td className="px-4 py-3.5 pl-9"><Link href={`/kanzleien/${client.id}`} className="font-semibold text-[#D8DADF] hover:text-white hover:underline">{client.name}</Link><div className="mt-1"><StatusPill status={client.status} /></div></td>
+                    <td className="px-4 py-3.5 pl-9"><Link href={`/kanzleien/${client.id}`} className="font-semibold text-[#D8DADF] hover:text-white hover:underline">{client.name}</Link><div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusPill status={client.status} />{client.approval_pending && <Badge tone="amber">Freigabe ausstehend</Badge>}</div></td>
                     <td className="px-4 py-3.5">{client.region ?? client.city ?? client.postal_code ?? "—"}</td>
                     <td className="px-4 py-3.5 text-[#CBD5E1]">{client.company_size ?? client.size ?? "—"}</td>
                     <td className="px-4 py-3.5">{client.focus ?? "—"}</td>
