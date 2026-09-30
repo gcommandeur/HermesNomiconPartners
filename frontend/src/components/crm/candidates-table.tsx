@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Ghost, History, ShieldAlert, X } from "lucide-react";
 import { FilterBar } from "@/components/crm/filter-bar";
 import { DataTable } from "@/components/crm/data-table";
@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { compareValues, type SortDir } from "@/lib/sort";
 import { ABSCHLUSSART_OPTIONS, abschlussartLabel, formatDate, ROLLE_OPTIONS, rolleLabel, searchFieldLabel } from "@/lib/utils";
 import { usePagination } from "@/lib/use-pagination";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { apiPost } from "@/lib/api/client";
 import { useCurrentUser, useReactivationCandidatesCache } from "@/lib/api/hooks";
 import { useServerSearchList } from "@/lib/api/use-server-search";
@@ -163,25 +164,36 @@ function AbschluesseFilter({
   );
 }
 
+const ROLLE_VALUES = new Set<string>(ROLLE_OPTIONS);
+const ABSCHLUSSART_VALUES = new Set<string>(ABSCHLUSSART_OPTIONS);
+
 export function CandidatesTable() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   // Erlaubt einen direkten Link auf den Reaktivierungs-Filter (z.B. vom
   // Redirect der entfernten /reaktivierung-Route, siehe Phase L.2).
   const [reactivationOnly, setReactivationOnly] = useState(
     () => searchParams.get("reaktivierung") === "1",
   );
-  const [status, setStatus] = useState("");
-  const [selectedRollen, setSelectedRollen] = useState<Rolle[]>([]);
-  const [selectedAbschluesse, setSelectedAbschluesse] = useState<Abschlussart[]>([]);
+  const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
+  const [selectedRollen, setSelectedRollen] = useState<Rolle[]>(
+    () => (searchParams.get("rollen") ?? "").split(",").filter((r): r is Rolle => ROLLE_VALUES.has(r)),
+  );
+  const [selectedAbschluesse, setSelectedAbschluesse] = useState<Abschlussart[]>(
+    () =>
+      (searchParams.get("abschluesse") ?? "")
+        .split(",")
+        .filter((a): a is Abschlussart => ABSCHLUSSART_VALUES.has(a)),
+  );
   // Echter PLZ+Umkreis-Filter (nicht der bestehende `region`-Substring-
   // Match) - radiusKm bleibt "" (kein Filter aktiv), bis der Nutzer sowohl
   // einen Ort ALS AUCH einen Radius gewaehlt hat, siehe use-server-search.ts.
-  const [plzOrt, setPlzOrt] = useState("");
-  const [radiusKm, setRadiusKm] = useState("");
+  const [plzOrt, setPlzOrt] = useState(() => searchParams.get("plz") ?? "");
+  const [radiusKm, setRadiusKm] = useState(() => searchParams.get("radius") ?? "");
   // "Meine Kandidaten" - reiner Komfort-Filter nach owner_user_id, KEINE
   // Sichtbarkeitsgrenze (Default "Alle" bleibt unveraendert). Siehe
   // Backend models/candidate.py::owner_user_id fuer die Begruendung.
-  const [mineOnly, setMineOnly] = useState(false);
+  const [mineOnly, setMineOnly] = useState(() => searchParams.get("mine") === "1");
   // Titelschutz-Korrektur Schritt 2: eigener Filter, um Kandidaten mit
   // unbestaetigter geschuetzter Rolle wiederzufinden (Nutzer-Vorgabe -
   // "sonst findet man sie nicht wieder"). Wirkt wie plzOrt/radiusKm NICHT
@@ -192,8 +204,12 @@ export function CandidatesTable() {
   );
   const { data: currentUserData } = useCurrentUser();
   const currentUserId = currentUserData?.data.id;
-  const [sortKey, setSortKey] = useState<string | null>("candidate_number");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortKey, setSortKey] = useState<string | null>(
+    () => searchParams.get("sort") ?? "candidate_number",
+  );
+  const [sortDir, setSortDir] = useState<SortDir>(
+    () => (searchParams.get("dir") === "asc" ? "asc" : "desc"),
+  );
   // Kandidat oeffnet im seitlichen Quickview-Panel statt per echter
   // Navigation zur Detailseite (Nutzer-Vorgabe: "im anderen Subfenster",
   // Liste bleibt gemountet) - vorher unmountete ein <Link>-Klick diese
@@ -246,7 +262,56 @@ export function CandidatesTable() {
     ownerUserId: mineOnly ? currentUserId : undefined,
     sortBy: sortKey ?? undefined,
     sortDir,
+    initialSearch: searchParams.get("q") ?? undefined,
+    initialPage: (() => {
+      const raw = Number(searchParams.get("page"));
+      return Number.isFinite(raw) && raw > 0 ? raw : undefined;
+    })(),
   });
+
+  // Spiegelt alle Filter/Sortier-/Such-/Seiten-Zustaende in die URL (kurze
+  // Schluessel, damit die Query-String nicht ausufert) - Zweck: der zweite
+  // Einstiegspunkt zur Kandidatendetailseite (globale Suche, siehe
+  // topbar.tsx::goTo) navigiert ECHT weg von /kandidaten und unmountet damit
+  // diese Komponente komplett; ohne URL-Spiegelung ging beim Zurueckkehren
+  // ueber "Zur Kandidatenliste" (siehe app/kandidaten/[id]/page.tsx::backLink)
+  // jeder Filter/Suchtext/Sortierung/Seite verloren. Klick auf eine Zeile
+  // bleibt bewusst unveraendert (siehe quickViewCandidateId oben) - dort
+  // bleibt die Komponente gemountet, es gibt also gar keinen Verlust.
+  // router.replace() statt push(): sonst wuerde jede Tastatureingabe/jeder
+  // Filterwechsel einen eigenen Browser-History-Eintrag erzeugen.
+  const debouncedUrlSearch = useDebouncedValue(search.trim(), 300);
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (debouncedUrlSearch) params.set("q", debouncedUrlSearch);
+    if (status) params.set("status", status);
+    if (selectedRollen.length > 0) params.set("rollen", selectedRollen.join(","));
+    if (selectedAbschluesse.length > 0) params.set("abschluesse", selectedAbschluesse.join(","));
+    if (plzOrt) params.set("plz", plzOrt);
+    if (radiusKm) params.set("radius", radiusKm);
+    if (mineOnly) params.set("mine", "1");
+    if (reactivationOnly) params.set("reaktivierung", "1");
+    if (rollenUnbestaetigtOnly) params.set("rollen_unbestaetigt", "1");
+    if (sortKey) params.set("sort", sortKey);
+    if (sortDir) params.set("dir", sortDir);
+    if (page > 0) params.set("page", String(page));
+    const query = params.toString();
+    router.replace(query ? `/kandidaten?${query}` : "/kandidaten", { scroll: false });
+  }, [
+    debouncedUrlSearch,
+    status,
+    selectedRollen,
+    selectedAbschluesse,
+    plzOrt,
+    radiusKm,
+    mineOnly,
+    reactivationOnly,
+    rollenUnbestaetigtOnly,
+    sortKey,
+    sortDir,
+    page,
+    router,
+  ]);
 
   const {
     data: reactivationData,

@@ -106,9 +106,30 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Navigiert echt zur Detailseite (kein Quickview-Panel, siehe
+  // candidates-table.tsx) - unmountet also /kandidaten komplett. Ist der
+  // Nutzer GERADE auf der (evtl. gefilterten) Kandidatenliste, haengt ein
+  // `back`-Parameter mit dem vollstaendigen Rueckweg (Pfad+Query) an, den
+  // app/kandidaten/[id]/page.tsx als Ziel fuer "Zur Kandidatenliste" bevorzugt
+  // - sonst ginge der Filter-/Suchzustand beim Zurueckkehren verloren (die
+  // URL-Spiegelung in candidates-table.tsx greift ja erst NACH dem Mount).
+  // Liest Pfad+Query bewusst per window.location statt usePathname()/
+  // useSearchParams() aus - goTo() laeuft nur innerhalb eines Klick-Handlers,
+  // eine Reaktivitaet auf Routenwechsel ist hier nicht noetig. Wichtiger
+  // Grund: Topbar sitzt im globalen app-shell.tsx auf JEDER Seite -
+  // useSearchParams() dort haette dort alle Seiten (auch /404) ohne eigene
+  // Suspense-Grenze aus dem statischen Prerendering geworfen ("useSearchParams
+  // should be wrapped in a suspense boundary").
   function goTo(path: string) {
     setQuery("");
     setOpen(false);
+    if (window.location.pathname === "/kandidaten") {
+      const currentQuery = window.location.search;
+      const back = encodeURIComponent(`/kandidaten${currentQuery}`);
+      const separator = path.includes("?") ? "&" : "?";
+      router.push(`${path}${separator}back=${back}`);
+      return;
+    }
     router.push(path);
   }
 

@@ -38,13 +38,22 @@ export default async function CandidateDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ from?: string; tab?: string }>;
+  searchParams?: Promise<{ from?: string; tab?: string; back?: string }>;
 }) {
   const { id } = await params;
-  const { from, tab } = (await searchParams) ?? {};
-  const backLink = from === "prozesse"
-    ? { href: "/prozesse", label: "Zurück zu Prozesse" }
-    : { href: "/kandidaten", label: "Zur Kandidatenliste" };
+  const { from, tab, back } = (await searchParams) ?? {};
+  // `back` (voller Pfad+Query, URL-kodiert) hat Vorrang vor dem aelteren
+  // `from`-Mechanismus - gesetzt von jedem Einstiegspunkt, der von einer
+  // gefilterten Kandidatenliste aus navigiert (siehe topbar.tsx::goTo), damit
+  // "Zur Kandidatenliste" den kompletten Filter-/Such-/Sortier-/Seiten-
+  // Zustand wiederherstellt statt auf einer leeren Standardliste zu landen.
+  // `from=prozesse` bleibt als Fallback bestehen, wo (noch) kein `back`
+  // mitgegeben wird.
+  const backLink = back
+    ? { href: decodeURIComponent(back), label: "Zur Kandidatenliste" }
+    : from === "prozesse"
+      ? { href: "/prozesse", label: "Zurück zu Prozesse" }
+      : { href: "/kandidaten", label: "Zur Kandidatenliste" };
   const [result, submissionsResult, clientsResult, activitiesResult, tasksResult, documentsResult, notesResult, historyResult] = await Promise.all([
     getCandidate(id),
     getSubmissions(),

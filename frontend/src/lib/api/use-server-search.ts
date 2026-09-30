@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import type { Abschlussart, DataResult, PageQuery, Paginated, Rolle } from "./types";
@@ -44,11 +44,22 @@ export function useServerSearchList<T>(
     pageSize?: number;
     sortBy?: string;
     sortDir?: "asc" | "desc";
+    // Erlaubt Aufrufern, Suche/Seite beim ersten Rendern aus der URL statt
+    // von "" bzw. 0 zu starten (siehe candidates-table.tsx) - nur fuer den
+    // initialen useState-Wert relevant, spaetere Aenderungen dieser Props
+    // haben keine Wirkung.
+    initialSearch?: string;
+    initialPage?: number;
   } = {},
 ) {
   const pageSize = options.pageSize ?? 100;
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(0);
+  const [search, setSearch] = useState(options.initialSearch ?? "");
+  const [page, setPage] = useState(options.initialPage ?? 0);
+  // Verhindert, dass der Seite-1-Reset-Effekt unten den obigen initialPage-
+  // Wert gleich beim ersten Render wieder auf 0 zuruecksetzt - Effects laufen
+  // auch nach dem allerersten Render, unabhaengig davon, ob sich Dependencies
+  // "geaendert" haben (es gibt ja noch keinen Vorwert zum Vergleichen).
+  const isFirstRender = useRef(true);
   const debouncedSearch = useDebouncedValue(search.trim(), DEBOUNCE_MS);
   // plzOrt ist wie search ein Freitextfeld - ohne eigenes Debounce wuerde
   // jeder Tastendruck (sobald ein Radius gewaehlt ist) einen eigenen Request
@@ -68,6 +79,10 @@ export function useServerSearchList<T>(
   // sonst bliebe man auf einer Seite haengen, die es im neuen (kuerzeren/
   // anders sortierten) Ergebnis vielleicht gar nicht mehr an dieser Stelle gibt.
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     setPage(0);
   }, [
     debouncedSearch,
