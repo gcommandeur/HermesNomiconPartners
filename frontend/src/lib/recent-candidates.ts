@@ -42,6 +42,10 @@ export function removeRecentCandidate(id: string) {
   write(read().filter((item) => item.id !== id));
 }
 
+export function clearRecentCandidates() {
+  write([]);
+}
+
 export function subscribeRecentCandidates(callback: () => void) {
   window.addEventListener(EVENT_NAME, callback);
   window.addEventListener("storage", callback);

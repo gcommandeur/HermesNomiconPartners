@@ -24,6 +24,19 @@ def second_user_token(session_factory: sessionmaker[Session]) -> str:
         return token
 
 
+@pytest.fixture
+def admin_token(session_factory: sessionmaker[Session]) -> str:
+    with session_factory() as session:
+        session.add(
+            User(
+                email="chef@commandeur.example", hashed_password=hash_password("x"), role="admin"
+            )
+        )
+        session.commit()
+        _, token = AuthService(session).login("chef@commandeur.example", "x")
+        return token
+
+
 def auth_header(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
@@ -44,9 +57,8 @@ class TestCockpitOwnerFilter:
     "standardauswahl sind alle user... Mehrfachauswahl moeglich") - filtert
     nach Candidate.owner_user_id, siehe CockpitService.build."""
 
-    def test_no_filter_shows_all_owners(
-        self, client: TestClient, second_user_token: str
-    ) -> None:
+    @staticmethod
+    def _two_owners_with_one_submission_each(client: TestClient, second_user_token: str) -> None:
         client.post("/api/v1/candidates", json={"first_name": "Mine", "last_name": "A"})
         client.post(
             "/api/v1/candidates",
@@ -60,8 +72,59 @@ class TestCockpitOwnerFilter:
             headers=auth_header(second_user_token),
         )
 
-        cockpit = client.get("/api/v1/cockpit?period=week").json()
+    def test_admin_without_filter_sees_all_owners(
+        self, client: TestClient, second_user_token: str, admin_token: str
+    ) -> None:
+        self._two_owners_with_one_submission_each(client, second_user_token)
+
+        cockpit = client.get(
+            "/api/v1/cockpit?period=week", headers=auth_header(admin_token)
+        ).json()
         assert cockpit["kpis"]["submissions"] == 2
+
+    def test_non_admin_without_filter_sees_only_own_data(
+        self, client: TestClient, second_user_token: str
+    ) -> None:
+        self._two_owners_with_one_submission_each(client, second_user_token)
+
+        mine = client.get("/api/v1/cockpit?period=week").json()
+        theirs = client.get(
+            "/api/v1/cockpit?period=week", headers=auth_header(second_user_token)
+        ).json()
+        # "Heisse Prozesse" wird aus derselben (hier gefilterten) Prozessliste
+        # gebildet wie kpis.submissions.
+        assert mine["kpis"]["submissions"] == 1
+        assert theirs["kpis"]["submissions"] == 1
+
+    def test_non_admin_without_filter_sees_only_own_tasks(
+        self,
+        client: TestClient,
+        second_user_token: str,
+        session_factory: sessionmaker[Session],
+    ) -> None:
+        me = client.get("/api/v1/auth/me").json()
+        colleague = client.get("/api/v1/auth/me", headers=auth_header(second_user_token)).json()
+        mine_candidate = client.post(
+            "/api/v1/candidates", json={"first_name": "Mine", "last_name": "A"}
+        ).json()
+        with session_factory() as session:
+            session.add_all(
+                [
+                    Task(title="Meine Aufgabe", owner_user_id=uuid.UUID(me["id"])),
+                    Task(title="Fremde Aufgabe", owner_user_id=uuid.UUID(colleague["id"])),
+                    # Ohne Zustaendigen, aber an meinem Kandidaten -> meine.
+                    Task(title="Mail-Aufgabe", candidate_id=uuid.UUID(mine_candidate["id"])),
+                    # Ohne Zustaendigen und ohne Bezug -> niemandes.
+                    Task(title="Verwaiste Aufgabe"),
+                ]
+            )
+            session.commit()
+
+        mine = client.get("/api/v1/cockpit?period=week").json()
+        assert sorted(item["title"] for item in mine["important"] if item["kind"] == "task") == [
+            "Mail-Aufgabe",
+            "Meine Aufgabe",
+        ]
 
     def test_filter_restricts_to_selected_owners(
         self, client: TestClient, second_user_token: str

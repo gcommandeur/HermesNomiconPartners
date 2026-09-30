@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import select
 
-from cc_crm.api.dependencies import DatabaseSession
+from cc_crm.api.dependencies import CurrentUser, DatabaseSession
 from cc_crm.core.config import get_settings
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.operational import Document
@@ -145,6 +145,7 @@ async def _read_upload_with_size_limit(file: UploadFile, max_bytes: int) -> byte
 @router.get("/cockpit", response_model=CockpitRead)
 def get_cockpit(
     session: DatabaseSession,
+    current_user: CurrentUser,
     # Frontend fragt keinen wählbaren Zeitraum mehr ab (Woche/Monat/Quartal-
     # Umschalter auf der Übersicht wurde entfernt, siehe dashboard-
     # cockpit.tsx) - "month" statt vorher "week", da KPI-Zeiträume sonst zu
@@ -158,6 +159,12 @@ def get_cockpit(
     # CockpitService.build-Docstring fuer die None-vs-leere-Liste-Unterscheidung).
     owner_user_id: Annotated[list[uuid.UUID] | None, Query()] = None,
 ) -> CockpitRead:
+    # Ohne expliziten Filter sieht ein Nicht-Admin nur seine eigenen
+    # Kandidaten/Prozesse/Aufgaben (Übersicht ruft ohne Parameter auf) - sonst
+    # tauchten fremde Eintraege als "wichtig"/"heiss" auf. Admins und
+    # explizite Filter (Analytics-Seite) bleiben unveraendert.
+    if owner_user_id is None and not current_user.is_admin:
+        owner_user_id = [current_user.id]
     return CockpitRead.model_validate(
         CockpitService(session).build(period, owner_user_ids=owner_user_id)
     )

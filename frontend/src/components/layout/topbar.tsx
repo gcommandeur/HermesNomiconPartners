@@ -9,6 +9,7 @@ import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { getCandidatesPage, getClientsPage, getContactsPage } from "@/lib/api/queries";
 import { useCurrentUser } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
+import { resetClientSession } from "@/lib/reset-client-session";
 import type { Candidate, ClientCompany, Contact } from "@/lib/api/types";
 
 const MIN_QUERY_LENGTH = 2;
@@ -20,6 +21,15 @@ interface GlobalSearchResults {
 }
 
 const emptyResults: GlobalSearchResults = { candidates: [], clients: [], contacts: [] };
+
+function initialsOf(label: string): string {
+  const words = label.split(/[\s@._-]+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  return words
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join("");
+}
 
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const router = useRouter();
@@ -38,8 +48,12 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
   const [results, setResults] = useState<GlobalSearchResults>(emptyResults);
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
 
+  const userLabel = currentUserData?.data.display_name || currentUserData?.data.email || "";
+  const userInitials = initialsOf(userLabel);
+
   async function handleLogout() {
     await fetch("/api/logout", { method: "POST" });
+    await resetClientSession();
     router.replace("/login");
     router.refresh();
   }
@@ -270,10 +284,9 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             className="ml-1 flex items-center gap-2 rounded-md p-1.5 hover:bg-white/6"
             onClick={() => setAccountOpen((current) => !current)}
           >
-            <span className="grid size-8 place-items-center rounded-full bg-[#202327] text-[11px] font-semibold text-white">CC</span>
-            <span className="hidden text-left md:block">
-              <span className="block text-xs font-medium text-white">Commandeur</span>
-              <span className="block text-[10px] text-[#858b91]">Consulting</span>
+            <span className="grid size-8 place-items-center rounded-full bg-[#202327] text-[11px] font-semibold text-white">{userInitials}</span>
+            <span className="hidden max-w-40 truncate text-left text-xs font-medium text-white md:block">
+              {userLabel}
             </span>
           </button>
           {accountOpen && (

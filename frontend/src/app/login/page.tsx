@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { LogIn, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { resetClientSession } from "@/lib/reset-client-session";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -50,6 +51,7 @@ export default function LoginPage() {
       }
       if (data.status === "authenticated") {
         // Vertrautes Geraet - 2FA-Schritt entfaellt komplett.
+        await resetClientSession();
         router.replace("/");
         router.refresh();
         return;
@@ -77,6 +79,7 @@ export default function LoginPage() {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error ?? "Code ist ungültig.");
       }
+      await resetClientSession();
       router.replace("/");
       router.refresh();
     } catch (err) {

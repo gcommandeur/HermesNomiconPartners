@@ -337,6 +337,27 @@ class CockpitService:
             # repositories/tasks.py::filtered(exclude_snoozed=...)).
             and (task.snoozed_until is None or naive_utc(task.snoozed_until) <= now)
         ]
+        if owner_filter_active:
+            # Aufgaben gehoeren dem Nutzer, dem sie zugewiesen sind; ohne
+            # Zustaendigen (z.B. automatisch aus Mails erzeugt) zaehlt der
+            # Owner des verknuepften Kandidaten - gleiche Regel wie oben bei
+            # den Prozessen.
+            owner_ids = set(owner_user_ids or [])
+            due_tasks = [
+                task
+                for task in due_tasks
+                if task.owner_user_id in owner_ids
+                or (
+                    task.owner_user_id is None
+                    and task.candidate_id is not None
+                    and filtered_candidate_ids is not None
+                    and task.candidate_id in filtered_candidate_ids
+                )
+                or (
+                    task.owner_user_id is None
+                    and task.candidate_submission_id in submission_ids_for_owner_filter
+                )
+            ]
         # Archivierte Placements ("Placement abschliessen", siehe
         # SubmissionService.archive()) sollen aus den beiden Action-Listen
         # verschwinden (wie schon im Kanban), aber NICHT aus den KPI-Zahlen
