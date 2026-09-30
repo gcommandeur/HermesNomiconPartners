@@ -16,6 +16,6 @@ const WeeklyChart = dynamic(
   },
 );
 
-export function WeeklyChartLoader({ data }: { data: { name: string; value: number }[] }) {
+export function WeeklyChartLoader({ data }: { data: { name: string; value: number; href?: string }[] }) {
   return <WeeklyChart data={data} />;
 }

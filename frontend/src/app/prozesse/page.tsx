@@ -6,10 +6,19 @@ import { SubmissionViews } from "@/components/crm/submission-views";
 import { SubmissionCreateModal } from "@/components/crm/submission-create-modal";
 import { Button } from "@/components/ui/button";
 import { getAllInterviews, getCandidates, getClients, getContacts, getSubmissions } from "@/lib/api/queries";
+import type { SubmissionStatus } from "@/lib/api/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProcessesPage() {
+const STAGES: SubmissionStatus[] = ["qualification_call", "cv_in", "cv_out", "interview", "offer", "placement", "cancelled"];
+
+export default async function ProcessesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ stage?: string; mine?: string }>;
+}) {
+  const { stage, mine } = (await searchParams) ?? {};
+  const initialStage = STAGES.find((value) => value === stage) ?? null;
   const [submissions, candidates, clients, contacts, interviews] = await Promise.all([getSubmissions(), getCandidates(), getClients(), getContacts(), getAllInterviews()]);
   const source = submissions.source === "api" && candidates.source === "api" && clients.source === "api" && contacts.source === "api" ? "api" : "demo";
   return (
@@ -26,7 +35,7 @@ export default async function ProcessesPage() {
         }
       />
       <DemoNotice source={source} />
-      <SubmissionViews submissions={submissions.data} candidates={candidates.data} clients={clients.data} contacts={contacts.data} interviews={interviews.data} />
+      <SubmissionViews submissions={submissions.data} candidates={candidates.data} clients={clients.data} contacts={contacts.data} interviews={interviews.data} initialStage={initialStage} initialMineOnly={mine === "1"} />
     </>
   );
 }

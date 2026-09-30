@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { AlertTriangle, ArrowRight, CalendarClock, FileCheck2, Flame, Gauge, ReceiptText, Trophy, TimerReset } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,7 @@ import { DashboardTodo } from "@/components/crm/dashboard-todo";
 import { useCurrentUser, useKpiRankingCache } from "@/lib/api/hooks";
 import { PITCH_LABEL, STAGE_LABELS } from "@/lib/stage-labels";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import type { Cockpit, CockpitItem } from "@/lib/api/types";
+import type { Cockpit, CockpitItem, SubmissionStatus } from "@/lib/api/types";
 
 function metricLabel(metric: string): string {
   if (metric === "points") return "Punkte";
@@ -124,15 +125,27 @@ function buildWarnings(cockpit: Cockpit): string[] {
 // "KPIs stimmen nicht", Punkt 3b). "Offers"/"Placements" bleiben bewusst
 // die KAUFMAENNISCHEN Zahlen (echte Datensaetze) - dieser Trichter zeigt
 // den Fortschritt von der Erfassung her, nicht die reine Pipeline.
-function buildChartData(cockpit: Cockpit) {
-  return [
-    ["Quali Calls", cockpit.kpis.qualification_calls],
-    ["CV In", cockpit.kpis.cv_available],
-    ["CV-Outs", cockpit.kpis.cv_outs_reached_count],
-    ["Interviews", cockpit.kpis.interviews],
-    ["Offers", cockpit.kpis.offers],
-    ["Placements", cockpit.kpis.placements],
-  ].map(([name, value]) => ({ name: String(name), value: Number(value) }));
+// Klick auf Kachel/Balken oeffnet /prozesse vorgefiltert auf die Stufe. Fuer
+// Nicht-Admins zusaetzlich "Meine" - das Cockpit zeigt ihnen nur eigene
+// Zahlen, die Liste dahinter soll dazu passen.
+function processesHref(stage: SubmissionStatus, mineOnly: boolean): string {
+  return `/prozesse?stage=${stage}${mineOnly ? "&mine=1" : ""}`;
+}
+
+function buildChartData(cockpit: Cockpit, mineOnly: boolean) {
+  const rows: [string, number, SubmissionStatus][] = [
+    ["Quali Calls", cockpit.kpis.qualification_calls, "qualification_call"],
+    ["CV In", cockpit.kpis.cv_available, "cv_in"],
+    ["CV-Outs", cockpit.kpis.cv_outs_reached_count, "cv_out"],
+    ["Interviews", cockpit.kpis.interviews, "interview"],
+    ["Offers", cockpit.kpis.offers, "offer"],
+    ["Placements", cockpit.kpis.placements, "placement"],
+  ];
+  return rows.map(([name, value, stage]) => ({
+    name,
+    value: Number(value),
+    href: processesHref(stage, mineOnly),
+  }));
 }
 
 export function DashboardCockpit({
@@ -148,13 +161,17 @@ export function DashboardCockpit({
   const source = initialSource;
   const error = initialError;
 
-  const chartData = buildChartData(cockpit);
+  const { data: currentUserData } = useCurrentUser();
+  const mineOnly = currentUserData ? !currentUserData.data.is_admin : false;
+  const chartData = buildChartData(cockpit, mineOnly);
   const warnings = buildWarnings(cockpit);
-  const quickMetrics: { label: string; value: string | number; Icon: typeof CalendarClock }[] = [
-    { label: "Interviews diese Woche", value: cockpit.kpis.interviews, Icon: CalendarClock },
-    { label: "Offers offen", value: cockpit.kpis.offers, Icon: FileCheck2 },
-    { label: "Placements", value: cockpit.kpis.placements, Icon: Flame },
-    { label: "Offene Fees", value: formatCurrency(cockpit.kpis.expected_fees - cockpit.kpis.realized_fees), Icon: ReceiptText },
+  // "Offene Fees" fuehrt auf die Placements - Fees/Rechnungsstatus haben in
+  // /prozesse keine eigene Filterstufe.
+  const quickMetrics: { label: string; value: string | number; Icon: typeof CalendarClock; href: string }[] = [
+    { label: "Interviews diese Woche", value: cockpit.kpis.interviews, Icon: CalendarClock, href: processesHref("interview", mineOnly) },
+    { label: "Offers offen", value: cockpit.kpis.offers, Icon: FileCheck2, href: processesHref("offer", mineOnly) },
+    { label: "Placements", value: cockpit.kpis.placements, Icon: Flame, href: processesHref("placement", mineOnly) },
+    { label: "Offene Fees", value: formatCurrency(cockpit.kpis.expected_fees - cockpit.kpis.realized_fees), Icon: ReceiptText, href: processesHref("placement", mineOnly) },
   ];
 
   return (
@@ -209,7 +226,7 @@ export function DashboardCockpit({
 
       <div className="mb-3 mt-7 flex items-center gap-2"><Gauge size={16} className="text-[#69A7EA]" /><h2 className="text-sm font-semibold">Kurzüberblick</h2></div>
       <section className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {quickMetrics.map(({ label, value, Icon }) => <Card key={label}><CardContent className="p-4"><Icon size={16} className="text-[#D8DADF]" /><p className="mt-3 text-[11px] text-[#94A3B8]">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></CardContent></Card>)}
+        {quickMetrics.map(({ label, value, Icon, href }) => <Link key={label} href={href} className="block rounded-xl transition hover:ring-1 hover:ring-[#1F5FA8]/60"><Card><CardContent className="p-4"><Icon size={16} className="text-[#D8DADF]" /><p className="mt-3 text-[11px] text-[#94A3B8]">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></CardContent></Card></Link>)}
       </section>
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>

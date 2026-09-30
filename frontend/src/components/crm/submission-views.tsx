@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, ArchiveRestore, Ban, Building2, CalendarPlus, ChevronDown, Columns3, Download, Eye, List, ShieldAlert } from "lucide-react";
+import { Archive, ArchiveRestore, Ban, Building2, CalendarPlus, ChevronDown, Columns3, Download, Eye, List, ShieldAlert, X } from "lucide-react";
 import type {
   Candidate,
   CandidateSubmission,
@@ -105,12 +105,16 @@ function isFollowUpDue(item: CandidateSubmission): boolean {
   return new Date(item.follow_up_at) <= endOfToday;
 }
 
-export function SubmissionViews({ submissions, candidates, clients, contacts = [], interviews: initialInterviews = [] }: {
+export function SubmissionViews({ submissions, candidates, clients, contacts = [], interviews: initialInterviews = [], initialStage = null, initialMineOnly = false }: {
   submissions: CandidateSubmission[];
   candidates: Candidate[];
   clients: ClientCompany[];
   contacts?: Contact[];
   interviews?: Interview[];
+  // Vorfilter aus der URL (?stage=...&mine=1), z.B. per Klick auf eine
+  // KPI-Kachel in der Übersicht (siehe dashboard-cockpit.tsx).
+  initialStage?: SubmissionStatus | null;
+  initialMineOnly?: boolean;
 }) {
   const router = useRouter();
   const [view, setView] = useState<"kanban" | "table">("kanban");
@@ -122,7 +126,8 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
   // Sichtbarkeitsgrenze (Default "Alle" bleibt unveraendert). Clientseitig
   // gefiltert, da Prozesse hier bereits vollstaendig geladen sind (siehe
   // getSubmissions() in lib/api/queries.ts, keine Server-Pagination).
-  const [mineOnly, setMineOnly] = useState(false);
+  const [mineOnly, setMineOnly] = useState(initialMineOnly);
+  const [stageFilter, setStageFilter] = useState<SubmissionStatus | null>(initialStage);
   // Abgeschlossene Placements (archived_at gesetzt) sind standardmaessig
   // aus dem Kanban ausgeblendet (Nutzer-Vorgabe "Nach Placement aus der
   // Prozessuebersicht herausnehmen") - ueber diesen Filter wieder
@@ -134,7 +139,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
   // plus nur die Prozesse DIESER EINEN Stufe darunter, siehe den
   // lg:hidden-Block im view === "kanban"-Zweig unten. Nur fuer den
   // Kanban-Modus relevant.
-  const [mobileStage, setMobileStage] = useState<SubmissionStatus>("qualification_call");
+  const [mobileStage, setMobileStage] = useState<SubmissionStatus>(initialStage ?? "qualification_call");
   const { data: currentUserData } = useCurrentUser();
   const currentUserId = currentUserData?.data.id;
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -206,6 +211,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
     return items.filter((item) => {
       if (!showArchived && item.archived_at) return false;
       if (mineOnly && item.owner_user_id !== currentUserId) return false;
+      if (stageFilter && item.status !== stageFilter) return false;
       if (!term) return true;
       const haystack = [
         candidateName(item.candidate_id), clientName(item.client_company_id),
@@ -214,7 +220,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
       return haystack.includes(term);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, search, mineOnly, showArchived, currentUserId, candidates, clients, contacts]);
+  }, [items, search, mineOnly, stageFilter, showArchived, currentUserId, candidates, clients, contacts]);
 
   const exportRows = filteredItems.map((item) => ({
     Kandidat: candidateName(item.candidate_id),
@@ -576,6 +582,16 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
           {showArchived ? "Abgeschlossene ausblenden" : "Abgeschlossene anzeigen"}
         </Button>
       </div>
+      {stageFilter && (
+        <div className="mb-3">
+          <Badge tone="blue" className="gap-1.5">
+            Nur Stufe: {STAGE_LABELS[stageFilter]}
+            <button type="button" onClick={() => setStageFilter(null)} title="Filter entfernen" className="hover:text-white">
+              <X size={12} />
+            </button>
+          </Badge>
+        </div>
+      )}
       {message && <div className="mb-4 flex items-center gap-2 rounded-lg border border-[#D8DADF]/20 bg-[#102A4C]/65 p-3 text-xs text-[#CBD5E1]"><ShieldAlert size={15} />{message}</div>}
 
       {clientPrompt && (
