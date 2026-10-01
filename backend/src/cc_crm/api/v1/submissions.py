@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response, status
 
-from cc_crm.api.dependencies import CurrentUser, DatabaseSession
+from cc_crm.api.dependencies import CurrentUser, DatabaseSession, process_owner_scope
 from cc_crm.models.enums import SubmissionStatus
 from cc_crm.schemas.pagination import Page
 from cc_crm.schemas.recruiting import (
@@ -40,6 +40,7 @@ router = APIRouter(prefix="/submissions")
 @router.get("", response_model=Page[CandidateSubmissionRead])
 def list_submissions(
     session: DatabaseSession,
+    current_user: CurrentUser,
     submission_status: Annotated[SubmissionStatus | None, Query(alias="status")] = None,
     candidate_id: uuid.UUID | None = None,
     client_id: uuid.UUID | None = None,
@@ -50,8 +51,13 @@ def list_submissions(
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> Page[CandidateSubmissionRead]:
-    # owner_user_id ist ein reiner Komfort-Filter ("Meine Prozesse") - ohne
-    # ihn sehen weiterhin alle Nutzer alle Prozesse, keine Sichtbarkeitsgrenze.
+    # Sichtbarkeitsgrenze: Nicht-Admins sehen nur eigene Prozesse - auch ein
+    # explizit uebergebener fremder owner_user_id wird ueberschrieben, sonst
+    # liesse sich die Grenze per Query-Parameter umgehen. Fuer Admins bleibt
+    # owner_user_id der optionale "Meine Prozesse"-Filter.
+    scope = process_owner_scope(current_user)
+    if scope is not None:
+        owner_user_id = scope
     service = CandidateSubmissionService(session)
     entities, total = service.submissions.filtered(
         status=submission_status,
@@ -86,10 +92,17 @@ def create_submission(
 
 
 @router.get("/priority-view", response_model=list[CandidateSubmissionRead])
-def list_priority_view(session: DatabaseSession) -> list[CandidateSubmissionRead]:
+def list_priority_view(
+    session: DatabaseSession, current_user: CurrentUser
+) -> list[CandidateSubmissionRead]:
     """Offene Prozesse sortiert nach closing_probability * erwartetem Honorar."""
+    scope = process_owner_scope(current_user)
     entities = CandidateSubmissionService(session).submissions.priority_candidates()
-    return [CandidateSubmissionRead.model_validate(item) for item in entities]
+    return [
+        CandidateSubmissionRead.model_validate(item)
+        for item in entities
+        if scope is None or item.owner_user_id == scope
+    ]
 
 
 @router.get("/{submission_id}", response_model=CandidateSubmissionRead)

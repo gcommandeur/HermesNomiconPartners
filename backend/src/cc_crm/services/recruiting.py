@@ -143,6 +143,47 @@ class RecruitingProcessService:
         self.warranty = WarrantyService(session)
         self.calendar_events = CalendarEventRepository(session)
 
+    def list_scoped[M: (SubmissionFeedback, Interview, Offer, Placement)](
+        self,
+        model: type[M],
+        owner_user_id: uuid.UUID | None,
+        *,
+        offset: int = 0,
+        limit: int | None = None,
+    ) -> list[M]:
+        """Alle Eintraege, fuer owner_user_id (Nicht-Admin) nur die zu eigenen
+        Prozessen (Sichtbarkeitsgrenze, siehe api/dependencies.py::
+        process_owner_scope). Ohne Limit: die "Alle"-Listen hingen vorher am
+        Standardlimit 100 von repository.list() und schnitten still ab."""
+        statement = select(model)
+        if owner_user_id is not None:
+            statement = statement.join(
+                CandidateSubmission, model.submission_id == CandidateSubmission.id
+            ).where(CandidateSubmission.owner_user_id == owner_user_id)
+        statement = statement.offset(offset)
+        if limit is not None:
+            statement = statement.limit(limit)
+        return list(self.session.scalars(statement).all())
+
+    def list_fees_scoped(self, owner_user_id: uuid.UUID | None) -> list[Fee]:
+        statement = select(Fee)
+        if owner_user_id is not None:
+            statement = (
+                statement.join(Placement, Fee.placement_id == Placement.id)
+                .join(CandidateSubmission, Placement.submission_id == CandidateSubmission.id)
+                .where(CandidateSubmission.owner_user_id == owner_user_id)
+            )
+        return list(self.session.scalars(statement).all())
+
+    def own_submission_ids(self, owner_user_id: uuid.UUID) -> set[uuid.UUID]:
+        return set(
+            self.session.scalars(
+                select(CandidateSubmission.id).where(
+                    CandidateSubmission.owner_user_id == owner_user_id
+                )
+            ).all()
+        )
+
     def list_feedback(self, submission_id: uuid.UUID) -> list[SubmissionFeedback]:
         self.submissions.get(submission_id)
         return list(self.feedback.list_for_submission(submission_id))
@@ -225,6 +266,7 @@ class RecruitingProcessService:
         payload: CandidateQuickLogCreate,
         *,
         changed_by: str | None = None,
+        owner_user_id: uuid.UUID | None = None,
     ) -> CandidateQuickLogResult:
         """Legt eine Notiz zu einer der drei fruehen Stufen an und startet
         dabei bei Bedarf automatisch einen Prozess - keine separate "Prozess
@@ -242,10 +284,14 @@ class RecruitingProcessService:
             )
         self.submissions.candidates.get(candidate_id)
 
+        # owner_user_id: Owner eines neu gestarteten Prozesses (der anlegende
+        # Nutzer). Ein offener Prozess eines Kollegen wird bewusst trotzdem
+        # weitergefuehrt: pro Kandidat ist nur EIN offener Prozess ohne
+        # Kanzlei erlaubt, ein zweiter scheitert mit 409.
         submission = self.submissions.submissions.find_open_unassigned(candidate_id)
         if submission is None:
             submission = self.submissions.create(
-                CandidateSubmissionCreate(candidate_id=candidate_id)
+                CandidateSubmissionCreate(candidate_id=candidate_id, owner_user_id=owner_user_id)
             )
         current_index = QUICK_LOG_STAGE_ORDER.index(submission.status)
         target_index = QUICK_LOG_STAGE_ORDER.index(payload.stage)

@@ -27,5 +27,5 @@ def bulk_submit_candidate(
     current_user: CurrentUser,
 ) -> BulkSubmitResponse:
     return CandidateMatchingService(session).bulk_submit(
-        candidate_id, payload, changed_by=current_user.email
+        candidate_id, payload, changed_by=current_user.email, owner_user_id=current_user.id
     )

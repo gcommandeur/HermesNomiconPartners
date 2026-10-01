@@ -84,6 +84,7 @@ class CandidateMatchingService:
         payload: BulkSubmitRequest,
         *,
         changed_by: str | None = None,
+        owner_user_id: uuid.UUID | None = None,
     ) -> BulkSubmitResponse:
         self.candidates.get(candidate_id)
         if payload.target_status not in BULK_SUBMIT_TARGETS:
@@ -102,7 +103,11 @@ class CandidateMatchingService:
             seen.add(client_company_id)
             try:
                 submission = self._submit_to_one(
-                    candidate_id, client_company_id, payload, changed_by=changed_by
+                    candidate_id,
+                    client_company_id,
+                    payload,
+                    changed_by=changed_by,
+                    owner_user_id=owner_user_id,
                 )
             except (ConflictError, BusinessRuleError, EntityNotFoundError) as exc:
                 skipped += 1
@@ -131,6 +136,7 @@ class CandidateMatchingService:
         payload: BulkSubmitRequest,
         *,
         changed_by: str | None = None,
+        owner_user_id: uuid.UUID | None = None,
     ) -> CandidateSubmission:
         self.clients.get(client_company_id)
         submission = self.submissions.create(
@@ -138,6 +144,7 @@ class CandidateMatchingService:
                 candidate_id=candidate_id,
                 client_company_id=client_company_id,
                 owner=payload.owner,
+                owner_user_id=owner_user_id,
             )
         )
         for status in self._transition_path(payload.target_status):

@@ -569,7 +569,9 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
             placeholder="Nach Kandidat, Kanzlei, Ansprechpartner oder Status suchen"
             value={search}
             onChange={setSearch}
-            ownerFilter={{ mineOnly, onChange: setMineOnly }}
+            // Nicht-Admins bekommen vom Server ohnehin nur eigene Prozesse -
+            // der Alle/Meine-Schalter waere fuer sie wirkungslos.
+            ownerFilter={currentUserData?.data.is_admin ? { mineOnly, onChange: setMineOnly } : undefined}
           />
         </div>
         <Button

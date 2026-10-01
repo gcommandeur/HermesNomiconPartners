@@ -340,7 +340,10 @@ def quick_log_candidate_stage(
     einen Prozess (siehe RecruitingProcessService.quick_log), ohne dass vorher
     eine separate "Prozess erstellen"-Aktion noetig ist."""
     return RecruitingProcessService(session).quick_log(
-        candidate_id, payload, changed_by=current_user.email
+        candidate_id,
+        payload,
+        changed_by=current_user.email,
+        owner_user_id=current_user.id,
     )
 
 

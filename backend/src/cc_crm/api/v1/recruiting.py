@@ -3,9 +3,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 
-from cc_crm.api.dependencies import CurrentUser, DatabaseSession
+from cc_crm.api.dependencies import CurrentUser, DatabaseSession, process_owner_scope
 from cc_crm.core.errors import BusinessRuleError
 from cc_crm.models.enums import InvoiceStatus
+from cc_crm.models.recruiting import Interview, Offer, Placement, SubmissionFeedback
 from cc_crm.schemas.recruiting import (
     FeeCreate,
     FeedbackRead,
@@ -23,49 +24,74 @@ router = APIRouter()
 @router.get("/feedback", response_model=list[FeedbackRead])
 def list_all_feedback(
     session: DatabaseSession,
+    current_user: CurrentUser,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> list[FeedbackRead]:
     service = RecruitingProcessService(session)
     return [
         FeedbackRead.model_validate(item)
-        for item in service.feedback.list(offset=offset, limit=limit)
+        for item in service.list_scoped(
+            SubmissionFeedback, process_owner_scope(current_user), offset=offset, limit=limit
+        )
     ]
 
 
 @router.get("/interviews", response_model=list[InterviewRead])
-def list_all_interviews(session: DatabaseSession) -> list[InterviewRead]:
+def list_all_interviews(
+    session: DatabaseSession, current_user: CurrentUser
+) -> list[InterviewRead]:
     service = RecruitingProcessService(session)
-    return [InterviewRead.model_validate(item) for item in service.interviews.list()]
+    return [
+        InterviewRead.model_validate(item)
+        for item in service.list_scoped(Interview, process_owner_scope(current_user))
+    ]
 
 
 @router.get("/offers", response_model=list[OfferRead])
-def list_all_offers(session: DatabaseSession) -> list[OfferRead]:
+def list_all_offers(session: DatabaseSession, current_user: CurrentUser) -> list[OfferRead]:
     service = RecruitingProcessService(session)
-    return [OfferRead.model_validate(item) for item in service.offers.list()]
+    return [
+        OfferRead.model_validate(item)
+        for item in service.list_scoped(Offer, process_owner_scope(current_user))
+    ]
 
 
 @router.get("/placements", response_model=list[PlacementRead])
-def list_all_placements(session: DatabaseSession) -> list[PlacementRead]:
+def list_all_placements(
+    session: DatabaseSession, current_user: CurrentUser
+) -> list[PlacementRead]:
     service = RecruitingProcessService(session)
-    return [PlacementRead.model_validate(item) for item in service.placements.list()]
+    return [
+        PlacementRead.model_validate(item)
+        for item in service.list_scoped(Placement, process_owner_scope(current_user))
+    ]
 
 
 @router.get("/placements/active-warranties", response_model=list[PlacementRead])
-def list_active_warranties(session: DatabaseSession) -> list[PlacementRead]:
+def list_active_warranties(
+    session: DatabaseSession, current_user: CurrentUser
+) -> list[PlacementRead]:
     """Uebersicht "Laufende Gewaehrleistungen": Placements mit Status LAUFEND
-    oder BALD_ABLAUFEND, sortiert nach dem naechstliegenden Ablaufdatum."""
+    oder BALD_ABLAUFEND, sortiert nach dem naechstliegenden Ablaufdatum -
+    fuer Nicht-Admins nur die eigener Prozesse."""
     service = RecruitingProcessService(session)
+    scope = process_owner_scope(current_user)
+    own_ids = service.own_submission_ids(scope) if scope is not None else None
     return [
         PlacementRead.model_validate(placement)
         for placement, _end_date, _status in service.warranty.active_warranties()
+        if own_ids is None or placement.submission_id in own_ids
     ]
 
 
 @router.get("/fees", response_model=list[FeeRead])
-def list_fees(session: DatabaseSession) -> list[FeeRead]:
+def list_fees(session: DatabaseSession, current_user: CurrentUser) -> list[FeeRead]:
     service = RecruitingProcessService(session)
-    return [FeeRead.model_validate(item) for item in service.fees.list()]
+    return [
+        FeeRead.model_validate(item)
+        for item in service.list_fees_scoped(process_owner_scope(current_user))
+    ]
 
 
 @router.post(

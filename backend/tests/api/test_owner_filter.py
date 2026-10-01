@@ -116,9 +116,200 @@ def test_submission_owner_filter(client: TestClient, second_user_token: str) -> 
     mine_only = client.get(f"/api/v1/submissions?owner_user_id={me['id']}").json()
     assert mine_only["total_count"] == 1
 
+    # Sichtbarkeitsgrenze: ein Nicht-Admin kann per fremdem owner_user_id NICHT
+    # in Kollegen-Prozesse schauen - der Parameter wird auf ihn selbst gesetzt.
     colleague = client.get("/api/v1/auth/me", headers=auth_header(second_user_token)).json()
     others_only = client.get(f"/api/v1/submissions?owner_user_id={colleague['id']}").json()
-    assert others_only["total_count"] == 0
+    assert [item["owner_user_id"] for item in others_only["items"]] == [me["id"]]
+
+
+@pytest.fixture
+def admin_token(session_factory: sessionmaker[Session]) -> str:
+    with session_factory() as session:
+        session.add(
+            User(email="gf@commandeur.example", hashed_password=hash_password("x"), role="admin")
+        )
+        session.commit()
+        _, token = AuthService(session).login("gf@commandeur.example", "x")
+        return token
+
+
+def _full_process(client: TestClient, headers: dict[str, str], last_name: str) -> dict:
+    """Prozess bis Placement samt Interview, Offer, Feedback und Fee - alles
+    im Namen des Nutzers aus `headers`."""
+    candidate = client.post(
+        "/api/v1/candidates", json={"first_name": "P", "last_name": last_name}, headers=headers
+    ).json()
+    company = client.post(
+        "/api/v1/clients", json={"name": f"Kanzlei {last_name}"}, headers=headers
+    ).json()
+    submission = client.post(
+        "/api/v1/submissions",
+        json={"candidate_id": candidate["id"], "client_company_id": company["id"]},
+        headers=headers,
+    ).json()
+    sid = submission["id"]
+
+    def move(status: str) -> None:
+        response = client.patch(
+            f"/api/v1/submissions/{sid}/transition", json={"status": status}, headers=headers
+        )
+        assert response.status_code == 200, response.text
+
+    for status in ("cv_in", "cv_out", "interview"):
+        move(status)
+    client.post(
+        f"/api/v1/submissions/{sid}/interviews",
+        json={"scheduled_at": "2026-10-10T10:00:00", "interview_type": "Erstgespraech"},
+        headers=headers,
+    )
+    client.post(
+        f"/api/v1/submissions/{sid}/feedback",
+        json={
+            "feedback_type": "internal",
+            "feedback_text": "ok",
+            "received_at": "2026-10-01T09:00:00",
+        },
+        headers=headers,
+    )
+    move("offer")
+    offer = client.post(
+        f"/api/v1/submissions/{sid}/offers", json={"offered_salary": "70000"}, headers=headers
+    )
+    assert offer.status_code == 201, offer.text
+    move("placement")
+    placement = client.post(
+        f"/api/v1/submissions/{sid}/placement",
+        json={"start_date": "2026-10-01", "final_salary": "70000", "fee_percentage": "27"},
+        headers=headers,
+    ).json()
+    client.post(
+        f"/api/v1/placements/{placement['id']}/fees", json={"amount_net": "18900"}, headers=headers
+    )
+    return submission
+
+
+class TestProcessVisibility:
+    """Laufende Prozesse und alles daran Haengende sind fuer Nicht-Admins auf
+    die eigenen beschraenkt (serverseitig, nicht nur im Browser gefiltert);
+    Admins sehen alles."""
+
+    ENDPOINTS = (
+        "/api/v1/interviews",
+        "/api/v1/offers",
+        "/api/v1/placements",
+        "/api/v1/placements/active-warranties",
+        "/api/v1/feedback",
+        "/api/v1/fees",
+        "/api/v1/submissions/priority-view",
+    )
+
+    def test_non_admin_sees_only_own_processes_and_children(
+        self, client: TestClient, second_user_token: str, admin_token: str
+    ) -> None:
+        mine = _full_process(client, {}, "Mein")
+        _full_process(client, auth_header(second_user_token), "Fremd")
+
+        submissions = client.get("/api/v1/submissions").json()
+        assert [item["id"] for item in submissions["items"]] == [mine["id"]]
+
+        for endpoint in self.ENDPOINTS:
+            if endpoint.endswith("priority-view"):
+                continue  # braucht einen Closing-Score, siehe eigener Test
+            mine_rows = client.get(endpoint).json()
+            all_rows = client.get(endpoint, headers=auth_header(admin_token)).json()
+            assert len(mine_rows) == 1, endpoint
+            assert len(all_rows) == 2, endpoint
+
+    def test_admin_sees_all_submissions_and_filter_still_works(
+        self, client: TestClient, second_user_token: str, admin_token: str
+    ) -> None:
+        me = client.get("/api/v1/auth/me").json()
+        _full_process(client, {}, "Mein")
+        _full_process(client, auth_header(second_user_token), "Fremd")
+
+        admin = auth_header(admin_token)
+        assert client.get("/api/v1/submissions", headers=admin).json()["total_count"] == 2
+        filtered = client.get(f"/api/v1/submissions?owner_user_id={me['id']}", headers=admin)
+        assert filtered.json()["total_count"] == 1
+
+    def test_priority_view_is_scoped(
+        self, client: TestClient, second_user_token: str, admin_token: str
+    ) -> None:
+        for headers, name in (({}, "Mein"), (auth_header(second_user_token), "Fremd")):
+            submission = _full_process(client, headers, name)
+            client.patch(
+                f"/api/v1/submissions/{submission['id']}/closing-score",
+                json={"closing_status": "hot"},
+                headers=headers,
+            )
+        mine = client.get("/api/v1/submissions/priority-view").json()
+        everyone = client.get(
+            "/api/v1/submissions/priority-view", headers=auth_header(admin_token)
+        ).json()
+        assert len(mine) <= 1
+        assert len(everyone) >= len(mine)
+        me = client.get("/api/v1/auth/me").json()
+        assert all(item["owner_user_id"] == me["id"] for item in mine)
+
+    def test_bulk_submit_and_quick_log_processes_belong_to_creator(
+        self, client: TestClient, admin_token: str
+    ) -> None:
+        me = client.get("/api/v1/auth/me").json()
+        candidate = client.post(
+            "/api/v1/candidates", json={"first_name": "Q", "last_name": "Log"}
+        ).json()
+        company = client.post(
+            "/api/v1/clients", json={"name": "Bulk StBG"}, headers=auth_header(admin_token)
+        ).json()
+
+        client.post(
+            f"/api/v1/candidates/{candidate['id']}/bulk-submit",
+            json={"client_company_ids": [company["id"]], "target_status": "cv_in"},
+        )
+        client.post(
+            f"/api/v1/candidates/{candidate['id']}/quick-log",
+            json={
+                "stage": "qualification_call",
+                "feedback_type": "internal",
+                "feedback_text": "Quali-Call",
+                "received_at": "2026-10-01T09:00:00",
+            },
+        )
+
+        own = client.get("/api/v1/submissions").json()["items"]
+        assert len(own) == 2
+        assert all(item["owner_user_id"] == me["id"] for item in own)
+
+    def test_quick_log_on_colleague_open_process_still_succeeds(
+        self, client: TestClient, second_user_token: str
+    ) -> None:
+        """Pro Kandidat ist nur ein offener Prozess ohne Kanzlei erlaubt -
+        ein Quick-Log auf einen Kandidaten mit offenem Kollegen-Prozess fuehrt
+        diesen weiter statt mit 409 zu scheitern (bekannter Grenzfall: der
+        Prozess bleibt beim Kollegen)."""
+        candidate = client.post(
+            "/api/v1/candidates", json={"first_name": "Geteilter", "last_name": "Kandidat"}
+        ).json()
+        quick_log = {
+            "stage": "qualification_call",
+            "feedback_type": "internal",
+            "feedback_text": "Quali-Call",
+            "received_at": "2026-10-01T09:00:00",
+        }
+        client.post(
+            f"/api/v1/candidates/{candidate['id']}/quick-log",
+            json=quick_log,
+            headers=auth_header(second_user_token),
+        )
+
+        response = client.post(f"/api/v1/candidates/{candidate['id']}/quick-log", json=quick_log)
+
+        assert response.status_code == 200, response.text
+        colleague_view = client.get(
+            "/api/v1/submissions", headers=auth_header(second_user_token)
+        ).json()
+        assert colleague_view["total_count"] == 1
 
 
 def test_task_owner_filter(client: TestClient, second_user_token: str) -> None:

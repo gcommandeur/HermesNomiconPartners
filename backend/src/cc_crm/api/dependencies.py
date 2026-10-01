@@ -1,3 +1,4 @@
+import uuid
 from typing import Annotated
 
 from fastapi import Depends, Header
@@ -44,3 +45,11 @@ def require_admin(current_user: CurrentUser) -> User:
 
 
 AdminUser = Annotated[User, Depends(require_admin)]
+
+
+def process_owner_scope(current_user: User) -> uuid.UUID | None:
+    """Sichtbarkeitsgrenze fuer laufende Prozesse und alles, was daran haengt
+    (Interviews, Offers, Placements, Feedback, Fees): Nicht-Admins sehen nur
+    eigene, Admins alles (None = keine Einschraenkung). Bewusst NICHT fuer
+    Kandidaten/Kanzleien - die sind der gemeinsame Pool der Agentur."""
+    return None if current_user.is_admin else current_user.id
