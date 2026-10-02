@@ -4,7 +4,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response, status
 
-from cc_crm.api.dependencies import CurrentUser, DatabaseSession, process_owner_scope
+from cc_crm.api.dependencies import (
+    CurrentUser,
+    DatabaseSession,
+    SubmissionAccess,
+    process_owner_scope,
+)
 from cc_crm.models.enums import SubmissionStatus
 from cc_crm.schemas.pagination import Page
 from cc_crm.schemas.recruiting import (
@@ -105,7 +110,9 @@ def list_priority_view(
     ]
 
 
-@router.get("/{submission_id}", response_model=CandidateSubmissionRead)
+@router.get(
+    "/{submission_id}", dependencies=[SubmissionAccess], response_model=CandidateSubmissionRead
+)
 def get_submission(
     submission_id: uuid.UUID,
     session: DatabaseSession,
@@ -115,7 +122,9 @@ def get_submission(
     )
 
 
-@router.patch("/{submission_id}", response_model=CandidateSubmissionRead)
+@router.patch(
+    "/{submission_id}", dependencies=[SubmissionAccess], response_model=CandidateSubmissionRead
+)
 def update_submission(
     submission_id: uuid.UUID,
     payload: CandidateSubmissionUpdate,
@@ -127,7 +136,11 @@ def update_submission(
     )
 
 
-@router.patch("/{submission_id}/transition", response_model=CandidateSubmissionRead)
+@router.patch(
+    "/{submission_id}/transition",
+    dependencies=[SubmissionAccess],
+    response_model=CandidateSubmissionRead,
+)
 def transition_submission(
     submission_id: uuid.UUID,
     payload: CandidateSubmissionTransition,
@@ -149,7 +162,11 @@ def transition_submission(
     )
 
 
-@router.post("/{submission_id}/archive", response_model=CandidateSubmissionRead)
+@router.post(
+    "/{submission_id}/archive",
+    dependencies=[SubmissionAccess],
+    response_model=CandidateSubmissionRead,
+)
 def archive_submission(
     submission_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
 ) -> CandidateSubmissionRead:
@@ -162,7 +179,11 @@ def archive_submission(
     )
 
 
-@router.post("/{submission_id}/unarchive", response_model=CandidateSubmissionRead)
+@router.post(
+    "/{submission_id}/unarchive",
+    dependencies=[SubmissionAccess],
+    response_model=CandidateSubmissionRead,
+)
 def unarchive_submission(
     submission_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
 ) -> CandidateSubmissionRead:
@@ -171,7 +192,11 @@ def unarchive_submission(
     )
 
 
-@router.patch("/{submission_id}/closing-score", response_model=ClosingScoreRead)
+@router.patch(
+    "/{submission_id}/closing-score",
+    dependencies=[SubmissionAccess],
+    response_model=ClosingScoreRead,
+)
 def update_closing_score(
     submission_id: uuid.UUID,
     payload: ClosingScoreInput,
@@ -187,7 +212,9 @@ def update_closing_score(
     )
 
 
-@router.get("/{submission_id}/feedback", response_model=list[FeedbackRead])
+@router.get(
+    "/{submission_id}/feedback", dependencies=[SubmissionAccess], response_model=list[FeedbackRead]
+)
 def list_feedback(submission_id: uuid.UUID, session: DatabaseSession) -> list[FeedbackRead]:
     return [
         FeedbackRead.model_validate(item)
@@ -197,6 +224,7 @@ def list_feedback(submission_id: uuid.UUID, session: DatabaseSession) -> list[Fe
 
 @router.post(
     "/{submission_id}/feedback",
+    dependencies=[SubmissionAccess],
     response_model=FeedbackCreateResult,
     status_code=status.HTTP_201_CREATED,
 )
@@ -215,7 +243,11 @@ def create_feedback(
     )
 
 
-@router.patch("/{submission_id}/feedback/{feedback_id}", response_model=FeedbackRead)
+@router.patch(
+    "/{submission_id}/feedback/{feedback_id}",
+    dependencies=[SubmissionAccess],
+    response_model=FeedbackRead,
+)
 def update_feedback(
     submission_id: uuid.UUID,
     feedback_id: uuid.UUID,
@@ -227,7 +259,11 @@ def update_feedback(
     )
 
 
-@router.delete("/{submission_id}/feedback/{feedback_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{submission_id}/feedback/{feedback_id}",
+    dependencies=[SubmissionAccess],
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 def delete_feedback(
     submission_id: uuid.UUID,
     feedback_id: uuid.UUID,
@@ -237,7 +273,11 @@ def delete_feedback(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/{submission_id}/interviews", response_model=list[InterviewRead])
+@router.get(
+    "/{submission_id}/interviews",
+    dependencies=[SubmissionAccess],
+    response_model=list[InterviewRead],
+)
 def list_interviews(submission_id: uuid.UUID, session: DatabaseSession) -> list[InterviewRead]:
     return [
         InterviewRead.model_validate(item)
@@ -247,6 +287,7 @@ def list_interviews(submission_id: uuid.UUID, session: DatabaseSession) -> list[
 
 @router.post(
     "/{submission_id}/interviews",
+    dependencies=[SubmissionAccess],
     response_model=InterviewRead,
     status_code=status.HTTP_201_CREATED,
 )
@@ -261,7 +302,11 @@ def create_interview(
     )
 
 
-@router.patch("/{submission_id}/interviews/{interview_id}", response_model=InterviewRead)
+@router.patch(
+    "/{submission_id}/interviews/{interview_id}",
+    dependencies=[SubmissionAccess],
+    response_model=InterviewRead,
+)
 def update_interview(
     submission_id: uuid.UUID,
     interview_id: uuid.UUID,
@@ -273,7 +318,11 @@ def update_interview(
     )
 
 
-@router.delete("/{submission_id}/interviews/{interview_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{submission_id}/interviews/{interview_id}",
+    dependencies=[SubmissionAccess],
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 def delete_interview(
     submission_id: uuid.UUID,
     interview_id: uuid.UUID,
@@ -283,7 +332,9 @@ def delete_interview(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/{submission_id}/offers", response_model=list[OfferRead])
+@router.get(
+    "/{submission_id}/offers", dependencies=[SubmissionAccess], response_model=list[OfferRead]
+)
 def list_offers(submission_id: uuid.UUID, session: DatabaseSession) -> list[OfferRead]:
     return [
         OfferRead.model_validate(item)
@@ -293,6 +344,7 @@ def list_offers(submission_id: uuid.UUID, session: DatabaseSession) -> list[Offe
 
 @router.post(
     "/{submission_id}/offers",
+    dependencies=[SubmissionAccess],
     response_model=OfferRead,
     status_code=status.HTTP_201_CREATED,
 )
@@ -306,7 +358,9 @@ def create_offer(
     )
 
 
-@router.patch("/{submission_id}/offers/{offer_id}", response_model=OfferRead)
+@router.patch(
+    "/{submission_id}/offers/{offer_id}", dependencies=[SubmissionAccess], response_model=OfferRead
+)
 def update_offer(
     submission_id: uuid.UUID,
     offer_id: uuid.UUID,
@@ -318,7 +372,11 @@ def update_offer(
     )
 
 
-@router.delete("/{submission_id}/offers/{offer_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{submission_id}/offers/{offer_id}",
+    dependencies=[SubmissionAccess],
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 def delete_offer(
     submission_id: uuid.UUID,
     offer_id: uuid.UUID,
@@ -328,7 +386,9 @@ def delete_offer(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/{submission_id}/placement", response_model=PlacementRead)
+@router.get(
+    "/{submission_id}/placement", dependencies=[SubmissionAccess], response_model=PlacementRead
+)
 def get_placement(submission_id: uuid.UUID, session: DatabaseSession) -> PlacementRead:
     return PlacementRead.model_validate(
         RecruitingProcessService(session).get_placement(submission_id)
@@ -337,6 +397,7 @@ def get_placement(submission_id: uuid.UUID, session: DatabaseSession) -> Placeme
 
 @router.post(
     "/{submission_id}/placement",
+    dependencies=[SubmissionAccess],
     response_model=PlacementRead,
     status_code=status.HTTP_201_CREATED,
 )
@@ -350,7 +411,9 @@ def create_placement(
     )
 
 
-@router.patch("/{submission_id}/placement", response_model=PlacementRead)
+@router.patch(
+    "/{submission_id}/placement", dependencies=[SubmissionAccess], response_model=PlacementRead
+)
 def update_placement(
     submission_id: uuid.UUID,
     payload: PlacementUpdate,
@@ -363,13 +426,19 @@ def update_placement(
     )
 
 
-@router.delete("/{submission_id}/placement", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{submission_id}/placement",
+    dependencies=[SubmissionAccess],
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 def delete_placement(submission_id: uuid.UUID, session: DatabaseSession) -> Response:
     RecruitingProcessService(session).delete_placement(submission_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.delete("/{submission_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{submission_id}", dependencies=[SubmissionAccess], status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_submission(
     submission_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
 ) -> Response:

@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
@@ -104,9 +106,7 @@ def test_submission_owner_filter(client: TestClient, second_user_token: str) -> 
         "/api/v1/candidates", json={"first_name": "Sub", "last_name": "Owner"}
     ).json()
 
-    created = client.post(
-        "/api/v1/submissions", json={"candidate_id": candidate["id"]}
-    )
+    created = client.post("/api/v1/submissions", json={"candidate_id": candidate["id"]})
     assert created.status_code == 201
     assert created.json()["owner_user_id"] == me["id"]
 
@@ -180,7 +180,15 @@ def _full_process(client: TestClient, headers: dict[str, str], last_name: str) -
     move("placement")
     placement = client.post(
         f"/api/v1/submissions/{sid}/placement",
-        json={"start_date": "2026-10-01", "final_salary": "70000", "fee_percentage": "27"},
+        json={
+            # Heute + 6 Monate Gewaehrleistung: ein fixes Datum liesse das
+            # Placement irgendwann "abgelaufen" und damit aus
+            # /placements/active-warranties verschwinden.
+            "start_date": date.today().isoformat(),
+            "final_salary": "70000",
+            "fee_percentage": "27",
+            "guarantee_period_months": 6,
+        },
         headers=headers,
     ).json()
     client.post(
@@ -310,6 +318,168 @@ class TestProcessVisibility:
             "/api/v1/submissions", headers=auth_header(second_user_token)
         ).json()
         assert colleague_view["total_count"] == 1
+
+
+class TestDirectIdAccess:
+    """Einzel-Endpunkte mit submission_id im Pfad (api/dependencies.py::
+    require_submission_access): Nicht-Admins kommen an fremde Prozesse - auch
+    ueber verschachtelte Interview-/Offer-/Feedback-/Placement-Routen - weder
+    lesend noch aendernd noch loeschend heran (404, nicht 403); Admins
+    uneingeschraenkt; eigene Prozesse unveraendert."""
+
+    @staticmethod
+    def _children(client: TestClient, admin: dict[str, str], sid: str) -> dict[str, str]:
+        """IDs von Interview/Offer/Feedback eines Prozesses (per Admin gelesen)."""
+        return {
+            "interview": client.get(f"/api/v1/submissions/{sid}/interviews", headers=admin).json()[
+                0
+            ]["id"],
+            "offer": client.get(f"/api/v1/submissions/{sid}/offers", headers=admin).json()[0]["id"],
+            "feedback": client.get(f"/api/v1/submissions/{sid}/feedback", headers=admin).json()[0][
+                "id"
+            ],
+        }
+
+    def test_foreign_process_is_hidden_on_every_endpoint(
+        self, client: TestClient, second_user_token: str, admin_token: str
+    ) -> None:
+        admin = auth_header(admin_token)
+        foreign = _full_process(client, auth_header(second_user_token), "Fremd")
+        sid = foreign["id"]
+        child = self._children(client, admin, sid)
+        base = f"/api/v1/submissions/{sid}"
+        interview = f"{base}/interviews/{child['interview']}"
+        offer = f"{base}/offers/{child['offer']}"
+        feedback = f"{base}/feedback/{child['feedback']}"
+        body = {"next_step": "Hack"}
+
+        attempts = [
+            ("GET", base, None),
+            ("PATCH", base, body),
+            (
+                "PATCH",
+                f"{base}/transition",
+                {"status": "cancelled", "cancellation_reason": "client_rejected"},
+            ),
+            ("POST", f"{base}/archive", None),
+            ("POST", f"{base}/unarchive", None),
+            ("PATCH", f"{base}/closing-score", {"closing_status": "hot"}),
+            ("GET", f"{base}/feedback", None),
+            ("PATCH", feedback, {"feedback_text": "Hack"}),
+            ("DELETE", feedback, None),
+            ("GET", f"{base}/interviews", None),
+            ("PATCH", interview, {"interview_type": "Hack"}),
+            ("DELETE", interview, None),
+            ("GET", f"{base}/offers", None),
+            ("PATCH", offer, {"notes": "Hack"}),
+            ("DELETE", offer, None),
+            ("GET", f"{base}/placement", None),
+            ("PATCH", f"{base}/placement", {"guarantee_period_months": 1}),
+            ("DELETE", f"{base}/placement", None),
+            ("DELETE", base, None),
+        ]
+        for method, url, json_body in attempts:
+            response = client.request(method, url, json=json_body)
+            assert response.status_code == 404, (method, url, response.status_code)
+
+        creates = [
+            (
+                f"{base}/feedback",
+                {
+                    "feedback_type": "internal",
+                    "feedback_text": "x",
+                    "received_at": "2026-10-01T09:00:00",
+                },
+            ),
+            (
+                f"{base}/interviews",
+                {"scheduled_at": "2026-10-11T10:00:00", "interview_type": "Hack"},
+            ),
+            (f"{base}/offers", {"offered_salary": "1"}),
+            (
+                f"{base}/placement",
+                {"start_date": "2026-10-01", "final_salary": "1", "fee_percentage": "27"},
+            ),
+        ]
+        for url, json_body in creates:
+            assert client.post(url, json=json_body).status_code == 404, url
+
+        # Nichts davon hat durchgeschlagen: Prozess und Kinder unveraendert.
+        assert client.get(base, headers=admin).json()["next_step"] != "Hack"
+        assert len(client.get(f"{base}/interviews", headers=admin).json()) == 1
+        assert len(client.get(f"{base}/offers", headers=admin).json()) == 1
+        assert client.get(f"{base}/placement", headers=admin).status_code == 200
+
+    def test_foreign_and_nonexistent_process_are_indistinguishable(
+        self, client: TestClient, second_user_token: str
+    ) -> None:
+        foreign = _full_process(client, auth_header(second_user_token), "Fremd")
+        missing = "00000000-0000-0000-0000-000000000000"
+
+        foreign_response = client.get(f"/api/v1/submissions/{foreign['id']}")
+        missing_response = client.get(f"/api/v1/submissions/{missing}")
+
+        assert foreign_response.status_code == missing_response.status_code == 404
+        assert foreign_response.json() == missing_response.json()
+
+    def test_own_process_works_normally(self, client: TestClient) -> None:
+        mine = _full_process(client, {}, "Mein")
+        base = f"/api/v1/submissions/{mine['id']}"
+
+        assert client.get(base).status_code == 200
+        assert client.patch(base, json={"next_step": "Anrufen"}).status_code == 200
+        assert client.get(f"{base}/interviews").status_code == 200
+        assert client.get(f"{base}/offers").status_code == 200
+        assert client.get(f"{base}/feedback").status_code == 200
+        assert client.get(f"{base}/placement").status_code == 200
+        assert (
+            client.patch(f"{base}/placement", json={"guarantee_period_months": 3}).status_code
+            == 200
+        )
+        feedback = client.post(
+            f"{base}/feedback",
+            json={
+                "feedback_type": "internal",
+                "feedback_text": "Eigene Notiz",
+                "received_at": "2026-10-01T09:00:00",
+            },
+        )
+        assert feedback.status_code == 201, feedback.text
+
+    def test_own_simple_process_can_be_deleted(self, client: TestClient) -> None:
+        candidate = client.post(
+            "/api/v1/candidates", json={"first_name": "Del", "last_name": "Own"}
+        ).json()
+        submission = client.post(
+            "/api/v1/submissions", json={"candidate_id": candidate["id"]}
+        ).json()
+        assert client.delete(f"/api/v1/submissions/{submission['id']}").status_code == 204
+
+    def test_admin_reaches_any_process(
+        self, client: TestClient, second_user_token: str, admin_token: str
+    ) -> None:
+        admin = auth_header(admin_token)
+        colleague = auth_header(second_user_token)
+        foreign = _full_process(client, colleague, "Fremd")
+        base = f"/api/v1/submissions/{foreign['id']}"
+
+        assert client.get(base, headers=admin).status_code == 200
+        patched = client.patch(base, json={"next_step": "Vom Admin"}, headers=admin)
+        assert patched.status_code == 200
+        assert client.get(f"{base}/interviews", headers=admin).status_code == 200
+        assert client.get(f"{base}/placement", headers=admin).status_code == 200
+
+        # Loeschen geht nur ohne Placement - dafuer ein schlichter fremder Prozess.
+        candidate = client.post(
+            "/api/v1/candidates",
+            json={"first_name": "Del", "last_name": "Fremd"},
+            headers=colleague,
+        ).json()
+        simple = client.post(
+            "/api/v1/submissions", json={"candidate_id": candidate["id"]}, headers=colleague
+        ).json()
+        deleted = client.delete(f"/api/v1/submissions/{simple['id']}", headers=admin)
+        assert deleted.status_code == 204
 
 
 def test_task_owner_filter(client: TestClient, second_user_token: str) -> None:
