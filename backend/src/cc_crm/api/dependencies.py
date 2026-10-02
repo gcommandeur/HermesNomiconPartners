@@ -3,11 +3,12 @@ from typing import Annotated
 
 from fastapi import Depends, Header
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
+from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from cc_crm.core.errors import AuthenticationError, EntityNotFoundError, PermissionDeniedError
 from cc_crm.infrastructure.database.session import get_db_session
+from cc_crm.models.recruiting import Fee, Placement
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.user import User
 from cc_crm.services.api_keys import ApiKeyService
@@ -81,3 +82,56 @@ def require_submission_access(
 
 
 SubmissionAccess = Depends(require_submission_access)
+
+
+def _owner_of_placement(placement_id: uuid.UUID) -> Select[tuple[uuid.UUID | None]]:
+    return (
+        select(CandidateSubmission.owner_user_id)
+        .join(Placement, Placement.submission_id == CandidateSubmission.id)
+        .where(Placement.id == placement_id)
+    )
+
+
+def _owner_of_fee(fee_id: uuid.UUID) -> Select[tuple[uuid.UUID | None]]:
+    # Fee.placement_id -> Placement.submission_id -> CandidateSubmission.owner_user_id
+    return (
+        select(CandidateSubmission.owner_user_id)
+        .join(Placement, Placement.submission_id == CandidateSubmission.id)
+        .join(Fee, Fee.placement_id == Placement.id)
+        .where(Fee.id == fee_id)
+    )
+
+
+def _is_visible(
+    session: Session, current_user: User, owner_statement: Select[tuple[uuid.UUID | None]]
+) -> bool:
+    scope = process_owner_scope(current_user)
+    if scope is None:
+        return True
+    return session.scalar(owner_statement) == scope
+
+
+def user_owns_fee(session: Session, current_user: User, fee_id: uuid.UUID) -> bool:
+    """Admin oder Eigentuemer des Prozesses, zu dem die Rechnung gehoert."""
+    return _is_visible(session, current_user, _owner_of_fee(fee_id))
+
+
+def require_placement_access(
+    placement_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> None:
+    """Wie require_submission_access, fuer Routen mit placement_id im Pfad
+    (Rechnungen eines Placements). Fremd und nicht existent: dasselbe 404."""
+    if not _is_visible(session, current_user, _owner_of_placement(placement_id)):
+        raise EntityNotFoundError("Placement not found")
+
+
+def require_fee_access(
+    fee_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> None:
+    """Wie require_submission_access, fuer Routen mit fee_id im Pfad."""
+    if not user_owns_fee(session, current_user, fee_id):
+        raise EntityNotFoundError("Rechnung nicht gefunden")
+
+
+PlacementAccess = Depends(require_placement_access)
+FeeAccess = Depends(require_fee_access)

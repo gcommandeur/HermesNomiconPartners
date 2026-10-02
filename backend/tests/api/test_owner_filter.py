@@ -455,6 +455,94 @@ class TestDirectIdAccess:
         ).json()
         assert client.delete(f"/api/v1/submissions/{submission['id']}").status_code == 204
 
+    @staticmethod
+    def _placement_and_fee(client: TestClient, admin: dict[str, str], sid: str) -> tuple[str, str]:
+        placement = client.get(f"/api/v1/submissions/{sid}/placement", headers=admin).json()
+        fee = client.get(f"/api/v1/placements/{placement['id']}/fees", headers=admin).json()[0]
+        return placement["id"], fee["id"]
+
+    def test_foreign_invoices_are_hidden_and_untouched(
+        self, client: TestClient, second_user_token: str, admin_token: str
+    ) -> None:
+        admin = auth_header(admin_token)
+        foreign = _full_process(client, auth_header(second_user_token), "Fremd")
+        placement_id, fee_id = self._placement_and_fee(client, admin, foreign["id"])
+        missing = "00000000-0000-0000-0000-000000000000"
+
+        listed = client.get(f"/api/v1/placements/{placement_id}/fees")
+        absent = client.get(f"/api/v1/placements/{missing}/fees")
+        assert listed.status_code == absent.status_code == 404
+        assert listed.json() == absent.json()
+
+        changed = client.post(
+            f"/api/v1/fees/{fee_id}/invoice-status", json={"invoice_status": "cancelled"}
+        )
+        assert changed.status_code == 404
+        created = client.post(
+            f"/api/v1/placements/{placement_id}/fees", json={"amount_net": "1.00"}
+        )
+        assert created.status_code == 404
+
+        fees = client.get(f"/api/v1/placements/{placement_id}/fees", headers=admin).json()
+        assert len(fees) == 1
+        assert fees[0]["invoice_status"] == "draft"
+
+    def test_own_invoices_keep_working_including_approval_flow(
+        self, client: TestClient, admin_token: str
+    ) -> None:
+        admin = auth_header(admin_token)
+        mine = _full_process(client, {}, "Mein")
+        placement_id, fee_id = self._placement_and_fee(client, admin, mine["id"])
+
+        assert client.get(f"/api/v1/placements/{placement_id}/fees").status_code == 200
+        issued = client.post(
+            f"/api/v1/fees/{fee_id}/invoice-status", json={"invoice_status": "issued"}
+        )
+        assert issued.status_code == 200, issued.text
+        # Nicht-Admin: "Rechnung stellen" wartet weiterhin auf Freigabe.
+        assert issued.json()["approval_request"]["kind"] == "invoice_issue"
+        assert issued.json()["fee"]["invoice_status"] == "draft"
+
+    def test_admin_reaches_any_invoice(
+        self, client: TestClient, second_user_token: str, admin_token: str
+    ) -> None:
+        admin = auth_header(admin_token)
+        foreign = _full_process(client, auth_header(second_user_token), "Fremd")
+        placement_id, fee_id = self._placement_and_fee(client, admin, foreign["id"])
+
+        assert (
+            client.get(f"/api/v1/placements/{placement_id}/fees", headers=admin).status_code == 200
+        )
+        issued = client.post(
+            f"/api/v1/fees/{fee_id}/invoice-status",
+            json={"invoice_status": "issued"},
+            headers=admin,
+        )
+        assert issued.status_code == 200
+        assert issued.json()["fee"]["invoice_status"] == "issued"
+
+    def test_pending_approvals_for_foreign_fee_are_not_readable(
+        self, client: TestClient, second_user_token: str, admin_token: str
+    ) -> None:
+        """GET /approval-requests/for/fee/{id} zeigt Kandidatenname und Betrag
+        der Rechnung - fuer fremde Rechnungen daher leer (wie "nicht
+        vorhanden"), fuer den Eigentuemer und Admins sichtbar."""
+        admin = auth_header(admin_token)
+        colleague = auth_header(second_user_token)
+        foreign = _full_process(client, colleague, "Fremd")
+        _, fee_id = self._placement_and_fee(client, admin, foreign["id"])
+        requested = client.post(
+            f"/api/v1/fees/{fee_id}/invoice-status",
+            json={"invoice_status": "issued"},
+            headers=colleague,
+        )
+        assert requested.json()["approval_request"] is not None
+        url = f"/api/v1/approval-requests/for/fee/{fee_id}"
+
+        assert client.get(url).json() == []
+        assert len(client.get(url, headers=colleague).json()) == 1
+        assert len(client.get(url, headers=admin).json()) == 1
+
     def test_admin_reaches_any_process(
         self, client: TestClient, second_user_token: str, admin_token: str
     ) -> None:

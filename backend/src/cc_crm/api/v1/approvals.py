@@ -3,7 +3,14 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query
 
-from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
+from cc_crm.api.dependencies import (
+    AdminUser,
+    CurrentUser,
+    DatabaseSession,
+    FeeAccess,
+    PlacementAccess,
+    user_owns_fee,
+)
 from cc_crm.models.approval_request import ApprovalRequest
 from cc_crm.schemas.approval import (
     ApprovalDecision,
@@ -42,10 +49,15 @@ def pending_approvals_for_entity(
     entity_type: Literal["client_company", "fee"],
     entity_id: uuid.UUID,
     session: DatabaseSession,
-    _user: CurrentUser,
+    current_user: CurrentUser,
 ) -> list[ApprovalRequestRead]:
     """Offene Anfragen zu einem Objekt - fuer den "Freigabe ausstehend"-
-    Hinweis beim anfragenden Nutzer, daher nicht admin-only."""
+    Hinweis beim anfragenden Nutzer, daher nicht admin-only. Fuer Rechnungen
+    (entity_type="fee") nur fuer Admin/Prozess-Eigentuemer: sonst liessen sich
+    ueber fremde fee_ids Kandidatenname und Betrag fremder Rechnungen lesen.
+    Fremd und nicht existent liefern gleichermassen eine leere Liste."""
+    if entity_type == "fee" and not user_owns_fee(session, current_user, entity_id):
+        return []
     service = ApprovalService(session)
     return [_read(service, item) for item in service.pending_for(entity_type, entity_id)]
 
@@ -69,7 +81,11 @@ def reject_request(
     return _read(service, service.reject(request_id, admin, payload.decision_note))
 
 
-@router.get("/placements/{placement_id}/fees", response_model=list[FeeRead])
+@router.get(
+    "/placements/{placement_id}/fees",
+    dependencies=[PlacementAccess],
+    response_model=list[FeeRead],
+)
 def list_placement_fees(
     placement_id: uuid.UUID, session: DatabaseSession, _user: CurrentUser
 ) -> list[FeeRead]:
@@ -79,7 +95,11 @@ def list_placement_fees(
     ]
 
 
-@router.post("/fees/{fee_id}/invoice-status", response_model=InvoiceStatusChangeResult)
+@router.post(
+    "/fees/{fee_id}/invoice-status",
+    dependencies=[FeeAccess],
+    response_model=InvoiceStatusChangeResult,
+)
 def change_invoice_status(
     fee_id: uuid.UUID,
     payload: InvoiceStatusChange,

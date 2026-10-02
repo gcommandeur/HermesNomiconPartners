@@ -3,7 +3,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 
-from cc_crm.api.dependencies import CurrentUser, DatabaseSession, process_owner_scope
+from cc_crm.api.dependencies import (
+    CurrentUser,
+    DatabaseSession,
+    PlacementAccess,
+    process_owner_scope,
+)
 from cc_crm.core.errors import BusinessRuleError
 from cc_crm.models.enums import InvoiceStatus
 from cc_crm.models.recruiting import Interview, Offer, Placement, SubmissionFeedback
@@ -96,6 +101,7 @@ def list_fees(session: DatabaseSession, current_user: CurrentUser) -> list[FeeRe
 
 @router.post(
     "/placements/{placement_id}/fees",
+    dependencies=[PlacementAccess],
     response_model=FeeRead,
     status_code=status.HTTP_201_CREATED,
 )
