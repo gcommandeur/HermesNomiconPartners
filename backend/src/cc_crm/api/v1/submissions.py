@@ -10,7 +10,9 @@ from cc_crm.api.dependencies import (
     SubmissionAccess,
     process_owner_scope,
     shared_submission_ids,
+    user_can_manage_shares,
 )
+from cc_crm.core.errors import PermissionDeniedError
 from cc_crm.models.enums import SubmissionStatus
 from cc_crm.schemas.pagination import Page
 from cc_crm.schemas.recruiting import (
@@ -473,9 +475,11 @@ def create_share(
     session: DatabaseSession,
     current_user: CurrentUser,
 ) -> SubmissionShareRead:
-    # Bewusst jeder mit Prozesszugriff (SubmissionAccess), nicht nur Owner/
-    # Admin: sonst koennte eine Vertretung (selbst nur per Freigabe) nicht
-    # weiterteilen. Doppelte Freigabe ist idempotent (siehe Service).
+    # SubmissionAccess (404 fuer Fremde) + Verwaltungsrecht: nur Eigentuemer,
+    # dessen Teamleiter und Admins - ein Empfaenger darf nicht weiterteilen.
+    # Doppelte Freigabe ist idempotent (siehe Service).
+    if not user_can_manage_shares(session, current_user, submission_id):
+        raise PermissionDeniedError("Nur Eigentuemer, Teamleiter oder Admins duerfen teilen.")
     service = SubmissionShareService(session)
     return service.to_read(service.create(submission_id, payload.shared_with_user_id, current_user))
 
@@ -491,9 +495,14 @@ def delete_share(
     session: DatabaseSession,
     current_user: CurrentUser,
 ) -> Response:
-    # SubmissionAccess deckt auch "die eigene Freigabe selbst entfernen" ab:
-    # der Empfaenger hat den Prozess ja gerade ueber diese Freigabe im Zugriff.
-    SubmissionShareService(session).delete(submission_id, share_id, current_user)
+    # Entziehen: Eigentuemer/Teamleiter/Admin - ein Empfaenger nur die EIGENE
+    # Freigabe (Rueckgabe).
+    service = SubmissionShareService(session)
+    if not user_can_manage_shares(session, current_user, submission_id):
+        share = service.get(submission_id, share_id)
+        if share.shared_with_user_id != current_user.id:
+            raise PermissionDeniedError("Nur die eigene Freigabe kann zurueckgegeben werden.")
+    service.delete(submission_id, share_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

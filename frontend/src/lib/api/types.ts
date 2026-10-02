@@ -62,6 +62,18 @@ export type SubmissionCancellationReason =
   | "candidate_rejected" | "client_rejected" | "candidate_ghosting";
 export type ClosingStatus = "hot" | "warm" | "risk" | "stop";
 
+/** Freigabe eines Prozesses an einen Kollegen (Backend schemas/submission.py::
+ * SubmissionShareRead) - gewaehrt vollen Zugriff auf genau diesen Prozess. */
+export interface SubmissionShare {
+  id: string;
+  submission_id: string;
+  shared_with_user_id: string;
+  shared_with_name: string | null;
+  created_by_user_id: string | null;
+  created_by_name: string | null;
+  created_at: string;
+}
+
 export interface Entity {
   id: string;
   created_at: string;

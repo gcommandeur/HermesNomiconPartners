@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SubmissionStageBar } from "@/components/crm/submission-stage-bar";
+import { SubmissionSharesPanel } from "@/components/crm/submission-shares-panel";
 import { StageEditModal } from "@/components/crm/stage-edit-modal";
 import type { CandidateSubmission, ClientCompany, SubmissionStatus } from "@/lib/api/types";
 
@@ -34,13 +35,18 @@ export function CandidateSubmissionStages({
   return (
     <>
       {submissions.map((submission) => (
-        <SubmissionStageBar
-          key={submission.id}
-          status={submission.status}
-          label={submissions.length > 1 ? clientName(submission.client_company_id) : undefined}
-          submissionId={submission.id}
-          onStageClick={(stage) => setEditing({ submissionId: submission.id, stage })}
-        />
+        <div key={submission.id} className="space-y-2">
+          <SubmissionStageBar
+            status={submission.status}
+            label={submissions.length > 1 ? clientName(submission.client_company_id) : undefined}
+            submissionId={submission.id}
+            onStageClick={(stage) => setEditing({ submissionId: submission.id, stage })}
+          />
+          <SubmissionSharesPanel
+            submissionId={submission.id}
+            ownerUserId={submission.owner_user_id}
+          />
+        </div>
       ))}
 
       {editing && editingSubmission && (

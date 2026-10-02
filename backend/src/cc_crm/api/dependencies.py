@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 from fastapi import Depends, Header
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -104,6 +104,22 @@ def user_can_access_submission(
     return _has_share(session, current_user, submission_id)
 
 
+def user_can_manage_shares(
+    session: Session, current_user: User, submission_id: uuid.UUID
+) -> bool:
+    """Freigaben anlegen/entziehen: nur Admin, Eigentuemer oder dessen
+    Teamleiter - also wer den Prozess ueber process_owner_scope erreicht, NICHT
+    wer ihn nur per Freigabe sieht (sonst koennte ein Empfaenger den Prozess an
+    beliebige Dritte weitergeben)."""
+    scope = process_owner_scope(current_user, session)
+    if scope is None:
+        return True
+    owner_user_id = session.scalar(
+        select(CandidateSubmission.owner_user_id).where(CandidateSubmission.id == submission_id)
+    )
+    return owner_user_id in scope
+
+
 def _has_share(session: Session, current_user: User, submission_id: uuid.UUID) -> bool:
     return (
         session.scalar(
@@ -138,26 +154,26 @@ SubmissionAccess = Depends(require_submission_access)
 
 
 def _submission_of_placement(placement_id: uuid.UUID) -> Select[Any]:
-    return (
+    return cast(
+        "Select[Any]",
         select(CandidateSubmission.id, CandidateSubmission.owner_user_id)
         .join(Placement, Placement.submission_id == CandidateSubmission.id)
-        .where(Placement.id == placement_id)
+        .where(Placement.id == placement_id),
     )
 
 
 def _submission_of_fee(fee_id: uuid.UUID) -> Select[Any]:
     # Fee.placement_id -> Placement.submission_id -> CandidateSubmission
-    return (
+    return cast(
+        "Select[Any]",
         select(CandidateSubmission.id, CandidateSubmission.owner_user_id)
         .join(Placement, Placement.submission_id == CandidateSubmission.id)
         .join(Fee, Fee.placement_id == Placement.id)
-        .where(Fee.id == fee_id)
+        .where(Fee.id == fee_id),
     )
 
 
-def _is_visible(
-    session: Session, current_user: User, submission_statement: Select[Any]
-) -> bool:
+def _is_visible(session: Session, current_user: User, submission_statement: Select[Any]) -> bool:
     """`submission_statement` liefert (submission_id, owner_user_id) des
     Prozesses, zu dem das Objekt gehoert (oder keine Zeile)."""
     scope = process_owner_scope(current_user, session)
@@ -166,7 +182,8 @@ def _is_visible(
     row = session.execute(submission_statement).first()
     if row is None:
         return False
-    submission_id, owner_user_id = row
+    submission_id: uuid.UUID = row[0]
+    owner_user_id: uuid.UUID | None = row[1]
     if owner_user_id in scope:
         return True
     return _has_share(session, current_user, submission_id)

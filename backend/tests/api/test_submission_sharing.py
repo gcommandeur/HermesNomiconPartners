@@ -1,7 +1,7 @@
 """Prozess-Sharing: ein einzelner Prozess wird gezielt mit einem Kollegen
 geteilt (voller Zugriff), additiv zur Sichtbarkeit ueber Owner/Team.
 
-Setup: A (member, Owner), C (member, unbeteiligt), D (member, nie beteiligt),
+Setup: A (member, Owner), C (member), D (member), E (member, nie beteiligt),
 B (team_lead mit A als Mitarbeiterin), dazu ein Admin."""
 
 import uuid
@@ -23,6 +23,7 @@ class Setup:
     b: Person
     c: Person
     d: Person
+    e: Person
     admin: Person
 
 
@@ -33,6 +34,7 @@ def setup(client: TestClient, session_factory: sessionmaker[Session]) -> Setup:
     b = _make_user(session_factory, "b@share.example", "team_lead", "Bernd")
     c = _make_user(session_factory, "c@share.example", "member", "Carla")
     d = _make_user(session_factory, "d@share.example", "member", "Dirk")
+    e = _make_user(session_factory, "e@share.example", "member", "Eva")
     client.patch(f"/api/v1/users/{a.id}", json={"manager_id": b.id}, headers=admin.headers)
     process = _full_process(client, a.headers, "Anna")
     a.process_id = process["id"]
@@ -42,7 +44,7 @@ def setup(client: TestClient, session_factory: sessionmaker[Session]) -> Setup:
     a.fee_id = client.get(
         f"/api/v1/placements/{a.placement_id}/fees", headers=admin.headers
     ).json()[0]["id"]
-    return Setup(a=a, b=b, c=c, d=d, admin=admin)
+    return Setup(a=a, b=b, c=c, d=d, e=e, admin=admin)
 
 
 def _share(client: TestClient, s: Setup, who: Person, by: Person | None = None):  # type: ignore[no-untyped-def]
@@ -121,14 +123,21 @@ def test_share_grants_access_everywhere_and_revocation_removes_it(
         assert client.get(f"/api/v1/{endpoint}", headers=setup.c.headers).json() == []
 
 
-def test_recipient_can_remove_own_share(client: TestClient, setup: Setup) -> None:
+def test_recipient_can_only_return_own_share(client: TestClient, setup: Setup) -> None:
     share = _share(client, setup, setup.c).json()
+    other = _share(client, setup, setup.d).json()
     url = f"/api/v1/submissions/{setup.a.process_id}/shares/{share['id']}"
-    # Unbeteiligter D darf nicht widerrufen (404)
-    assert client.delete(url, headers=setup.d.headers).status_code == 404
+    # Unbeteiligter (E) darf nicht widerrufen (404, keine Existenz verraten)
+    assert client.delete(url, headers=setup.e.headers).status_code == 404
+    # Empfaenger D darf die Freigabe von C nicht entziehen (403) ...
+    assert client.delete(url, headers=setup.d.headers).status_code == 403
+    assert _ids(client, setup.c) == {setup.a.process_id}
+    # ... aber die eigene zurueckgeben
+    own = f"/api/v1/submissions/{setup.a.process_id}/shares/{other['id']}"
+    assert client.delete(own, headers=setup.d.headers).status_code == 204
+    assert _ids(client, setup.d) == set()
     assert client.delete(url, headers=setup.c.headers).status_code == 204
     assert _ids(client, setup.c) == set()
-    assert client.get(_paths(setup)[0], headers=setup.c.headers).status_code == 404
     assert client.get(f"/api/v1/submissions/{setup.a.process_id}/shares",
                       headers=setup.a.headers).json() == []
 
@@ -175,17 +184,46 @@ def test_duplicate_share_is_idempotent(client: TestClient, setup: Setup) -> None
     assert len(listed) == 1
 
 
-def test_team_lead_via_hierarchy_and_recipient_can_reshare(
+def test_only_owner_team_lead_and_admin_can_manage_shares(
     client: TestClient, setup: Setup
 ) -> None:
-    # D ist unbeteiligt und darf weder teilen noch die Freigaben sehen.
-    outsider = _share(client, setup, setup.b, by=setup.d)
-    assert outsider.status_code == 404
-    # B sieht den Prozess nur ueber die Team-Hierarchie und darf trotzdem teilen.
+    # Unbeteiligter E: 404, darf weder teilen noch Freigaben sehen.
+    assert _share(client, setup, setup.b, by=setup.e).status_code == 404
+    # Teamleiter B (Zugriff nur ueber die Hierarchie) und Admin duerfen teilen.
     assert _share(client, setup, setup.c, by=setup.b).status_code == 201
-    # C (nur per Freigabe) darf weiterteilen - Vertretung ohne Owner/Admin.
-    assert _share(client, setup, setup.d, by=setup.c).status_code == 201
-    assert _ids(client, setup.d) == {setup.a.process_id}
+    assert _share(client, setup, setup.d, by=setup.admin).status_code == 201
+    # Empfaenger C darf NICHT weiterteilen (403) - D ist schon Empfaenger, E nicht.
+    denied = _share(client, setup, setup.e, by=setup.c)
+    assert denied.status_code == 403, denied.text
+    assert _ids(client, setup.e) == set()
+    # Teamleiter B darf fremde Freigaben entziehen.
+    shares = client.get(
+        f"/api/v1/submissions/{setup.a.process_id}/shares", headers=setup.b.headers
+    ).json()
+    for item in shares:
+        url = f"/api/v1/submissions/{setup.a.process_id}/shares/{item['id']}"
+        assert client.delete(url, headers=setup.b.headers).status_code == 204
+
+
+def test_fee_approval_requests_and_invoices_follow_shares(
+    client: TestClient, setup: Setup
+) -> None:
+    url = f"/api/v1/approval-requests/for/fee/{setup.a.fee_id}"
+    assert client.get(url, headers=setup.c.headers).json() == []
+    _share(client, setup, setup.c)
+    assert client.get(url, headers=setup.c.headers).status_code == 200
+    # Mitarbeiter-Rechnung stellen braucht Freigabe -> Anfrage ist fuer den
+    # Empfaenger sichtbar, fuer Unbeteiligte nicht.
+    requested = client.post(
+        f"/api/v1/fees/{setup.a.fee_id}/invoice-status",
+        json={"invoice_status": "issued"},
+        headers=setup.c.headers,
+    )
+    assert requested.status_code == 200, requested.text
+    assert requested.json()["approval_request"] is not None
+    visible = client.get(url, headers=setup.c.headers).json()
+    assert [item["entity_id"] for item in visible] == [setup.a.fee_id]
+    assert client.get(url, headers=setup.d.headers).json() == []
 
 
 def test_team_scope_unchanged_and_admin_unrestricted(client: TestClient, setup: Setup) -> None:
@@ -197,7 +235,9 @@ def test_team_scope_unchanged_and_admin_unrestricted(client: TestClient, setup: 
         assert client.get(path, headers=setup.admin.headers).status_code == 200
 
 
-def test_audit_log_entries(client: TestClient, setup: Setup, session_factory: sessionmaker[Session]) -> None:
+def test_audit_log_entries(
+    client: TestClient, setup: Setup, session_factory: sessionmaker[Session]
+) -> None:
     share = _share(client, setup, setup.c).json()
     _share(client, setup, setup.c)  # idempotent: kein zweiter Eintrag
     client.delete(

@@ -95,10 +95,14 @@ class SubmissionShareService:
         self.session.commit()
         return share
 
-    def delete(self, submission_id: uuid.UUID, share_id: uuid.UUID, current_user: User) -> None:
+    def get(self, submission_id: uuid.UUID, share_id: uuid.UUID) -> SubmissionShare:
         share = self.session.get(SubmissionShare, share_id)
         if share is None or share.submission_id != submission_id:
             raise EntityNotFoundError("Freigabe nicht gefunden")
+        return share
+
+    def delete(self, submission_id: uuid.UUID, share_id: uuid.UUID, current_user: User) -> None:
+        share = self.get(submission_id, share_id)
         self.session.delete(share)
         self.audit_logs.create(
             {
