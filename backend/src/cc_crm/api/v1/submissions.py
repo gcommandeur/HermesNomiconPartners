@@ -56,20 +56,23 @@ def list_submissions(
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> Page[CandidateSubmissionRead]:
-    # Sichtbarkeitsgrenze: Nicht-Admins sehen nur eigene Prozesse - auch ein
-    # explizit uebergebener fremder owner_user_id wird ueberschrieben, sonst
-    # liesse sich die Grenze per Query-Parameter umgehen. Fuer Admins bleibt
-    # owner_user_id der optionale "Meine Prozesse"-Filter.
-    scope = process_owner_scope(current_user)
-    if scope is not None:
-        owner_user_id = scope
+    # Sichtbarkeitsgrenze: Nicht-Admins sehen nur Prozesse ihres Scopes
+    # (Mitarbeiter: eigene; Teamleiter: eigene + die ihres Teams). Ein
+    # explizites owner_user_id darf innerhalb des Scopes einschraenken
+    # ("Meine Prozesse"), ein fremdes wird verworfen - sonst liesse sich die
+    # Grenze per Query-Parameter umgehen. Fuer Admins bleibt owner_user_id der
+    # optionale Filter.
+    scope = process_owner_scope(current_user, session)
+    owner_user_ids = scope
+    if owner_user_id is not None and (scope is None or owner_user_id in scope):
+        owner_user_ids = [owner_user_id]
     service = CandidateSubmissionService(session)
     entities, total = service.submissions.filtered(
         status=submission_status,
         candidate_id=candidate_id,
         client_id=client_id,
         job_id=job_id,
-        owner_user_id=owner_user_id,
+        owner_user_ids=owner_user_ids,
         created_from=created_from,
         created_to=created_to,
         offset=offset,
@@ -101,12 +104,12 @@ def list_priority_view(
     session: DatabaseSession, current_user: CurrentUser
 ) -> list[CandidateSubmissionRead]:
     """Offene Prozesse sortiert nach closing_probability * erwartetem Honorar."""
-    scope = process_owner_scope(current_user)
+    scope = process_owner_scope(current_user, session)
     entities = CandidateSubmissionService(session).submissions.priority_candidates()
     return [
         CandidateSubmissionRead.model_validate(item)
         for item in entities
-        if scope is None or item.owner_user_id == scope
+        if scope is None or item.owner_user_id in scope
     ]
 
 

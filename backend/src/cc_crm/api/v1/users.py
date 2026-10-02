@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter
 
 from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
+from cc_crm.models.user import User
 from cc_crm.schemas.user import (
     CalendarFeedTokenRead,
     UserAdminRead,
@@ -14,19 +15,24 @@ from cc_crm.services.users import UserService
 router = APIRouter(prefix="/users")
 
 
+def _admin_read(user: User, labels: dict[uuid.UUID, str]) -> UserAdminRead:
+    return UserAdminRead(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        is_admin=user.is_admin,
+        is_active=user.is_active,
+        role=user.role,
+        manager_id=user.manager_id,
+        manager_name=labels.get(user.manager_id) if user.manager_id else None,
+    )
+
+
 @router.get("", response_model=list[UserAdminRead])
 def list_users(session: DatabaseSession, _admin: AdminUser) -> list[UserAdminRead]:
     users = UserService(session).list_all()
-    return [
-        UserAdminRead(
-            id=user.id,
-            email=user.email,
-            display_name=user.display_name,
-            is_admin=user.is_admin,
-            is_active=user.is_active,
-        )
-        for user in users
-    ]
+    labels = {user.id: user.display_name or user.email for user in users}
+    return [_admin_read(user, labels) for user in users]
 
 
 @router.get("/assignable", response_model=list[UserBriefRead])
@@ -51,14 +57,10 @@ def update_user(
     session: DatabaseSession,
     admin: AdminUser,
 ) -> UserAdminRead:
-    user = UserService(session).update_admin_fields(user_id, payload, admin)
-    return UserAdminRead(
-        id=user.id,
-        email=user.email,
-        display_name=user.display_name,
-        is_admin=user.is_admin,
-        is_active=user.is_active,
-    )
+    service = UserService(session)
+    user = service.update_admin_fields(user_id, payload, admin)
+    labels = {item.id: item.display_name or item.email for item in service.list_all()}
+    return _admin_read(user, labels)
 
 
 @router.post("/{user_id}/rotate-calendar-feed-token", response_model=CalendarFeedTokenRead)

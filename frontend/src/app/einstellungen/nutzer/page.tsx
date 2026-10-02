@@ -9,7 +9,16 @@ import { DataTable } from "@/components/crm/data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiPatch } from "@/lib/api/client";
 import { useAdminUsersCache, useCurrentUser, invalidateAdminUsersCache } from "@/lib/api/hooks";
-import type { AdminUser } from "@/lib/api/types";
+import type { AdminUser, UserRole } from "@/lib/api/types";
+
+const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
+  { value: "member", label: "Mitarbeiter" },
+  { value: "team_lead", label: "Teamleiter" },
+  { value: "admin", label: "Admin" },
+];
+
+const selectClass =
+  "h-9 rounded-md border border-white/15 bg-[#0D1B2E] px-2 text-sm text-[#D8DADF] focus:outline-none focus:ring-2 focus:ring-[#1F5FA8]/30 disabled:opacity-50";
 
 export default function NutzerverwaltungPage() {
   const { data: meData, isLoading: meLoading } = useCurrentUser();
@@ -19,11 +28,11 @@ export default function NutzerverwaltungPage() {
   const [rowError, setRowError] = useState<string | null>(null);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
-  async function toggleField(user: AdminUser, field: "is_admin" | "is_active") {
+  async function patchUser(user: AdminUser, body: Record<string, unknown>) {
     setBusyUserId(user.id);
     setRowError(null);
     try {
-      await apiPatch(`/users/${user.id}`, { [field]: !user[field] });
+      await apiPatch(`/users/${user.id}`, body);
       await Promise.all([retry(), invalidateAdminUsersCache()]);
     } catch (exception) {
       setRowError(exception instanceof Error ? exception.message : "Änderung fehlgeschlagen.");
@@ -31,6 +40,12 @@ export default function NutzerverwaltungPage() {
       setBusyUserId(null);
     }
   }
+
+  const toggleActive = (user: AdminUser) => patchUser(user, { is_active: !user.is_active });
+  const changeRole = (user: AdminUser, role: UserRole) => patchUser(user, { role });
+  // "" (Keine Zuordnung) -> explizit null, hebt die Zuordnung auf.
+  const changeManager = (user: AdminUser, managerId: string) =>
+    patchUser(user, { manager_id: managerId === "" ? null : managerId });
 
   if (meLoading) {
     return (
@@ -75,33 +90,76 @@ export default function NutzerverwaltungPage() {
           ))}
         </div>
       ) : (
-        <DataTable headers={["Name", "E-Mail", "Admin", "Aktiv"]}>
-          {users.map((user) => (
-            <tr key={user.id} className="hover:bg-[#203A5A]/25">
-              <td className="px-4 py-3.5 font-medium text-[#F8FAFC]">{user.display_name ?? "—"}</td>
-              <td className="px-4 py-3.5 text-[#CBD5E1]">{user.email}</td>
-              <td className="px-4 py-3.5">
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={user.is_admin}
+        <DataTable headers={["Name", "E-Mail", "Rolle", "Teamleiter", "Aktiv"]}>
+          {users.map((user) => {
+            // Zur Auswahl: aktive Teamleiter (ohne den Nutzer selbst) - plus ein
+            // bereits zugeordneter Teamleiter, auch wenn er inzwischen keiner
+            // mehr ist, damit die aktuelle Zuordnung sichtbar bleibt.
+            const managerOptions = users.filter(
+              (candidate) =>
+                candidate.id !== user.id &&
+                ((candidate.role === "team_lead" && candidate.is_active) || candidate.id === user.manager_id),
+            );
+            const managerStale =
+              user.manager_id !== null && !managerOptions.some((option) => option.id === user.manager_id);
+            return (
+              <tr key={user.id} className="hover:bg-[#203A5A]/25">
+                <td className="px-4 py-3.5 font-medium text-[#F8FAFC]">{user.display_name ?? "—"}</td>
+                <td className="px-4 py-3.5 text-[#CBD5E1]">{user.email}</td>
+                <td className="px-4 py-3.5">
+                  <select
+                    className={selectClass}
+                    value={user.role}
                     disabled={busyUserId === user.id}
-                    onChange={() => toggleField(user, "is_admin")}
-                  />
-                </label>
-              </td>
-              <td className="px-4 py-3.5">
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={user.is_active}
-                    disabled={busyUserId === user.id}
-                    onChange={() => toggleField(user, "is_active")}
-                  />
-                </label>
-              </td>
-            </tr>
-          ))}
+                    onChange={(event) => void changeRole(user, event.target.value as UserRole)}
+                    aria-label={`Rolle von ${user.display_name ?? user.email}`}
+                  >
+                    {ROLE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="px-4 py-3.5">
+                  {user.role === "admin" ? (
+                    <span className="text-xs text-[#94A3B8]" title="Admins sehen alle Prozesse">—</span>
+                  ) : (
+                    <>
+                      <select
+                        className={selectClass}
+                        value={user.manager_id ?? ""}
+                        disabled={busyUserId === user.id}
+                        onChange={(event) => void changeManager(user, event.target.value)}
+                        aria-label={`Teamleiter von ${user.display_name ?? user.email}`}
+                      >
+                        <option value="">Keine Zuordnung</option>
+                        {managerOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.display_name ?? option.email}
+                            {option.role !== "team_lead" ? " (kein Teamleiter mehr)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                      {managerStale && (
+                        <p className="mt-1 text-[11px] text-[#F0B429]">Zugeordneter Teamleiter nicht in der Liste.</p>
+                      )}
+                    </>
+                  )}
+                </td>
+                <td className="px-4 py-3.5">
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={user.is_active}
+                      disabled={busyUserId === user.id}
+                      onChange={() => toggleActive(user)}
+                    />
+                  </label>
+                </td>
+              </tr>
+            );
+          })}
         </DataTable>
       )}
     </>

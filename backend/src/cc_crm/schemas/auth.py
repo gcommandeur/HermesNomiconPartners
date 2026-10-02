@@ -19,6 +19,9 @@ class UserRead(BaseModel):
     email: str
     display_name: str | None
     is_admin: bool = False
+    # "member" | "team_lead" | "admin" - steuert u.a., ob der Alle/Meine-
+    # Schalter bei den Prozessen sichtbar ist.
+    role: str = "member"
     # NUR fuer den eingeloggten Nutzer selbst befuellt (Login-Response,
     # /auth/me) - niemals fuer andere Nutzer (siehe schemas/user.py::
     # UserAdminRead fuer die Admin-Nutzerliste, die dieses Feld bewusst

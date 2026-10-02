@@ -50,12 +50,23 @@ def require_admin(current_user: CurrentUser) -> User:
 AdminUser = Annotated[User, Depends(require_admin)]
 
 
-def process_owner_scope(current_user: User) -> uuid.UUID | None:
+def process_owner_scope(current_user: User, session: Session) -> list[uuid.UUID] | None:
     """Sichtbarkeitsgrenze fuer laufende Prozesse und alles, was daran haengt
-    (Interviews, Offers, Placements, Feedback, Fees): Nicht-Admins sehen nur
-    eigene, Admins alles (None = keine Einschraenkung). Bewusst NICHT fuer
-    Kandidaten/Kanzleien - die sind der gemeinsame Pool der Agentur."""
-    return None if current_user.is_admin else current_user.id
+    (Interviews, Offers, Placements, Feedback, Fees). Ergebnis:
+    - None: keine Einschraenkung (Admin),
+    - Liste von Nutzer-IDs, deren Prozesse sichtbar sind: Mitarbeiter nur die
+      eigene ID, Teamleiter die eigene plus die seiner direkten Mitarbeiter
+      (users.manager_id), jeweils LIVE aus der DB - eine geaenderte Zuordnung
+      wirkt sofort, ohne Cache.
+    Immer eine Liste statt einer Einzel-UUID, damit alle Aufrufer genau einen
+    Fall behandeln (`in` bzw. `.in_()`). Bewusst NICHT fuer Kandidaten/
+    Kanzleien - die sind der gemeinsame Pool der Agentur."""
+    if current_user.is_admin:
+        return None
+    if current_user.is_team_lead:
+        reports = session.scalars(select(User.id).where(User.manager_id == current_user.id)).all()
+        return [current_user.id, *reports]
+    return [current_user.id]
 
 
 def require_submission_access(
@@ -71,13 +82,13 @@ def require_submission_access(
     einer nicht existierenden ID - 403 wuerde die Existenz verraten. Admins
     und ein nicht existierender Prozess laufen unveraendert an den Handler
     durch (der meldet das 404 selbst)."""
-    scope = process_owner_scope(current_user)
+    scope = process_owner_scope(current_user, session)
     if scope is None:
         return
     owner_user_id = session.scalar(
         select(CandidateSubmission.owner_user_id).where(CandidateSubmission.id == submission_id)
     )
-    if owner_user_id != scope:
+    if owner_user_id not in scope:
         raise EntityNotFoundError("CandidateSubmission not found")
 
 
@@ -105,10 +116,10 @@ def _owner_of_fee(fee_id: uuid.UUID) -> Select[Any]:
 def _is_visible(
     session: Session, current_user: User, owner_statement: Select[Any]
 ) -> bool:
-    scope = process_owner_scope(current_user)
+    scope = process_owner_scope(current_user, session)
     if scope is None:
         return True
-    return bool(session.scalar(owner_statement) == scope)
+    return session.scalar(owner_statement) in scope
 
 
 def user_owns_fee(session: Session, current_user: User, fee_id: uuid.UUID) -> bool:

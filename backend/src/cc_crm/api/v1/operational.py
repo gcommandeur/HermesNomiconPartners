@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import select
 
-from cc_crm.api.dependencies import CurrentUser, DatabaseSession
+from cc_crm.api.dependencies import CurrentUser, DatabaseSession, process_owner_scope
 from cc_crm.core.config import get_settings
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.operational import Document
@@ -163,8 +163,9 @@ def get_cockpit(
     # Kandidaten/Prozesse/Aufgaben (Übersicht ruft ohne Parameter auf) - sonst
     # tauchten fremde Eintraege als "wichtig"/"heiss" auf. Admins und
     # explizite Filter (Analytics-Seite) bleiben unveraendert.
-    if owner_user_id is None and not current_user.is_admin:
-        owner_user_id = [current_user.id]
+    if owner_user_id is None:
+        # Mitarbeiter: sich selbst; Teamleiter: sich und sein Team; Admin: None.
+        owner_user_id = process_owner_scope(current_user, session)
     return CockpitRead.model_validate(
         CockpitService(session).build(period, owner_user_ids=owner_user_id)
     )

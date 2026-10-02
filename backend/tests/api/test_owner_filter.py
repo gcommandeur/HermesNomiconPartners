@@ -244,21 +244,32 @@ class TestProcessVisibility:
     def test_priority_view_is_scoped(
         self, client: TestClient, second_user_token: str, admin_token: str
     ) -> None:
-        for headers, name in (({}, "Mein"), (auth_header(second_user_token), "Fremd")):
-            submission = _full_process(client, headers, name)
-            client.patch(
+        ids = {}
+        for key, headers in (("mine", {}), ("foreign", auth_header(second_user_token))):
+            candidate = client.post(
+                "/api/v1/candidates",
+                json={"first_name": "Prio", "last_name": key},
+                headers=headers,
+            ).json()
+            submission = client.post(
+                "/api/v1/submissions", json={"candidate_id": candidate["id"]}, headers=headers
+            ).json()
+            scored = client.patch(
                 f"/api/v1/submissions/{submission['id']}/closing-score",
-                json={"closing_status": "hot"},
+                json={"pain_staerke": 5, "entscheidungsklarheit": 5, "markt_fit": 5},
                 headers=headers,
             )
+            assert scored.status_code == 200, scored.text
+            ids[key] = submission["id"]
+
         mine = client.get("/api/v1/submissions/priority-view").json()
         everyone = client.get(
             "/api/v1/submissions/priority-view", headers=auth_header(admin_token)
         ).json()
-        assert len(mine) <= 1
-        assert len(everyone) >= len(mine)
-        me = client.get("/api/v1/auth/me").json()
-        assert all(item["owner_user_id"] == me["id"] for item in mine)
+        # Mit gueltigem Score taucht ein offener Prozess ueberhaupt auf - sonst
+        # wuerde der Test nichts pruefen.
+        assert {item["id"] for item in everyone} == {ids["mine"], ids["foreign"]}
+        assert [item["id"] for item in mine] == [ids["mine"]]
 
     def test_bulk_submit_and_quick_log_processes_belong_to_creator(
         self, client: TestClient, admin_token: str
@@ -363,7 +374,11 @@ class TestDirectIdAccess:
             ),
             ("POST", f"{base}/archive", None),
             ("POST", f"{base}/unarchive", None),
-            ("PATCH", f"{base}/closing-score", {"closing_status": "hot"}),
+            (
+                "PATCH",
+                f"{base}/closing-score",
+                {"pain_staerke": 5, "entscheidungsklarheit": 5, "markt_fit": 5},
+            ),
             ("GET", f"{base}/feedback", None),
             ("PATCH", feedback, {"feedback_text": "Hack"}),
             ("DELETE", feedback, None),

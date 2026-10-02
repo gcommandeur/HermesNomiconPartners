@@ -42,6 +42,7 @@ def _user_read(user: User) -> UserRead:
         email=user.email,
         display_name=user.display_name,
         is_admin=user.is_admin,
+        role=user.role,
         calendar_feed_token=user.calendar_feed_token,
     )
 

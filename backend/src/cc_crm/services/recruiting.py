@@ -1,5 +1,6 @@
 import logging
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import TypeVar
@@ -146,40 +147,41 @@ class RecruitingProcessService:
     def list_scoped[M: (SubmissionFeedback, Interview, Offer, Placement)](
         self,
         model: type[M],
-        owner_user_id: uuid.UUID | None,
+        owner_user_ids: Sequence[uuid.UUID] | None,
         *,
         offset: int = 0,
         limit: int | None = None,
     ) -> list[M]:
-        """Alle Eintraege, fuer owner_user_id (Nicht-Admin) nur die zu eigenen
-        Prozessen (Sichtbarkeitsgrenze, siehe api/dependencies.py::
-        process_owner_scope). Ohne Limit: die "Alle"-Listen hingen vorher am
-        Standardlimit 100 von repository.list() und schnitten still ab."""
+        """Alle Eintraege; mit owner_user_ids (Nicht-Admin) nur die zu
+        Prozessen dieser Eigentuemer (Sichtbarkeitsgrenze, siehe api/
+        dependencies.py::process_owner_scope). Ohne Limit: die "Alle"-Listen
+        hingen vorher am Standardlimit 100 von repository.list() und schnitten
+        still ab."""
         statement = select(model)
-        if owner_user_id is not None:
+        if owner_user_ids is not None:
             statement = statement.join(
                 CandidateSubmission, model.submission_id == CandidateSubmission.id
-            ).where(CandidateSubmission.owner_user_id == owner_user_id)
+            ).where(CandidateSubmission.owner_user_id.in_(owner_user_ids))
         statement = statement.offset(offset)
         if limit is not None:
             statement = statement.limit(limit)
         return list(self.session.scalars(statement).all())
 
-    def list_fees_scoped(self, owner_user_id: uuid.UUID | None) -> list[Fee]:
+    def list_fees_scoped(self, owner_user_ids: Sequence[uuid.UUID] | None) -> list[Fee]:
         statement = select(Fee)
-        if owner_user_id is not None:
+        if owner_user_ids is not None:
             statement = (
                 statement.join(Placement, Fee.placement_id == Placement.id)
                 .join(CandidateSubmission, Placement.submission_id == CandidateSubmission.id)
-                .where(CandidateSubmission.owner_user_id == owner_user_id)
+                .where(CandidateSubmission.owner_user_id.in_(owner_user_ids))
             )
         return list(self.session.scalars(statement).all())
 
-    def own_submission_ids(self, owner_user_id: uuid.UUID) -> set[uuid.UUID]:
+    def submission_ids_for_owners(self, owner_user_ids: Sequence[uuid.UUID]) -> set[uuid.UUID]:
         return set(
             self.session.scalars(
                 select(CandidateSubmission.id).where(
-                    CandidateSubmission.owner_user_id == owner_user_id
+                    CandidateSubmission.owner_user_id.in_(owner_user_ids)
                 )
             ).all()
         )

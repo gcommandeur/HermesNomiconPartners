@@ -23,7 +23,19 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # mit is_admin als zweitem Boolean waere das ein Feld pro Rolle geworden.
     # is_admin bleibt unten als Property erhalten, damit der Rest des Codes
     # (current_user.is_admin) unveraendert einfach bleibt.
+    # Gueltige Werte: "member" (nur eigene Prozesse), "team_lead" (eigene +
+    # die der zugeordneten Mitarbeiter, siehe manager_id) und "admin" (alles).
+    # Bewusst nur anwendungsseitig validiert (schemas/user.py::UserRole), nicht
+    # per DB-CHECK - wie bei den anderen String-Feldern dieses Projekts
+    # (z.B. KpiPointRule.stage), damit ein weiterer Wert keine Migration braucht.
     role: Mapped[str] = mapped_column(String(20), default="member", nullable=False)
+    # Teamleiter dieses Mitarbeiters (einstufig: ein Teamleiter sieht seine
+    # DIREKTEN Mitarbeiter). Wirkt nur, wenn der Zugeordnete role="team_lead"
+    # hat. SET NULL: wird der Teamleiter geloescht, bleibt der Mitarbeiter
+    # bestehen, nur ohne Zuordnung.
+    manager_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
     # "Passwort" fuer den persoenlichen ICS-Kalender-Feed (siehe
     # api/v1/calendar_feed.py) - MUSS geheim bleiben wie ein API-Key: nie in
     # UserRead an andere Nutzer, nie loggen. secrets.token_urlsafe(32) statt
@@ -49,3 +61,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     @property
     def is_admin(self) -> bool:
         return self.role == "admin"
+
+    @property
+    def is_team_lead(self) -> bool:
+        return self.role == "team_lead"

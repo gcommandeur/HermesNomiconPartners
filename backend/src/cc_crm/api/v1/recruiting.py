@@ -37,7 +37,10 @@ def list_all_feedback(
     return [
         FeedbackRead.model_validate(item)
         for item in service.list_scoped(
-            SubmissionFeedback, process_owner_scope(current_user), offset=offset, limit=limit
+            SubmissionFeedback,
+            process_owner_scope(current_user, session),
+            offset=offset,
+            limit=limit,
         )
     ]
 
@@ -49,7 +52,7 @@ def list_all_interviews(
     service = RecruitingProcessService(session)
     return [
         InterviewRead.model_validate(item)
-        for item in service.list_scoped(Interview, process_owner_scope(current_user))
+        for item in service.list_scoped(Interview, process_owner_scope(current_user, session))
     ]
 
 
@@ -58,7 +61,7 @@ def list_all_offers(session: DatabaseSession, current_user: CurrentUser) -> list
     service = RecruitingProcessService(session)
     return [
         OfferRead.model_validate(item)
-        for item in service.list_scoped(Offer, process_owner_scope(current_user))
+        for item in service.list_scoped(Offer, process_owner_scope(current_user, session))
     ]
 
 
@@ -69,7 +72,7 @@ def list_all_placements(
     service = RecruitingProcessService(session)
     return [
         PlacementRead.model_validate(item)
-        for item in service.list_scoped(Placement, process_owner_scope(current_user))
+        for item in service.list_scoped(Placement, process_owner_scope(current_user, session))
     ]
 
 
@@ -81,8 +84,8 @@ def list_active_warranties(
     oder BALD_ABLAUFEND, sortiert nach dem naechstliegenden Ablaufdatum -
     fuer Nicht-Admins nur die eigener Prozesse."""
     service = RecruitingProcessService(session)
-    scope = process_owner_scope(current_user)
-    own_ids = service.own_submission_ids(scope) if scope is not None else None
+    scope = process_owner_scope(current_user, session)
+    own_ids = service.submission_ids_for_owners(scope) if scope is not None else None
     return [
         PlacementRead.model_validate(placement)
         for placement, _end_date, _status in service.warranty.active_warranties()
@@ -95,7 +98,7 @@ def list_fees(session: DatabaseSession, current_user: CurrentUser) -> list[FeeRe
     service = RecruitingProcessService(session)
     return [
         FeeRead.model_validate(item)
-        for item in service.list_fees_scoped(process_owner_scope(current_user))
+        for item in service.list_fees_scoped(process_owner_scope(current_user, session))
     ]
 
 

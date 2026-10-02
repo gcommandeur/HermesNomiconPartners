@@ -93,11 +93,15 @@ export interface CalendarEvent extends Entity {
  * selbst befuellt, `calendar_feed_token` ist ein Geheimnis (siehe Backend
  * schemas/auth.py::UserRead). Fuer die Admin-Nutzerliste andere Nutzer siehe
  * AdminUser weiter unten, die dieses Feld bewusst nicht enthaelt. */
+export type UserRole = "member" | "team_lead" | "admin";
+
 export interface CurrentUserInfo {
   id: string;
   email: string;
   display_name: string | null;
   is_admin: boolean;
+  /** "member" | "team_lead" | "admin" - ein Teamleiter sieht die Prozesse seines Teams. */
+  role?: UserRole;
   calendar_feed_token?: string | null;
 }
 
@@ -107,6 +111,10 @@ export interface AdminUser {
   display_name: string | null;
   is_admin: boolean;
   is_active: boolean;
+  role: UserRole;
+  /** Zugeordneter Teamleiter (wirkt nur, wenn dieser role="team_lead" hat). */
+  manager_id: string | null;
+  manager_name: string | null;
 }
 
 /** Minimale Nutzerliste (GET /users/assignable) fuer Owner-Dropdowns beim

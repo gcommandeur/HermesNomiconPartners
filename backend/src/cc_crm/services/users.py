@@ -33,21 +33,36 @@ class UserService:
         entzieht (sonst waere ohne einen zweiten Admin niemand mehr in der
         Lage, es zurueckzugeben)."""
         user = self.get(user_id)
+        new_role: str | None = None
+        if payload.role is not None:
+            new_role = payload.role
+        elif payload.is_admin is True:
+            new_role = "admin"
+        elif payload.is_admin is False and user.is_admin:
+            new_role = "member"
         if (
             user.id == current_user.id
-            and payload.is_admin is False
             and current_user.is_admin
+            and new_role is not None
+            and new_role != "admin"
         ):
             raise BusinessRuleError(
                 "Du kannst dir dein eigenes Admin-Recht nicht selbst entziehen."
             )
-        old_values = {"role": user.role, "is_active": user.is_active}
+        old_values = {
+            "role": user.role,
+            "is_active": user.is_active,
+            "manager_id": str(user.manager_id) if user.manager_id else None,
+        }
         changed = False
-        if payload.is_admin is not None:
-            user.role = "admin" if payload.is_admin else "member"
+        if new_role is not None:
+            user.role = new_role
             changed = True
         if payload.is_active is not None:
             user.is_active = payload.is_active
+            changed = True
+        if "manager_id" in payload.model_fields_set:
+            self._assign_manager(user, payload.manager_id)
             changed = True
         if changed:
             # Sicherheitsrelevant (wer hat wem welche Rechte gegeben/entzogen) -
@@ -60,11 +75,32 @@ class UserService:
                     "action": "admin_fields_changed",
                     "changed_by": current_user.email,
                     "old_values": old_values,
-                    "new_values": {"role": user.role, "is_active": user.is_active},
+                    "new_values": {
+                        "role": user.role,
+                        "is_active": user.is_active,
+                        "manager_id": str(user.manager_id) if user.manager_id else None,
+                    },
                 }
             )
         self.session.commit()
         return user
+
+    def _assign_manager(self, user: User, manager_id: uuid.UUID | None) -> None:
+        """Teamleiter-Zuordnung setzen/aufheben. Bewusst einstufig und ohne
+        Zyklus-Pruefung (Teamleiter sieht nur seine DIREKTEN Mitarbeiter, siehe
+        api/dependencies.py::process_owner_scope). Die Zuordnung wirkt nur,
+        wenn der Zugeordnete role="team_lead" hat."""
+        if manager_id is None:
+            user.manager_id = None
+            return
+        if manager_id == user.id:
+            raise BusinessRuleError("Ein Nutzer kann nicht sein eigener Teamleiter sein.")
+        manager = self.session.get(User, manager_id)
+        if manager is None:
+            raise EntityNotFoundError("Teamleiter nicht gefunden")
+        if not manager.is_active:
+            raise BusinessRuleError("Der Teamleiter ist deaktiviert.")
+        user.manager_id = manager.id
 
     def rotate_calendar_feed_token(self, user_id: uuid.UUID, current_user: User) -> User:
         user = self.get(user_id)
