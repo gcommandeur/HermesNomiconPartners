@@ -9,6 +9,7 @@ from cc_crm.api.dependencies import (
     DatabaseSession,
     SubmissionAccess,
     process_owner_scope,
+    shared_submission_ids,
 )
 from cc_crm.models.enums import SubmissionStatus
 from cc_crm.schemas.pagination import Page
@@ -34,9 +35,12 @@ from cc_crm.schemas.submission import (
     ClosingScoreInput,
     ClosingScoreRead,
     FeedbackCreateResult,
+    SubmissionShareCreate,
+    SubmissionShareRead,
 )
 from cc_crm.services.closing_score import ACTION_RECOMMENDATIONS
 from cc_crm.services.recruiting import RecruitingProcessService
+from cc_crm.services.submission_shares import SubmissionShareService
 from cc_crm.services.submissions import CandidateSubmissionService
 
 router = APIRouter(prefix="/submissions")
@@ -64,8 +68,12 @@ def list_submissions(
     # optionale Filter.
     scope = process_owner_scope(current_user, session)
     owner_user_ids = scope
+    # Freigaben (submission_shares) kommen additiv dazu - ausser bei einem
+    # gueltigen Owner-Filter ("Meine Prozesse"), der bewusst einschraenkt.
+    shared_ids = shared_submission_ids(current_user, session)
     if owner_user_id is not None and (scope is None or owner_user_id in scope):
         owner_user_ids = [owner_user_id]
+        shared_ids = []
     service = CandidateSubmissionService(session)
     entities, total = service.submissions.filtered(
         status=submission_status,
@@ -73,6 +81,7 @@ def list_submissions(
         client_id=client_id,
         job_id=job_id,
         owner_user_ids=owner_user_ids,
+        shared_submission_ids=shared_ids,
         created_from=created_from,
         created_to=created_to,
         offset=offset,
@@ -105,11 +114,12 @@ def list_priority_view(
 ) -> list[CandidateSubmissionRead]:
     """Offene Prozesse sortiert nach closing_probability * erwartetem Honorar."""
     scope = process_owner_scope(current_user, session)
+    shared_ids = set(shared_submission_ids(current_user, session))
     entities = CandidateSubmissionService(session).submissions.priority_candidates()
     return [
         CandidateSubmissionRead.model_validate(item)
         for item in entities
-        if scope is None or item.owner_user_id in scope
+        if scope is None or item.owner_user_id in scope or item.id in shared_ids
     ]
 
 
@@ -438,6 +448,52 @@ def update_placement(
 )
 def delete_placement(submission_id: uuid.UUID, session: DatabaseSession) -> Response:
     RecruitingProcessService(session).delete_placement(submission_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/{submission_id}/shares",
+    dependencies=[SubmissionAccess],
+    response_model=list[SubmissionShareRead],
+)
+def list_shares(submission_id: uuid.UUID, session: DatabaseSession) -> list[SubmissionShareRead]:
+    service = SubmissionShareService(session)
+    return [service.to_read(item) for item in service.list_for_submission(submission_id)]
+
+
+@router.post(
+    "/{submission_id}/shares",
+    dependencies=[SubmissionAccess],
+    response_model=SubmissionShareRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_share(
+    submission_id: uuid.UUID,
+    payload: SubmissionShareCreate,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> SubmissionShareRead:
+    # Bewusst jeder mit Prozesszugriff (SubmissionAccess), nicht nur Owner/
+    # Admin: sonst koennte eine Vertretung (selbst nur per Freigabe) nicht
+    # weiterteilen. Doppelte Freigabe ist idempotent (siehe Service).
+    service = SubmissionShareService(session)
+    return service.to_read(service.create(submission_id, payload.shared_with_user_id, current_user))
+
+
+@router.delete(
+    "/{submission_id}/shares/{share_id}",
+    dependencies=[SubmissionAccess],
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_share(
+    submission_id: uuid.UUID,
+    share_id: uuid.UUID,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> Response:
+    # SubmissionAccess deckt auch "die eigene Freigabe selbst entfernen" ab:
+    # der Empfaenger hat den Prozess ja gerade ueber diese Freigabe im Zugriff.
+    SubmissionShareService(session).delete(submission_id, share_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

@@ -165,3 +165,19 @@ class CandidatePitchLogRead(EntityRead):
     occurred_at: datetime
     notes_text: str | None
     next_step: str | None
+
+
+class SubmissionShareCreate(BaseModel):
+    shared_with_user_id: uuid.UUID
+
+
+class SubmissionShareRead(BaseModel):
+    """Eine Prozess-Freigabe: wer hat Zugriff, von wem geteilt, seit wann."""
+
+    id: uuid.UUID
+    submission_id: uuid.UUID
+    shared_with_user_id: uuid.UUID
+    shared_with_name: str | None = None
+    created_by_user_id: uuid.UUID | None = None
+    created_by_name: str | None = None
+    created_at: datetime

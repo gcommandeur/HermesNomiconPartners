@@ -2,7 +2,7 @@ import uuid
 from collections.abc import Sequence
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from cc_crm.models.enums import SubmissionStatus
@@ -123,6 +123,7 @@ class CandidateSubmissionRepository(SQLAlchemyRepository[CandidateSubmission]):
         job_id: uuid.UUID | None = None,
         owner_user_id: uuid.UUID | None = None,
         owner_user_ids: Sequence[uuid.UUID] | None = None,
+        shared_submission_ids: Sequence[uuid.UUID] = (),
         created_from: datetime | None = None,
         created_to: datetime | None = None,
         offset: int = 0,
@@ -140,7 +141,13 @@ class CandidateSubmissionRepository(SQLAlchemyRepository[CandidateSubmission]):
         if owner_user_id is not None:
             filters.append(CandidateSubmission.owner_user_id == owner_user_id)
         if owner_user_ids is not None:
-            filters.append(CandidateSubmission.owner_user_id.in_(owner_user_ids))
+            # Freigaben (submission_shares) kommen ADDITIV zum Owner-Scope dazu.
+            filters.append(
+                or_(
+                    CandidateSubmission.owner_user_id.in_(owner_user_ids),
+                    CandidateSubmission.id.in_(shared_submission_ids),
+                )
+            )
         if created_from is not None:
             filters.append(CandidateSubmission.created_at >= created_from)
         if created_to is not None:

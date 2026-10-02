@@ -33,6 +33,7 @@ from cc_crm.models.region_modifier import RegionModifier
 from cc_crm.models.sourcing_lead import SourcingLead
 from cc_crm.models.sourcing_run import SourcingRun
 from cc_crm.models.submission import CandidateSubmission
+from cc_crm.models.submission_share import SubmissionShare
 from cc_crm.models.task import Task
 from cc_crm.models.trusted_device import TrustedDevice
 from cc_crm.models.user import User
@@ -74,6 +75,7 @@ __all__ = [
     "SourcingLead",
     "SourcingMetric",
     "SourcingRun",
+    "SubmissionShare",
     "Task",
     "TrustedDevice",
     "User",

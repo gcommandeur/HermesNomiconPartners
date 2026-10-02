@@ -1,5 +1,6 @@
 import re
 import uuid
+from collections.abc import Collection
 from datetime import UTC, date, datetime, timedelta
 from statistics import mean, median
 
@@ -242,7 +243,10 @@ class CockpitService:
         return f"{status_label} — {who}"
 
     def build(
-        self, period: str, owner_user_ids: list[uuid.UUID] | None = None
+        self,
+        period: str,
+        owner_user_ids: list[uuid.UUID] | None = None,
+        shared_submission_ids: Collection[uuid.UUID] = (),
     ) -> dict[str, object]:
         now = naive_utc(datetime.now(UTC))
         since = now - timedelta(days={"week": 7, "month": 30, "quarter": 90}.get(period, 7))
@@ -267,8 +271,13 @@ class CockpitService:
             )
         submissions = list(self.session.scalars(select(CandidateSubmission)).all())
         if filtered_candidate_ids is not None:
+            # shared_submission_ids: per Freigabe geteilte Prozesse zaehlen
+            # additiv zum Kandidaten-Owner-Filter (siehe submission_shares).
             submissions = [
-                item for item in submissions if item.candidate_id in filtered_candidate_ids
+                item
+                for item in submissions
+                if item.candidate_id in filtered_candidate_ids
+                or item.id in shared_submission_ids
             ]
         submission_ids_for_owner_filter = {item.id for item in submissions}
         tasks = list(

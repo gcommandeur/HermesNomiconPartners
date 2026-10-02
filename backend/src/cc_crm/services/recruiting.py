@@ -6,7 +6,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import TypeVar
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from cc_crm.core.config import get_settings
@@ -148,40 +148,63 @@ class RecruitingProcessService:
         self,
         model: type[M],
         owner_user_ids: Sequence[uuid.UUID] | None,
+        shared_submission_ids: Sequence[uuid.UUID] = (),
         *,
         offset: int = 0,
         limit: int | None = None,
     ) -> list[M]:
         """Alle Eintraege; mit owner_user_ids (Nicht-Admin) nur die zu
         Prozessen dieser Eigentuemer (Sichtbarkeitsgrenze, siehe api/
-        dependencies.py::process_owner_scope). Ohne Limit: die "Alle"-Listen
+        dependencies.py::process_owner_scope) PLUS die Prozesse in
+        shared_submission_ids (Freigaben, additiv). Ohne Limit: die "Alle"-Listen
         hingen vorher am Standardlimit 100 von repository.list() und schnitten
         still ab."""
         statement = select(model)
         if owner_user_ids is not None:
             statement = statement.join(
                 CandidateSubmission, model.submission_id == CandidateSubmission.id
-            ).where(CandidateSubmission.owner_user_id.in_(owner_user_ids))
+            ).where(
+                or_(
+                    CandidateSubmission.owner_user_id.in_(owner_user_ids),
+                    CandidateSubmission.id.in_(shared_submission_ids),
+                )
+            )
         statement = statement.offset(offset)
         if limit is not None:
             statement = statement.limit(limit)
         return list(self.session.scalars(statement).all())
 
-    def list_fees_scoped(self, owner_user_ids: Sequence[uuid.UUID] | None) -> list[Fee]:
+    def list_fees_scoped(
+        self,
+        owner_user_ids: Sequence[uuid.UUID] | None,
+        shared_submission_ids: Sequence[uuid.UUID] = (),
+    ) -> list[Fee]:
         statement = select(Fee)
         if owner_user_ids is not None:
             statement = (
                 statement.join(Placement, Fee.placement_id == Placement.id)
                 .join(CandidateSubmission, Placement.submission_id == CandidateSubmission.id)
-                .where(CandidateSubmission.owner_user_id.in_(owner_user_ids))
+                .where(
+                    or_(
+                        CandidateSubmission.owner_user_id.in_(owner_user_ids),
+                        CandidateSubmission.id.in_(shared_submission_ids),
+                    )
+                )
             )
         return list(self.session.scalars(statement).all())
 
-    def submission_ids_for_owners(self, owner_user_ids: Sequence[uuid.UUID]) -> set[uuid.UUID]:
+    def submission_ids_for_owners(
+        self,
+        owner_user_ids: Sequence[uuid.UUID],
+        shared_submission_ids: Sequence[uuid.UUID] = (),
+    ) -> set[uuid.UUID]:
         return set(
             self.session.scalars(
                 select(CandidateSubmission.id).where(
-                    CandidateSubmission.owner_user_id.in_(owner_user_ids)
+                    or_(
+                        CandidateSubmission.owner_user_id.in_(owner_user_ids),
+                        CandidateSubmission.id.in_(shared_submission_ids),
+                    )
                 )
             ).all()
         )
