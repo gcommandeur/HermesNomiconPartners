@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends, Header
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -84,7 +84,7 @@ def require_submission_access(
 SubmissionAccess = Depends(require_submission_access)
 
 
-def _owner_of_placement(placement_id: uuid.UUID) -> Select[tuple[uuid.UUID | None]]:
+def _owner_of_placement(placement_id: uuid.UUID) -> Select[Any]:
     return (
         select(CandidateSubmission.owner_user_id)
         .join(Placement, Placement.submission_id == CandidateSubmission.id)
@@ -92,7 +92,7 @@ def _owner_of_placement(placement_id: uuid.UUID) -> Select[tuple[uuid.UUID | Non
     )
 
 
-def _owner_of_fee(fee_id: uuid.UUID) -> Select[tuple[uuid.UUID | None]]:
+def _owner_of_fee(fee_id: uuid.UUID) -> Select[Any]:
     # Fee.placement_id -> Placement.submission_id -> CandidateSubmission.owner_user_id
     return (
         select(CandidateSubmission.owner_user_id)
@@ -103,12 +103,12 @@ def _owner_of_fee(fee_id: uuid.UUID) -> Select[tuple[uuid.UUID | None]]:
 
 
 def _is_visible(
-    session: Session, current_user: User, owner_statement: Select[tuple[uuid.UUID | None]]
+    session: Session, current_user: User, owner_statement: Select[Any]
 ) -> bool:
     scope = process_owner_scope(current_user)
     if scope is None:
         return True
-    return session.scalar(owner_statement) == scope
+    return bool(session.scalar(owner_statement) == scope)
 
 
 def user_owns_fee(session: Session, current_user: User, fee_id: uuid.UUID) -> bool:
