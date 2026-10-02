@@ -26,3 +26,6 @@ class ActivityUpdate(BaseModel):
 class ActivityRead(ActivityCreate, ORMModel):
     id: uuid.UUID
     occurred_at: datetime
+    # Wer die Aktivitaet ausgeloest hat (z.B. Mailversand) - None bei
+    # automatischen/eingehenden. Basis der Autorenanzeige in der Timeline.
+    sent_by_user_id: uuid.UUID | None = None

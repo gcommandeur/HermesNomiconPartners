@@ -224,8 +224,13 @@ class RecruitingProcessService:
             values = payload.model_dump(exclude={"target_status"})
             values["submission_id"] = submission.id
             values["stage"] = stage
+            # Urheber kommt vom angemeldeten Nutzer, nicht aus dem Payload -
+            # sonst liesse sich ein Kommentar unter fremdem Namen anlegen. Ohne
+            # Nutzer (interne Aufrufe) bleibt ein evtl. mitgegebener Wert.
+            if changed_by is not None:
+                values["created_by"] = changed_by
             feedback = self.feedback.create(values)
-            self._event(submission, "feedback_received", "Feedback received", {})
+            self._event(submission, "feedback_received", "Feedback received", {}, changed_by)
             self.session.commit()
             return feedback
         except Exception:
@@ -393,6 +398,7 @@ class RecruitingProcessService:
             payload,
             "interview_scheduled",
             "Interview scheduled",
+            changed_by=current_user.email,
         )
         self._align_interview_follow_up(submission, payload.scheduled_at)
         # Das Interview ist die primaere, wichtige Aktion und ist an dieser
@@ -531,7 +537,9 @@ class RecruitingProcessService:
         self.submissions.get(submission_id)
         return list(self.offers.list_for_submission(submission_id))
 
-    def create_offer(self, submission_id: uuid.UUID, payload: OfferCreate) -> Offer:
+    def create_offer(
+        self, submission_id: uuid.UUID, payload: OfferCreate, current_user: User | None = None
+    ) -> Offer:
         submission = self.submissions.get(submission_id)
         if submission.status != SubmissionStatus.OFFER:
             raise BusinessRuleError("Offer requires the process to be in offer status")
@@ -541,6 +549,7 @@ class RecruitingProcessService:
             payload,
             "offer_received",
             "Offer received",
+            changed_by=current_user.email if current_user else None,
         )
 
     def _get_offer(self, submission_id: uuid.UUID, offer_id: uuid.UUID) -> Offer:
@@ -574,7 +583,12 @@ class RecruitingProcessService:
             raise EntityNotFoundError("Placement not found")
         return placement
 
-    def create_placement(self, submission_id: uuid.UUID, payload: PlacementCreate) -> Placement:
+    def create_placement(
+        self,
+        submission_id: uuid.UUID,
+        payload: PlacementCreate,
+        current_user: User | None = None,
+    ) -> Placement:
         submission = self.submissions.get(submission_id)
         if submission.status != SubmissionStatus.PLACEMENT:
             raise BusinessRuleError("Placement requires the process to be in placement status")
@@ -600,6 +614,7 @@ class RecruitingProcessService:
             "placement_created",
             "Placement created",
             {"fee_percentage": str(fee_percentage), "calculated_fee": str(calculated_fee)},
+            current_user.email if current_user else None,
         )
         self.session.commit()
         return placement
@@ -686,7 +701,9 @@ class RecruitingProcessService:
             "fee_percentage was not provided and no Kanzlei default is available"
         )
 
-    def create_fee(self, placement_id: uuid.UUID, payload: FeeCreate) -> Fee:
+    def create_fee(
+        self, placement_id: uuid.UUID, payload: FeeCreate, current_user: User | None = None
+    ) -> Fee:
         placement = self.placements.get(placement_id)
         if placement is None:
             raise EntityNotFoundError("Placement not found")
@@ -709,6 +726,7 @@ class RecruitingProcessService:
             "fee_calculated",
             "Fee calculated",
             {"amount_net": str(fee.amount_net), "amount_gross": str(amount_gross)},
+            current_user.email if current_user else None,
         )
         self.session.commit()
         return fee
@@ -722,11 +740,12 @@ class RecruitingProcessService:
         subject: str,
         *,
         commit: bool = True,
+        changed_by: str | None = None,
     ) -> ChildT:
         values = payload.model_dump()
         values["submission_id"] = submission.id
         entity = repository.create(values)
-        self._event(submission, activity_type, subject, {})
+        self._event(submission, activity_type, subject, {}, changed_by)
         if commit:
             self.session.commit()
         return entity
@@ -737,6 +756,7 @@ class RecruitingProcessService:
         activity_type: str,
         subject: str,
         new_values: dict[str, object],
+        changed_by: str | None = None,
     ) -> None:
         now = datetime.now(UTC)
         self.activities.create(
@@ -755,6 +775,7 @@ class RecruitingProcessService:
                 "entity_id": submission.id,
                 "action": activity_type,
                 "changed_at": now,
+                "changed_by": changed_by,
                 "new_values": new_values,
             }
         )

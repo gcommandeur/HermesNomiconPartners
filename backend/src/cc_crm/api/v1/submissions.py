@@ -352,9 +352,10 @@ def create_offer(
     submission_id: uuid.UUID,
     payload: OfferCreate,
     session: DatabaseSession,
+    current_user: CurrentUser,
 ) -> OfferRead:
     return OfferRead.model_validate(
-        RecruitingProcessService(session).create_offer(submission_id, payload)
+        RecruitingProcessService(session).create_offer(submission_id, payload, current_user)
     )
 
 
@@ -405,9 +406,10 @@ def create_placement(
     submission_id: uuid.UUID,
     payload: PlacementCreate,
     session: DatabaseSession,
+    current_user: CurrentUser,
 ) -> PlacementRead:
     return PlacementRead.model_validate(
-        RecruitingProcessService(session).create_placement(submission_id, payload)
+        RecruitingProcessService(session).create_placement(submission_id, payload, current_user)
     )
 
 

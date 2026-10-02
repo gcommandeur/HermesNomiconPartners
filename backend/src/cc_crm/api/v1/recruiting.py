@@ -112,5 +112,5 @@ def create_fee(
             "Neue Rechnungen starten als Entwurf - das Stellen erfordert eine Freigabe."
         )
     return FeeRead.model_validate(
-        RecruitingProcessService(session).create_fee(placement_id, payload)
+        RecruitingProcessService(session).create_fee(placement_id, payload, current_user)
     )

@@ -769,6 +769,8 @@ export interface Activity extends Entity {
   subject: string;
   details: string | null;
   occurred_at: string;
+  /** Ausloesender Nutzer (z.B. Mailversand) - null bei automatischen/eingehenden. */
+  sent_by_user_id?: string | null;
 }
 
 export interface Task extends Entity {
@@ -815,6 +817,21 @@ export interface Note extends Entity {
   client_company_id: string | null;
   candidate_submission_id: string | null;
   body: string;
+  /** Autor - null bei Alt-Notizen und automatisch erzeugten Notizen. */
+  created_by_user_id?: string | null;
+  created_by_name?: string | null;
+}
+
+/** Notiz oder Prozess-Feedback zu einem Kandidaten mit Autor (Timeline). */
+export interface CandidateComment {
+  kind: "note" | "feedback";
+  id: string;
+  occurred_at: string;
+  author: string | null;
+  text: string;
+  stage: SubmissionStatus | null;
+  feedback_type: string | null;
+  submission_id: string | null;
 }
 
 export interface CvExtractionSuggestion {

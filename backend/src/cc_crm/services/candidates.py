@@ -4,16 +4,18 @@ from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from cc_crm.core.config import get_settings
 from cc_crm.core.errors import ConsentNotGrantedError
+from cc_crm.core.time import naive_utc
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.contact_person import ContactPerson
 from cc_crm.models.enums import Abschlussart, CandidateStatus, ClientStatus, Rolle
-from cc_crm.models.recruiting import AuditLog
+from cc_crm.models.note import Note
+from cc_crm.models.recruiting import AuditLog, SubmissionFeedback
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.user import User
 from cc_crm.repositories.candidates import CandidateRepository
@@ -21,6 +23,7 @@ from cc_crm.repositories.notes import NoteRepository
 from cc_crm.repositories.operational import DocumentRepository
 from cc_crm.repositories.recruiting import AuditLogRepository
 from cc_crm.schemas.candidate import CandidateCreate, CandidateUpdate, CvExtractionSuggestion
+from cc_crm.schemas.note import CandidateCommentRead
 from cc_crm.services.audit_diff import changed_values
 from cc_crm.services.base import CrudService
 from cc_crm.services.clients import ClientCompanyService
@@ -36,6 +39,7 @@ from cc_crm.services.geo import (
     load_postal_locality_index,
     resolve_place_query,
 )
+from cc_crm.services.notes import user_labels, user_labels_by_email
 from cc_crm.services.profile_docx_export import persist_anonymous_profile_document
 from cc_crm.services.storage import delete_document_bytes
 
@@ -158,6 +162,75 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             ).all()
         )
         return list(self.audit_logs.list_for_candidate(entity_id, submission_ids))
+
+    def comments(self, entity_id: uuid.UUID) -> list[CandidateCommentRead]:
+        """Alle Notizen (allgemeine UND prozessgebundene) und alle Prozess-
+        Feedbacks zu einem Kandidaten, mit Autor - Basis der Kandidaten-
+        Timeline. Bewusst ueber ALLE Prozesse des Kandidaten, unabhaengig vom
+        Prozess-Owner: Kommentare sind gemeinsames Agenturwissen (Nutzer-
+        Vorgabe "jeder Kommentar soll bei jedem angezeigt werden"), die
+        Sichtbarkeitsgrenze gilt fuer Prozesse, nicht fuer die Kommentare
+        daran. Neueste zuerst."""
+        self.get(entity_id)
+        submission_ids = list(
+            self.session.scalars(
+                select(CandidateSubmission.id).where(
+                    CandidateSubmission.candidate_id == entity_id
+                )
+            ).all()
+        )
+        note_filter = Note.candidate_id == entity_id
+        if submission_ids:
+            note_filter = or_(note_filter, Note.candidate_submission_id.in_(submission_ids))
+        notes = list(self.session.scalars(select(Note).where(note_filter)).all())
+        feedback = (
+            list(
+                self.session.scalars(
+                    select(SubmissionFeedback).where(
+                        SubmissionFeedback.submission_id.in_(submission_ids)
+                    )
+                ).all()
+            )
+            if submission_ids
+            else []
+        )
+        note_authors = user_labels(self.session, (note.created_by_user_id for note in notes))
+        feedback_authors = user_labels_by_email(
+            self.session, (item.created_by for item in feedback)
+        )
+        entries = [
+            CandidateCommentRead(
+                kind="note",
+                id=note.id,
+                occurred_at=note.created_at,
+                author=note_authors.get(note.created_by_user_id)
+                if note.created_by_user_id
+                else None,
+                text=note.body,
+                submission_id=note.candidate_submission_id,
+            )
+            for note in notes
+        ] + [
+            CandidateCommentRead(
+                kind="feedback",
+                id=item.id,
+                occurred_at=item.received_at,
+                # Alt-Eintraege koennen einen frei getippten Namen statt einer
+                # E-Mail tragen - dann unveraendert anzeigen.
+                author=(
+                    feedback_authors.get(item.created_by.lower(), item.created_by)
+                    if item.created_by
+                    else None
+                ),
+                text=item.feedback_text,
+                stage=item.stage.value if item.stage else None,
+                feedback_type=item.feedback_type.value,
+                submission_id=item.submission_id,
+            )
+            for item in feedback
+        ]
+        entries.sort(key=lambda entry: naive_utc(entry.occurred_at), reverse=True)
+        return entries
 
     def confirm_rollen(self, entity_id: uuid.UUID, current_user: User) -> Candidate:
         """"Bestätigen"-Aktion (Titelschutz-Korrektur Schritt 2): der Nutzer

@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, Field
 
@@ -21,4 +22,23 @@ class NoteUpdate(BaseModel):
 
 
 class NoteRead(NoteBase, EntityRead):
-    pass
+    created_by_user_id: uuid.UUID | None = None
+    # Anzeigename (Fallback E-Mail) des Autors - None bei Alt-/Systemnotizen.
+    created_by_name: str | None = None
+
+
+class CandidateCommentRead(BaseModel):
+    """Eine Notiz ODER ein Prozess-Feedback zu einem Kandidaten, einheitlich
+    mit Autor - Basis der Kandidaten-Timeline (GET /candidates/{id}/comments).
+    Fuer alle Nutzer sichtbar (Kommentare sind gemeinsames Agenturwissen,
+    kein Teil der Prozess-Sichtbarkeitsgrenze)."""
+
+    kind: str  # "note" | "feedback"
+    id: uuid.UUID
+    occurred_at: datetime
+    author: str | None
+    text: str
+    # Nur Feedback: Stufe, in der es erfasst wurde, und der Prozess.
+    stage: str | None = None
+    feedback_type: str | None = None
+    submission_id: uuid.UUID | None = None

@@ -22,3 +22,9 @@ class Note(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
     )
     body: Mapped[str] = mapped_column(Text, nullable=False)
+    # Wer die Notiz geschrieben hat - nullable, weil Alt-Notizen (vor diesem
+    # Feld) und automatisch erzeugte (Mail-Sync, CV-Profilnotiz) keinen
+    # Autor haben. Analog Activity.sent_by_user_id.
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )

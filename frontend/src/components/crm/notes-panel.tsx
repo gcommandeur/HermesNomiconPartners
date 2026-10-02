@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +26,7 @@ const QUALI_CALL_NOTE_TEMPLATE =
  * bestehende Prozess-Timeline (candidate-process-log.tsx), die immer an
  * einen Recruiting-Prozess/-Stufe gebunden ist. */
 export function NotesPanel({ candidateId, initialNotes }: { candidateId: string; initialNotes: Note[] }) {
+  const router = useRouter();
   const [notes, setNotes] = useState(initialNotes);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -48,6 +50,9 @@ export function NotesPanel({ candidateId, initialNotes }: { candidateId: string;
       const created = await createNote({ candidate_id: candidateId, body: body.trim() });
       setNotes((current) => [created, ...current]);
       setBody("");
+      // Timeline-Tab (Server Component) zeigt die neue Notiz sonst erst nach
+      // einem Neuladen.
+      router.refresh();
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Notiz konnte nicht gespeichert werden.");
     } finally {
@@ -87,7 +92,12 @@ export function NotesPanel({ candidateId, initialNotes }: { candidateId: string;
               </span>
               <div className="min-w-0 flex-1">
                 <p className="whitespace-pre-wrap text-sm text-[#D8DADF]">{note.body}</p>
-                <span className="mt-2 inline-block text-xs text-[#8b9196]">{formatDate(note.created_at)}</span>
+                <span className="mt-2 inline-block text-xs text-[#8b9196]">
+                  {formatDate(note.created_at)} ·{" "}
+                  {note.created_by_name ?? (
+                    <span title="Alt-Notiz oder automatisch erzeugt - kein Autor erfasst">Unbekannt</span>
+                  )}
+                </span>
               </div>
             </CardContent>
           </Card>

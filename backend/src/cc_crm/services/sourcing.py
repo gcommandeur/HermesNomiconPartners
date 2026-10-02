@@ -623,7 +623,8 @@ class SourcingService:
             # Kandidaten - damit bleibt nach der Uebernahme nachvollziehbar,
             # was die Person macht/gemacht hat (Nutzer-Vorgabe).
             NoteService(self.session).create(
-                NoteCreate(candidate_id=candidate.id, body=lead.notes_text)
+                NoteCreate(candidate_id=candidate.id, body=lead.notes_text),
+                created_by_user_id=user_id,
             )
         lead.status = SourcingLeadStatus.APPROVED
         lead.created_candidate_id = candidate.id

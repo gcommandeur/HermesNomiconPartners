@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response, status
 
-from cc_crm.api.dependencies import DatabaseSession
+from cc_crm.api.dependencies import CurrentUser, DatabaseSession
 from cc_crm.schemas.note import NoteCreate, NoteRead, NoteUpdate
 from cc_crm.services.notes import NoteService
 
@@ -34,17 +34,21 @@ def list_notes(
             offset=offset,
             limit=limit,
         )
-    return [NoteRead.model_validate(note) for note in notes]
+    return NoteService(session).read_many(notes)
 
 
 @router.post("", response_model=NoteRead, status_code=status.HTTP_201_CREATED)
-def create_note(payload: NoteCreate, session: DatabaseSession) -> NoteRead:
-    return NoteRead.model_validate(NoteService(session).create(payload))
+def create_note(
+    payload: NoteCreate, session: DatabaseSession, current_user: CurrentUser
+) -> NoteRead:
+    service = NoteService(session)
+    return service.read_one(service.create(payload, current_user.id))
 
 
 @router.get("/{note_id}", response_model=NoteRead)
 def get_note(note_id: uuid.UUID, session: DatabaseSession) -> NoteRead:
-    return NoteRead.model_validate(NoteService(session).get(note_id))
+    service = NoteService(session)
+    return service.read_one(service.get(note_id))
 
 
 @router.patch("/{note_id}", response_model=NoteRead)
@@ -53,7 +57,8 @@ def update_note(
     payload: NoteUpdate,
     session: DatabaseSession,
 ) -> NoteRead:
-    return NoteRead.model_validate(NoteService(session).update(note_id, payload))
+    service = NoteService(session)
+    return service.read_one(service.update(note_id, payload))
 
 
 @router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)

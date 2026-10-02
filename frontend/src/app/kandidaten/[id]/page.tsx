@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
-import { ArrowLeft, Clock3, Ghost, Mail, MapPin, Phone } from "lucide-react";
+import { ArrowLeft, Ghost, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import {
   getActivitiesForCandidate,
+  getAssignableUsers,
   getCandidate,
+  getCandidateComments,
   getCandidateHistory,
   getClientsByIds,
   getDocumentsForOwner,
@@ -23,7 +25,7 @@ import { MailComposeButton } from "@/components/crm/mail-compose-modal";
 import { RegisterRecentCandidate } from "@/components/crm/register-recent-candidate";
 import { CandidateSubmissionStages } from "@/components/crm/candidate-submission-stages";
 import { CandidateProcessLog } from "@/components/crm/candidate-process-log";
-import { CandidateHistoryPanel } from "@/components/crm/candidate-history-panel";
+import { CandidateTimeline } from "@/components/crm/candidate-timeline";
 import { CandidateRollenUnbestaetigtHint } from "@/components/crm/candidate-rollen-unbestaetigt-hint";
 import { NotesPanel } from "@/components/crm/notes-panel";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,7 +60,7 @@ export default async function CandidateDetailPage({
   // Kanzleien laden - vorher wurden hier ALLE Prozesse und ALLE Kanzleien
   // (mehrere tausend, seitenweise nacheinander) geladen, nur um ein paar
   // Kanzleinamen anzuzeigen (~10s Ladezeit).
-  const [result, submissionsResult, activitiesResult, tasksResult, documentsResult, notesResult, historyResult] = await Promise.all([
+  const [result, submissionsResult, activitiesResult, tasksResult, documentsResult, notesResult, historyResult, commentsResult, usersResult] = await Promise.all([
     getCandidate(id),
     getSubmissionsForCandidate(id),
     getActivitiesForCandidate(id),
@@ -66,6 +68,8 @@ export default async function CandidateDetailPage({
     getDocumentsForOwner("candidate", id),
     getNotesForCandidate(id),
     getCandidateHistory(id),
+    getCandidateComments(id),
+    getAssignableUsers(),
   ]);
   const candidate = result.data;
   if (!candidate) notFound();
@@ -79,6 +83,8 @@ export default async function CandidateDetailPage({
   const documents = documentsResult.data;
   const notes = notesResult.data;
   const history = historyResult.data;
+  const comments = commentsResult.data;
+  const users = usersResult.data;
   const clientName = (clientId: string | null) => clientId ? (clients.find((client) => client.id === clientId)?.name ?? "Kanzlei") : "Kanzlei offen";
   const anonymousProfile = candidate.short_profile ?? [
     `${candidate.job_title ?? "Kandidat/in"} mit Schwerpunkt ${candidate.summary ?? "Steuern / Beratung"}.`,
@@ -264,30 +270,10 @@ export default async function CandidateDetailPage({
           </div>
         </TabsContent>
         <TabsContent value="Timeline">
-          {/* Änderungshistorie (was/wann/durch wen, aus dem AuditLog) steht
-           * bewusst ALS EIGENER BLOCK oberhalb der Aktivitäten-Liste - klar
-           * getrennt, da Aktivitäten (Mails, Anrufe, ...) keine changed_by-
-           * Spalte tragen und beide Datenquellen unterschiedliche Fragen
-           * beantworten ("was ist passiert" vs. "wer hat es ausgelöst"). */}
-          <CandidateHistoryPanel entries={history} />
-          <div className="space-y-2">
-            {activities.map((activity) => (
-              <Card key={activity.id}>
-                <CardContent className="flex items-start gap-3">
-                  <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-[#102A4C] text-[#D8DADF]"><Clock3 size={14} /></span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="font-semibold">{activity.subject}</p>
-                      <span className="text-xs text-[#8b9196]">{formatDate(activity.occurred_at)}</span>
-                    </div>
-                    {activity.details && <p className="mt-1 text-xs text-[#94A3B8]">{activity.details}</p>}
-                    <span className="mt-2 inline-block rounded bg-[#12243A] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[#94A3B8]">{activity.activity_type.replace(/_/g, " ")}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {activities.length === 0 && <Card><CardContent className="py-12 text-center text-sm text-[#858b90]">Noch keine Aktivitäten für diesen Kandidaten.</CardContent></Card>}
-          </div>
+          {/* EINE chronologische Liste aller Ereignisse (Statuswechsel/Aenderungen,
+           * Aktivitaeten, Notizen, Feedback) mit Zeitpunkt und Urheber - siehe
+           * candidate-timeline.tsx. */}
+          <CandidateTimeline history={history} activities={activities} comments={comments} users={users} />
         </TabsContent>
         <TabsContent value="Aufgaben">
           <div className="space-y-2">

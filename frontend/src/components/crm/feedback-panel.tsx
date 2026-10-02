@@ -12,7 +12,9 @@ import {
   getFeedback,
   updateFeedback,
 } from "@/lib/api/queries";
+import { useAssignableUsersCache } from "@/lib/api/hooks";
 import { isAllowedTransition } from "@/lib/submission-transitions";
+import { createUserLabels } from "@/lib/user-labels";
 import { formatDateTime } from "@/lib/utils";
 import type { CandidateSubmission, Feedback, FeedbackTargetStatus, SubmissionStatus } from "@/lib/api/types";
 
@@ -93,6 +95,8 @@ export function FeedbackPanel({
   onTransitioned?: (updated: CandidateSubmission) => void;
 }) {
   const [entries, setEntries] = useState<Feedback[]>([]);
+  const { data: usersData } = useAssignableUsersCache();
+  const userLabels = createUserLabels(usersData?.data ?? []);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -280,7 +284,9 @@ export function FeedbackPanel({
                 <span className="font-semibold text-[#F8FAFC]">
                   {entry.stage ? STAGE_LABELS[entry.stage] : "–"}
                 </span>
-                <span className="text-[#94A3B8]">{formatDateTime(entry.received_at)}</span>
+                <span className="text-[#94A3B8]">
+                  {formatDateTime(entry.received_at)} · {userLabels.byEmail(entry.created_by) ?? "Unbekannt"}
+                </span>
               </div>
               <p className="mt-1 text-[#CBD5E1]">{entry.feedback_text}</p>
               {entry.next_step && (

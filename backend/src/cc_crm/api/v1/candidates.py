@@ -22,6 +22,7 @@ from cc_crm.schemas.candidate import (
     CvPreviewResponse,
 )
 from cc_crm.schemas.cv_out import CvOutContact, CvOutTargetClient, CvOutTargetsResult
+from cc_crm.schemas.note import CandidateCommentRead
 from cc_crm.schemas.pagination import Page
 from cc_crm.schemas.recruiting import AuditLogRead
 from cc_crm.schemas.submission import (
@@ -260,6 +261,17 @@ def get_candidate_history(candidate_id: uuid.UUID, session: DatabaseSession) -> 
     eigene Kandidaten-Historie ist regulärer Bestandteil des Profils."""
     entries = CandidateService(session).history(candidate_id)
     return [AuditLogRead.model_validate(entry) for entry in entries]
+
+
+@router.get("/{candidate_id}/comments", response_model=list[CandidateCommentRead])
+def get_candidate_comments(
+    candidate_id: uuid.UUID, session: DatabaseSession
+) -> list[CandidateCommentRead]:
+    """Notizen und Prozess-Feedback zu einem Kandidaten mit Autor (Timeline-
+    Tab). Fuer alle Nutzer sichtbar, auch fuer Feedback an Prozessen von
+    Kollegen - Kommentare sind gemeinsames Agenturwissen und nicht Teil der
+    Prozess-Sichtbarkeitsgrenze (siehe CandidateService.comments)."""
+    return CandidateService(session).comments(candidate_id)
 
 
 @router.get("/{candidate_id}/cv-out-targets", response_model=CvOutTargetsResult)
