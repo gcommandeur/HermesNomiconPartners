@@ -89,13 +89,10 @@ Der Nutzer arbeitet auch rein vom Handy ueber Claude-Code-Cloud-Sitzungen. Dafue
 - Parallel arbeiten Cloud und Laptop an derselben Stelle: vorher `git fetch` und `origin/main` mergen; bei Migrationen vor dem Commit `alembic heads` pruefen (es darf nur EINEN Head geben).
 - Nur am Laptop moeglich: Produktions-Skripte, DigitalOcean-Konsole, Klicktests mit echtem Login.
 
-## Stand (Anfang Oktober 2026)
+## Gemeinsamer Projektstand (PFLICHT)
 
-Zuletzt umgesetzt: Rolle `team_lead` (`2cd6c1f`), Direktzugriffs-Sperre fuer Prozesse und Rechnungen, Freigabe-Inbox, Audit-Trail, vereinheitlichte Kandidaten-Timeline mit Autoren, Sourcing mit Umkreissuche, Suche-/Filterzustand in der Kandidatenliste per URL.
+Laptop- und Cloud-Sitzungen sehen die Gespraeche der jeweils anderen NICHT. Der gemeinsame Stand lebt in **`docs/PROJEKT_STAND.md`** (offene Punkte, Entscheidungen, Stolperfallen, Protokoll).
 
-Offen / naechste Schritte:
-- Auf die Teamleiter-Rolle aufbauend: Record-Sharing, Notifications, Sequenzen (brauchen alle den Begriff "Team").
-- Kalender und KPI-Ranking haben eigenes Admin-Scoping, Teamleiter sehen dort nur Eigenes - Entscheidung steht aus.
-- Vom Nutzer auszufuehren (nicht von Claude): drei Produktions-Skripte (`cleanup_service_users.py`, `backfill_cv_in_recorded_at.py`, `backfill_cv_available_from_documents.py`, alle Dry-Run-Standard) und das Zuruecksetzen des DigitalOcean-`doadmin`-Passworts.
-- Aeltere Prozesse ohne `owner_user_id` sind fuer Nicht-Admins unsichtbar; ggf. Owner nachtragen.
-- Die Analytics-Seite erlaubt Nicht-Admins weiterhin die Auswahl anderer Nutzer im Filter (Entscheidung offen).
+- **Vor jeder Aufgabe:** `docs/PROJEKT_STAND.md` lesen, `git fetch` und `origin/main` einbeziehen.
+- **Nach jeder Aufgabe, im selben Commit:** Protokoll-Eintrag (Datum, Laptop/Cloud, was, Commits, was NICHT geprueft wurde), offene Punkte und neue Entscheidungen/Stolperfallen pflegen. Ohne aktualisierte Datei ist eine Aufgabe nicht fertig.
+- Nichts Geheimes eintragen.
