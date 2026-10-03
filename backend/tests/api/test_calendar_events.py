@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
@@ -5,6 +7,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from cc_crm.core.security import hash_password
 from cc_crm.models.user import User
 from cc_crm.services.auth import AuthService
+from tests.tz import utc_naive
 
 
 @pytest.fixture
@@ -168,7 +171,7 @@ def test_missing_end_at_defaults_to_30_minutes_after_start(client: TestClient) -
     )
     assert created.status_code == 201, created.text
     body = created.json()
-    assert body["end_at"] == "2026-09-28T10:30:00"
+    assert utc_naive(body["end_at"]) == datetime(2026, 9, 28, 10, 30)
 
 
 def test_end_at_before_minimum_duration_is_rejected(client: TestClient) -> None:
@@ -270,3 +273,23 @@ def test_non_admin_cannot_set_owner_user_id(client: TestClient, second_user_toke
     ).json()
     assert created["owner_user_id"] == me["id"]
     assert created["owner_user_id"] != other_me["id"]
+
+
+def test_minimum_duration_check_tolerates_mixed_timezone_awareness() -> None:
+    """Regression (im Postgres-Lauf aufgefallen): gespeicherte Zeiten kommen unter
+    Postgres MIT Zeitzone, ein Payload ohne Offset ist naiv. Der Vergleich darf
+    nicht mit TypeError abbrechen (vorher HTTP 500 beim Verschieben von nur
+    start_at oder nur end_at)."""
+    from datetime import UTC, datetime
+
+    from cc_crm.core.errors import BusinessRuleError
+    from cc_crm.services.calendar_events import apply_minimum_duration
+
+    naive_start = datetime(2026, 9, 28, 10, 0)
+    aware_end = datetime(2026, 9, 28, 11, 0, tzinfo=UTC)
+    assert apply_minimum_duration(naive_start, aware_end) == aware_end
+    aware_start = datetime(2026, 9, 28, 10, 0, tzinfo=UTC)
+    naive_end = datetime(2026, 9, 28, 11, 0)
+    assert apply_minimum_duration(aware_start, naive_end) == naive_end
+    with pytest.raises(BusinessRuleError):
+        apply_minimum_duration(naive_start, datetime(2026, 9, 28, 10, 10, tzinfo=UTC))

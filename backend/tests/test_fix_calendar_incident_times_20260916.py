@@ -32,6 +32,7 @@ from cc_crm.models.mail import MailAccount
 from cc_crm.models.user import User
 from cc_crm.services import graph_token_service
 from scripts.archive import fix_calendar_incident_times_20260916 as script
+from tests.tz import utc_naive
 
 _KEY = Fernet.generate_key().decode()
 
@@ -255,7 +256,7 @@ class TestSingleInstanceCorrection:
         with session_factory() as session:
             refreshed = session.get(CalendarEvent, event_id)
             assert refreshed is not None
-            assert refreshed.start_at == expected
+            assert utc_naive(refreshed.start_at) == utc_naive(expected)
             assert refreshed.local_last_synced_at is not None
 
 
@@ -333,8 +334,9 @@ class TestSeriesCorrection:
         with session_factory() as session:
             refreshed_1 = session.get(CalendarEvent, e1_id)
             refreshed_2 = session.get(CalendarEvent, e2_id)
-            assert refreshed_1.start_at == corrupted_1 - script._INCIDENT_SHIFT
-            assert refreshed_2.start_at == corrupted_2 - script._INCIDENT_SHIFT
+            shift = script._INCIDENT_SHIFT
+            assert utc_naive(refreshed_1.start_at) == utc_naive(corrupted_1 - shift)
+            assert utc_naive(refreshed_2.start_at) == utc_naive(corrupted_2 - shift)
 
     def test_exception_occurrence_of_series_is_corrected_individually(
         self, session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch, tmp_path
@@ -480,7 +482,7 @@ class TestSafety:
 
         with session_factory() as session:
             refreshed = session.get(CalendarEvent, event_id)
-            assert refreshed.start_at == corrupted
+            assert utc_naive(refreshed.start_at) == utc_naive(corrupted)
 
 
 class TestManualOverride:

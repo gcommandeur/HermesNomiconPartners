@@ -1,6 +1,9 @@
+from datetime import datetime
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
+
+from tests.tz import utc_naive
 
 
 def _create_interview_ready_submission(client: TestClient) -> dict:
@@ -59,11 +62,11 @@ def test_update_interview_syncs_linked_calendar_event(client: TestClient) -> Non
         },
     )
     assert response.status_code == 200
-    assert response.json()["scheduled_at"] == "2026-08-12T16:30:00"
+    assert utc_naive(response.json()["scheduled_at"]) == datetime(2026, 8, 12, 16, 30)
 
     event = _linked_event(client, interview["id"])
     assert event is not None
-    assert event["start_at"] == "2026-08-12T16:30:00"
+    assert utc_naive(event["start_at"]) == datetime(2026, 8, 12, 16, 30)
     assert event["location"] == "https://example.com/new-room"
     assert event["notes"] == "Verschoben"
 
@@ -105,7 +108,7 @@ def test_update_interview_survives_calendar_sync_failure(client: TestClient) -> 
         )
 
     assert response.status_code == 200
-    assert response.json()["scheduled_at"] == "2026-08-13T10:00:00"
+    assert utc_naive(response.json()["scheduled_at"]) == datetime(2026, 8, 13, 10, 0)
 
     # Session danach noch benutzbar.
     still_works = client.get(f"/api/v1/submissions/{submission['id']}/interviews")

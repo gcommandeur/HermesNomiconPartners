@@ -44,7 +44,10 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     calendar_feed_token: Mapped[str] = mapped_column(
         String(64),
         nullable=False,
+        # Eindeutiger Index (ix_users_calendar_feed_token), wie in der Migration
+        # 2840ce14c934 angelegt - keine zusaetzliche Constraint.
         unique=True,
+        index=True,
         default=lambda: secrets.token_urlsafe(32),
     )
     # Persoenliches Standard-Absenderpostfach fuer den Mailversand. Hat

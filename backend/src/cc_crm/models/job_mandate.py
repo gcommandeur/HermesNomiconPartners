@@ -26,7 +26,7 @@ class JobMandate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Enum(TaskPriority, native_enum=False, length=16),
         default=TaskPriority.NORMAL,
         nullable=False,
-        index=True,
+        # Kein Index: wenige Werte, die Datenbank hat auch keinen (Migrationen).
     )
     location: Mapped[str | None] = mapped_column(String(240))
     search_radius_km: Mapped[int] = mapped_column(default=30, nullable=False)

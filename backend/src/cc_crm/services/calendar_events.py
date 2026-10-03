@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
 from cc_crm.core.errors import BusinessRuleError, PermissionDeniedError
+from cc_crm.core.time import naive_utc
 from cc_crm.models.calendar_event import CalendarEvent
 from cc_crm.models.enums import CalendarEventType
 from cc_crm.models.user import User
@@ -30,11 +31,17 @@ def apply_minimum_duration(start_at: datetime, end_at: datetime | None) -> datet
     recruiting.py::_create_calendar_event_for_interview automatisch erzeugte
     Interview-Termine denselben Mindestdauer-Regeln unterwerfen muss - dort
     wird end_at bislang gar nicht gesetzt, faellt also ebenfalls unter den
-    "kein end_at angegeben"-Fall unten."""
+    "kein end_at angegeben"-Fall unten.
+
+    Verglichen wird ueber naive UTC-Zeiten (core/time.py::naive_utc): unter
+    Postgres liefert die Datenbank den gespeicherten Wert MIT Zeitzone, ein
+    Payload ohne Offset ("2026-09-28T10:00:00") ist dagegen naiv - der direkte
+    Vergleich warf "can't compare offset-naive and offset-aware datetimes"
+    (HTTP 500), sobald nur start_at ODER nur end_at geaendert wurde."""
     minimum_end_at = start_at + timedelta(minutes=MINIMUM_EVENT_DURATION_MINUTES)
     if end_at is None:
         return minimum_end_at
-    if end_at < minimum_end_at:
+    if naive_utc(end_at) < naive_utc(minimum_end_at):
         raise BusinessRuleError(
             f"Ende muss mindestens {MINIMUM_EVENT_DURATION_MINUTES} Minuten "
             "nach dem Start liegen."
