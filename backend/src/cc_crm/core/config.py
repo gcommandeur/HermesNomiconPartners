@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     # mehreren Instanzen besser aus und stattdessen ein Pre-Deploy-Job, siehe
     # docs/DEPLOYMENT.md.
     migrate_on_startup: bool = True
+    # Die Job-Warteschlange (services/job_queue.py) im Webprozess mitlaufen
+    # lassen. Standard an, damit es OHNE eigene Worker-Komponente funktioniert;
+    # mit separatem Worker (scripts/run_worker.py) hier auf false stellen.
+    embedded_worker: bool = True
     database_url: str = "postgresql+psycopg://cc_crm:change-me@localhost:5432/cc_crm"
     cors_origins: list[AnyUrl] = []
     sql_echo: bool = False

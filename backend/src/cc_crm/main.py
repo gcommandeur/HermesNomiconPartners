@@ -1,3 +1,4 @@
+import threading
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
@@ -13,9 +14,25 @@ from cc_crm.core.observability import RequestLoggingMiddleware, configure_loggin
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    if get_settings().migrate_on_startup:
+    settings = get_settings()
+    if settings.migrate_on_startup:
         ensure_database_at_head()
-    yield
+    stop = threading.Event()
+    worker: threading.Thread | None = None
+    if settings.embedded_worker:
+        from cc_crm.infrastructure.database.session import SessionLocal
+        from cc_crm.services.job_queue import run_worker_loop
+
+        worker = threading.Thread(
+            target=run_worker_loop, args=(SessionLocal, stop), name="job-worker", daemon=True
+        )
+        worker.start()
+    try:
+        yield
+    finally:
+        stop.set()
+        if worker is not None:
+            worker.join(timeout=5)
 
 
 _DOCS_ENABLED_ENVIRONMENTS = {"local", "development"}

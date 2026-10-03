@@ -12,6 +12,7 @@ from cc_crm.models.enums import SourcingRunStatus
 from cc_crm.models.postal_locality import PostalLocality
 from cc_crm.schemas.sourcing import SourcingRunResult
 from cc_crm.services.sourcing import SourcingService
+from tests.jobs import drain_jobs
 
 EMPTY_DIRECTORY_HTML = "<html><body></body></html>"
 
@@ -80,6 +81,7 @@ def test_radius_run_queries_every_postal_code_in_radius_nearest_first(
     body = response.json()
     assert body["background_started"] == 3
     assert body["run_id"] is not None
+    drain_jobs(session_factory)
     assert queried == ["70191", "70173", "70372"]
     with session_factory() as session:
         run = SourcingService(session).get_run_status()
@@ -91,7 +93,7 @@ def test_radius_run_queries_every_postal_code_in_radius_nearest_first(
 
 @pytest.mark.usefixtures("stuttgart_and_munich")
 def test_radius_run_team_scan_only_scans_companies_in_radius(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     def create_client(name: str, postal_code: str, city: str, website: str | None) -> str:
         response = client.post(
@@ -120,6 +122,7 @@ def test_radius_run_team_scan_only_scans_companies_in_radius(
 
     assert response.status_code == 200, response.text
     assert response.json()["background_started"] == 1
+    drain_jobs(session_factory)
     assert scanned == [near]
 
 

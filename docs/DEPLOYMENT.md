@@ -337,6 +337,38 @@ Ohne diese Umstellung ändert sich nichts gegenüber heute.
 `CC_CRM_DATABASE_URL` und `CC_CRM_TEST_DATABASE_URL` auf eine Wegwerf-Datenbank zeigen lassen,
 deren Name „test" enthält (die Tabellen werden nach jedem Test geleert).
 
+## Hintergrundjobs (Job-Warteschlange)
+
+Sourcing-Läufe, CV-Scans gescannter PDFs und Sicherheitswarnungen laufen als Jobs in der
+Tabelle `background_jobs` (statt als flüchtige Threads im Webprozess). Ein Job übersteht
+Neustarts, wird bei Fehlern mit wachsendem Abstand wiederholt (30 s, 2 min, …) und ist
+unter **Einstellungen → Hintergrundjobs** (nur Admin) sichtbar; fehlgeschlagene Jobs lassen
+sich dort neu starten.
+
+- **Standard (nichts zu tun):** der Webprozess arbeitet die Jobs selbst ab
+  (`CC_CRM_EMBEDDED_WORKER=true`, Standardwert).
+- **Optional mit eigenem Worker:** in DigitalOcean eine "Worker"-Komponente mit
+  Run-Befehl `python scripts/run_worker.py` anlegen (gleiche Umgebungsvariablen wie das
+  Backend) und am Backend `CC_CRM_EMBEDDED_WORKER=false` setzen. Mehrere Worker sind erlaubt.
+- Lokal: nichts einzurichten, der Webprozess arbeitet mit.
+
+## Webhooks (ausgehende Ereignisse)
+
+Unter **Einstellungen → Webhooks** (nur Admin) lassen sich https-Ziele anlegen, die bei Ereignissen
+(Ereignisart = `<Objekt>.<Aktion>` aus dem Audit-Log, z. B. `candidate_submission.status_changed`,
+Muster wie `candidate.*` oder `*`) benachrichtigt werden.
+
+- Jeder Audit-Log-Eintrag schreibt in derselben Transaktion eine Zeile in `event_outbox`; der Worker
+  (siehe "Hintergrundjobs") verteilt sie an passende, aktive Ziele und stellt sie signiert zu
+  (Standard-Webhooks: Header `webhook-id`, `webhook-timestamp`, `webhook-signature`, HMAC-SHA256).
+- Die Nachricht enthält nur Ereignisart und IDs (`entity_type`, `entity_id`, `audit_log_id`), keine
+  Personendaten. Details holt der Empfänger per API-Key.
+- Das Geheimnis (`whsec_…`) wird nur bei Anlage bzw. "Neues Geheimnis" angezeigt; gespeichert wird es
+  verschlüsselt (`CC_CRM_MAIL_CREDENTIALS_ENCRYPTION_KEY` muss gesetzt sein).
+- Nur `https`, keine Adressen im privaten/internen Netz, keine Weiterleitungen. Fehlgeschlagene
+  Zustellungen werden 6-mal mit wachsendem Abstand versucht, danach "aufgegeben" (per Knopf neu senden).
+- Verarbeitete Outbox-Zeilen werden nach 14 Tagen gelöscht.
+
 ## Umgebungsvariablen (Frontend-Komponente `hermescrm-frontend`)
 
 - `NEXT_PUBLIC_CC_CRM_API_URL=https://hermescrm-v9sle.ondigitalocean.app/api/v1`

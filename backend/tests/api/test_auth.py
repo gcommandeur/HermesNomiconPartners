@@ -1,9 +1,9 @@
 import re
-import threading
 import uuid
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.core.rate_limit import (
@@ -15,6 +15,8 @@ from cc_crm.core.rate_limit import (
     verify_account_rate_limiter,
     verify_ip_rate_limiter,
 )
+from cc_crm.models.background_job import BackgroundJob
+from cc_crm.services.job_queue import process_one
 from tests.conftest import TEST_USER_EMAIL, TEST_USER_PASSWORD
 
 _CODE_RE = re.compile(r"Anmeldecode lautet: (\d{6})")
@@ -450,35 +452,33 @@ def test_login_ignores_spoofed_x_forwarded_for_when_cf_connecting_ip_present(
 
 
 def test_login_rate_limit_triggers_exactly_one_security_alert(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Die Warnung wird in einem eigenen Thread verschickt (siehe
-    api/v1/auth.py), daher hier per Event auf den Aufruf warten statt auf
-    eine Race-Condition zu vertrauen."""
+    """Die Warnung wird als Job eingereiht (services/job_queue.py) und vom
+    Worker verschickt; hier zaehlen wir die Jobs und fuehren sie dann aus."""
     client.headers.pop("Authorization", None)
     login_rate_limiter.reset()
 
-    calls: list[dict[str, str]] = []
-    fired = threading.Event()
-
-    def fake_send_security_alert(subject: str, body: str, settings: object | None = None) -> None:
-        calls.append({"subject": subject, "body": body})
-        fired.set()
-
-    monkeypatch.setattr(
-        "cc_crm.api.v1.auth.send_security_alert",
-        fake_send_security_alert,
-    )
-
     for _ in range(MAX_ATTEMPTS):
         _start_login(client, password="wrong-password")
-    assert fired.wait(timeout=2), "Sicherheitswarnung wurde nicht innerhalb von 2s ausgeloest"
-    assert len(calls) == 1
-    assert TEST_USER_EMAIL in calls[0]["body"]
+    with session_factory() as session:
+        jobs = session.scalars(select(BackgroundJob)).all()
+    assert [job.kind for job in jobs] == ["security_alert"]
+    assert TEST_USER_EMAIL in jobs[0].payload["body"]
 
     # Weitere Versuche waehrend der Sperre loesen KEINE erneute Warnung aus.
     _start_login(client, password="wrong-password")
-    assert len(calls) == 1
+    with session_factory() as session:
+        assert len(session.scalars(select(BackgroundJob)).all()) == 1
+
+    # Der Worker verschickt sie tatsaechlich.
+    sent: list[str] = []
+    monkeypatch.setattr(
+        "cc_crm.services.security_alerts.send_security_alert",
+        lambda subject, body, settings=None: sent.append(subject),
+    )
+    assert process_one(session_factory) is True
+    assert sent == ["[Hermes CRM] Verdaechtige Login-Versuche blockiert"]
 
     login_rate_limiter.reset()
 

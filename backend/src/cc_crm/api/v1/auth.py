@@ -1,5 +1,4 @@
 import logging
-import threading
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response, status
@@ -28,7 +27,7 @@ from cc_crm.schemas.auth import (
     VerifyLoginRequest,
 )
 from cc_crm.services.auth import AuthService, IssuedChallenge, TrustedLogin
-from cc_crm.services.security_alerts import send_security_alert
+from cc_crm.services.job_queue import enqueue
 
 logger = logging.getLogger("cc_crm.auth")
 
@@ -47,7 +46,17 @@ def _user_read(user: User) -> UserRead:
     )
 
 
-def _send_login_code(email: str, issued: IssuedChallenge) -> None:
+def _queue_security_alert(session: DatabaseSession, subject: str, body: str) -> None:
+    """Legt die Warnmail in die Job-Warteschlange (Worker verschickt sie mit
+    Wiederholung); ein Fehler hier darf den Request nie zusaetzlich abbrechen."""
+    try:
+        enqueue(session, "security_alert", {"subject": subject, "body": body}, max_attempts=5)
+    except Exception:  # noqa: BLE001
+        session.rollback()
+        logger.exception("Sicherheitswarnung konnte nicht eingereiht werden: %s", subject)
+
+
+def _send_login_code(session: DatabaseSession, email: str, issued: IssuedChallenge) -> None:
     """Verschickt den 2FA-Code. Anders als send_security_alert (best-effort)
     MUSS der Code ankommen - schlaegt der Versand fehl, bekommt der Client
     einen Fehler statt eines "challenge_required" ohne Aussicht auf einen
@@ -69,17 +78,12 @@ def _send_login_code(email: str, issued: IssuedChallenge) -> None:
         )
     except EmailProviderError:
         logger.exception("2FA-Code konnte nicht an %s verschickt werden.", email)
-        threading.Thread(
-            target=send_security_alert,
-            kwargs={
-                "subject": "[Hermes CRM] 2FA-Code-Versand fehlgeschlagen",
-                "body": (
-                    f"Der Versand eines Anmeldecodes an {email} ist fehlgeschlagen - "
-                    "Resend-Konfiguration/-Kontingent pruefen."
-                ),
-            },
-            daemon=True,
-        ).start()
+        _queue_security_alert(
+            session,
+            "[Hermes CRM] 2FA-Code-Versand fehlgeschlagen",
+            f"Der Versand eines Anmeldecodes an {email} ist fehlgeschlagen - "
+            "Resend-Konfiguration/-Kontingent pruefen.",
+        )
         raise
 
 
@@ -124,20 +128,13 @@ def login(payload: LoginRequest, session: DatabaseSession, request: Request) -> 
                 ip,
                 payload.email,
             )
-            # Bewusst ein eigener Thread statt FastAPIs BackgroundTasks: die
-            # gleich folgende `raise` verlaesst den Endpoint ueber eine
-            # Exception, die von einem zentralen Exception-Handler (siehe
-            # api/error_handlers.py) in eine neue Response uebersetzt wird -
-            # BackgroundTasks haengen aber am *zurueckgegebenen* Response-
-            # Objekt des Endpoints und werden bei diesem Pfad nie ausgefuehrt
-            # (live in Tests bestaetigt: 0 statt 1 Aufruf). Ein Daemon-Thread
-            # ist davon unabhaengig und blockiert die Antwort an den
-            # (moeglichen) Angreifer nicht.
-            threading.Thread(
-                target=send_security_alert,
-                kwargs={
-                    "subject": "[Hermes CRM] Verdaechtige Login-Versuche blockiert",
-                    "body": (
+            # Als Job eingereiht, nicht als FastAPI-BackgroundTask: die folgende
+            # `raise` laeuft ueber den zentralen Exception-Handler, dessen neue
+            # Response die BackgroundTasks des Endpoints verwirft.
+            _queue_security_alert(
+                session,
+                "[Hermes CRM] Verdaechtige Login-Versuche blockiert",
+                (
                         f"Die IP-Adresse {ip} wurde soeben gesperrt, nachdem sie "
                         f"{login_rate_limiter.max_attempts} fehlgeschlagene Login-Versuche "
                         f"innerhalb von {int(login_rate_limiter.window.total_seconds() // 60)} "
@@ -146,10 +143,8 @@ def login(payload: LoginRequest, session: DatabaseSession, request: Request) -> 
                         "Weitere Versuche von dieser IP werden fuer das laufende Zeitfenster "
                         "automatisch mit HTTP 429 abgelehnt, bevor ueberhaupt ein "
                         "Passwort-Vergleich stattfindet."
-                    ),
-                },
-                daemon=True,
-            ).start()
+                ),
+            )
         raise
     login_rate_limiter.record_success(ip)
     email_login_rate_limiter.record_success(email_key)
@@ -162,7 +157,7 @@ def login(payload: LoginRequest, session: DatabaseSession, request: Request) -> 
             trusted_device_token=result.trusted_device_token,
         )
 
-    _send_login_code(result.user.email, result)
+    _send_login_code(session, result.user.email, result)
     return LoginStartResponse(
         status="challenge_required",
         challenge_id=result.challenge.id,
@@ -216,7 +211,7 @@ def resend_login_code(
     payload: ResendLoginCodeRequest, session: DatabaseSession
 ) -> ResendLoginCodeResponse:
     issued = AuthService(session).resend_challenge(payload.challenge_id)
-    _send_login_code(issued.user.email, issued)
+    _send_login_code(session, issued.user.email, issued)
     return ResendLoginCodeResponse(
         challenge_id=issued.challenge.id, expires_at=issued.challenge.expires_at
     )

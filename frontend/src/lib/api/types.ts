@@ -1223,3 +1223,40 @@ export interface KpiRankingResult {
   metric: string;
   entries: KpiRankingEntry[];
 }
+
+export interface BackgroundJob {
+  id: string;
+  kind: string;
+  status: "queued" | "running" | "done" | "failed";
+  attempts: number;
+  max_attempts: number;
+  run_after: string;
+  last_error: string | null;
+  finished_at: string | null;
+  created_at: string;
+}
+
+export interface WebhookEndpoint {
+  id: string;
+  name: string;
+  url: string;
+  event_types: string[];
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface WebhookEndpointWithSecret extends WebhookEndpoint {
+  secret: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  endpoint_id: string;
+  event_type: string;
+  status: "pending" | "retrying" | "delivered" | "dead";
+  attempts: number;
+  response_status: number | null;
+  last_error: string | null;
+  delivered_at: string | null;
+  created_at: string;
+}

@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Query
+from fastapi import APIRouter, Query
 from sqlalchemy import select
 
 from cc_crm.api.dependencies import CurrentUser, DatabaseSession
@@ -14,25 +14,33 @@ from cc_crm.schemas.sourcing import (
     SourcingRunResult,
     SourcingRunStatusRead,
 )
-from cc_crm.services.sourcing import (
-    SourcingService,
-    scan_team_pages_in_background,
-    search_areas_in_background,
-)
+from cc_crm.services.job_queue import enqueue
+from cc_crm.services.sourcing import SourcingService
 
 router = APIRouter(prefix="/sourcing")
+
+
+def _enqueue_team_pages(
+    session: DatabaseSession, company_ids: list[uuid.UUID], run_id: uuid.UUID
+) -> None:
+    # Ein Versuch: ein Wiederholungslauf wuerde den ganzen Scan von vorn starten.
+    enqueue(
+        session,
+        "sourcing.team_pages",
+        {"company_ids": [str(value) for value in company_ids], "run_id": str(run_id)},
+        max_attempts=1,
+    )
 
 
 @router.post("/run", response_model=SourcingRunResult)
 def run_sourcing(
     payload: SourcingRunRequest,
     session: DatabaseSession,
-    background_tasks: BackgroundTasks,
 ) -> SourcingRunResult:
     """Manuell ausgeloester Sourcing-Lauf (kein Cron) - synchron, damit die
     Antwort direkt die Zahlen (gefunden/neu/uebersprungen) enthaelt (~2s pro
     Gebiet/Kanzlei, das Frontend ruft mit verlaengertem Timeout auf).
-    Einzige Ausnahme: scan_all_companies laeuft als FastAPI-BackgroundTask,
+    Einzige Ausnahme: scan_all_companies laeuft als Job der Warteschlange (services/job_queue.py),
     da hunderte Kanzlei-Websites + LLM-Aufrufe jeden HTTP-Timeout sprengen -
     die Antwort meldet dann nur die Anzahl gestarteter Kanzlei-Scans."""
     service = SourcingService(session)
@@ -41,12 +49,19 @@ def run_sourcing(
         if payload.source_type == SourcingSourceType.KANZLEI_TEAM_PAGE:
             company_ids = service.company_ids_around(payload.center, payload.radius_km)
             run = service.start_run(payload.source_type, total=len(company_ids))
-            background_tasks.add_task(scan_team_pages_in_background, company_ids, run.id)
+            _enqueue_team_pages(session, company_ids, run.id)
             return SourcingRunResult(background_started=len(company_ids), run_id=run.id)
         postal_codes = service.postal_codes_around(payload.center, payload.radius_km)
         run = service.start_run(payload.source_type, total=len(postal_codes))
-        background_tasks.add_task(
-            search_areas_in_background, payload.source_type, postal_codes, run.id
+        enqueue(
+            session,
+            "sourcing.areas",
+            {
+                "source_type": payload.source_type.value,
+                "postal_codes": postal_codes,
+                "run_id": str(run.id),
+            },
+            max_attempts=1,
         )
         return SourcingRunResult(background_started=len(postal_codes), run_id=run.id)
     if payload.source_type == SourcingSourceType.KANZLEI_TEAM_PAGE:
@@ -59,7 +74,7 @@ def run_sourcing(
                 ).all()
             )
             run = service.start_run(payload.source_type, total=len(company_ids))
-            background_tasks.add_task(scan_team_pages_in_background, company_ids, run.id)
+            _enqueue_team_pages(session, company_ids, run.id)
             return SourcingRunResult(background_started=len(company_ids), run_id=run.id)
         assert payload.client_company_ids is not None  # per Schema-Validierung
         return service.run_team_scrapes(payload.client_company_ids)

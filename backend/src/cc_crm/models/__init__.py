@@ -3,6 +3,7 @@ from cc_crm.models.api_key import ApiKey
 from cc_crm.models.app_setting import AppSetting
 from cc_crm.models.approval_request import ApprovalRequest
 from cc_crm.models.auth import AuthSession
+from cc_crm.models.background_job import BackgroundJob
 from cc_crm.models.base import Base
 from cc_crm.models.calendar_event import CalendarEvent
 from cc_crm.models.candidate import Candidate
@@ -12,6 +13,7 @@ from cc_crm.models.contact_person import ContactPerson
 from cc_crm.models.cv_extraction_job import CvExtractionJob
 from cc_crm.models.deletion_request import DeletionRequest
 from cc_crm.models.email_template import EmailTemplate
+from cc_crm.models.event_outbox import EventOutbox
 from cc_crm.models.job_mandate import JobMandate
 from cc_crm.models.kpi_point_rule import KpiPointRule
 from cc_crm.models.login_challenge import LoginChallenge
@@ -38,6 +40,7 @@ from cc_crm.models.submission_share import SubmissionShare
 from cc_crm.models.task import Task
 from cc_crm.models.trusted_device import TrustedDevice
 from cc_crm.models.user import User
+from cc_crm.models.webhook import WebhookDelivery, WebhookEndpoint
 
 __all__ = [
     "Activity",
@@ -46,6 +49,7 @@ __all__ = [
     "ApprovalRequest",
     "AuditLog",
     "AuthSession",
+    "BackgroundJob",
     "Base",
     "CalendarEvent",
     "Candidate",
@@ -58,6 +62,7 @@ __all__ = [
     "Document",
     "EmailDraftLog",
     "EmailTemplate",
+    "EventOutbox",
     "Fee",
     "Interview",
     "JobMandate",
@@ -83,4 +88,6 @@ __all__ = [
     "Task",
     "TrustedDevice",
     "User",
+    "WebhookDelivery",
+    "WebhookEndpoint",
 ]
