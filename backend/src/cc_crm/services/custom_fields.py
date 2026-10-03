@@ -23,6 +23,7 @@ from cc_crm.models.custom_field import (
     CUSTOM_FIELD_TYPES,
     CustomFieldDefinition,
 )
+from cc_crm.services.custom_field_indexes import ensure_index
 
 _KEY_RE = re.compile(r"^[a-z][a-z0-9_]{0,59}$")
 MAX_TEXT_LENGTH = 1000
@@ -98,6 +99,8 @@ class CustomFieldService:
         )
         self.session.add(definition)
         self.session.commit()
+        # Postgres: Index auf den Filter-Ausdruck (siehe custom_field_indexes).
+        ensure_index(self.session, entity_type, key, field_type)
         return definition
 
     def update(
