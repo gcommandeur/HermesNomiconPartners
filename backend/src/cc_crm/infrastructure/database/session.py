@@ -4,6 +4,7 @@ from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.core.config import get_settings
+from cc_crm.core.observability import install_slow_sql_logging
 
 
 def register_sqlite_unicode_lower(engine: Engine) -> None:
@@ -44,6 +45,7 @@ def build_engine(database_url: str, *, echo: bool = False) -> Engine:
         connect_args=connect_args,
     )
     register_sqlite_unicode_lower(engine)
+    install_slow_sql_logging(engine)
     return engine
 
 

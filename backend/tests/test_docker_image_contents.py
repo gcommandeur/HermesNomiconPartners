@@ -18,3 +18,12 @@ def test_dockerfile_copies_templates_directory() -> None:
 def test_master_profile_template_exists_in_repo() -> None:
     template = _REPO_ROOT / "backend" / "templates" / "anonymes_profil_master.docx"
     assert template.is_file()
+
+
+def test_dockerfile_migration_on_startup_can_be_switched_off() -> None:
+    """CC_CRM_MIGRATE_ON_STARTUP=false muss die Migration im Container-Start
+    ueberspringen; ohne die Variable bleibt sie an (bisheriges Verhalten)."""
+    dockerfile = (_REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
+    assert "CC_CRM_MIGRATE_ON_STARTUP:-true" in dockerfile
+    assert "alembic upgrade head" in dockerfile
+    assert "exec uvicorn" in dockerfile
