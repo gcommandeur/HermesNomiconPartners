@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
 
 from cc_crm.core.config import get_settings
@@ -77,6 +77,8 @@ _PROFILE_SUMMARY_NOTE_TEMPLATE = (
 # die strukturierten/statistischen Felder (job_title, qualification, PLZ/
 # Ort, status, fachliche_schwerpunkte, ...), die fuer Auswertungen erhalten
 # bleiben sollen (Nutzer-Vorgabe: "Statistiken bleiben auswertbar").
+REDACTED = "[entfernt]"  # Ersatzwert fuer geschwaerzte Audit-Werte
+
 _ANONYMIZE_TEXT_FIELDS = [
     "email",
     "phone",
@@ -371,6 +373,8 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         for field in _ANONYMIZE_TEXT_FIELDS:
             setattr(candidate, field, None)
 
+        self._redact_audit_history(candidate.id)
+
         # Bewusst KEINE personenbezogenen Werte (Name, E-Mail, ...) ins
         # Audit-Log schreiben - alter_values wuerde sonst genau die Daten
         # reproduzieren, die diese Aktion gerade entfernt.
@@ -386,6 +390,27 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         self.session.commit()
         self.session.refresh(candidate)
         return candidate
+
+    def _redact_audit_history(self, candidate_id: uuid.UUID) -> None:
+        """Schwaerzt die alten/neuen Werte frueherer Audit-Eintraege dieses
+        Kandidaten (E-Mail, Telefon, Name ... aus normalen Aenderungen). Die
+        Eintraege selbst bleiben (wer/wann/welche Aktion/welche Felder);
+        nur die WERTE werden durch "[entfernt]" ersetzt. Der Audit-Log ist
+        per Datenbank-Trigger sonst unveraenderbar (Migration f4b7d1a8c2e5) -
+        diese Funktion setzt dafuer das transaktionsgebundene Flag."""
+        if self.session.get_bind().dialect.name == "postgresql":
+            self.session.execute(text("SET LOCAL cc_crm.audit_redaction = 'on'"))
+        rows = self.session.scalars(
+            select(AuditLog).where(
+                AuditLog.entity_type == "candidate", AuditLog.entity_id == candidate_id
+            )
+        ).all()
+        for row in rows:
+            for column in ("old_values", "new_values"):
+                values = getattr(row, column)
+                if isinstance(values, dict) and values:
+                    setattr(row, column, {key: REDACTED for key in values})
+        self.session.flush()
 
     def _extract_and_suggest(
         self,
