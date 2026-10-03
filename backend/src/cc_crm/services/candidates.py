@@ -8,7 +8,7 @@ from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
 
 from cc_crm.core.config import get_settings
-from cc_crm.core.errors import ConsentNotGrantedError
+from cc_crm.core.errors import BusinessRuleError, ConsentNotGrantedError
 from cc_crm.core.time import naive_utc
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
@@ -98,6 +98,8 @@ _LEGACY_CANDIDATE_NUMBER_FLOOR = 4052
 
 
 class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate]):
+    custom_field_entity = "candidate"
+
     def __init__(self, session: Session) -> None:
         repository = CandidateRepository(session)
         super().__init__(session, repository, "Candidate")
@@ -370,6 +372,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         candidate.consent_received = False
         candidate.cv_available = False
         candidate.no_gos = []
+        candidate.custom_fields = {}  # Zusatzfelder koennen Personenbezug haben
         for field in _ANONYMIZE_TEXT_FIELDS:
             setattr(candidate, field, None)
 
@@ -384,7 +387,9 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
                 "entity_id": candidate.id,
                 "action": "anonymized",
                 "changed_by": admin_user.email,
-                "new_values": {"fields_cleared": [*_ANONYMIZE_TEXT_FIELDS, "no_gos"]},
+                "new_values": {
+                    "fields_cleared": [*_ANONYMIZE_TEXT_FIELDS, "no_gos", "custom_fields"]
+                },
             }
         )
         self.session.commit()
@@ -562,6 +567,23 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         )
         self.notes.create({"candidate_id": candidate.id, "body": body})
 
+    def _parse_custom_field_filter(self, raw: str | None) -> tuple[str, str, str] | None:
+        """"schluessel:wert" -> (Schluessel, Feldtyp, Wert); Feld muss definiert sein."""
+        if not raw:
+            return None
+        key, separator, value = raw.partition(":")
+        if not separator or not key:
+            raise BusinessRuleError("Eigener Feld-Filter erwartet 'schluessel:wert'.")
+        from cc_crm.services.custom_fields import CustomFieldService
+
+        kind = CustomFieldService(self.session).filter_kind("candidate", key)
+        if kind == "number":
+            try:
+                float(value)
+            except ValueError as exc:
+                raise BusinessRuleError("Zahlenfeld-Filter erwartet eine Zahl.") from exc
+        return key, kind, value
+
     def list_filtered(
         self,
         *,
@@ -577,11 +599,13 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         created_from: datetime | None = None,
         created_to: datetime | None = None,
         rollen_unbestaetigt: bool | None = None,
+        custom_field: str | None = None,
         sort_by: str | None = None,
         sort_dir: str = "asc",
         offset: int = 0,
         limit: int = 100,
     ) -> tuple[Sequence[Candidate], int]:
+        custom_field_filter = self._parse_custom_field_filter(custom_field)
         # plz_ort+radius_km ist ein ECHTER Umkreis-Filter (siehe
         # MAX_RADIUS_FILTER_CANDIDATES oben) - beide muessen gesetzt sein,
         # sonst gaebe es kein Zentrum bzw. keinen Radius zum Filtern.
@@ -599,6 +623,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
                 created_from=created_from,
                 created_to=created_to,
                 rollen_unbestaetigt=rollen_unbestaetigt,
+                custom_field_filter=custom_field_filter,
                 sort_by=sort_by,
                 sort_dir=sort_dir,
                 offset=offset,
@@ -616,6 +641,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             created_from=created_from,
             created_to=created_to,
             rollen_unbestaetigt=rollen_unbestaetigt,
+            custom_field_filter=custom_field_filter,
             sort_by=sort_by,
             sort_dir=sort_dir,
             offset=offset,
@@ -639,6 +665,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         created_from: datetime | None,
         created_to: datetime | None,
         rollen_unbestaetigt: bool | None = None,
+        custom_field_filter: tuple[str, str, str] | None = None,
         sort_by: str | None,
         sort_dir: str,
         offset: int,
@@ -673,6 +700,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             created_from=created_from,
             created_to=created_to,
             rollen_unbestaetigt=rollen_unbestaetigt,
+            custom_field_filter=custom_field_filter,
             sort_by=sort_by,
             sort_dir=sort_dir,
             offset=0,

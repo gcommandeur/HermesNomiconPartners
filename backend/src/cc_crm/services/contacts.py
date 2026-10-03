@@ -10,6 +10,8 @@ from cc_crm.services.clients import ClientCompanyService
 
 
 class ContactPersonService(CrudService[ContactPerson, ContactPersonCreate, ContactPersonUpdate]):
+    custom_field_entity = "contact"
+
     def __init__(self, session: Session) -> None:
         repository = ContactPersonRepository(session)
         super().__init__(session, repository, "ContactPerson")

@@ -10,6 +10,7 @@ from cc_crm.models.candidate import Candidate
 from cc_crm.models.candidate_pitch_log import CandidatePitchLog
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.contact_person import ContactPerson
+from cc_crm.models.custom_field import CustomFieldDefinition
 from cc_crm.models.cv_extraction_job import CvExtractionJob
 from cc_crm.models.deletion_request import DeletionRequest
 from cc_crm.models.email_template import EmailTemplate
@@ -57,6 +58,7 @@ __all__ = [
     "CandidateSubmission",
     "ClientCompany",
     "ContactPerson",
+    "CustomFieldDefinition",
     "CvExtractionJob",
     "DeletionRequest",
     "Document",

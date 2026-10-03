@@ -245,6 +245,8 @@ export interface Candidate extends Entity {
   /** Zustaendiger Mitarbeiter (Komfort-Filter "Meine Kandidaten", KEINE
    * Sichtbarkeitsgrenze - siehe Backend models/candidate.py::owner_user_id). */
   owner_user_id?: string | null;
+  /** Eigene Felder (Admin-definiert), Schlüssel -> Wert. */
+  custom_fields?: Record<string, CustomFieldValue>;
   /** Nur gesetzt, wenn GET /candidates mit `search` aufgerufen wurde (siehe
    * Backend repositories/candidates.py::compute_search_match_fields) -
    * macht nachvollziehbar, WARUM ein Treffer gefunden wurde: welche
@@ -290,6 +292,8 @@ export interface ClientCompany extends Entity {
   /** Zustaendiger Mitarbeiter (Komfort-Filter "Meine Kanzleien", KEINE
    * Sichtbarkeitsgrenze - siehe Backend models/client_company.py::owner_user_id). */
   owner_user_id?: string | null;
+  /** Eigene Felder (Admin-definiert), Schlüssel -> Wert. */
+  custom_fields?: Record<string, CustomFieldValue>;
   /** Von einem Nicht-Admin angelegt, Freigabe durch die GF steht aus. */
   approval_pending?: boolean;
 }
@@ -1259,4 +1263,19 @@ export interface WebhookDelivery {
   last_error: string | null;
   delivered_at: string | null;
   created_at: string;
+}
+
+export type CustomFieldEntity = "candidate" | "client" | "contact";
+export type CustomFieldType = "text" | "number" | "date" | "boolean" | "select";
+export type CustomFieldValue = string | number | boolean | null;
+
+export interface CustomFieldDefinition {
+  id: string;
+  entity_type: CustomFieldEntity;
+  key: string;
+  label: string;
+  field_type: CustomFieldType;
+  options: string[];
+  sort_order: number;
+  is_active: boolean;
 }

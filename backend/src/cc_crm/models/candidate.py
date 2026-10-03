@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import JSON, Boolean, Date, DateTime, Enum, ForeignKey, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cc_crm.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -158,4 +158,10 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # gueltiger Zustand, Bestandsdaten werden nicht rueckwirkend zugewiesen.
     owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+
+    # Eigene Felder (Admin-definiert, siehe models/custom_field.py). Bewusst plain JSON
+    # ohne GIN-Index (wie rollen): Filter ueber JSON-Pfad, portabel fuer SQLite/Postgres.
+    custom_fields: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict, server_default=text("'{}'")
     )

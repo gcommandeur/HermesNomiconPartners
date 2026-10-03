@@ -29,6 +29,7 @@ import { CandidateProcessLog } from "@/components/crm/candidate-process-log";
 import { CandidateTimeline } from "@/components/crm/candidate-timeline";
 import { CandidateRollenUnbestaetigtHint } from "@/components/crm/candidate-rollen-unbestaetigt-hint";
 import { NotesPanel } from "@/components/crm/notes-panel";
+import { CustomFieldsPanel } from "@/components/crm/custom-fields-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -172,6 +173,8 @@ export default async function CandidateDetailPage({
       )}
 
       <CandidateSequencesPanel candidateId={candidate.id} />
+
+      <CustomFieldsPanel entityType="candidate" entityId={candidate.id} initialValues={candidate.custom_fields} />
 
       <Tabs defaultValue={initialTab}>
         <TabsList className="scrollbar-subtle mb-5 overflow-x-auto">

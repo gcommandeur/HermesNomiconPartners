@@ -1404,6 +1404,11 @@
             ],
             "title": "Current Employer Internal"
           },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
           "cv_available": {
             "default": false,
             "title": "Cv Available",
@@ -2002,6 +2007,11 @@
               }
             ],
             "title": "Current Employer Internal"
+          },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
           },
           "cv_available": {
             "default": false,
@@ -3358,6 +3368,18 @@
             ],
             "title": "Current Employer Internal"
           },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
+          },
           "cv_available": {
             "anyOf": [
               {
@@ -3752,6 +3774,11 @@
             ],
             "title": "Company Size"
           },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
           "email": {
             "anyOf": [
               {
@@ -4047,6 +4074,11 @@
             "title": "Created At",
             "type": "string"
           },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
           "email": {
             "anyOf": [
               {
@@ -4335,6 +4367,18 @@
               }
             ],
             "title": "Company Size"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
           },
           "email": {
             "anyOf": [
@@ -5106,6 +5150,11 @@
             "title": "Client Company Id",
             "type": "string"
           },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
           "email": {
             "anyOf": [
               {
@@ -5191,6 +5240,11 @@
             "title": "Created At",
             "type": "string"
           },
+          "custom_fields": {
+            "additionalProperties": true,
+            "title": "Custom Fields",
+            "type": "object"
+          },
           "email": {
             "anyOf": [
               {
@@ -5267,6 +5321,18 @@
       },
       "ContactPersonUpdate": {
         "properties": {
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
+          },
           "email": {
             "anyOf": [
               {
@@ -5342,6 +5408,182 @@
           }
         },
         "title": "ContactPersonUpdate",
+        "type": "object"
+      },
+      "CustomFieldCreate": {
+        "properties": {
+          "entity_type": {
+            "enum": [
+              "candidate",
+              "client",
+              "contact"
+            ],
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "field_type": {
+            "enum": [
+              "text",
+              "number",
+              "date",
+              "boolean",
+              "select"
+            ],
+            "title": "Field Type",
+            "type": "string"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entity_type",
+          "label",
+          "field_type"
+        ],
+        "title": "CustomFieldCreate",
+        "type": "object"
+      },
+      "CustomFieldRead": {
+        "properties": {
+          "entity_type": {
+            "enum": [
+              "candidate",
+              "client",
+              "contact"
+            ],
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "field_type": {
+            "enum": [
+              "text",
+              "number",
+              "date",
+              "boolean",
+              "select"
+            ],
+            "title": "Field Type",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "entity_type",
+          "key",
+          "label",
+          "field_type",
+          "options",
+          "sort_order",
+          "is_active"
+        ],
+        "title": "CustomFieldRead",
+        "type": "object"
+      },
+      "CustomFieldUpdate": {
+        "description": "Typ und Schluessel sind nach dem Anlegen unveraenderlich.",
+        "properties": {
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          }
+        },
+        "title": "CustomFieldUpdate",
         "type": "object"
       },
       "CvExtractionRequest": {
@@ -14784,6 +15026,22 @@
           },
           {
             "in": "query",
+            "name": "custom_field",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Custom Field"
+            }
+          },
+          {
+            "in": "query",
             "name": "sort_by",
             "required": false,
             "schema": {
@@ -17710,6 +17968,232 @@
         "summary": "Update Contact",
         "tags": [
           "contacts"
+        ]
+      }
+    },
+    "/api/v1/custom-fields": {
+      "get": {
+        "description": "Fuer jeden Nutzer (die Felder erscheinen in den Masken); deaktivierte nur fuer Admins.",
+        "operationId": "list_custom_fields_api_v1_custom_fields_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "candidate",
+                    "client",
+                    "contact"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_inactive",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Inactive",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CustomFieldRead"
+                  },
+                  "title": "Response List Custom Fields Api V1 Custom Fields Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Custom Fields",
+        "tags": [
+          "custom-fields"
+        ]
+      },
+      "post": {
+        "operationId": "create_custom_field_api_v1_custom_fields_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomFieldCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomFieldRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Custom Field",
+        "tags": [
+          "custom-fields"
+        ]
+      }
+    },
+    "/api/v1/custom-fields/{definition_id}": {
+      "patch": {
+        "operationId": "update_custom_field_api_v1_custom_fields__definition_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomFieldUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomFieldRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Custom Field",
+        "tags": [
+          "custom-fields"
         ]
       }
     },

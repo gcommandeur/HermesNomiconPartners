@@ -86,6 +86,8 @@ def list_candidates(
     # rollen_unbestaetigt) - sonst findet man sie im laufenden Betrieb nicht
     # wieder. True/False filtert, None (Default) laesst den Filter aus.
     rollen_unbestaetigt: bool | None = None,
+    # Eigener Feld-Filter "schluessel:wert" (nur Auswahl-/Ja-Nein-/Text-/Zahlenfelder).
+    custom_field: str | None = None,
     sort_by: Annotated[
         Literal["candidate_number", "name", "job_title", "city", "salary_expectation", "status"]
         | None,
@@ -110,6 +112,7 @@ def list_candidates(
         created_from=created_from,
         created_to=created_to,
         rollen_unbestaetigt=rollen_unbestaetigt,
+        custom_field=custom_field,
         sort_by=sort_by,
         sort_dir=sort_dir,
         offset=offset,

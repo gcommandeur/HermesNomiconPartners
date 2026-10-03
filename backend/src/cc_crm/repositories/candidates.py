@@ -263,12 +263,23 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
         created_from: datetime | None = None,
         created_to: datetime | None = None,
         rollen_unbestaetigt: bool | None = None,
+        custom_field_filter: tuple[str, str, str] | None = None,
         sort_by: str | None = None,
         sort_dir: str = "asc",
         offset: int = 0,
         limit: int = 100,
     ) -> tuple[Sequence[Candidate], int]:
         filters = []
+        if custom_field_filter is not None:
+            # (Schluessel, Feldtyp, Wert) - JSON-Pfad statt Spalte, portabel fuer
+            # SQLite und Postgres.
+            key, kind, wanted = custom_field_filter
+            if kind == "boolean":
+                filters.append(Candidate.custom_fields[key].as_boolean() == (wanted == "true"))
+            elif kind == "number":
+                filters.append(Candidate.custom_fields[key].as_float() == float(wanted))
+            else:
+                filters.append(Candidate.custom_fields[key].as_string() == wanted)
         if status is not None:
             filters.append(Candidate.status == status)
         if owner_user_id is not None:

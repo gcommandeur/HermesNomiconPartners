@@ -150,6 +150,9 @@ export default function EinstellungenPage() {
               <Link href="/einstellungen/sequenzen">
                 <Button size="sm" variant="outline">Outreach-Sequenzen öffnen</Button>
               </Link>
+              <Link href="/einstellungen/felder">
+                <Button size="sm" variant="outline">Eigene Felder öffnen</Button>
+              </Link>
               <Link href="/einstellungen/webhooks">
                 <Button size="sm" variant="outline">Webhooks öffnen</Button>
               </Link>
