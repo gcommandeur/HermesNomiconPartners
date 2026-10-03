@@ -1,6 +1,7 @@
 "use client";
 
 import { useCurrentUser } from "@/lib/api/hooks";
+import { brand } from "@/lib/brand";
 
 function formatWatermarkDate(): string {
   return new Date().toLocaleDateString("de-DE", {
@@ -89,7 +90,7 @@ export function ScreenWatermark() {
   const email = data?.data.email;
   if (!email) return null;
 
-  const label = `Commandeur Consulting · Vertraulich · ${email} · ${formatWatermarkDate()}`;
+  const label = `${brand.companyName} · Vertraulich · ${email} · ${formatWatermarkDate()}`;
   const svg = buildTiledWatermarkSvg(label);
   const backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 

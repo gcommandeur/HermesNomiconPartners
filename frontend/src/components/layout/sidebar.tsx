@@ -14,6 +14,7 @@ import {
 } from "@/lib/recent-candidates";
 import { useCurrentUser } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
+import { brand } from "@/lib/brand";
 
 type NavigationItem = (typeof primaryNavigation)[number];
 
@@ -92,11 +93,11 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
                 Schriftzug bei 1418:232 Bildseitenverhaeltnis ueber den
                 verfuegbaren Platz neben dem Icon hinaus (Nutzer-Feedback
                 "Schrift ... nicht ueber Grenze"). */}
-            <Image src="/brand/commandeur-mark.png" alt="Commandeur Consulting" width={44} height={44} className="h-11 w-11 shrink-0 object-contain" priority />
+            <Image src={brand.markSrc} alt={brand.companyName} width={44} height={44} className="h-11 w-11 shrink-0 object-contain" priority />
             {!collapsed && (
               <Image
-                src="/brand/commandeur-wordmark.png"
-                alt="Commandeur Consulting"
+                src={brand.wordmarkSrc}
+                alt={brand.companyName}
                 width={1418}
                 height={232}
                 className="h-6 w-auto max-w-full object-contain"
