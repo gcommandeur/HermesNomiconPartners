@@ -234,6 +234,26 @@ $/Monat bei dieser Taktung). Diese Job-Komponente braucht dieselben
 `CC_CRM_DATABASE_URL`/`CC_CRM_MAIL_CREDENTIALS_ENCRYPTION_KEY`/
 `CC_CRM_MS_GRAPH_*`-Variablen wie die Backend-Web-Service-Komponente.
 
+**Tägliche Fälligkeits-Mail**: `backend/scripts/send_due_reminders.py` schickt
+jedem aktiven Nutzer EINE Sammel-Mail an die eigene Adresse mit den heute
+fälligen/überfälligen eigenen Aufgaben (`tasks.due_at`, nicht zurückgestellt)
+und Prozess-Wiedervorlagen (`follow_up_at`, Prozess weder abgeschlossen noch
+storniert noch archiviert). Nichts Fälliges: keine Mail. Absenderkonto je
+Nutzer: persönliches Standard-Postfach, sonst das globale Standard-Postfach
+(`default_for_cv_out`); ohne Konto wird der Nutzer übersprungen. Ein Fehler
+bei einem Nutzer stoppt die anderen nicht, der Job endet dann aber mit Exit-Code
+1 (rot in der DigitalOcean-Oberfläche, Details im Job-Log). Einrichtung als
+zweite App-Platform-Komponente vom Typ **Scheduled Job**:
+
+- Kommando: `python scripts/send_due_reminders.py`
+- Zeitplan: einmal täglich morgens. Die Cron-Zeit in App Platform ist UTC:
+  `0 5 * * *` = 07:00 Sommerzeit (MESZ) bzw. 06:00 Winterzeit (MEZ).
+- Dieselben Variablen wie `graph-sync-job` (`CC_CRM_DATABASE_URL`,
+  `CC_CRM_MAIL_CREDENTIALS_ENCRYPTION_KEY`, `CC_CRM_MS_GRAPH_*`).
+
+Die Mail zählt wie jeder Versand zum Tageslimit des Absenderpostfachs
+(`daily_send_limit`) und erscheint als ausgehende Mail ohne Kandidatenbezug.
+
 ## Umgebungsvariablen (Frontend-Komponente `hermescrm-frontend`)
 
 - `NEXT_PUBLIC_CC_CRM_API_URL=https://hermescrm-v9sle.ondigitalocean.app/api/v1`
