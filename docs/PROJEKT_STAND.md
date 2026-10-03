@@ -27,6 +27,19 @@ Das ist die **Memory-Datei** des Projekts. Sie enthaelt jede Aenderung, jede Auf
 
 Der Nutzer will langfristig alles vom Handy aus erledigen koennen. `main` deployt automatisch nach DigitalOcean und bekommt nur gepruefte Staende von `entwicklung`.
 
+## Arbeitsplan (Stand 2026-10-03, Laptop) - bei Abbruch hier weitermachen
+
+Reihenfolge, jeder Schritt = eigener Commit auf `entwicklung`, danach Status hier von `[ ]` auf `[x]` setzen (mit Commit-Nummer). Wer abbricht, traegt unter "Stand" ein, was halb fertig ist. Grundlage: Entscheidungen vom 2026-10-03 (Abschnitt Entscheidungen).
+
+- [ ] **P1 Teamleiter-Scoping Kalender/KPI-Ranking/Analytics.** Teamleiter sehen ihr Team (eigene + Mitarbeiter mit `manager_id`), Admins alles, Mitarbeiter nur sich. Dazu Analytics-Nutzerfilter: nur Admin und Teamleiter (fuer ihr Team) duerfen andere Nutzer waehlen; Nicht-Admins mit fremder `owner_user_id` bekommen nur den erlaubten Bereich. Wiederverwenden: `process_owner_scope` in `backend/src/cc_crm/api/dependencies.py`. Tests nach Muster `tests/api/test_team_lead.py`. Kanzlei-Freigabeanfragen bleiben fuer alle lesbar (keine Aenderung).
+- [ ] **P2 Eigene Felder: Index und Nachmessung.** Filter nach Eigenen Feldern ist ein Tabellen-Scan; passenden Index per Migration (Postgres, in SQLite harmlos) anlegen; Messskript aus Schritt 1c auf 200.000 Kandidaten hochfahren und Ergebnisse in `docs/` festhalten; Cockpit und Suche pruefen. Migration auf Kopie testen, nur EIN Alembic-Head.
+- [ ] **P3 Claude-Schnittstelle (5b)** laut `docs/PLAN_SKALIERUNG.md`. Entscheidung: bauen, aber **standardmaessig AUS** per Konfigurationsschalter (z.B. `CC_CRM_AI_ENABLED=false`), weil der Auftragsverarbeitungsvertrag vom Nutzer noch zu klaeren ist; ohne Schalter duerfen keine Personendaten an die KI gehen. Modell-ID und SDK-Nutzung nach dem Skill `claude-api` pruefen, nie raten.
+- [ ] **P4 Branding aus Konfiguration** (Vorbereitung zweite Firma als Kopie-Repo): Logo, Firmenname, Farben nicht fest im Code, sondern zentral konfigurierbar; nur wenn P1-P3 fertig und der Aufwand klein ist.
+
+Nur der Nutzer (nie Claude): Schutzregel `main` bei GitHub, Entra ID, DigitalOcean (Pre-Deploy-Job, Cron-Jobs, Sentry), `doadmin`-Passwort, Produktions-Skripte, AVV fuer die KI.
+
+**Stand:** noch nichts begonnen.
+
 ## Offene Punkte (nach Prioritaet)
 
 1. **Start-Hook in einer frischen Cloud-Sitzung gegenpruefen (repariert 2026-10-03, Laptop; manuell von der Cloud nachgestellt und ok, Start in frischer Sitzung ungetestet):** `.claude/hooks/cloud-setup.sh` meldet in der Cloud "pip install fehlgeschlagen", weil `python3` dort 3.11 ist, das Backend aber `>=3.12` braucht (`python3.12` und `python3.13` liegen unter `/usr/bin`). Fix-Idee: im Hook `python3.12`/`python3.13` bevorzugen (oder `uv venv --python 3.12`), und pytest/ruff/mypy aus diesem venv aufrufen. Ausserdem braucht pytest in der Cloud `CC_CRM_DATABASE_URL=sqlite:///./x.db`, sonst versucht die App Postgres auf localhost. Danach den Rest dieses Punkts abhaken:
