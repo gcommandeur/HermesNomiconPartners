@@ -28,6 +28,11 @@ from cc_crm.core.errors import BusinessRuleError
 # Scope-Varianten.
 GRAPH_SCOPES = "offline_access User.Read Mail.Send Mail.ReadWrite Calendars.ReadWrite"
 
+# Schlanke Scopes NUR fuer "Mit Microsoft anmelden" am CRM-Login (eigener Flow,
+# unabhaengig vom Postfach-Connect): Identitaet bestaetigen, kein Mail-/Kalender-
+# Zugriff, kein offline_access (es wird kein Refresh-Token gespeichert).
+LOGIN_SCOPES = "openid profile email User.Read"
+
 _AUTHORITY = "https://login.microsoftonline.com"
 _GRAPH_ROOT = "https://graph.microsoft.com/v1.0"
 
@@ -82,7 +87,9 @@ def build_authorization_url(
     return f"{_AUTHORITY}/{settings.ms_graph_tenant_id}/oauth2/v2.0/authorize?{urlencode(params)}"
 
 
-def _token_request(data: dict[str, str], settings: Settings) -> GraphTokens:
+def _token_request(
+    data: dict[str, str], settings: Settings, *, require_refresh_token: bool = True
+) -> GraphTokens:
     url = f"{_AUTHORITY}/{settings.ms_graph_tenant_id}/oauth2/v2.0/token"
     payload = {
         "client_id": settings.ms_graph_client_id,
@@ -104,8 +111,8 @@ def _token_request(data: dict[str, str], settings: Settings) -> GraphTokens:
     # Konfigurationsfehler (Scope nicht gewaehrt) und muss laut erkennbar
     # sein statt spaeter mit einem kryptischen invalid_grant beim naechsten
     # Refresh-Versuch.
-    refresh_token = body.get("refresh_token")
-    if not refresh_token:
+    refresh_token: str = body.get("refresh_token") or ""
+    if not refresh_token and require_refresh_token:
         raise GraphAuthError(
             "Microsoft hat kein refresh_token zurückgegeben - fehlt der "
             "'offline_access'-Scope im Consent?"
@@ -131,6 +138,45 @@ def exchange_code_for_tokens(
         },
         settings,
     )
+
+
+def build_login_authorization_url(
+    *, redirect_uri: str, state: str, settings: Settings | None = None
+) -> str:
+    """Autorisierungs-URL fuer den reinen Anmelde-Flow (LOGIN_SCOPES, eigene
+    Redirect-URI) - bewusst getrennt von build_authorization_url oben."""
+    settings = _require_settings(settings)
+    params = {
+        "client_id": settings.ms_graph_client_id,
+        "response_type": "code",
+        "redirect_uri": redirect_uri,
+        "response_mode": "query",
+        "scope": LOGIN_SCOPES,
+        "state": state,
+        # Microsoft-Kontoauswahl immer zeigen: ohne das meldet ein im Browser
+        # schon angemeldetes Microsoft-Konto ungefragt das "falsche" Konto an.
+        "prompt": "select_account",
+    }
+    return f"{_AUTHORITY}/{settings.ms_graph_tenant_id}/oauth2/v2.0/authorize?{urlencode(params)}"
+
+
+def exchange_code_for_login(
+    *, code: str, redirect_uri: str, settings: Settings | None = None
+) -> str:
+    """Tauscht den Code des Anmelde-Flows; liefert nur das Access-Token (fuer
+    `GET /me`), es wird nichts gespeichert."""
+    settings = _require_settings(settings)
+    tokens = _token_request(
+        {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "scope": LOGIN_SCOPES,
+        },
+        settings,
+        require_refresh_token=False,
+    )
+    return tokens.access_token
 
 
 class GraphReauthRequiredError(GraphAuthError):

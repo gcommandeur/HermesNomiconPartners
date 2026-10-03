@@ -20,6 +20,7 @@ from cc_crm.api.v1.mail_accounts import router as mail_accounts_router
 from cc_crm.api.v1.mail_send import router as mail_send_router
 from cc_crm.api.v1.mailing_groups import router as mailing_groups_router
 from cc_crm.api.v1.matching import router as matching_router
+from cc_crm.api.v1.microsoft_login import public_router as microsoft_login_router
 from cc_crm.api.v1.nl_search import router as nl_search_router
 from cc_crm.api.v1.notes import router as notes_router
 from cc_crm.api.v1.operational import router as operational_router
@@ -46,6 +47,7 @@ api_router.include_router(calendar_feed_router, tags=["calendar-feed"])
 # oauth_state.py). Live-Vorfall: lag zunaechst faelschlich in
 # protected_router und lieferte 401 statt den OAuth-Flow abzuschliessen.
 api_router.include_router(mail_accounts_public_router, tags=["mail-accounts-oauth-callback"])
+api_router.include_router(microsoft_login_router, tags=["auth-microsoft"])
 
 protected_router = APIRouter(dependencies=[Depends(get_current_user)])
 protected_router.include_router(calendar_events_router, tags=["calendar-events"])

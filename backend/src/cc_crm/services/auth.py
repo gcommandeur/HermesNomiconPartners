@@ -87,6 +87,12 @@ class AuthService:
         self.session.commit()
         return user, token
 
+    def issue_session(self, user: User) -> str:
+        """Fertige Session fuer einen bereits anderweitig authentifizierten
+        Nutzer (Microsoft-SSO, siehe services/microsoft_login.py) - derselbe
+        Session-Token wie beim Passwort-Login, ohne Passwort und ohne 2FA."""
+        return self._create_session(user)[1]
+
     def logout(self, token: str) -> None:
         token_hash = hash_token(token)
         auth_session = self.session.scalar(

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { LogIn, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { apiBaseUrl } from "@/lib/api/client";
 import { resetClientSession } from "@/lib/reset-client-session";
 
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -34,6 +35,14 @@ export default function LoginPage() {
   useEffect(() => {
     if (challengeId) codeInputRef.current?.focus();
   }, [challengeId]);
+
+  // Fehlermeldung vom Microsoft-Login (Backend leitet mit ?error=... hierher
+  // zurueck, siehe api/v1/microsoft_login.py). window.location statt
+  // useSearchParams, damit das statische Prerendering der Seite nicht bricht.
+  useEffect(() => {
+    const message = new URLSearchParams(window.location.search).get("error");
+    if (message) setError(message);
+  }, []);
 
   async function handlePasswordSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -161,6 +170,19 @@ export default function LoginPage() {
               <LogIn size={15} />
               {loading ? "Anmelden…" : "Anmelden"}
             </Button>
+            <div className="flex items-center gap-3 text-xs text-[#64748B]">
+              <span className="h-px flex-1 bg-white/10" />
+              oder
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
+            {/* Volle Seitennavigation (kein fetch): der Flow besteht aus
+                Redirects ueber Microsoft und zurueck, siehe api/v1/microsoft_login.py. */}
+            <a
+              href={`${apiBaseUrl ?? "/api/v1"}/auth/microsoft/login`}
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-white/15 bg-white/5 text-sm font-medium text-[#D8DADF] transition-colors hover:bg-white/10"
+            >
+              Mit Microsoft anmelden
+            </a>
           </form>
         ) : (
           <form className="space-y-4" onSubmit={handleCodeSubmit}>

@@ -61,4 +61,36 @@ def verify_oauth_state(state: str) -> uuid.UUID:
         raise InvalidOAuthStateError("OAuth-state enthält keine gültige Nutzer-ID.") from exc
 
 
-__all__ = ["create_oauth_state", "verify_oauth_state", "InvalidOAuthStateError"]
+_LOGIN_STATE_PREFIX = "login:"
+
+
+def create_login_state(nonce: str) -> str:
+    """State fuer "Mit Microsoft anmelden" (CRM-Login). Traegt statt einer
+    Nutzer-ID eine Zufalls-`nonce`, die zusaetzlich als httpOnly-Cookie im
+    Browser liegt: erst die Kombination beweist, dass derselbe Browser den Flow
+    gestartet hat (Schutz vor Login-CSRF - ein Angreifer koennte sonst seinen
+    eigenen gueltigen code/state in den Callback des Opfers einschleusen). Das
+    Praefix verhindert, dass ein Postfach-Connect-State hier (oder umgekehrt)
+    akzeptiert wird."""
+    return encrypt_password(f"{_LOGIN_STATE_PREFIX}{nonce}")
+
+
+def verify_login_state(state: str) -> str:
+    try:
+        raw = decrypt_with_ttl(state, OAUTH_STATE_TTL_SECONDS)
+    except (InvalidToken, MailCredentialsError) as exc:
+        raise InvalidOAuthStateError(
+            "Die Anmeldung ist abgelaufen oder ungültig - bitte erneut starten."
+        ) from exc
+    if not raw.startswith(_LOGIN_STATE_PREFIX):
+        raise InvalidOAuthStateError("Die Anmeldung ist ungültig - bitte erneut starten.")
+    return raw[len(_LOGIN_STATE_PREFIX) :]
+
+
+__all__ = [
+    "create_login_state",
+    "create_oauth_state",
+    "verify_login_state",
+    "verify_oauth_state",
+    "InvalidOAuthStateError",
+]
