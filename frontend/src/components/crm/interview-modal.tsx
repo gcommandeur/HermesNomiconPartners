@@ -33,6 +33,9 @@ interface FormState {
   location_or_link: string;
   notes: string;
   status: InterviewStatus;
+  invite_candidate: boolean;
+  teams_meeting: boolean;
+  invite_message: string;
 }
 
 function formStateFor(interview: Interview | null, defaultScheduledAt?: string): FormState {
@@ -43,6 +46,9 @@ function formStateFor(interview: Interview | null, defaultScheduledAt?: string):
       location_or_link: interview.location_or_link ?? "",
       notes: interview.notes ?? "",
       status: interview.status,
+      invite_candidate: false,
+      teams_meeting: false,
+      invite_message: "",
     };
   }
   return {
@@ -51,6 +57,9 @@ function formStateFor(interview: Interview | null, defaultScheduledAt?: string):
     location_or_link: "",
     notes: "",
     status: "scheduled",
+    invite_candidate: false,
+    teams_meeting: false,
+    invite_message: "",
   };
 }
 
@@ -102,7 +111,12 @@ export function InterviewModal({
     if (interview) {
       onUpdate(interview, { ...shared, status: form.status });
     } else {
-      onCreate(shared);
+      onCreate({
+        ...shared,
+        invite_candidate: form.invite_candidate,
+        teams_meeting: form.invite_candidate && form.teams_meeting,
+        invite_message: form.invite_candidate ? form.invite_message.trim() || null : null,
+      });
     }
     onClose();
   }
@@ -172,6 +186,44 @@ export function InterviewModal({
           <label className={labelClass}>Notiz (optional)</label>
           <textarea className={textareaClass} value={form.notes} onChange={(e) => set("notes", e.target.value)} />
         </div>
+
+        {!interview && (
+          <div className="space-y-3 rounded-lg border border-white/10 p-3">
+            <label className="flex items-center gap-2 text-sm text-[#F8FAFC]">
+              <input
+                type="checkbox"
+                checked={form.invite_candidate}
+                onChange={(e) => set("invite_candidate", e.target.checked)}
+              />
+              Kandidat per Outlook einladen
+            </label>
+            {form.invite_candidate && (
+              <>
+                <label className="flex items-center gap-2 text-sm text-[#F8FAFC]">
+                  <input
+                    type="checkbox"
+                    checked={form.teams_meeting}
+                    onChange={(e) => set("teams_meeting", e.target.checked)}
+                  />
+                  Teams-Link erzeugen
+                </label>
+                <div>
+                  <label className={labelClass}>Einladungstext (optional – sonst Standardtext)</label>
+                  <textarea
+                    className={textareaClass}
+                    placeholder="Das sieht der Kandidat in der Einladung. Die Notiz oben bleibt intern."
+                    value={form.invite_message}
+                    onChange={(e) => set("invite_message", e.target.value)}
+                  />
+                </div>
+                <p className="text-xs text-[#94A3B8]">
+                  Die Einladung geht sofort aus deinem Outlook raus (Voraussetzung: Microsoft-Anmeldung und
+                  E-Mail-Adresse beim Kandidaten). Interne Notizen werden nie mitgeschickt.
+                </p>
+              </>
+            )}
+          </div>
+        )}
 
         {formError && (
           <div className="rounded-lg border border-red-400/25 bg-red-950/30 p-3 text-xs text-red-200">

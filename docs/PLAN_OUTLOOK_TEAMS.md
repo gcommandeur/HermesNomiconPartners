@@ -1,6 +1,6 @@
 # Plan: Outlook/Teams-Anbindung "einmal anmelden, alles verbunden"
 
-Stand: 2026-10-03 (Cloud-Sitzung). **Status: Entwurf, wartet auf Freigaben (siehe unten).**
+Stand: 2026-10-03 (Cloud-Sitzung). **Status: umgesetzt am 2026-10-03 mit den empfohlenen Entscheidungen (Haken mit Vorschau, Teams-Link per Haken je Termin, `Mail.ReadWrite` unveraendert, weil der Posteingangs-Abgleich es nutzt). Offen fuer dich: Entra-ID-Einstellungen, siehe docs/DEPLOYMENT.md "Outlook & Teams".**
 
 ## Ziel
 Wer sich mit seinem Microsoft-Konto anmeldet, hat danach ohne weiteren Schritt: Mail-Versand

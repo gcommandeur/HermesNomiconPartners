@@ -138,6 +138,15 @@ export interface CalendarEvent extends Entity {
    * rein informativ, nie ueber das Formular setzbar. */
   source_interview_id?: string | null;
   reminder_minutes_before: number;
+  /** Einladung per Outlook: eingeladener Teilnehmer (z. B. der Kandidat). */
+  attendee_email?: string | null;
+  attendee_name?: string | null;
+  invite_message?: string | null;
+  online_meeting?: boolean;
+  /** Teams-Beitrittslink (von Outlook zurückgemeldet). */
+  online_meeting_url?: string | null;
+  /** Antwort des Teilnehmers laut Outlook: none | accepted | declined | tentative. */
+  attendee_response?: string | null;
 }
 
 /** Antwort von /auth/login und /auth/me - NUR fuer den eingeloggten Nutzer
@@ -609,6 +618,19 @@ export interface InterviewCreate {
   participants?: string[];
   status?: InterviewStatus;
   notes?: string | null;
+  /** Kandidaten per Outlook einladen (braucht Kandidaten-Mail + Microsoft-Anmeldung). */
+  invite_candidate?: boolean;
+  /** Teams-Link erzeugen (nur zusammen mit invite_candidate). */
+  teams_meeting?: boolean;
+  /** Kandidatenfreundlicher Einladungstext - NICHT die internen Notizen. */
+  invite_message?: string | null;
+}
+
+export type OutlookState = "not_connected" | "connected" | "needs_reconnect";
+
+export interface OutlookStatus {
+  state: OutlookState;
+  address: string | null;
 }
 
 export interface InterviewUpdate {

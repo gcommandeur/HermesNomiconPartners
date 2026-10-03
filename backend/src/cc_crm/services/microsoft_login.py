@@ -10,16 +10,23 @@ automatisch angelegt (Governance-Entscheidung)."""
 from __future__ import annotations
 
 import hmac
+import logging
 import secrets
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from cc_crm.core.config import get_settings
 from cc_crm.core.errors import AuthenticationError
 from cc_crm.integrations.microsoft_graph.auth import (
+    GRAPH_SCOPES,
+    LOGIN_SCOPES,
     GraphAuthError,
+    GraphTokens,
     build_login_authorization_url,
     exchange_code_for_login,
+    exchange_code_for_login_tokens,
     fetch_own_profile,
 )
 from cc_crm.integrations.microsoft_graph.oauth_state import (
@@ -27,8 +34,13 @@ from cc_crm.integrations.microsoft_graph.oauth_state import (
     create_login_state,
     verify_login_state,
 )
+from cc_crm.models.enums import MailAccountOAuthStatus
+from cc_crm.models.mail import MailAccount
 from cc_crm.models.user import User
 from cc_crm.services.auth import AuthService
+from cc_crm.services.mail_oauth import store_connection
+
+logger = logging.getLogger("cc_crm.microsoft_login")
 
 NO_ACCOUNT_MESSAGE = (
     "Kein Konto für diese E-Mail-Adresse - bitte einen Admin bitten, dich anzulegen."
@@ -39,8 +51,9 @@ def start_login(*, redirect_uri: str) -> tuple[str, str]:
     """(Autorisierungs-URL, nonce). Die nonce muss der Aufrufer als httpOnly-
     Cookie im Browser ablegen; im Callback wird sie gegen den State geprueft."""
     nonce = secrets.token_urlsafe(32)
+    scopes = GRAPH_SCOPES if get_settings().ms_login_connects_mailbox else LOGIN_SCOPES
     url = build_login_authorization_url(
-        redirect_uri=redirect_uri, state=create_login_state(nonce)
+        redirect_uri=redirect_uri, state=create_login_state(nonce), scopes=scopes
     )
     return url, nonce
 
@@ -56,7 +69,13 @@ def complete_login(
         raise InvalidOAuthStateError(
             "Die Anmeldung wurde in einem anderen Browser gestartet - bitte erneut starten."
         )
-    access_token = exchange_code_for_login(code=code, redirect_uri=redirect_uri)
+    connect_mailbox = get_settings().ms_login_connects_mailbox
+    if connect_mailbox:
+        tokens = exchange_code_for_login_tokens(code=code, redirect_uri=redirect_uri)
+        access_token = tokens.access_token
+    else:
+        tokens = None
+        access_token = exchange_code_for_login(code=code, redirect_uri=redirect_uri)
     profile = fetch_own_profile(access_token)
     candidates = []
     for key in ("mail", "userPrincipalName"):
@@ -73,4 +92,28 @@ def complete_login(
     )
     if user is None:
         raise AuthenticationError(NO_ACCOUNT_MESSAGE)
+    if tokens is not None:
+        _connect_mailbox(session, user, tokens, profile)
     return user, AuthService(session).issue_session(user)
+
+
+def _connect_mailbox(
+    session: Session, user: User, tokens: GraphTokens, profile: dict[str, Any]
+) -> None:
+    """Postfach/Kalender des Anmeldenden verbinden. Darf die Anmeldung NIE
+    verhindern (Fehler werden nur geloggt) und ueberschreibt kein Postfach, das
+    ein ANDERER Nutzer verbunden hat."""
+    try:
+        address = (profile.get("mail") or profile.get("userPrincipalName") or "").strip().lower()
+        existing = session.scalar(select(MailAccount).where(MailAccount.address == address))
+        if (
+            existing is not None
+            and existing.oauth_connected_by_user_id not in (None, user.id)
+            and existing.oauth_status == MailAccountOAuthStatus.CONNECTED
+        ):
+            logger.warning("Postfach %s gehoert einem anderen Nutzer - nicht verbunden.", address)
+            return
+        store_connection(session, user.id, tokens, profile)
+    except Exception:  # noqa: BLE001 - die Anmeldung selbst ist wichtiger
+        session.rollback()
+        logger.exception("Postfach-Verbindung beim Microsoft-Login fehlgeschlagen")

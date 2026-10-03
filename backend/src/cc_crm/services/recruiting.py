@@ -40,6 +40,7 @@ from cc_crm.schemas.recruiting import (
     FeedbackRead,
     FeedbackUpdate,
     InterviewCreate,
+    InterviewCreateRequest,
     InterviewUpdate,
     OfferCreate,
     OfferUpdate,
@@ -55,7 +56,12 @@ from cc_crm.schemas.submission import (
     CandidateSubmissionRead,
     CandidateSubmissionTransition,
 )
-from cc_crm.services.calendar_events import apply_minimum_duration
+from cc_crm.services.calendar_events import (
+    CalendarEventService,
+    apply_minimum_duration,
+    default_invite_message,
+)
+from cc_crm.services.calendar_graph_sync import has_connected_account
 from cc_crm.services.submissions import CandidateSubmissionService
 from cc_crm.services.warranty import WarrantyService
 
@@ -421,6 +427,28 @@ class RecruitingProcessService:
         submission = self.submissions.get(submission_id)
         if submission.status != SubmissionStatus.INTERVIEW:
             raise BusinessRuleError("Interview requires the process to be in interview status")
+        # Einladung des Kandidaten (Outlook/Teams) VOR dem Anlegen pruefen: der
+        # Kalendertermin unten ist best-effort, eine fehlende Voraussetzung
+        # (keine Kandidaten-Mail, kein verbundenes Outlook) soll dem Nutzer
+        # sofort sichtbar werden statt still keine Einladung zu verschicken.
+        invite = payload if isinstance(payload, InterviewCreateRequest) else None
+        invite_candidate = bool(invite and invite.invite_candidate)
+        if invite and invite.teams_meeting and not invite_candidate:
+            raise BusinessRuleError("Ein Teams-Link braucht eine Einladung an den Kandidaten.")
+        if invite_candidate:
+            candidate = self.session.get(Candidate, submission.candidate_id)
+            if candidate is None or not candidate.email:
+                raise BusinessRuleError(
+                    "Fuer die Einladung fehlt die E-Mail-Adresse des Kandidaten."
+                )
+            if not has_connected_account(self.session, current_user.id):
+                raise BusinessRuleError(
+                    "Einladungen laufen ueber Outlook: bitte zuerst mit Microsoft anmelden."
+                )
+        # Nur die Interview-Spalten speichern, nicht die Einladungs-Optionen.
+        payload = InterviewCreate.model_validate(
+            payload.model_dump(include=set(InterviewCreate.model_fields))
+        )
         interview = self._create_child(
             self.interviews,
             submission,
@@ -436,7 +464,9 @@ class RecruitingProcessService:
         # scheitern lassen (Nutzer-Vorgabe), deshalb bewusst breit gefangen
         # und nur geloggt statt weitergereicht.
         try:
-            self._create_calendar_event_for_interview(interview, submission, current_user)
+            self._create_calendar_event_for_interview(
+                interview, submission, current_user, invite if invite_candidate else None
+            )
         except Exception:
             logger.exception(
                 "Automatische Kalender-Erstellung fuer Interview %s fehlgeschlagen", interview.id
@@ -488,6 +518,9 @@ class RecruitingProcessService:
             },
         )
         self.session.commit()
+        if event.attendee_email:
+            # Verschobener Termin: Outlook informiert den eingeladenen Kandidaten.
+            CalendarEventService(self.session).push_invite(event, None)
 
     def delete_interview(self, submission_id: uuid.UUID, interview_id: uuid.UUID) -> None:
         interview = self._get_interview(submission_id, interview_id)
@@ -513,7 +546,11 @@ class RecruitingProcessService:
         self.session.commit()
 
     def _create_calendar_event_for_interview(
-        self, interview: Interview, submission: CandidateSubmission, current_user: User
+        self,
+        interview: Interview,
+        submission: CandidateSubmission,
+        current_user: User,
+        invite: InterviewCreateRequest | None = None,
     ) -> None:
         candidate = self.session.get(Candidate, submission.candidate_id)
         candidate_name = (
@@ -540,8 +577,17 @@ class RecruitingProcessService:
             source_interview_id=interview.id,
             reminder_minutes_before=INTERVIEW_CALENDAR_REMINDER_MINUTES,
         )
+        if invite is not None and candidate is not None:
+            calendar_event.attendee_email = candidate.email
+            calendar_event.attendee_name = f"{candidate.first_name} {candidate.last_name}"
+            calendar_event.online_meeting = invite.teams_meeting
+            calendar_event.invite_message = invite.invite_message or default_invite_message(
+                candidate.first_name, client_name, interview.scheduled_at
+            )
         self.session.add(calendar_event)
         self.session.commit()
+        if calendar_event.attendee_email:
+            CalendarEventService(self.session).push_invite(calendar_event, current_user)
 
     def _align_interview_follow_up(
         self, submission: CandidateSubmission, scheduled_at: datetime

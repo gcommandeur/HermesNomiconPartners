@@ -20,11 +20,13 @@ Ablauf:
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from cc_crm.integrations.microsoft_graph.auth import (
+    GraphTokens,
     build_authorization_url,
     exchange_code_for_tokens,
     fetch_own_profile,
@@ -32,6 +34,7 @@ from cc_crm.integrations.microsoft_graph.auth import (
 from cc_crm.integrations.microsoft_graph.oauth_state import create_oauth_state, verify_oauth_state
 from cc_crm.models.enums import MailAccountOAuthStatus, MailAccountProvider
 from cc_crm.models.mail import MailAccount
+from cc_crm.models.user import User
 from cc_crm.services.mail_credentials import encrypt_password
 
 
@@ -51,6 +54,16 @@ def handle_oauth_callback(
     user_id = verify_oauth_state(state)
     tokens = exchange_code_for_tokens(code=code, redirect_uri=redirect_uri)
     profile = fetch_own_profile(tokens.access_token)
+    return store_connection(session, user_id, tokens, profile)
+
+
+def store_connection(
+    session: Session, user_id: uuid.UUID, tokens: GraphTokens, profile: dict[str, Any]
+) -> MailAccount:
+    """Legt das Postfach des Nutzers an bzw. aktualisiert es (gemeinsam genutzt
+    vom "Postfach verbinden"-Flow und vom Microsoft-Login). Setzt es als
+    Standard-Absender des Nutzers, falls dieser noch keinen hat - so gehen
+    seine Mails aus seinem eigenen Postfach raus."""
     address = (profile.get("mail") or profile.get("userPrincipalName") or "").strip().lower()
     if not address:
         from cc_crm.integrations.microsoft_graph.auth import GraphAuthError
@@ -84,6 +97,14 @@ def handle_oauth_callback(
     account.oauth_status = MailAccountOAuthStatus.CONNECTED
     account.oauth_connected_by_user_id = user_id
     account.is_active = True
+    session.flush()
+    user = session.get(User, user_id)
+    if (
+        user is not None
+        and user.default_send_account_id is None
+        and user.email.strip().lower() == address
+    ):
+        user.default_send_account_id = account.id
     session.commit()
     session.refresh(account)
     return account

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { mutate } from "swr";
 import { CalendarDays, Check, Copy, RefreshCw, Users } from "lucide-react";
 import { PageHeader } from "@/components/crm/page-header";
+import { OutlookConnectionCard } from "@/components/crm/outlook-connection";
 import { ErrorState } from "@/components/crm/error-state";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
@@ -64,6 +65,7 @@ export default function EinstellungenPage() {
   return (
     <>
       <PageHeader eyebrow="Hermes" title="Einstellungen" />
+      <OutlookConnectionCard />
 
       <div className="space-y-5">
         <CollapsibleSection

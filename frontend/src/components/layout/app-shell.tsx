@@ -5,6 +5,7 @@ import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { BottomNav } from "./bottom-nav";
 import { ScreenWatermark } from "@/components/crm/screen-watermark";
+import { OutlookBanner } from "@/components/crm/outlook-connection";
 import { cn } from "@/lib/utils";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -19,7 +20,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* pb-20 auf Mobile, damit Inhalte nicht hinter der neuen BottomNav
          * verschwinden - ab lg (wo die BottomNav per lg:hidden ausgeblendet
          * ist) wieder das urspruengliche p-8. */}
-        <main className="mx-auto max-w-[1600px] p-5 pb-20 lg:p-8">{children}</main>
+        <main className="mx-auto max-w-[1600px] p-5 pb-20 lg:p-8">
+          <OutlookBanner />
+          {children}
+        </main>
       </div>
       <BottomNav onMenu={() => setMobileOpen(true)} />
     </div>

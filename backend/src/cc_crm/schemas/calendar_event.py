@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 from cc_crm.models.enums import CalendarEventType
 from cc_crm.schemas.base import EntityRead
@@ -21,6 +21,13 @@ class CalendarEventBase(BaseModel):
 
 
 class CalendarEventCreate(CalendarEventBase):
+    # Einladung per Outlook: Teilnehmer + eigener (kandidatenfreundlicher) Text.
+    # Interne `notes` werden NIE an Teilnehmer geschickt. Setzt voraus, dass der
+    # Terminbesitzer mit Microsoft angemeldet ist (sonst Fehler beim Anlegen).
+    attendee_email: EmailStr | None = None
+    attendee_name: str | None = Field(default=None, max_length=240)
+    invite_message: str | None = None
+    online_meeting: bool = False
     # Vom Client optional mitgeschickt, aber serverseitig ueberschrieben fuer
     # Nicht-Admins (siehe CalendarEventService.create) - Admins duerfen damit
     # einen Termin fuer einen anderen Nutzer anlegen.
@@ -38,6 +45,10 @@ class CalendarEventUpdate(BaseModel):
     client_company_id: uuid.UUID | None = None
     candidate_submission_id: uuid.UUID | None = None
     reminder_minutes_before: int | None = Field(default=None, ge=0)
+    attendee_email: EmailStr | None = None
+    attendee_name: str | None = Field(default=None, max_length=240)
+    invite_message: str | None = None
+    online_meeting: bool | None = None
 
 
 class CalendarEventRead(CalendarEventBase, EntityRead):
@@ -48,3 +59,9 @@ class CalendarEventRead(CalendarEventBase, EntityRead):
     # Zeigt dem Frontend an, dass dieser Termin aus einem Interview stammt
     # (siehe calendar-event-modal.tsx: Hinweis + Link zum Prozess).
     source_interview_id: uuid.UUID | None = None
+    attendee_email: str | None = None
+    attendee_name: str | None = None
+    invite_message: str | None = None
+    online_meeting: bool = False
+    online_meeting_url: str | None = None
+    attendee_response: str | None = None
