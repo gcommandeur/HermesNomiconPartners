@@ -3,10 +3,10 @@ import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
-from sqlalchemy import or_, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session
 
 from cc_crm.core.config import get_settings
@@ -87,7 +87,7 @@ ChildT = TypeVar("ChildT", bound=Base)
 
 def stage_reached_counts(
     session: Session,
-    submission_ids: list[uuid.UUID],
+    submission_ids: "Sequence[uuid.UUID] | Select[Any]",
     *,
     since: datetime | None = None,
 ) -> dict[SubmissionStatus, set[uuid.UUID]]:
@@ -100,13 +100,17 @@ def stage_reached_counts(
     diesem Zeitpunkt zaehlen (fuer period-gescopte Cockpit-Kennzahlen, siehe
     services/operational.py::CockpitService).
 
+    `submission_ids` darf eine Liste von IDs ODER eine SELECT-Abfrage sein, die
+    IDs liefert (das Cockpit uebergibt eine Unterabfrage, damit nicht tausende IDs
+    als Parameter durch die Leitung gehen).
+
     Oeffentliche Modulfunktion statt Methode, damit CockpitService dieselbe
     Logik fuer die Pipeline-Kennzahlen wiederverwenden kann, ohne sie zu
     duplizieren."""
     reached: dict[SubmissionStatus, set[uuid.UUID]] = {
         status: set() for status in SubmissionStatus
     }
-    if not submission_ids:
+    if not isinstance(submission_ids, Select) and not submission_ids:
         return reached
     filters = [
         AuditLog.entity_type == "candidate_submission",
