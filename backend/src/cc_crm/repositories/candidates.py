@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import ColumnElement, Integer, String, and_, cast, func, or_, select
+from sqlalchemy import ColumnElement, Integer, String, and_, cast, func, literal_column, or_, select
 from sqlalchemy.orm import Session
 
 from cc_crm.models.candidate import Candidate
@@ -132,14 +132,26 @@ def _split_search_terms(search: str) -> list[str]:
     return [t for t in cleaned.split() if t.strip()]
 
 
-def _search_term_filter(term: str) -> ColumnElement[bool]:
+# Postgres: gespeicherte, generierte Spalte mit dem fertig normalisierten Text aller
+# durchsuchten Felder (Migration a1c5e9b3d7f2) + GIN-Trigram-Index. Nicht im Modell
+# (gibt es unter SQLite nicht), deshalb als Rohspalte angesprochen.
+_SEARCH_TEXT_COLUMN: Any = literal_column("candidates.search_text")
+
+
+def _search_term_filter(term: str, *, use_search_text: bool = False) -> ColumnElement[bool]:
     """EIN Suchwort -> ODER-verknuepfter Treffer in irgendeiner bekannten
     Synonym-/Ober-Unterbegriff-Variante (siehe services/synonyms.py::
     search_expansion_terms) UND irgendeinem der durchsuchten Felder.
-    Mehrere Suchworte werden von filtered() UND-verknuepft (siehe dort)."""
+    Mehrere Suchworte werden von filtered() UND-verknuepft (siehe dort).
+
+    `use_search_text` (Postgres): ein LIKE auf die vorberechnete Spalte statt der
+    Mehrspalten-Faltung zur Laufzeit - gleiche Treffer, aber indexfaehig."""
     clauses: list[ColumnElement[bool]] = []
     for variant in search_expansion_terms(term):
         pattern = f"%{_normalize_search_term(variant)}%"
+        if use_search_text:
+            clauses.append(_SEARCH_TEXT_COLUMN.like(pattern))
+            continue
         for column in _SEARCH_TEXT_COLUMNS:
             clauses.append(_normalized_sql_text(column).like(pattern))
         for column in _SEARCH_JSON_COLUMNS:
@@ -297,7 +309,15 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
             # Felder (siehe _search_term_filter oben).
             search_terms = _split_search_terms(search)
             if search_terms:
-                filters.append(and_(*(_search_term_filter(t) for t in search_terms)))
+                use_search_text = self.session.get_bind().dialect.name == "postgresql"
+                filters.append(
+                    and_(
+                        *(
+                            _search_term_filter(t, use_search_text=use_search_text)
+                            for t in search_terms
+                        )
+                    )
+                )
         if created_from:
             filters.append(Candidate.created_at >= created_from)
         if created_to:
