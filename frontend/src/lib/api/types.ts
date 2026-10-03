@@ -74,6 +74,45 @@ export interface SubmissionShare {
   created_at: string;
 }
 
+/** Outreach-Sequenzen (Backend schemas/outreach.py). */
+export type SequenceChannel = "email" | "linkedin" | "phone" | "other";
+
+export interface SequenceStep {
+  step_index: number;
+  day_offset: number;
+  channel: SequenceChannel;
+  subject: string;
+  body_template: string | null;
+}
+
+export interface OutreachSequence {
+  id: string;
+  name: string;
+  is_active: boolean;
+  steps: SequenceStep[];
+  created_at: string;
+}
+
+export type SequenceStepInput = Omit<SequenceStep, "step_index">;
+
+export type EnrollmentStatus = "active" | "paused_reply" | "completed" | "stopped";
+
+export interface SequenceEnrollment {
+  id: string;
+  sequence_id: string;
+  sequence_name: string;
+  candidate_id: string;
+  owner_user_id: string | null;
+  status: EnrollmentStatus;
+  stopped_reason: string | null;
+  started_at: string;
+  current_step_index: number;
+  total_steps: number;
+  next_step_channel: SequenceChannel | null;
+  next_step_subject: string | null;
+  next_step_due_on: string | null;
+}
+
 export interface Entity {
   id: string;
   created_at: string;

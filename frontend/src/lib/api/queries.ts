@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, OutreachSequence, SequenceEnrollment, SequenceStepInput, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -515,6 +515,44 @@ export async function createSubmissionShare(submissionId: string, sharedWithUser
 
 export async function deleteSubmissionShare(submissionId: string, shareId: string) {
   return apiDelete(`/submissions/${submissionId}/shares/${shareId}`);
+}
+
+/** Outreach-Sequenzen: Verwaltung (Admin) und Einschreibung von Kandidaten. */
+export async function getSequences(includeInactive = false) {
+  return apiGet<OutreachSequence[]>(
+    `/sequences${includeInactive ? "?include_inactive=true" : ""}`,
+    [],
+  );
+}
+
+export async function createSequence(payload: {
+  name: string;
+  is_active: boolean;
+  steps: SequenceStepInput[];
+}) {
+  return apiPost<OutreachSequence>("/sequences", payload);
+}
+
+export async function updateSequence(
+  sequenceId: string,
+  payload: { name?: string; is_active?: boolean; steps?: SequenceStepInput[] },
+) {
+  return apiPatch<OutreachSequence>(`/sequences/${sequenceId}`, payload);
+}
+
+export async function getCandidateEnrollments(candidateId: string) {
+  return apiGet<SequenceEnrollment[]>(`/candidates/${candidateId}/sequence-enrollments`, []);
+}
+
+export async function enrollCandidate(sequenceId: string, candidateId: string) {
+  return apiPost<SequenceEnrollment>("/sequence-enrollments", {
+    sequence_id: sequenceId,
+    candidate_id: candidateId,
+  });
+}
+
+export async function stopEnrollment(enrollmentId: string) {
+  return apiPost<SequenceEnrollment>(`/sequence-enrollments/${enrollmentId}/stop`, {});
 }
 
 export async function getAuditLogs() {

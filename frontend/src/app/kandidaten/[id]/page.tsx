@@ -24,6 +24,7 @@ import { CvOutCampaignButton } from "@/components/crm/cv-out-campaign-modal";
 import { MailComposeButton } from "@/components/crm/mail-compose-modal";
 import { RegisterRecentCandidate } from "@/components/crm/register-recent-candidate";
 import { CandidateSubmissionStages } from "@/components/crm/candidate-submission-stages";
+import { CandidateSequencesPanel } from "@/components/crm/candidate-sequences-panel";
 import { CandidateProcessLog } from "@/components/crm/candidate-process-log";
 import { CandidateTimeline } from "@/components/crm/candidate-timeline";
 import { CandidateRollenUnbestaetigtHint } from "@/components/crm/candidate-rollen-unbestaetigt-hint";
@@ -169,6 +170,8 @@ export default async function CandidateDetailPage({
           <CandidateSubmissionStages submissions={submissions} clients={clients} />
         </div>
       )}
+
+      <CandidateSequencesPanel candidateId={candidate.id} />
 
       <Tabs defaultValue={initialTab}>
         <TabsList className="scrollbar-subtle mb-5 overflow-x-auto">
