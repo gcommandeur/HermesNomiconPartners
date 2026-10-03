@@ -28,6 +28,10 @@ jobs:
       - name: Mypy
         run: mypy src
 
+      # Das eingecheckte OpenAPI-Schema (Quelle der Frontend-Typen) muss zum Code passen.
+      - name: OpenAPI-Schema aktuell
+        run: python scripts/export_openapi.py --check
+
       # Kein Postgres-Service-Container: die Testsuite laeuft (siehe
       # tests/conftest.py) komplett gegen eine In-Memory-SQLite-DB und
       # braucht dafuer keine externe Infrastruktur. CC_CRM_DATABASE_URL
@@ -129,6 +133,12 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+      # Die erzeugten API-Typen muessen zum eingecheckten OpenAPI-Schema passen.
+      - name: API-Typen aktuell
+        run: |
+          pnpm gen:api
+          git diff --exit-code -- src/lib/api/schema.d.ts
 
       # DEMO_MODE=true statt einer echten API-URL: in CI laeuft kein
       # Backend, ein paar Seiten sind statisch prerendert (siehe next build-
