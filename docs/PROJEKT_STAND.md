@@ -24,15 +24,16 @@ Der Nutzer will langfristig alles vom Handy aus erledigen koennen. `main` deploy
 
 ## Offene Punkte (nach Prioritaet)
 
-1. **Prozess-Sharing (Cloud-Branch `claude/funny-allen-ayl3bi`)**: Backend + Frontend fertig, CI auf dem Branch gruen, aber **noch nicht gemergt und nicht von der Laptop-Sitzung inhaltlich geprueft**. Migration `d2f5a8b1c6e4` haengt an `c9a1d4e7f2b3`. Vor dem Merge: Diff pruefen, `alembic heads` = 1.
-2. **Schutzregel fuer `main`** bei GitHub (Checks `backend` und `frontend` Pflicht). Entscheidung noetig, weil sie auch den direkten Push der Laptop-Sitzung betreffen kann.
-3. **Vom Nutzer selbst auszufuehren** (nie von Claude): die drei Produktions-Skripte in `backend/scripts/` (`cleanup_service_users.py`, `backfill_cv_in_recorded_at.py`, `backfill_cv_available_from_documents.py`, alle standardmaessig Dry-Run) und das Zuruecksetzen des DigitalOcean-`doadmin`-Passworts (stand einmal in einer Diagnose-Datei im Klartext).
-4. **Nicht live im Browser geprueft:** Teamleiter-Nutzerverwaltung, Freigabe-Inbox und Rechnungsbereich, Sourcing-Umkreissuche mit echtem Lauf, Kandidaten-Timeline, Prozess-Zugriffssperren mit echten Logins. Alles ist nur ueber Tests/Build abgesichert.
-5. **Entscheidungen offen:** Kalender und KPI-Ranking haben eigenes Admin-Scoping (Teamleiter sieht dort nur Eigenes); Analytics erlaubt Nicht-Admins die Auswahl anderer Nutzer im Filter; Kanzlei-Freigabeanfragen (`approval-requests/for/client_company`) sind fuer alle lesbar.
-6. **Daten:** Prozesse ohne `owner_user_id` (aus der Zeit vor dem Feld) sind fuer Nicht-Admins unsichtbar - ggf. Owner nachtragen.
-7. **CI-Ausbau:** Postgres-Migrationstest (produktiv Postgres, Tests nur SQLite), Pruefung auf genau EINEN Alembic-Head, optional Browser-Tests (Playwright, Demo-Modus).
-8. **Weiterbauen auf Team/Sharing:** Notifications, Sequenzen.
-9. **Kleinigkeiten:** Quick-Log auf Kandidat mit offenem Kollegen-Prozess fuehrt dessen Prozess weiter (Grenzfall, bewusst); Aktivitaet "Prozess angelegt" hat keinen Autor.
+1. **Neue Cloud-Sitzung pruefen:** startet der Hook, sind Pakete installiert, laufen `pytest`/`ruff`/`mypy` ohne Rueckfrage, wird `docs/PROJEKT_STAND.md` gelesen? Falls nicht, Einstellungen/Hook nachbessern.
+2. **Prozess-Sharing (Cloud-Branch `claude/funny-allen-ayl3bi`)**: Backend + Frontend fertig, CI auf dem Branch gruen, aber **noch nicht gemergt und nicht von der Laptop-Sitzung inhaltlich geprueft**. Migration `d2f5a8b1c6e4` haengt an `c9a1d4e7f2b3`. Vor dem Merge: Diff pruefen, `alembic heads` = 1.
+3. **Schutzregel fuer `main`** bei GitHub (Checks `backend` und `frontend` Pflicht). Entscheidung noetig, weil sie auch den direkten Push der Laptop-Sitzung betreffen kann.
+4. **Vom Nutzer selbst auszufuehren** (nie von Claude): die drei Produktions-Skripte in `backend/scripts/` (`cleanup_service_users.py`, `backfill_cv_in_recorded_at.py`, `backfill_cv_available_from_documents.py`, alle standardmaessig Dry-Run) und das Zuruecksetzen des DigitalOcean-`doadmin`-Passworts (stand einmal in einer Diagnose-Datei im Klartext).
+5. **Nicht live im Browser geprueft:** Teamleiter-Nutzerverwaltung, Freigabe-Inbox und Rechnungsbereich, Sourcing-Umkreissuche mit echtem Lauf, Kandidaten-Timeline, Prozess-Zugriffssperren mit echten Logins. Alles ist nur ueber Tests/Build abgesichert.
+6. **Entscheidungen offen:** Kalender und KPI-Ranking haben eigenes Admin-Scoping (Teamleiter sieht dort nur Eigenes); Analytics erlaubt Nicht-Admins die Auswahl anderer Nutzer im Filter; Kanzlei-Freigabeanfragen (`approval-requests/for/client_company`) sind fuer alle lesbar.
+7. **Daten:** Prozesse ohne `owner_user_id` (aus der Zeit vor dem Feld) sind fuer Nicht-Admins unsichtbar - ggf. Owner nachtragen.
+8. **CI-Ausbau:** Postgres-Migrationstest (produktiv Postgres, Tests nur SQLite), Pruefung auf genau EINEN Alembic-Head, optional Browser-Tests (Playwright, Demo-Modus).
+9. **Weiterbauen auf Team/Sharing:** Notifications, Sequenzen.
+10. **Kleinigkeiten:** Quick-Log auf Kandidat mit offenem Kollegen-Prozess fuehrt dessen Prozess weiter (Grenzfall, bewusst); Aktivitaet "Prozess angelegt" hat keinen Autor.
 
 ## Entscheidungen (mit Grund)
 
@@ -58,7 +59,7 @@ Der Nutzer will langfristig alles vom Handy aus erledigen koennen. `main` deploy
 
 ## Protokoll (neueste zuerst)
 
-- **2026-10-03 Laptop** - Cloud-Einstellungen fuer die Arbeit vom Handy (`.claude/settings.json`, Start-Hook, `.gitattributes`, CLAUDE.md-Abschnitt) auf Branch `chore/mobile-cloud-setup` (`f23cd9c`), plus diese Datei. Danach Pull Request und Merge.
+- **2026-10-03 Laptop** - Einstellungen fuer die Arbeit vom Handy (`.claude/settings.json`, Start-Hook `.claude/hooks/cloud-setup.sh`, `.gitattributes`, CLAUDE.md-Abschnitt) und diese Datei ueber Pull Request #2 nach `main` gemergt (CI gruen, per Rebase: `89bef29`, `f655b43`). Noch nicht in einer echten Cloud-Sitzung geprueft.
 - **2026-10-02 Cloud** - Prozess-Sharing ("Geteilt mit"): `29b5f9a`, `5c234aa`, `1547028` auf `claude/funny-allen-ayl3bi`; Freigaben nur durch Eigentuemer/Teamleiter/Admin, Rechnungs-Endpunkte beruecksichtigen Freigaben; CI auf dem Branch gruen. Nicht gemergt.
 - **2026-10-02 Laptop** - Rolle `team_lead` (`2cd6c1f`), CI-Fix mypy-Typen (`5fa2180`), Rechnungs-Endpunkte nur fuer Eigentuemer/Admins (`3ba25b5`), Kandidaten-Timeline mit Autoren (`b424b40`), Prozesse per ID gesperrt (`3590392`), CLAUDE.md-Einfuehrung (`283430e`), alte Branches aufgeraeumt.
 - **2026-10-01 Laptop** - Owner-Scoping der Prozess-Listen (`3e2f16e`), Freigabe-Inbox (`7bb21fe`), klickbare KPI-Kacheln (`c501541`), Audit-Trail fuer Edits (`583b84b`), Sourcing-Umkreissuche (`005391c`), Rueckweg/Profil-Performance (`debfaed`, `b09cd5b`).
