@@ -21,12 +21,15 @@ target_metadata = Base.metadata
 def include_object(
     obj: object, name: str | None, type_: str, reflected: bool, compare_to: object
 ) -> bool:
-    """Die Trigram-Indizes (ix_trgm_*, Migration 7c1e651c4844) gibt es nur unter
-    Postgres und per Roh-SQL - sie stehen bewusst nicht in den Modellen. Ohne
-    diesen Filter meldet `alembic check` sie als "zu entfernen"."""
-    return not (
-        type_ == "index" and reflected and name is not None and name.startswith("ix_trgm_")
-    )
+    """Die Trigram-Indizes (ix_trgm_*, Migrationen 7c1e651c4844/a1c5e9b3d7f2) und
+    die generierte Spalte candidates.search_text gibt es nur unter Postgres und
+    per Roh-SQL - sie stehen bewusst nicht in den Modellen. Ohne diesen Filter
+    meldet `alembic check` sie als "zu entfernen"."""
+    if type_ == "index" and reflected and name is not None and name.startswith("ix_trgm_"):
+        return False
+    # candidates.search_text: Postgres-only, generierte Spalte (Migration
+    # a1c5e9b3d7f2) - bewusst nicht im Modell.
+    return not (type_ == "column" and reflected and name == "search_text")
 
 
 def run_migrations_offline() -> None:
