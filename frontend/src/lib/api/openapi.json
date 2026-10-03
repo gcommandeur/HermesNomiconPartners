@@ -20804,6 +20804,71 @@
         ]
       }
     },
+    "/api/v1/mcp": {
+      "post": {
+        "description": "MCP (Streamable HTTP, JSON-Modus) - lesender Zugriff fuer Claude.\n\nNur mit API-Key (X-API-Key), nicht mit einer Browser-Sitzung; es gelten die\nRechte des Key-Besitzers. Ausgeschaltet (404), solange CC_CRM_AI_ENABLED\nnicht gesetzt ist. Details: services/mcp_server.py.",
+        "operationId": "mcp_endpoint_api_v1_mcp_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "title": "Message"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Mcp Endpoint Api V1 Mcp Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mcp Endpoint",
+        "tags": [
+          "mcp"
+        ]
+      }
+    },
     "/api/v1/me/outlook": {
       "get": {
         "operationId": "outlook_status_api_v1_me_outlook_get",

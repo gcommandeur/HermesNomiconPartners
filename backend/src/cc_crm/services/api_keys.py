@@ -29,6 +29,23 @@ class ApiKeyService:
     def __init__(self, session: Session) -> None:
         self.session = session
 
+    def create_mcp_key(
+        self, name: str, user: User, expires_at: datetime | None = None
+    ) -> tuple[ApiKey, str]:
+        """Schluessel fuer die lesende Claude-Schnittstelle, gebunden an einen
+        bestehenden Nutzer (es gelten dessen Rechte), aber NUR fuer /api/v1/mcp."""
+        raw_key = f"ccrm_{generate_session_token()}"
+        api_key = ApiKey(
+            name=name,
+            key_hash=hash_token(raw_key),
+            user_id=user.id,
+            expires_at=expires_at,
+            scope="mcp",
+        )
+        self.session.add(api_key)
+        self.session.commit()
+        return api_key, raw_key
+
     def create(self, name: str, expires_at: datetime | None = None) -> tuple[ApiKey, str]:
         service_email = f"service+{_slugify(name)}-{secrets.token_hex(4)}@cc-crm.local"
         user = User(
@@ -54,6 +71,10 @@ class ApiKeyService:
             self.session.commit()
 
     def user_for_key(self, raw_key: str) -> User:
+        return self.authenticate(raw_key)[0]
+
+    def authenticate(self, raw_key: str) -> tuple[User, str]:
+        """(Nutzer, Scope des Schluessels)."""
         key_hash = hash_token(raw_key)
         api_key = self.session.scalar(select(ApiKey).where(ApiKey.key_hash == key_hash))
         if api_key is None or api_key.revoked_at is not None:
@@ -67,4 +88,4 @@ class ApiKeyService:
         if user is None or not user.is_active:
             raise AuthenticationError("API key is invalid or revoked")
         self.session.commit()
-        return user
+        return user, api_key.scope

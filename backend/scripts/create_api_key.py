@@ -17,7 +17,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from sqlalchemy import select  # noqa: E402
+
 from cc_crm.infrastructure.database.session import SessionLocal  # noqa: E402
+from cc_crm.models.user import User  # noqa: E402
 from cc_crm.services.api_keys import ApiKeyService  # noqa: E402
 
 
@@ -30,6 +33,13 @@ def main() -> None:
         default=None,
         help="Optional: Key laeuft nach dieser Anzahl Tage ab (Default: laeuft nie ab)",
     )
+    parser.add_argument(
+        "--mcp-for-user",
+        metavar="E-MAIL",
+        default=None,
+        help="Key fuer die lesende Claude-Schnittstelle (/api/v1/mcp), gebunden an diesen "
+        "bestehenden Nutzer (dessen Rechte gelten; gilt NUR fuer /mcp)",
+    )
     args = parser.parse_args()
 
     expires_at = None
@@ -37,7 +47,14 @@ def main() -> None:
         expires_at = datetime.now(UTC) + timedelta(days=args.expires_in_days)
 
     with SessionLocal() as session:
-        api_key, raw_key = ApiKeyService(session).create(args.name, expires_at=expires_at)
+        service = ApiKeyService(session)
+        if args.mcp_for_user:
+            user = session.scalar(select(User).where(User.email == args.mcp_for_user.lower()))
+            if user is None or not user.is_active:
+                sys.exit(f"Nutzer '{args.mcp_for_user}' nicht gefunden oder deaktiviert.")
+            api_key, raw_key = service.create_mcp_key(args.name, user, expires_at=expires_at)
+        else:
+            api_key, raw_key = service.create(args.name, expires_at=expires_at)
 
     print(f"API-Key '{args.name}' angelegt (id={api_key.id}).")
     if expires_at is not None:

@@ -1561,6 +1561,30 @@ export interface paths {
         patch: operations["update_mailing_group_api_v1_mailing_groups__group_id__patch"];
         trace?: never;
     };
+    "/api/v1/mcp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mcp Endpoint
+         * @description MCP (Streamable HTTP, JSON-Modus) - lesender Zugriff fuer Claude.
+         *
+         *     Nur mit API-Key (X-API-Key), nicht mit einer Browser-Sitzung; es gelten die
+         *     Rechte des Key-Besitzers. Ausgeschaltet (404), solange CC_CRM_AI_ENABLED
+         *     nicht gesetzt ist. Details: services/mcp_server.py.
+         */
+        post: operations["mcp_endpoint_api_v1_mcp_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/outlook": {
         parameters: {
             query?: never;
@@ -10481,6 +10505,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MailingGroupRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mcp_endpoint_api_v1_mcp_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": unknown;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
