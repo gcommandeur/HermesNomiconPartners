@@ -27,7 +27,8 @@ const PERIOD_OPTIONS: { value: "week" | "month" | "quarter"; label: string }[] =
 
 export default function GeschaeftsfuehrungPage() {
   const { data: meData, isLoading: meLoading } = useCurrentUser();
-  const isAdmin = meData?.data.is_admin ?? false;
+  // Admins sehen alle, Teamleiter ihr Team (Server begrenzt).
+  const isAdmin = (meData?.data.is_admin || meData?.data.role === "team_lead") ?? false;
   const [period, setPeriod] = useState<"week" | "month" | "quarter">("week");
   const { data, isLoading, error, mutate: retry } = useTeamKpisCache(period, isAdmin);
   const members = data?.data.members ?? [];
@@ -49,7 +50,7 @@ export default function GeschaeftsfuehrungPage() {
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <ShieldOff size={28} className="text-[#94A3B8]" />
-            <p className="text-sm font-semibold text-[#F8FAFC]">Nur für Admins zugänglich</p>
+            <p className="text-sm font-semibold text-[#F8FAFC]">Nur für Teamleiter und Admins zugänglich</p>
             <p className="max-w-sm text-xs text-[#94A3B8]">
               Diese Übersicht zeigt die KPI-Werte aller Mitarbeiter:innen. Wende dich an einen
               Admin, falls du Zugriff benötigst.

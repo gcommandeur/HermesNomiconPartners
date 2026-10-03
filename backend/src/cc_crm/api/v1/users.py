@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter
 
-from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
+from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession, process_owner_scope
 from cc_crm.models.user import User
 from cc_crm.schemas.user import (
     CalendarFeedTokenRead,
@@ -47,6 +47,21 @@ def list_assignable_users(
     return [
         UserBriefRead(id=user.id, email=user.email, display_name=user.display_name)
         for user in users
+    ]
+
+
+@router.get("/scope", response_model=list[UserBriefRead])
+def list_scope_users(session: DatabaseSession, current_user: CurrentUser) -> list[UserBriefRead]:
+    """Nutzer im eigenen Sichtbereich (process_owner_scope): Admin alle,
+    Teamleiter sie selbst + Team, Mitarbeiter nur sie selbst. Grundlage fuer
+    Nutzerfilter in Analytics und Kalender - dort duerfen nur diese gewaehlt
+    werden (der Server ignoriert andere ohnehin)."""
+    scope = process_owner_scope(current_user, session)
+    users = UserService(session).list_all()
+    return [
+        UserBriefRead(id=user.id, email=user.email, display_name=user.display_name)
+        for user in users
+        if scope is None or user.id in scope
     ]
 
 

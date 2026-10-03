@@ -502,6 +502,11 @@ export async function getAssignableUsers() {
   return apiGet<UserBrief[]>("/users/assignable", []);
 }
 
+/** Nutzer im eigenen Sichtbereich (Admin: alle, Teamleiter: Team, sonst nur man selbst). */
+export async function getScopeUsers() {
+  return apiGet<UserBrief[]>("/users/scope", []);
+}
+
 /** Prozess-Freigaben ("Geteilt mit"): Liste, Anlegen, Entziehen/Zurueckgeben. */
 export async function getSubmissionShares(submissionId: string) {
   return apiGet<SubmissionShare[]>(`/submissions/${submissionId}/shares`, []);

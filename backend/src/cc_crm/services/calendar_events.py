@@ -78,16 +78,19 @@ class CalendarEventService(CrudService[CalendarEvent, CalendarEventCreate, Calen
         start_to: datetime | None = None,
         event_type: CalendarEventType | None = None,
         owner_user_id: uuid.UUID | None = None,
+        visible_owner_ids: list[uuid.UUID] | None = None,
     ) -> Sequence[CalendarEvent]:
-        """Standardnutzer sehen ausschliesslich eigene Termine - ein
-        mitgeschickter owner_user_id-Filter wird fuer sie stillschweigend
-        ignoriert (nicht mit einem Fehler quittiert, da er fuer sie ohnehin
-        keine andere Bedeutung haben kann als "meine eigenen"). Admins sehen
-        per Default alle, koennen optional auf einen einzelnen Nutzer filtern."""
-        if current_user.is_admin:
+        """`visible_owner_ids` ist die Sichtbarkeitsgrenze (process_owner_scope):
+        None = alle (Admin), sonst die erlaubten Nutzer - Mitarbeiter nur sie
+        selbst, Teamleiter sie selbst plus ihr Team. Ein mitgeschickter
+        owner_user_id-Filter wirkt nur innerhalb dieser Grenze; ausserhalb wird
+        er stillschweigend ignoriert (nicht mit einem Fehler quittiert)."""
+        if visible_owner_ids is None:
             owner_user_ids = [owner_user_id] if owner_user_id is not None else None
+        elif owner_user_id is not None and owner_user_id in visible_owner_ids:
+            owner_user_ids = [owner_user_id]
         else:
-            owner_user_ids = [current_user.id]
+            owner_user_ids = visible_owner_ids
         return self.events.filtered(
             owner_user_ids=owner_user_ids,
             start_from=start_from,

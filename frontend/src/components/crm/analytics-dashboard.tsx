@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { ErrorState } from "@/components/crm/error-state";
-import { useAssignableUsersCache, useCockpitCache } from "@/lib/api/hooks";
+import { useCockpitCache, useScopeUsersCache } from "@/lib/api/hooks";
 import { PITCH_LABEL, STAGE_LABELS } from "@/lib/stage-labels";
 import { formatCurrency } from "@/lib/utils";
 
@@ -104,7 +104,7 @@ function UserFilter({
  * abfragt (siehe useCockpitCache). */
 export function AnalyticsDashboard() {
   const [selectedOwnerIds, setSelectedOwnerIds] = useState<Set<string> | null>(null);
-  const { data: usersResult } = useAssignableUsersCache();
+  const { data: usersResult } = useScopeUsersCache();
   const users = useMemo(
     () => (usersResult?.data ?? []).map((u) => ({ id: u.id, label: u.display_name || u.email })),
     [usersResult],
@@ -155,9 +155,12 @@ export function AnalyticsDashboard() {
 
   return (
     <>
-      <div className="mb-5 flex justify-end">
-        <UserFilter users={users} selected={selectedOwnerIds} onChange={setSelectedOwnerIds} />
-      </div>
+      {/* Mitarbeiter sehen nur sich selbst - dort waere ein Filter sinnlos. */}
+      {users.length > 1 && (
+        <div className="mb-5 flex justify-end">
+          <UserFilter users={users} selected={selectedOwnerIds} onChange={setSelectedOwnerIds} />
+        </div>
+      )}
       <DemoNotice source={data.source} error={data.error} />
       {/* Ueber den gesamten historischen Bestand berechnet (nicht auf den
        * Cockpit-Zeitraum begrenzt), siehe Backend CockpitService::

@@ -3,7 +3,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Response, status
 
-from cc_crm.api.dependencies import CurrentUser, DatabaseSession
+from cc_crm.api.dependencies import CurrentUser, DatabaseSession, process_owner_scope
 from cc_crm.models.enums import CalendarEventType
 from cc_crm.schemas.calendar_event import (
     CalendarEventCreate,
@@ -30,6 +30,7 @@ def list_calendar_events(
         start_to=start_to,
         event_type=event_type,
         owner_user_id=owner_user_id,
+        visible_owner_ids=process_owner_scope(current_user, session),
     )
     return [CalendarEventRead.model_validate(event) for event in events]
 

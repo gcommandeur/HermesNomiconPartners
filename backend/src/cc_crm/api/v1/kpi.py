@@ -2,7 +2,8 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query
 
-from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
+from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession, process_owner_scope
+from cc_crm.core.errors import PermissionDeniedError
 from cc_crm.schemas.kpi import (
     AppSettingsRead,
     AppSettingsUpdate,
@@ -57,15 +58,18 @@ def update_admin_app_settings(
 @router.get("/team-kpis", response_model=TeamKpiOverview)
 def get_team_kpis(
     session: DatabaseSession,
-    _admin: AdminUser,
+    current_user: CurrentUser,
     period: Annotated[Literal["week", "month", "quarter"], Query()] = "week",
 ) -> TeamKpiOverview:
-    """Geschaeftsfuehrer-Ansicht: eine Zeile pro Mitarbeiter mit den 6
-    KPI-Stufen-Ist-Werten (gleiche Zahlen wie im eigenen Cockpit der
-    jeweiligen Person) und der Gesamt-Punktzahl - admin-only
-    (Rollenmodell-Entscheidung: keine neue Rolle, User.is_admin schaltet
-    frei)."""
-    members = team_kpi_overview(session, period)
+    """Geschaeftsfuehrer-/Teamleiter-Ansicht: eine Zeile pro Mitarbeiter mit
+    den 6 KPI-Stufen-Ist-Werten (gleiche Zahlen wie im eigenen Cockpit der
+    jeweiligen Person) und der Gesamt-Punktzahl. Admins sehen alle, Teamleiter
+    ihr Team (process_owner_scope), Mitarbeiter bekommen 403."""
+    if not (current_user.is_admin or current_user.is_team_lead):
+        raise PermissionDeniedError("Nur Teamleiter und Admins.")
+    members = team_kpi_overview(
+        session, period, only_user_ids=process_owner_scope(current_user, session)
+    )
     return TeamKpiOverview(
         period=period,
         members=[
