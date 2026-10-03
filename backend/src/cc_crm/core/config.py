@@ -26,6 +26,15 @@ class Settings(BaseSettings):
 
     environment: str = "local"
     api_prefix: str = "/api/v1"
+    # Betrieb: Logs als JSON (eine Zeile pro Request), Sentry nur mit DSN.
+    log_level: str = "INFO"
+    json_logs: bool = True
+    sentry_dsn: str | None = None
+    sentry_traces_sample_rate: float = 0.0
+    # Beim Start `alembic upgrade head` ausfuehren (Standard, wie bisher). Bei
+    # mehreren Instanzen besser aus und stattdessen ein Pre-Deploy-Job, siehe
+    # docs/DEPLOYMENT.md.
+    migrate_on_startup: bool = True
     database_url: str = "postgresql+psycopg://cc_crm:change-me@localhost:5432/cc_crm"
     cors_origins: list[AnyUrl] = []
     sql_echo: bool = False

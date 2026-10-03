@@ -31,3 +31,27 @@ def health(session: DatabaseSession, response: Response) -> HealthResponse:
             status="error", service="cc-crm-api", detail="Datenbank nicht erreichbar"
         )
     return HealthResponse(status="ok", service="cc-crm-api")
+
+
+@router.get("/readyz", response_model=HealthResponse)
+def readyz(session: DatabaseSession, response: Response) -> HealthResponse:
+    """Bereit fuer Verkehr: Datenbank erreichbar UND Schema auf dem Stand des
+    Codes (`alembic_version` = neueste Migration). Ein Deploy, dessen Migration
+    noch nicht gelaufen ist, soll keinen Verkehr bekommen. `/health` bleibt die
+    einfache Lebendigkeitspruefung."""
+    from cc_crm.core.migrations import script_head
+
+    try:
+        current = session.execute(text("SELECT version_num FROM alembic_version")).scalar()
+    except Exception:  # noqa: BLE001 - treiberabhaengige Fehlerklassen
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return HealthResponse(
+            status="error", service="cc-crm-api", detail="Datenbank nicht bereit"
+        )
+    head = script_head()
+    if head is None or current != head:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return HealthResponse(
+            status="error", service="cc-crm-api", detail="Datenbank-Schema veraltet"
+        )
+    return HealthResponse(status="ok", service="cc-crm-api")

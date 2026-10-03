@@ -8,11 +8,13 @@ from cc_crm.api.error_handlers import register_error_handlers
 from cc_crm.api.v1.router import api_router
 from cc_crm.core.config import get_settings
 from cc_crm.core.migrations import ensure_database_at_head
+from cc_crm.core.observability import RequestLoggingMiddleware, configure_logging, init_sentry
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    ensure_database_at_head()
+    if get_settings().migrate_on_startup:
+        ensure_database_at_head()
     yield
 
 
@@ -38,6 +40,12 @@ _CSP_DOCS = (
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    configure_logging(settings.log_level, json_logs=settings.json_logs)
+    init_sentry(
+        settings.sentry_dsn,
+        environment=settings.environment,
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+    )
     # /docs, /redoc, /openapi.json geben in Produktion bewusst 404 - sie
     # verraten sonst die komplette API-Struktur (Routen, Schemas, Felder)
     # oeffentlich, ohne dass das fuer den Betrieb noetig waere (siehe
@@ -82,6 +90,9 @@ def create_app() -> FastAPI:
 
     register_error_handlers(app)
     app.include_router(api_router, prefix=settings.api_prefix)
+    # Zuletzt hinzugefuegt = aeusserste Schicht: Request-ID und Dauer umfassen
+    # alles andere (inkl. CORS und Sicherheits-Header).
+    app.add_middleware(RequestLoggingMiddleware)
     return app
 
 

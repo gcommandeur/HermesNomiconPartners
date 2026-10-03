@@ -297,6 +297,46 @@ fremder Tenants scheitern bereits bei Microsoft (Single-Tenant-App,
 leitet nach `/sso-complete` weiter; Frontend und Backend müssen dafür dieselbe
 Domain teilen (ist durch das `/api/v1`-Routing der Fall).
 
+## Betrieb: Logs, Gesundheitsprüfung, Migrationen
+
+**Logs.** Das Backend schreibt pro Request EINE JSON-Zeile auf stdout (DigitalOcean →
+Runtime Logs): `ts`, `level`, `request_id`, `method`, `path` (Routen-Vorlage statt echtem
+Pfad, also ohne IDs), `status`, `duration_ms`, `user_id`. Jede Antwort trägt den Header
+`X-Request-ID`; mit diesem Wert findet man die zugehörigen Zeilen (auch Fehler und langsame
+SQL-Abfragen) wieder – bei Rückfragen von Nutzern also die Request-ID erfragen. Eine
+mitgeschickte `X-Request-ID` wird übernommen, wenn sie harmlos aussieht (8-64 Zeichen
+`A-Za-z0-9._-`), sonst neu erzeugt. Warnungen: `slow_request` (ab 1 s) und `slow_sql`
+(ab 300 ms, gekürztes Statement OHNE Parameterwerte). Einstellbar über `CC_CRM_LOG_LEVEL`
+(Standard `INFO`) und `CC_CRM_JSON_LOGS=false` (lesbare Zeilen für die lokale Entwicklung).
+
+**Sentry (optional).** Erst wenn `CC_CRM_SENTRY_DSN` gesetzt ist, werden unbehandelte Fehler
+an Sentry gemeldet (ohne personenbezogene Daten, ohne Request-Bodies, `send_default_pii=False`);
+ohne Variable passiert nichts. Bei Nutzung die EU-Region wählen und die Auftragsverarbeitung
+prüfen. `CC_CRM_SENTRY_TRACES_SAMPLE_RATE` (Standard `0`) schaltet Performance-Messung zu.
+
+**Health-Checks.** `/api/v1/health` = Prozess lebt und Datenbank antwortet (so ist der
+App-Platform-Check konfiguriert). `/api/v1/readyz` = zusätzlich: das Datenbank-Schema steht
+auf dem Stand des Codes (`alembic_version` = neueste Migration); bei einem Deploy, dessen
+Migration noch nicht gelaufen ist, antwortet es mit 503. Für Uptime-Monitoring `readyz` nehmen.
+
+**Migrationen (empfohlen mit mehreren Instanzen).** Standardmäßig führt jeder Container-Start
+`alembic upgrade head` aus (Dockerfile) und der App-Start nochmals (Lifespan). Bei mehr als
+einer Instanz ist das ein Wettlauf. Umstellung, einmalig in DigitalOcean:
+
+1. Beim Backend die Variable `CC_CRM_MIGRATE_ON_STARTUP=false` setzen (Dockerfile und App
+   überspringen dann die Migration).
+2. Eine Komponente vom Typ **Job**, Ausführung **Pre-Deploy**, mit dem Kommando
+   `alembic upgrade head` und denselben Variablen wie das Backend (mindestens
+   `CC_CRM_DATABASE_URL`) anlegen. App Platform führt sie vor jedem Deploy aus und bricht den
+   Deploy ab, wenn die Migration scheitert – es läuft nie neuer Code gegen altes Schema.
+
+Ohne diese Umstellung ändert sich nichts gegenüber heute.
+
+**Tests gegen Postgres.** Die CI führt die Testsuite zusätzlich gegen Postgres 16 aus
+(Job `backend-postgres`), inklusive Migrationen hoch/zurück/hoch und `alembic check`. Lokal:
+`CC_CRM_DATABASE_URL` und `CC_CRM_TEST_DATABASE_URL` auf eine Wegwerf-Datenbank zeigen lassen,
+deren Name „test" enthält (die Tabellen werden nach jedem Test geleert).
+
 ## Umgebungsvariablen (Frontend-Komponente `hermescrm-frontend`)
 
 - `NEXT_PUBLIC_CC_CRM_API_URL=https://hermescrm-v9sle.ondigitalocean.app/api/v1`
@@ -338,9 +378,9 @@ neu generieren" invalidieren. Einbindung in Outlook (Desktop oder Web) über
 
 ## Was NICHT automatisch passiert
 
-- **Monitoring/Alerting**: Für den Anfang reicht der eingebaute Healthcheck
-  (`/api/v1/health`); für echten Betrieb später ggf. Uptime-Monitoring (z.B.
-  UptimeRobot, kostenlos) ergänzen.
+- **Alerting**: Es gibt strukturierte Logs, Request-IDs und optional Sentry (siehe „Betrieb"),
+  aber keine automatische Benachrichtigung; Uptime-Monitoring (z.B. UptimeRobot, kostenlos)
+  auf `/api/v1/readyz` und eine Sentry-Alarmregel bei Bedarf selbst einrichten.
 - **E-Mail-Versand** (Outlook-Integration über den Kalender-Sync hinaus):
   laut Projektstand für eine spätere Phase vorgesehen, nicht Teil dieses
   Deployments.

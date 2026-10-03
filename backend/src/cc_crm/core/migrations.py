@@ -16,8 +16,19 @@ def ensure_database_at_head() -> None:
     instead of the file path."""
     config = Config(str(_BACKEND_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(_BACKEND_ROOT / "alembic"))
+    config.attributes["configure_logger"] = False  # App-Logging nicht ueberschreiben
     try:
         command.upgrade(config, "head")
     except Exception:
         logger.exception("Automatic 'alembic upgrade head' on startup failed")
         raise
+
+
+def script_head() -> str | None:
+    """Neuester Migrationsstand laut Code (None, wenn es mehrere Heads gibt)."""
+    from alembic.script import ScriptDirectory
+
+    config = Config(str(_BACKEND_ROOT / "alembic.ini"))
+    config.set_main_option("script_location", str(_BACKEND_ROOT / "alembic"))
+    heads = ScriptDirectory.from_config(config).get_heads()
+    return heads[0] if len(heads) == 1 else None

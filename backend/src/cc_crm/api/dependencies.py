@@ -7,6 +7,7 @@ from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from cc_crm.core.errors import AuthenticationError, EntityNotFoundError, PermissionDeniedError
+from cc_crm.core.observability import set_request_user
 from cc_crm.infrastructure.database.session import get_db_session
 from cc_crm.models.recruiting import Fee, Placement
 from cc_crm.models.submission import CandidateSubmission
@@ -30,10 +31,13 @@ def get_current_user(
     docs/API_KEYS.md.
     """
     if api_key is not None:
-        return ApiKeyService(session).user_for_key(api_key)
-    if credentials is None:
-        raise AuthenticationError("Missing bearer token or X-API-Key header")
-    return AuthService(session).user_for_token(credentials.credentials)
+        user = ApiKeyService(session).user_for_key(api_key)
+    else:
+        if credentials is None:
+            raise AuthenticationError("Missing bearer token or X-API-Key header")
+        user = AuthService(session).user_for_token(credentials.credentials)
+    set_request_user(str(user.id))  # fuer die Logzeile der Anfrage (core/observability.py)
+    return user
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
