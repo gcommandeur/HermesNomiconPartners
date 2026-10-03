@@ -1,8 +1,21 @@
 import uuid
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
-from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, Numeric, String, Text, false
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Date,
+    Enum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    false,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cc_crm.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -71,4 +84,10 @@ class ClientCompany(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # die vollstaendige Begruendung.
     owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+
+    # Eigene Felder (Admin-definiert, siehe models/custom_field.py). Bewusst plain JSON
+    # ohne GIN-Index (wie rollen): Filter ueber JSON-Pfad, portabel fuer SQLite/Postgres.
+    custom_fields: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict, server_default=text("'{}'")
     )

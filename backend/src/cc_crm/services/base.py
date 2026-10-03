@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import Sequence
+from typing import Any
 
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
@@ -21,6 +22,21 @@ class CrudService[ModelT: Base, CreateT: BaseModel, UpdateT: BaseModel]:
         self.repository = repository
         self.entity_name = entity_name
 
+    # "candidate" | "client" | "contact": aktiviert die Pruefung von `custom_fields`
+    # (services/custom_fields.py). None = Objekt hat keine eigenen Felder.
+    custom_field_entity: str | None = None
+
+    def _checked_custom_fields(
+        self, values: dict[str, Any], existing: dict[str, Any] | None
+    ) -> None:
+        if self.custom_field_entity is None or values.get("custom_fields") is None:
+            return
+        from cc_crm.services.custom_fields import CustomFieldService
+
+        values["custom_fields"] = CustomFieldService(self.session).validate_values(
+            self.custom_field_entity, values["custom_fields"], existing
+        )
+
     def get(self, entity_id: uuid.UUID) -> ModelT:
         entity = self.repository.get(entity_id)
         if entity is None:
@@ -32,7 +48,9 @@ class CrudService[ModelT: Base, CreateT: BaseModel, UpdateT: BaseModel]:
 
     def create(self, payload: CreateT) -> ModelT:
         try:
-            entity = self.repository.create(payload.model_dump(exclude_none=True))
+            values = payload.model_dump(exclude_none=True)
+            self._checked_custom_fields(values, None)
+            entity = self.repository.create(values)
             self.session.commit()
             return entity
         except IntegrityError as exception:
@@ -45,6 +63,7 @@ class CrudService[ModelT: Base, CreateT: BaseModel, UpdateT: BaseModel]:
     def update(self, entity_id: uuid.UUID, payload: UpdateT) -> ModelT:
         entity = self.get(entity_id)
         values = payload.model_dump(exclude_unset=True)
+        self._checked_custom_fields(values, getattr(entity, "custom_fields", None))
         try:
             updated = self.repository.update(entity, values)
             self.session.commit()

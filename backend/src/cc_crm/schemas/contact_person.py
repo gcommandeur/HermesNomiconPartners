@@ -1,4 +1,5 @@
 import uuid
+from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -6,6 +7,9 @@ from cc_crm.schemas.base import EntityRead
 
 
 class ContactPersonBase(BaseModel):
+    # Eigene Felder (Schluessel -> Wert), geprueft gegen die Definitionen
+    # (services/custom_fields.py). Beim Speichern wird das ganze Dict ersetzt.
+    custom_fields: dict[str, Any] = Field(default_factory=dict)
     client_company_id: uuid.UUID
     # KEIN min_length=1 hier: der Kanzlei-Kontakte-Import (siehe
     # scripts/import_kanzlei_domains_20260713.py) legt bewusst Kontakte mit
@@ -42,6 +46,7 @@ class ContactPersonCreate(ContactPersonBase):
 
 
 class ContactPersonUpdate(BaseModel):
+    custom_fields: dict[str, Any] | None = None
     first_name: str | None = Field(default=None, min_length=1, max_length=120)
     last_name: str | None = Field(default=None, min_length=1, max_length=120)
     role_title: str | None = Field(default=None, max_length=180)

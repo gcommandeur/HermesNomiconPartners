@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusPill } from "@/components/crm/status-pill";
 import { ClientHonorarEditor } from "@/components/crm/client-honorar-editor";
 import { DocumentPanel } from "@/components/crm/document-panel";
+import { CustomFieldsPanel } from "@/components/crm/custom-fields-panel";
 import { ClientEditModal } from "@/components/crm/client-create-modal";
 import { ApprovalPendingNotice } from "@/components/crm/approval-pending-notice";
 import { AddToMailingButton } from "@/components/crm/add-to-mailing-button";
@@ -61,6 +62,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           <ClientEditModal client={client} />
         </div>
       </div>
+      <CustomFieldsPanel entityType="client" entityId={client.id} initialValues={client.custom_fields} />
       <Tabs defaultValue="Übersicht">
         <TabsList className="mb-5"><TabsTrigger value="Übersicht">Übersicht</TabsTrigger><TabsTrigger value="Kontakte">Kontakte</TabsTrigger><TabsTrigger value="Kandidaten">Vorgestellte Kandidaten</TabsTrigger><TabsTrigger value="Konditionen">Konditionen / AGB</TabsTrigger><TabsTrigger value="Dokumente">Dokumente</TabsTrigger></TabsList>
         <TabsContent value="Übersicht">

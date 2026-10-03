@@ -947,6 +947,44 @@ export interface paths {
         patch: operations["update_contact_api_v1_contacts__contact_id__patch"];
         trace?: never;
     };
+    "/api/v1/custom-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Custom Fields
+         * @description Fuer jeden Nutzer (die Felder erscheinen in den Masken); deaktivierte nur fuer Admins.
+         */
+        get: operations["list_custom_fields_api_v1_custom_fields_get"];
+        put?: never;
+        /** Create Custom Field */
+        post: operations["create_custom_field_api_v1_custom_fields_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/custom-fields/{definition_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Custom Field */
+        patch: operations["update_custom_field_api_v1_custom_fields__definition_id__patch"];
+        trace?: never;
+    };
     "/api/v1/deletion-requests": {
         parameters: {
             query?: never;
@@ -2976,6 +3014,10 @@ export interface components {
             consent_received: boolean;
             /** Current Employer Internal */
             current_employer_internal?: string | null;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
             /**
              * Cv Available
              * @default false
@@ -3153,6 +3195,10 @@ export interface components {
             created_at: string;
             /** Current Employer Internal */
             current_employer_internal?: string | null;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
             /**
              * Cv Available
              * @default false
@@ -3505,6 +3551,10 @@ export interface components {
             consent_received?: boolean | null;
             /** Current Employer Internal */
             current_employer_internal?: string | null;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            } | null;
             /** Cv Available */
             cv_available?: boolean | null;
             /** Edv Kenntnisse */
@@ -3571,6 +3621,10 @@ export interface components {
             commercial_notes?: string | null;
             /** Company Size */
             company_size?: string | null;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
             /** Email */
             email?: string | null;
             /**
@@ -3653,6 +3707,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
             /** Email */
             email?: string | null;
             /**
@@ -3735,6 +3793,10 @@ export interface components {
             commercial_notes?: string | null;
             /** Company Size */
             company_size?: string | null;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            } | null;
             /** Email */
             email?: string | null;
             /** Fee Percentage */
@@ -3988,6 +4050,10 @@ export interface components {
              * Format: uuid
              */
             client_company_id: string;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
             /** Email */
             email?: string | null;
             /** First Name */
@@ -4018,6 +4084,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            };
             /** Email */
             email?: string | null;
             /** First Name */
@@ -4046,6 +4116,10 @@ export interface components {
         };
         /** ContactPersonUpdate */
         ContactPersonUpdate: {
+            /** Custom Fields */
+            custom_fields?: {
+                [key: string]: unknown;
+            } | null;
             /** Email */
             email?: string | null;
             /** First Name */
@@ -4058,6 +4132,67 @@ export interface components {
             phone?: string | null;
             /** Role Title */
             role_title?: string | null;
+        };
+        /** CustomFieldCreate */
+        CustomFieldCreate: {
+            /**
+             * Entity Type
+             * @enum {string}
+             */
+            entity_type: "candidate" | "client" | "contact";
+            /**
+             * Field Type
+             * @enum {string}
+             */
+            field_type: "text" | "number" | "date" | "boolean" | "select";
+            /** Key */
+            key?: string | null;
+            /** Label */
+            label: string;
+            /** Options */
+            options?: string[];
+        };
+        /** CustomFieldRead */
+        CustomFieldRead: {
+            /**
+             * Entity Type
+             * @enum {string}
+             */
+            entity_type: "candidate" | "client" | "contact";
+            /**
+             * Field Type
+             * @enum {string}
+             */
+            field_type: "text" | "number" | "date" | "boolean" | "select";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options: string[];
+            /** Sort Order */
+            sort_order: number;
+        };
+        /**
+         * CustomFieldUpdate
+         * @description Typ und Schluessel sind nach dem Anlegen unveraenderlich.
+         */
+        CustomFieldUpdate: {
+            /** Is Active */
+            is_active?: boolean | null;
+            /** Label */
+            label?: string | null;
+            /** Options */
+            options?: string[] | null;
+            /** Sort Order */
+            sort_order?: number | null;
         };
         /** CvExtractionRequest */
         CvExtractionRequest: {
@@ -7580,6 +7715,7 @@ export interface operations {
                 created_from?: string | null;
                 created_to?: string | null;
                 rollen_unbestaetigt?: boolean | null;
+                custom_field?: string | null;
                 sort_by?: ("candidate_number" | "name" | "job_title" | "city" | "salary_expectation" | "status") | null;
                 sort_dir?: "asc" | "desc";
                 offset?: number;
@@ -8910,6 +9046,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContactPersonRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_custom_fields_api_v1_custom_fields_get: {
+        parameters: {
+            query?: {
+                entity_type?: ("candidate" | "client" | "contact") | null;
+                include_inactive?: boolean;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFieldRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_custom_field_api_v1_custom_fields_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomFieldCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFieldRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_custom_field_api_v1_custom_fields__definition_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomFieldUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFieldRead"];
                 };
             };
             /** @description Validation Error */

@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, BackgroundJob, WebhookDelivery, WebhookEndpoint, WebhookEndpointWithSecret, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, OutreachSequence, SequenceEnrollment, SequenceStepInput, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, BackgroundJob, CustomFieldDefinition, CustomFieldEntity, CustomFieldValue, WebhookDelivery, WebhookEndpoint, WebhookEndpointWithSecret, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, OutreachSequence, SequenceEnrollment, SequenceStepInput, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -698,4 +698,47 @@ export async function sendWebhookTest(webhookId: string) {
 
 export async function retryWebhookDelivery(deliveryId: string) {
   return apiPost<WebhookDelivery>(`/webhooks/deliveries/${deliveryId}/retry`, {});
+}
+
+/** Eigene Felder: Definitionen (Anlegen/Ändern nur Admin) und Werte am Objekt. */
+export async function getCustomFields(entityType?: CustomFieldEntity, includeInactive = false) {
+  const params = new URLSearchParams();
+  if (entityType) params.set("entity_type", entityType);
+  if (includeInactive) params.set("include_inactive", "true");
+  const query = params.toString();
+  return apiGet<CustomFieldDefinition[]>(`/custom-fields${query ? `?${query}` : ""}`, []);
+}
+
+export async function createCustomField(payload: {
+  entity_type: CustomFieldEntity;
+  label: string;
+  field_type: CustomFieldDefinition["field_type"];
+  options: string[];
+}) {
+  return apiPost<CustomFieldDefinition>("/custom-fields", payload);
+}
+
+export async function updateCustomField(
+  fieldId: string,
+  payload: { label?: string; options?: string[]; sort_order?: number; is_active?: boolean },
+) {
+  return apiPatch<CustomFieldDefinition>(`/custom-fields/${fieldId}`, payload);
+}
+
+const CUSTOM_FIELD_PATHS: Record<CustomFieldEntity, string> = {
+  candidate: "candidates",
+  client: "clients",
+  contact: "contacts",
+};
+
+/** Speichert die eigenen Felder eines Objekts (ersetzt das komplette Dict). */
+export async function saveCustomFieldValues(
+  entityType: CustomFieldEntity,
+  entityId: string,
+  values: Record<string, CustomFieldValue>,
+) {
+  return apiPatch<{ custom_fields: Record<string, CustomFieldValue> }>(
+    `/${CUSTOM_FIELD_PATHS[entityType]}/${entityId}`,
+    { custom_fields: values },
+  );
 }

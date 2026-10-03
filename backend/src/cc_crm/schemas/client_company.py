@@ -1,6 +1,7 @@
 import uuid
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -9,6 +10,9 @@ from cc_crm.schemas.base import EntityRead
 
 
 class ClientCompanyBase(BaseModel):
+    # Eigene Felder (Schluessel -> Wert), geprueft gegen die Definitionen
+    # (services/custom_fields.py). Beim Speichern wird das ganze Dict ersetzt.
+    custom_fields: dict[str, Any] = Field(default_factory=dict)
     name: str = Field(min_length=1, max_length=240)
     # Marken-/Netzwerkname für Kanzleien mit mehreren Standorten (z.B. "ECOVIS").
     kanzleigruppe: str | None = Field(default=None, max_length=160)
@@ -60,6 +64,7 @@ class ClientCompanyCreate(ClientCompanyBase):
 
 
 class ClientCompanyUpdate(BaseModel):
+    custom_fields: dict[str, Any] | None = None
     name: str | None = Field(default=None, min_length=1, max_length=240)
     kanzleigruppe: str | None = Field(default=None, max_length=160)
     status: ClientStatus | None = None

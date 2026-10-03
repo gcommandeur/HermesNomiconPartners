@@ -11,6 +11,7 @@ from cc_crm.api.v1.calendar_feed import router as calendar_feed_router
 from cc_crm.api.v1.candidates import router as candidates_router
 from cc_crm.api.v1.clients import router as clients_router
 from cc_crm.api.v1.contacts import router as contacts_router
+from cc_crm.api.v1.custom_fields import router as custom_fields_router
 from cc_crm.api.v1.deletion_requests import router as deletion_requests_router
 from cc_crm.api.v1.geo import router as geo_router
 from cc_crm.api.v1.imports import router as imports_router
@@ -54,6 +55,7 @@ api_router.include_router(microsoft_login_router, tags=["auth-microsoft"])
 protected_router = APIRouter(dependencies=[Depends(get_current_user)])
 protected_router.include_router(background_jobs_router, tags=["background-jobs"])
 protected_router.include_router(webhooks_router, tags=["webhooks"])
+protected_router.include_router(custom_fields_router, tags=["custom-fields"])
 protected_router.include_router(calendar_events_router, tags=["calendar-events"])
 protected_router.include_router(candidates_router, tags=["candidates"])
 protected_router.include_router(clients_router, tags=["clients"])

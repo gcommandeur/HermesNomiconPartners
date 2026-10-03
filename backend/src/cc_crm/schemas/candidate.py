@@ -21,6 +21,9 @@ class BeruflicheStation(BaseModel):
 
 
 class CandidateBase(BaseModel):
+    # Eigene Felder (Schluessel -> Wert), geprueft gegen die Definitionen
+    # (services/custom_fields.py). Beim Speichern wird das ganze Dict ersetzt.
+    custom_fields: dict[str, Any] = Field(default_factory=dict)
     candidate_number: str | None = Field(default=None, max_length=40)
     first_name: str = Field(min_length=1, max_length=120)
     last_name: str = Field(min_length=1, max_length=120)
@@ -81,6 +84,7 @@ class CandidateCreate(CandidateBase):
 
 
 class CandidateUpdate(BaseModel):
+    custom_fields: dict[str, Any] | None = None
     candidate_number: str | None = Field(default=None, max_length=40)
     first_name: str | None = Field(default=None, min_length=1, max_length=120)
     last_name: str | None = Field(default=None, min_length=1, max_length=120)

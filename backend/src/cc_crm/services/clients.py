@@ -34,6 +34,8 @@ MAX_RADIUS_FILTER_CLIENTS = 5000
 
 
 class ClientCompanyService(CrudService[ClientCompany, ClientCompanyCreate, ClientCompanyUpdate]):
+    custom_field_entity = "client"
+
     def __init__(self, session: Session) -> None:
         repository = ClientCompanyRepository(session)
         super().__init__(session, repository, "ClientCompany")
