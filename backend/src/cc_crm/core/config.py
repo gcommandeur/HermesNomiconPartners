@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     # guarantee_period_months), zu denen automatisch ein Follow-up-Task
     # erzeugt wird ("bald_ablaufend").
     warranty_follow_up_days_before: int = 14
+    # Lesende Claude-Schnittstelle (MCP, api/v1/mcp.py): STANDARDMAESSIG AUS. Erst
+    # einschalten, wenn die Auftragsverarbeitung mit Anthropic geklaert ist - ohne
+    # den Schalter liefert der Endpunkt 404 und es verlassen keine Daten das System.
+    ai_enabled: bool = False
+    # Maximale MCP-Werkzeugaufrufe pro Nutzer und Tag (UTC).
+    mcp_daily_limit: int = 500
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-5"
     # Fernet-Schluessel fuer die Postfach-Passwoerter (siehe

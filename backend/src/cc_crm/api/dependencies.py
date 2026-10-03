@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated, Any, cast
 
-from fastapi import Depends, Header
+from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
@@ -22,6 +22,7 @@ _bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
+    request: Request,
     session: DatabaseSession,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)],
     api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
@@ -31,7 +32,11 @@ def get_current_user(
     docs/API_KEYS.md.
     """
     if api_key is not None:
-        user = ApiKeyService(session).user_for_key(api_key)
+        user, scope = ApiKeyService(session).authenticate(api_key)
+        if scope == "mcp" and not request.url.path.rstrip("/").endswith("/mcp"):
+            # An einen echten Nutzer gebundener Schluessel: nur fuer die lesende
+            # Claude-Schnittstelle, nie fuer die uebrige API.
+            raise AuthenticationError("Dieser API-Key gilt nur fuer /api/v1/mcp")
     else:
         if credentials is None:
             raise AuthenticationError("Missing bearer token or X-API-Key header")
@@ -108,9 +113,7 @@ def user_can_access_submission(
     return _has_share(session, current_user, submission_id)
 
 
-def user_can_manage_shares(
-    session: Session, current_user: User, submission_id: uuid.UUID
-) -> bool:
+def user_can_manage_shares(session: Session, current_user: User, submission_id: uuid.UUID) -> bool:
     """Freigaben anlegen/entziehen: nur Admin, Eigentuemer oder dessen
     Teamleiter - also wer den Prozess ueber process_owner_scope erreicht, NICHT
     wer ihn nur per Freigabe sieht (sonst koennte ein Empfaenger den Prozess an

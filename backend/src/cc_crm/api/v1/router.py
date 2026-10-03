@@ -22,6 +22,7 @@ from cc_crm.api.v1.mail_accounts import router as mail_accounts_router
 from cc_crm.api.v1.mail_send import router as mail_send_router
 from cc_crm.api.v1.mailing_groups import router as mailing_groups_router
 from cc_crm.api.v1.matching import router as matching_router
+from cc_crm.api.v1.mcp import router as mcp_router
 from cc_crm.api.v1.microsoft_login import public_router as microsoft_login_router
 from cc_crm.api.v1.my_outlook import router as my_outlook_router
 from cc_crm.api.v1.nl_search import router as nl_search_router
@@ -54,6 +55,7 @@ api_router.include_router(mail_accounts_public_router, tags=["mail-accounts-oaut
 api_router.include_router(microsoft_login_router, tags=["auth-microsoft"])
 
 protected_router = APIRouter(dependencies=[Depends(get_current_user)])
+protected_router.include_router(mcp_router, tags=["mcp"])
 protected_router.include_router(background_jobs_router, tags=["background-jobs"])
 protected_router.include_router(webhooks_router, tags=["webhooks"])
 protected_router.include_router(my_outlook_router, tags=["outlook"])

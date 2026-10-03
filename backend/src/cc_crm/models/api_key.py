@@ -30,3 +30,10 @@ class ApiKey(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Auth-Pruefung wie ein widerrufener Key behandelt, sobald er
     # abgelaufen ist (siehe ApiKeyService.user_for_key).
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # "service": Schluessel eines eigenen Service-Nutzers (Integrationen, voller
+    # API-Zugriff wie bisher). "mcp": an einen ECHTEN Nutzer gebunden und NUR fuer
+    # die lesende Claude-Schnittstelle (/api/v1/mcp) gueltig - sonst haette der
+    # Schluessel auf jedem Endpunkt die vollen Rechte dieses Nutzers.
+    scope: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="service", server_default="service"
+    )
