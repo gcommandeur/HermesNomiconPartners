@@ -25,6 +25,12 @@
       "Bash(git switch*)",
       "Bash(git checkout -b*)",
       "Bash(git merge origin/main*)",
+      "Bash(git pull*)",
+      "Bash(git rebase origin/entwicklung*)",
+      "Bash(git merge origin/entwicklung*)",
+      "Bash(git push origin entwicklung)",
+      "Bash(git push -u origin entwicklung)",
+      "Bash(git push origin HEAD:entwicklung)",
       "Bash(git push -u origin claude/*)",
       "Bash(git push origin claude/*)",
       "Bash(gh run list*)",
@@ -39,7 +45,10 @@
       "Bash(git push --force*)",
       "Bash(git push -f*)",
       "Bash(git reset --hard*)",
-      "Bash(git branch -D*)"
+      "Bash(git branch -D*)",
+      "Bash(git push origin main*)",
+      "Bash(git push origin HEAD:main*)",
+      "Bash(git push -u origin main*)"
     ]
   },
   "hooks": {

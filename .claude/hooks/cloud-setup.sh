@@ -14,8 +14,26 @@ cd "$ROOT" || exit 0
 
 if [ -f backend/pyproject.toml ]; then
   echo "[cloud-setup] Backend-Abhaengigkeiten ..."
-  (cd backend && python3 -m pip install --quiet -e ".[dev]") \
-    || echo "[cloud-setup] WARNUNG: pip install fehlgeschlagen"
+  # Das Backend braucht Python >= 3.12; python3 ist in der Cloud 3.11.
+  PY=""
+  for candidate in python3.13 python3.12; do
+    if command -v "$candidate" >/dev/null 2>&1; then PY="$candidate"; break; fi
+  done
+  if [ -z "$PY" ]; then
+    echo "[cloud-setup] WARNUNG: weder python3.13 noch python3.12 gefunden"
+  else
+    (cd backend && { [ -x .venv/bin/python ] || "$PY" -m venv .venv; } \
+      && .venv/bin/python -m pip install --quiet -e ".[dev]") \
+      || echo "[cloud-setup] WARNUNG: Backend-Installation fehlgeschlagen"
+  fi
+  # pytest/ruff/mypy/alembic ohne Pfad aufrufbar machen; Tests brauchen
+  # ausserdem eine SQLite-URL, sonst versucht die App Postgres auf localhost.
+  if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+    {
+      echo "export PATH=\"$ROOT/backend/.venv/bin:\$PATH\""
+      echo "export CC_CRM_DATABASE_URL=\"sqlite:////tmp/cc_crm_test.db\""
+    } >> "$CLAUDE_ENV_FILE"
+  fi
 fi
 
 if [ -f frontend/package.json ]; then
