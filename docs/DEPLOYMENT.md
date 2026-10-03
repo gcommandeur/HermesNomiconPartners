@@ -277,6 +277,26 @@ Bekannte Grenze: Versand und Fortschritt lassen sich nicht atomar speichern;
 bricht der Job exakt zwischen erfolgreichem Versand und Speichern ab, würde der
 Schritt beim nächsten Lauf noch einmal versendet.
 
+**Anmeldung mit Microsoft (SSO)**: Die Login-Seite hat zusätzlich zum
+E-Mail/Passwort+2FA-Login den Button „Mit Microsoft anmelden" (der klassische
+Login bleibt als Fallback bestehen). Eigener Flow, unabhängig vom
+Postfach-Connect, mit den schlanken Scopes `openid profile email User.Read`
+(kein Mail-/Kalenderzugriff, kein Refresh-Token). Es werden nur BESTEHENDE,
+aktive CRM-Nutzer angemeldet, deren E-Mail-Adresse der Microsoft-Adresse
+(`mail`, sonst `userPrincipalName`) entspricht - es wird nie automatisch ein
+Nutzer angelegt; Admins legen Nutzer wie gewohnt an (siehe unten). Konten
+fremder Tenants scheitern bereits bei Microsoft (Single-Tenant-App,
+`CC_CRM_MS_GRAPH_TENANT_ID`). Ein Microsoft-Login überspringt die 2FA-Abfrage
+(Microsoft hat die Identität bestätigt). **Einmalig in Entra ID**
+(App-Registrierung → Authentifizierung → Web → „Umleitungs-URI hinzufügen"):
+
+`https://hermescrm-v9sle.ondigitalocean.app/api/v1/auth/microsoft/callback`
+
+(zusätzlich zur Postfach-URI oben; keine neue Variable, die bestehenden
+`CC_CRM_MS_GRAPH_*` genügen). Das Backend setzt den Session-Cookie selbst und
+leitet nach `/sso-complete` weiter; Frontend und Backend müssen dafür dieselbe
+Domain teilen (ist durch das `/api/v1`-Routing der Fall).
+
 ## Umgebungsvariablen (Frontend-Komponente `hermescrm-frontend`)
 
 - `NEXT_PUBLIC_CC_CRM_API_URL=https://hermescrm-v9sle.ondigitalocean.app/api/v1`

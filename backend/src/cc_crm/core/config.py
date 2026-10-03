@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     ms_graph_client_id: str | None = None
     ms_graph_tenant_id: str | None = None
     ms_graph_client_secret: str | None = None
+    # Name des Session-Cookies, den das Frontend liest (frontend/src/lib/api/
+    # client.ts::AUTH_COOKIE_NAME) - der Microsoft-SSO-Callback laeuft im
+    # Backend und setzt ihn selbst, siehe api/v1/microsoft_login.py.
+    auth_cookie_name: str = "cc_crm_token"
     # Lokales Verzeichnis für hochgeladene Dokumente (CVs, Verträge, etc.) -
     # Fallback, wenn kein S3-kompatibler Speicher konfiguriert ist (siehe unten).
     # Relativ zum Backend-Arbeitsverzeichnis, falls kein absoluter Pfad gesetzt ist.
