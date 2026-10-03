@@ -510,9 +510,9 @@ class TestLegacyRowsAfterM365Migration:
                         is_active, default_for_cv_out, send_throttle_seconds, daily_send_limit,
                         created_at, updated_at
                     ) VALUES (
-                        :id, :address, :label, 'imap_smtp', :imap_host, 993, 1,
-                        :smtp_host, 587, 1, :username, :pw,
-                        1, 0, 8, 150,
+                        :id, :address, :label, 'imap_smtp', :imap_host, 993, TRUE,
+                        :smtp_host, 587, TRUE, :username, :pw,
+                        TRUE, FALSE, 8, 150,
                         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                     )
                     """

@@ -41,6 +41,66 @@ jobs:
           CC_CRM_ENVIRONMENT: "local"
         run: pytest
 
+  # Dieselbe Testsuite zusaetzlich gegen ECHTES Postgres 16 (produktiv laeuft
+  # Postgres, der Job oben nutzt SQLite). Zusaetzlich: Migrationen von leer bis
+  # head, ein Schritt zurueck und wieder hoch, und `alembic check` (Modelle und
+  # Migrationen duerfen nicht auseinanderlaufen). tests/conftest.py legt das
+  # Schema ueber die Migrationen an und leert die Tabellen nach jedem Test.
+  backend-postgres:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cc_crm_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      CC_CRM_DATABASE_URL: "postgresql+psycopg://postgres:postgres@localhost:5432/cc_crm_test"
+      CC_CRM_TEST_DATABASE_URL: "postgresql+psycopg://postgres:postgres@localhost:5432/cc_crm_test"
+      CC_CRM_ENVIRONMENT: "local"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      # Reine Testdatenbank im Wegwerf-Container: Dauerhaftigkeit ist egal,
+      # Geschwindigkeit nicht (Tabellen werden nach jedem Test geleert).
+      - name: Postgres fuer Tests beschleunigen
+        env:
+          PGPASSWORD: postgres
+        run: >-
+          psql -h localhost -U postgres
+          -c "ALTER SYSTEM SET fsync = off"
+          -c "ALTER SYSTEM SET synchronous_commit = off"
+          -c "ALTER SYSTEM SET full_page_writes = off"
+          -c "SELECT pg_reload_conf()"
+        continue-on-error: true
+
+      - name: Migrationen (hoch, zurueck, hoch) und Abgleich mit den Modellen
+        run: |
+          alembic -c alembic.ini upgrade head
+          alembic -c alembic.ini downgrade -1
+          alembic -c alembic.ini upgrade head
+          alembic -c alembic.ini check
+
+      - name: Pytest gegen Postgres
+        run: pytest
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

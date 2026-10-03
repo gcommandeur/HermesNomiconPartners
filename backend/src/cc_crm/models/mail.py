@@ -16,7 +16,17 @@ die API zurueckgegeben (siehe services/mail_credentials.py).
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cc_crm.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -30,8 +40,11 @@ from cc_crm.models.enums import (
 
 class MailAccount(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "mail_accounts"
+    # Eindeutigkeit als benannte Constraint (uq_mail_accounts_address) plus
+    # normaler Index - so legt es die Migration an (c4e8a1f7b920).
+    __table_args__ = (UniqueConstraint("address"),)
 
-    address: Mapped[str] = mapped_column(String(320), nullable=False, unique=True, index=True)
+    address: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
     # Sprechendes Kuerzel fuer die Auswahl in der Oberflaeche, z.B.
     # "info-linkedin", "gege-persoenlich", "contact", "karriere", "lukas".
     label: Mapped[str] = mapped_column(String(80), nullable=False)
@@ -167,12 +180,13 @@ class MailMessage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """
 
     __tablename__ = "mail_messages"
+    __table_args__ = (UniqueConstraint("message_id"),)  # uq_mail_messages_message_id
 
     mail_account_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("mail_accounts.id", ondelete="CASCADE"), nullable=False, index=True
     )
     # RFC-5322 Message-ID - Dedup-Schluessel ueber alle Laeufe hinweg.
-    message_id: Mapped[str] = mapped_column(String(998), nullable=False, unique=True, index=True)
+    message_id: Mapped[str] = mapped_column(String(998), nullable=False, index=True)
     # IMAP-UID des Kontos, fuer den inkrementellen Abruf (siehe
     # MailAccount.last_seen_uid). Nur innerhalb eines Kontos eindeutig.
     imap_uid: Mapped[str | None] = mapped_column(String(80))

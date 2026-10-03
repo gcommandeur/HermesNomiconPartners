@@ -33,6 +33,7 @@ from cc_crm.services import calendar_graph_sync, graph_token_service, mail_oauth
 from cc_crm.services.graph_token_service import get_valid_access_token
 from cc_crm.services.mail_send import send_mail
 from cc_crm.services.mail_sync import fetch_mail
+from tests.tz import utc_naive
 
 _KEY = Fernet.generate_key().decode()
 
@@ -607,7 +608,7 @@ class TestCalendarGraphSync:
                 )
             )
             assert event is not None
-            assert event.start_at == datetime(2026, 9, 20, 16, 0)
+            assert utc_naive(event.start_at) == datetime(2026, 9, 20, 16, 0)
 
             # Lauf 2: nichts hat sich auf Graph-Seite geaendert (gleicher
             # delta-Aufruf liefert dasselbe last_modified_at) - der Push darf

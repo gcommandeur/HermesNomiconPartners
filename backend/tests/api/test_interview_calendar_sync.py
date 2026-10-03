@@ -1,6 +1,9 @@
+from datetime import datetime
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
+
+from tests.tz import utc_naive
 
 
 def _create_interview_ready_submission(client: TestClient) -> dict:
@@ -47,7 +50,7 @@ def test_creating_interview_auto_creates_calendar_event(client: TestClient) -> N
 
     event = matching[0]
     assert event["event_type"] == "interview"
-    assert event["start_at"] == "2026-08-10T14:00:00"
+    assert utc_naive(event["start_at"]) == datetime(2026, 8, 10, 14, 0)
     assert event["owner_user_id"] == me["id"]
     assert event["created_by_user_id"] == me["id"]
     assert event["candidate_submission_id"] == submission["id"]
