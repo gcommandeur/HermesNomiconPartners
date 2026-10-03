@@ -80,6 +80,15 @@ Hermes ist ein Recruiting-CRM fuer Steuer-/Rechts-Kanzleien: Kandidaten, Kanzlei
 - Keine Passwoerter eingeben, keine Konten anlegen, keine Aktionen gegen die Produktions-Datenbank ohne ausdrueckliche Freigabe des Nutzers. Skripte gegen Produktion (`backend/scripts/`) laufen immer erst als Dry-Run und nur vom Nutzer selbst.
 - Konkrete Tests/Muster zum Abschauen: `tests/api/test_owner_filter.py` (Sichtbarkeit), `tests/api/test_team_lead.py` (Rollen), `tests/api/test_approvals.py` (Freigaben), `tests/api/test_candidate_comments.py` (Timeline/Autoren).
 
+## Cloud-/Handy-Workflow
+
+Der Nutzer arbeitet auch rein vom Handy ueber Claude-Code-Cloud-Sitzungen. Dafuer gilt:
+- Cloud-Sitzungen arbeiten auf einem eigenen Branch `claude/...`, **nie direkt auf `main`** (`main` deployt automatisch nach DigitalOcean). Ablauf: umsetzen, Pruefbefehle in der Sitzung ausfuehren (`pytest`, `ruff check`, `mypy`, `pnpm lint/typecheck/build`), Branch pushen, Pull Request anlegen, CI-Ergebnis abwarten. Den Merge nach `main` macht der Nutzer (z.B. in der GitHub-App) oder die Sitzung nur auf ausdrueckliche Anweisung.
+- `.claude/settings.json` erlaubt die Pruefbefehle und das Pushen von `claude/*`-Branches ohne Rueckfrage; Force-Push, `reset --hard` und `branch -D` sind gesperrt. Der Start-Hook `.claude/hooks/cloud-setup.sh` installiert die Abhaengigkeiten (nur in der Cloud).
+- Am Laptop laufende (lokale) Sitzungen pushen weiterhin direkt auf `main`, wie unter "Workflow" oben beschrieben.
+- Parallel arbeiten Cloud und Laptop an derselben Stelle: vorher `git fetch` und `origin/main` mergen; bei Migrationen vor dem Commit `alembic heads` pruefen (es darf nur EINEN Head geben).
+- Nur am Laptop moeglich: Produktions-Skripte, DigitalOcean-Konsole, Klicktests mit echtem Login.
+
 ## Stand (Anfang Oktober 2026)
 
 Zuletzt umgesetzt: Rolle `team_lead` (`2cd6c1f`), Direktzugriffs-Sperre fuer Prozesse und Rechnungen, Freigabe-Inbox, Audit-Trail, vereinheitlichte Kandidaten-Timeline mit Autoren, Sourcing mit Umkreissuche, Suche-/Filterzustand in der Kandidatenliste per URL.
