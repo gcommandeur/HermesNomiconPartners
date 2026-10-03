@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ConditionalShell } from "@/components/layout/conditional-shell";
+import { brand } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: { default: "Hermes", template: "%s | Hermes" },
-  description: "Recruiting CRM for Commandeur Consulting",
+  title: { default: brand.appName, template: `%s | ${brand.appName}` },
+  description: `Recruiting CRM for ${brand.companyName}`,
 };
 
 export default function RootLayout({
