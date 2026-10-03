@@ -11,6 +11,7 @@ import {
   useAdminUsersCache,
   useCalendarEventsCache,
   useCurrentUser,
+  useScopeUsersCache,
   invalidateCalendarEventsCache,
 } from "@/lib/api/hooks";
 import {
@@ -32,6 +33,8 @@ export default function CalendarPage() {
   const { data: userData, isLoading: userLoading, error: userError } = useCurrentUser();
   const currentUser = userData?.data;
   const isAdmin = currentUser?.is_admin ?? false;
+  // Teamleiter sehen und filtern ihr Team (Server begrenzt auf process_owner_scope).
+  const canFilterOwners = isAdmin || currentUser?.role === "team_lead";
 
   const [view, setView] = useState<ViewMode>("month");
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -43,6 +46,8 @@ export default function CalendarPage() {
 
   const { data: adminUsersData } = useAdminUsersCache(isAdmin);
   const adminUsers = useMemo(() => adminUsersData?.data ?? [], [adminUsersData]);
+  const { data: scopeUsersData } = useScopeUsersCache(canFilterOwners);
+  const scopeUsers = useMemo(() => scopeUsersData?.data ?? [], [scopeUsersData]);
 
   const range = useMemo(() => {
     if (view === "week") {
@@ -53,7 +58,7 @@ export default function CalendarPage() {
   }, [view, currentDate]);
 
   const ownerUserId =
-    !isAdmin || ownerFilter === "all" ? undefined : ownerFilter === "me" ? currentUser?.id : ownerFilter;
+    !canFilterOwners || ownerFilter === "all" ? undefined : ownerFilter === "me" ? currentUser?.id : ownerFilter;
 
   const {
     data: eventsData,
@@ -136,15 +141,15 @@ export default function CalendarPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {isAdmin && (
+          {canFilterOwners && (
             <select
               className={selectClass}
               value={ownerFilter}
               onChange={(e) => setOwnerFilter(e.target.value)}
             >
               <option value="me">Meine Termine</option>
-              <option value="all">Alle Termine</option>
-              {adminUsers.map((user) => (
+              <option value="all">{isAdmin ? "Alle Termine" : "Mein Team"}</option>
+              {scopeUsers.map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.display_name ?? user.email}
                 </option>

@@ -147,7 +147,7 @@ class TestCockpitOwnerFilter:
         assert cockpit["kpis"]["submissions"] == 1
 
     def test_multiple_owner_ids_are_unioned(
-        self, client: TestClient, second_user_token: str
+        self, client: TestClient, second_user_token: str, admin_token: str
     ) -> None:
         me = client.get("/api/v1/auth/me").json()
         colleague = client.get("/api/v1/auth/me", headers=auth_header(second_user_token)).json()
@@ -164,10 +164,13 @@ class TestCockpitOwnerFilter:
             headers=auth_header(second_user_token),
         )
 
-        cockpit = client.get(
-            f"/api/v1/cockpit?period=week&owner_user_id={me['id']}&owner_user_id={colleague['id']}"
-        ).json()
+        query = f"period=week&owner_user_id={me['id']}&owner_user_id={colleague['id']}"
+        # Admin: beide Nutzer werden vereinigt.
+        cockpit = client.get(f"/api/v1/cockpit?{query}", headers=auth_header(admin_token)).json()
         assert cockpit["kpis"]["submissions"] == 2
+        # Nicht-Admin: der fremde Nutzer faellt weg (Entscheidung 2026-10-03).
+        clamped = client.get(f"/api/v1/cockpit?{query}").json()
+        assert clamped["kpis"]["submissions"] == 1
 
 
 def _candidate_id(client: TestClient, last_name: str) -> str:

@@ -169,11 +169,17 @@ def _active_team_users(session: Session) -> list[User]:
     ]
 
 
-def team_kpi_overview(session: Session, period: str) -> list[dict[str, Any]]:
+def team_kpi_overview(
+    session: Session, period: str, *, only_user_ids: list[uuid.UUID] | None = None
+) -> list[dict[str, Any]]:
+    """`only_user_ids` begrenzt die Zeilen (Teamleiter: sie selbst + Team);
+    None = alle (Admin)."""
     counts_by_user = stage_counts_by_user(session, period)
     rules = get_point_rules(session)
     overview = []
     for user in _active_team_users(session):
+        if only_user_ids is not None and user.id not in only_user_ids:
+            continue
         stages = counts_by_user.get(user.id, dict.fromkeys(STAGE_KEYS, 0))
         overview.append(
             {

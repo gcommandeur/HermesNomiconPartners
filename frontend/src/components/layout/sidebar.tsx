@@ -43,7 +43,10 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
   // useCurrentUser() sicherheitshalber ausgeblendet statt kurz aufzublitzen.
   const { data: meData } = useCurrentUser();
   const isAdmin = meData?.data.is_admin ?? false;
-  const visiblePrimaryNavigation = primaryNavigation.filter((item) => !item.adminOnly || isAdmin);
+  const isTeamLead = meData?.data.role === "team_lead";
+  const visiblePrimaryNavigation = primaryNavigation.filter(
+    (item) => !item.adminOnly || isAdmin || (item.teamLeadToo && isTeamLead),
+  );
 
   const renderItem = (item: NavigationItem) => {
     const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);

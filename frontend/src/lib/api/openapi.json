@@ -25440,7 +25440,7 @@
     },
     "/api/v1/team-kpis": {
       "get": {
-        "description": "Geschaeftsfuehrer-Ansicht: eine Zeile pro Mitarbeiter mit den 6\nKPI-Stufen-Ist-Werten (gleiche Zahlen wie im eigenen Cockpit der\njeweiligen Person) und der Gesamt-Punktzahl - admin-only\n(Rollenmodell-Entscheidung: keine neue Rolle, User.is_admin schaltet\nfrei).",
+        "description": "Geschaeftsfuehrer-/Teamleiter-Ansicht: eine Zeile pro Mitarbeiter mit\nden 6 KPI-Stufen-Ist-Werten (gleiche Zahlen wie im eigenen Cockpit der\njeweiligen Person) und der Gesamt-Punktzahl. Admins sehen alle, Teamleiter\nihr Team (process_owner_scope), Mitarbeiter bekommen 403.",
         "operationId": "get_team_kpis_api_v1_team_kpis_get",
         "parameters": [
           {
@@ -25620,6 +25620,65 @@
           }
         ],
         "summary": "List Assignable Users",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/scope": {
+      "get": {
+        "description": "Nutzer im eigenen Sichtbereich (process_owner_scope): Admin alle,\nTeamleiter sie selbst + Team, Mitarbeiter nur sie selbst. Grundlage fuer\nNutzerfilter in Analytics und Kalender - dort duerfen nur diese gewaehlt\nwerden (der Server ignoriert andere ohnehin).",
+        "operationId": "list_scope_users_api_v1_users_scope_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserBriefRead"
+                  },
+                  "title": "Response List Scope Users Api V1 Users Scope Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Scope Users",
         "tags": [
           "users"
         ]

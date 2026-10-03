@@ -175,6 +175,13 @@ def get_cockpit(
         # expliziter Nutzerfilter bleibt ein reiner Filter).
         owner_user_id = process_owner_scope(current_user, session)
         shared_ids = shared_submission_ids(current_user, session)
+    else:
+        # Expliziter Nutzerfilter (Analytics): Nicht-Admins duerfen nur Nutzer
+        # ihres Bereichs waehlen (Mitarbeiter: sich, Teamleiter: sich + Team);
+        # fremde IDs fallen still weg.
+        scope = process_owner_scope(current_user, session)
+        if scope is not None:
+            owner_user_id = [uid for uid in owner_user_id if uid in scope]
     return CockpitRead.model_validate(
         CockpitService(session).build(
             period, owner_user_ids=owner_user_id, shared_submission_ids=shared_ids

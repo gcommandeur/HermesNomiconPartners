@@ -2353,11 +2353,10 @@ export interface paths {
         };
         /**
          * Get Team Kpis
-         * @description Geschaeftsfuehrer-Ansicht: eine Zeile pro Mitarbeiter mit den 6
-         *     KPI-Stufen-Ist-Werten (gleiche Zahlen wie im eigenen Cockpit der
-         *     jeweiligen Person) und der Gesamt-Punktzahl - admin-only
-         *     (Rollenmodell-Entscheidung: keine neue Rolle, User.is_admin schaltet
-         *     frei).
+         * @description Geschaeftsfuehrer-/Teamleiter-Ansicht: eine Zeile pro Mitarbeiter mit
+         *     den 6 KPI-Stufen-Ist-Werten (gleiche Zahlen wie im eigenen Cockpit der
+         *     jeweiligen Person) und der Gesamt-Punktzahl. Admins sehen alle, Teamleiter
+         *     ihr Team (process_owner_scope), Mitarbeiter bekommen 403.
          */
         get: operations["get_team_kpis_api_v1_team_kpis_get"];
         put?: never;
@@ -2400,6 +2399,29 @@ export interface paths {
          *     UserBriefRead.
          */
         get: operations["list_assignable_users_api_v1_users_assignable_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/scope": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Scope Users
+         * @description Nutzer im eigenen Sichtbereich (process_owner_scope): Admin alle,
+         *     Teamleiter sie selbst + Team, Mitarbeiter nur sie selbst. Grundlage fuer
+         *     Nutzerfilter in Analytics und Kalender - dort duerfen nur diese gewaehlt
+         *     werden (der Server ignoriert andere ohnehin).
+         */
+        get: operations["list_scope_users_api_v1_users_scope_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -12785,6 +12807,37 @@ export interface operations {
         };
     };
     list_assignable_users_api_v1_users_assignable_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserBriefRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_scope_users_api_v1_users_scope_get: {
         parameters: {
             query?: never;
             header?: {

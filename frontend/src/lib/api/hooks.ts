@@ -6,6 +6,7 @@ import {
   getAdminUsers,
   getAppSettings,
   getAssignableUsers,
+  getScopeUsers,
   getAuditLogs,
   getCalendarEvents,
   getClients,
@@ -171,6 +172,11 @@ export function invalidateAdminUsersCache() {
  * Aufgabe (siehe candidate-/client-/submission-create-modal.tsx). */
 export function useAssignableUsersCache() {
   return useSWR<DataResult<UserBrief[]>>("/users/assignable", getAssignableUsers, swrConfig);
+}
+
+/** Nutzer im eigenen Sichtbereich fuer Filter (Analytics, Kalender). */
+export function useScopeUsersCache(enabled = true) {
+  return useSWR<DataResult<UserBrief[]>>(enabled ? "/users/scope" : null, getScopeUsers, swrConfig);
 }
 
 /** Analytics-Seite mit neuem Mehrfach-Nutzerfilter (Nutzer-Vorgabe:

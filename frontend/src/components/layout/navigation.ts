@@ -20,6 +20,8 @@ export const primaryNavigation: {
   href: string;
   icon: typeof LayoutDashboard;
   adminOnly?: boolean;
+  /** Auch fuer Teamleiter sichtbar (Server begrenzt auf das Team). */
+  teamLeadToo?: boolean;
 }[] = [
   { label: "Übersicht", href: "/", icon: LayoutDashboard },
   // Eigener "Reaktivierung"-Menuepunkt entfernt (Phase L.2): der
@@ -39,7 +41,7 @@ export const primaryNavigation: {
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   // Nur fuer Admins sichtbar (siehe sidebar.tsx) - gleiche Sichtbarkeits-
   // logik wie der Administration-Block in einstellungen/page.tsx.
-  { label: "Geschäftsführung", href: "/geschaeftsfuehrung", icon: Trophy, adminOnly: true },
+  { label: "Geschäftsführung", href: "/geschaeftsfuehrung", icon: Trophy, adminOnly: true, teamLeadToo: true },
   { label: "Freigaben", href: "/freigaben", icon: ClipboardCheck, adminOnly: true },
 ];
 
