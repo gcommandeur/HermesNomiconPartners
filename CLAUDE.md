@@ -42,7 +42,7 @@ corepack pnpm dev
 
 ## Workflow
 
-Der lokale Rechner ist reine Entwicklungs- und Testumgebung: erst lokal testen, dann nach GitHub pushen (`https://github.com/gcommandeur/hermescrm.git`, Branch `main`), von wo aus die Anwendung über DigitalOcean online läuft. GitHub ist die maßgebliche Quelle — die lokale Kopie braucht keine zusätzliche Sicherung.
+Der lokale Rechner ist reine Entwicklungs- und Testumgebung: erst lokal testen, dann nach GitHub pushen (`https://github.com/gcommandeur/hermescrm.git`). **Gearbeitet wird auf dem Branch `entwicklung`, nicht auf `main`** (Details in `docs/PROJEKT_STAND.md`). `main` wird nur per Pull Request aktualisiert, nach grüner CI und Freigabe des Nutzers; von `main` aus läuft die Anwendung über DigitalOcean online. GitHub ist die maßgebliche Quelle — die lokale Kopie braucht keine zusätzliche Sicherung.
 
 Ausführliche Doku: `README.md`, `backend/README.md`, `frontend/README.md`, `docs/CC_CRM_AUDIT_REPORT.md`.
 
@@ -55,7 +55,7 @@ Hermes ist ein Recruiting-CRM fuer Steuer-/Rechts-Kanzleien: Kandidaten, Kanzlei
 - Wichtige Fachbereiche: `candidates`, `clients` (Kanzleien), `submissions` + `recruiting` (Prozesse mit Stufen qualification_call -> cv_in -> cv_out -> interview -> offer -> placement, dazu Feedback/Interview/Offer/Placement/Fee), `approvals` + `invoices` (Freigabe-Inbox, Rechnungsstatus), `notes`, `sourcing` (Verzeichnis-/Team-Seiten-Suche mit Umkreis), `geo` (PLZ-Koordinaten, Umkreissuche), `mail_*`, `kpi_scoring`, `operational` (Cockpit/Uebersicht).
 - Auth: Login mit Passwort + E-Mail-2FA-Code; `api/dependencies.py` hat `CurrentUser`, `AdminUser` und die Zugriffsgrenzen (siehe unten).
 - Tests: `backend/tests/` (pytest, SQLite im Speicher, Fixture `client` = angemeldeter Nicht-Admin). Pruefen mit `ruff check src tests`, `mypy src`, `pytest`.
-- Migrationen: `backend/alembic/versions/`, aktueller Head `d2f5a8b1c6e4` (Prozess-Sharing; vor Merge von PR #1 noch `c9a1d4e7f2b3`). Neue Migration immer auf einer KOPIE der lokalen DB per upgrade -> downgrade -> upgrade pruefen.
+- Migrationen: `backend/alembic/versions/`, aktueller Head `d2f5a8b1c6e4` (Prozess-Sharing). Neue Migration immer auf einer KOPIE der lokalen DB per upgrade -> downgrade -> upgrade pruefen.
 
 **Frontend** (`frontend/`, Next.js 15 App Router, TypeScript, Tailwind, pnpm):
 - Seiten in `frontend/src/app/*` (z.B. `kandidaten`, `kanzleien`, `prozesse`, `sourcing`, `freigaben`, `geschaeftsfuehrung`, `einstellungen/*`), Komponenten in `src/components/crm/*`, API-Zugriff in `src/lib/api/` (`queries.ts`, `hooks.ts` mit SWR, `types.ts`). Browser-Aufrufe laufen ueber `/api/proxy/...`, das den Login-Cookie serverseitig anhaengt.
@@ -83,9 +83,8 @@ Hermes ist ein Recruiting-CRM fuer Steuer-/Rechts-Kanzleien: Kandidaten, Kanzlei
 ## Cloud-/Handy-Workflow
 
 Der Nutzer arbeitet auch rein vom Handy ueber Claude-Code-Cloud-Sitzungen. Dafuer gilt:
-- Cloud-Sitzungen arbeiten auf einem eigenen Branch `claude/...`, **nie direkt auf `main`** (`main` deployt automatisch nach DigitalOcean). Ablauf: umsetzen, Pruefbefehle in der Sitzung ausfuehren (`pytest`, `ruff check`, `mypy`, `pnpm lint/typecheck/build`), Branch pushen, Pull Request anlegen, CI-Ergebnis abwarten. Den Merge nach `main` macht der Nutzer (z.B. in der GitHub-App) oder die Sitzung nur auf ausdrueckliche Anweisung.
+- Cloud- und Laptop-Sitzungen arbeiten beide auf dem Branch `entwicklung`, **nie direkt auf `main`** (`main` deployt automatisch nach DigitalOcean; Pushes darauf sind in `.claude/settings.json` gesperrt). Ablauf: `git fetch`, `git pull --rebase origin entwicklung`, `docs/PROJEKT_STAND.md` lesen, umsetzen, Pruefbefehle ausfuehren (`pytest`, `ruff check`, `mypy`, `pnpm lint/typecheck/build`), Protokoll in `docs/PROJEKT_STAND.md` ergaenzen, auf `entwicklung` pushen, CI-Ergebnis abwarten. Den Merge nach `main` (Pull Request `entwicklung` -> `main`) macht eine Sitzung nur auf ausdrueckliche Anweisung des Nutzers.
 - `.claude/settings.json` erlaubt die Pruefbefehle und das Pushen von `claude/*`-Branches ohne Rueckfrage; Force-Push, `reset --hard` und `branch -D` sind gesperrt. Der Start-Hook `.claude/hooks/cloud-setup.sh` installiert die Abhaengigkeiten (nur in der Cloud).
-- Am Laptop laufende (lokale) Sitzungen pushen weiterhin direkt auf `main`, wie unter "Workflow" oben beschrieben.
 - Parallel arbeiten Cloud und Laptop an derselben Stelle: vorher `git fetch` und `origin/main` mergen; bei Migrationen vor dem Commit `alembic heads` pruefen (es darf nur EINEN Head geben).
 - Nur am Laptop moeglich: Produktions-Skripte, DigitalOcean-Konsole, Klicktests mit echtem Login.
 
@@ -93,6 +92,6 @@ Der Nutzer arbeitet auch rein vom Handy ueber Claude-Code-Cloud-Sitzungen. Dafue
 
 Laptop- und Cloud-Sitzungen sehen die Gespraeche der jeweils anderen NICHT. Der gemeinsame Stand lebt in **`docs/PROJEKT_STAND.md`** (offene Punkte, Entscheidungen, Stolperfallen, Protokoll).
 
-- **Vor jeder Aufgabe:** `docs/PROJEKT_STAND.md` lesen, `git fetch` und `origin/main` einbeziehen.
-- **Nach jeder Aufgabe, im selben Commit:** Protokoll-Eintrag (Datum, Laptop/Cloud, was, Commits, was NICHT geprueft wurde), offene Punkte und neue Entscheidungen/Stolperfallen pflegen. Ohne aktualisierte Datei ist eine Aufgabe nicht fertig.
+- **Vor jeder Aufgabe:** `git fetch`, `git pull --rebase origin entwicklung`, dann `docs/PROJEKT_STAND.md` lesen.
+- **Nach jeder Aufgabe, im selben Commit:** Protokoll-Eintrag (Datum, Laptop/Cloud, was, Commits, was NICHT geprueft wurde, `Gemeldet:` = was dem Nutzer mitgeteilt wurde), offene Punkte und neue Entscheidungen/Stolperfallen pflegen. Ohne aktualisierte Datei ist eine Aufgabe nicht fertig.
 - Nichts Geheimes eintragen.
