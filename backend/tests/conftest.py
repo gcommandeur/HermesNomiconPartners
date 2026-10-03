@@ -1,6 +1,11 @@
 import os
 from collections.abc import Generator
 
+# VOR dem Import der App: der TestClient fuehrt den Lifespan aus - ein mitlaufender
+# Worker-Thread wuerde parallel auf der geteilten Test-Verbindung arbeiten (Flackern).
+# Tests arbeiten Jobs gezielt per tests/jobs.py::drain_jobs ab.
+os.environ.setdefault("CC_CRM_EMBEDDED_WORKER", "false")
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event, text

@@ -5,6 +5,7 @@ from cc_crm.api.v1.activities import router as activities_router
 from cc_crm.api.v1.approvals import router as approvals_router
 from cc_crm.api.v1.audit_logs import router as audit_logs_router
 from cc_crm.api.v1.auth import router as auth_router
+from cc_crm.api.v1.background_jobs import router as background_jobs_router
 from cc_crm.api.v1.calendar_events import router as calendar_events_router
 from cc_crm.api.v1.calendar_feed import router as calendar_feed_router
 from cc_crm.api.v1.candidates import router as candidates_router
@@ -33,6 +34,7 @@ from cc_crm.api.v1.submissions import router as submissions_router
 from cc_crm.api.v1.system import router as system_router
 from cc_crm.api.v1.tasks import router as tasks_router
 from cc_crm.api.v1.users import router as users_router
+from cc_crm.api.v1.webhooks import router as webhooks_router
 
 api_router = APIRouter()
 api_router.include_router(system_router, tags=["system"])
@@ -50,6 +52,8 @@ api_router.include_router(mail_accounts_public_router, tags=["mail-accounts-oaut
 api_router.include_router(microsoft_login_router, tags=["auth-microsoft"])
 
 protected_router = APIRouter(dependencies=[Depends(get_current_user)])
+protected_router.include_router(background_jobs_router, tags=["background-jobs"])
+protected_router.include_router(webhooks_router, tags=["webhooks"])
 protected_router.include_router(calendar_events_router, tags=["calendar-events"])
 protected_router.include_router(candidates_router, tags=["candidates"])
 protected_router.include_router(clients_router, tags=["clients"])

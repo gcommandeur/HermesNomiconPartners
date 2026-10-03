@@ -150,6 +150,12 @@ export default function EinstellungenPage() {
               <Link href="/einstellungen/sequenzen">
                 <Button size="sm" variant="outline">Outreach-Sequenzen öffnen</Button>
               </Link>
+              <Link href="/einstellungen/webhooks">
+                <Button size="sm" variant="outline">Webhooks öffnen</Button>
+              </Link>
+              <Link href="/einstellungen/jobs">
+                <Button size="sm" variant="outline">Hintergrundjobs öffnen</Button>
+              </Link>
             </div>
           </CollapsibleSection>
         )}

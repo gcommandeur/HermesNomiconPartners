@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, OutreachSequence, SequenceEnrollment, SequenceStepInput, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, BackgroundJob, WebhookDelivery, WebhookEndpoint, WebhookEndpointWithSecret, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, OutreachSequence, SequenceEnrollment, SequenceStepInput, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -653,4 +653,49 @@ export async function getOpenSourcingLeads() {
     source: pending.source,
     error: pending.error,
   };
+}
+
+/** Hintergrundjobs (nur Admin): Ansicht und erneutes Anstoßen fehlgeschlagener Jobs. */
+export async function getBackgroundJobs(status?: string) {
+  return apiGet<BackgroundJob[]>(`/background-jobs${status ? `?status=${status}` : ""}`, []);
+}
+
+export async function retryBackgroundJob(jobId: string) {
+  return apiPost<BackgroundJob>(`/background-jobs/${jobId}/retry`, {});
+}
+
+/** Ausgehende Webhooks (nur Admin). Das Geheimnis kommt nur bei Anlage/Erneuerung zurück. */
+export async function getWebhooks() {
+  return apiGet<WebhookEndpoint[]>("/webhooks", []);
+}
+
+export async function createWebhook(payload: { name: string; url: string; event_types: string[] }) {
+  return apiPost<WebhookEndpointWithSecret>("/webhooks", payload);
+}
+
+export async function updateWebhook(
+  webhookId: string,
+  payload: { name?: string; url?: string; event_types?: string[]; is_active?: boolean },
+) {
+  return apiPatch<WebhookEndpoint>(`/webhooks/${webhookId}`, payload);
+}
+
+export async function rotateWebhookSecret(webhookId: string) {
+  return apiPost<WebhookEndpointWithSecret>(`/webhooks/${webhookId}/rotate-secret`, {});
+}
+
+export async function deleteWebhook(webhookId: string) {
+  return apiDelete(`/webhooks/${webhookId}`);
+}
+
+export async function getWebhookDeliveries(webhookId: string) {
+  return apiGet<WebhookDelivery[]>(`/webhooks/${webhookId}/deliveries`, []);
+}
+
+export async function sendWebhookTest(webhookId: string) {
+  return apiPost<WebhookDelivery>(`/webhooks/${webhookId}/test`, {});
+}
+
+export async function retryWebhookDelivery(deliveryId: string) {
+  return apiPost<WebhookDelivery>(`/webhooks/deliveries/${deliveryId}/retry`, {});
 }

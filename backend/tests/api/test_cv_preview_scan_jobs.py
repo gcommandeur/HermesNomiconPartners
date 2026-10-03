@@ -2,8 +2,8 @@
 status="processing", Ergebnis per GET /cv-preview/{job_id}), alles andere
 inline wie bisher. Plus: .doc wird im Upload klar abgelehnt.
 
-Der TestClient fuehrt FastAPI-BackgroundTasks noch vor der Rueckkehr des
-POST aus - der anschliessende GET sieht deshalb bereits den Endstatus."""
+Die Auswertung laeuft als Job der Warteschlange; die Tests arbeiten ihn mit
+drain_jobs() ab (in der App macht das der Worker)."""
 
 import json
 from collections.abc import Generator
@@ -28,6 +28,7 @@ from tests.cv_document_fixtures import (
     make_scanned_pdf,
     make_text_pdf,
 )
+from tests.jobs import drain_jobs
 
 _DOC_MIME = "application/msword"
 
@@ -61,7 +62,7 @@ def _post(client: TestClient, filename: str, content: bytes, mime: str) -> Any:
 
 
 def test_scanned_pdf_returns_processing_immediately_then_result_can_be_fetched(
-    client: TestClient, _wire: dict[str, int]
+    client: TestClient, session_factory: sessionmaker[Session], _wire: dict[str, int]
 ) -> None:
     response = _post(client, "scan.pdf", make_scanned_pdf(5), "application/pdf")
 
@@ -71,6 +72,10 @@ def test_scanned_pdf_returns_processing_immediately_then_result_can_be_fetched(
     assert started["job_id"]
     assert started["first_name"] is None  # noch nichts ausgewertet zurueckgegeben
 
+    assert client.get(f"/api/v1/candidates/cv-preview/{started['job_id']}").json()["status"] == (
+        "processing"
+    )
+    drain_jobs(session_factory)
     result = client.get(f"/api/v1/candidates/cv-preview/{started['job_id']}")
     assert result.status_code == 200
     body = result.json()
@@ -83,7 +88,7 @@ def test_scanned_pdf_returns_processing_immediately_then_result_can_be_fetched(
 
 
 def test_failed_background_extraction_reports_failed_with_reason(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     def failing(**_: Any) -> str:
         raise AIProviderError("credit balance is too low")
@@ -91,6 +96,7 @@ def test_failed_background_extraction_reports_failed_with_reason(
     monkeypatch.setattr(cv_extraction, "generate_text_with_images", failing)
 
     started = _post(client, "scan.pdf", make_scanned_pdf(2), "application/pdf").json()
+    drain_jobs(session_factory)
     body = client.get(f"/api/v1/candidates/cv-preview/{started['job_id']}").json()
 
     assert body["status"] == "failed"

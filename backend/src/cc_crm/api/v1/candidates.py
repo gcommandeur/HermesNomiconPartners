@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, BackgroundTasks, File, Query, Response, UploadFile, status
+from fastapi import APIRouter, File, Query, Response, UploadFile, status
 
 from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
 from cc_crm.api.v1.operational import (
@@ -45,8 +45,8 @@ from cc_crm.services.cv_extraction import (
 from cc_crm.services.cv_extraction_jobs import (
     create_job,
     get_job_for_user,
-    run_scan_job_in_background,
 )
+from cc_crm.services.job_queue import enqueue
 from cc_crm.services.operational import DocumentService
 from cc_crm.services.recruiting import RecruitingProcessService
 from cc_crm.services.storage import read_document_bytes
@@ -149,7 +149,6 @@ def create_candidate(
 @router.post("/cv-preview", response_model=CvPreviewResponse)
 async def preview_cv_fields(
     file: Annotated[UploadFile, File()],
-    background_tasks: BackgroundTasks,
     session: DatabaseSession,
     current_user: CurrentUser,
 ) -> CvPreviewResponse:
@@ -175,7 +174,13 @@ async def preview_cv_fields(
     kind = classify_cv_source(filename, content, cv_text)
     if kind is CvSourceKind.SCANNED_PDF:
         job = create_job(session, current_user.id)
-        background_tasks.add_task(run_scan_job_in_background, job.id, filename, content)
+        enqueue(
+            session,
+            "cv.scan",
+            {"job_id": str(job.id), "filename": filename},
+            blob=content,
+            max_attempts=1,
+        )
         return CvPreviewResponse(status="processing", job_id=job.id)
     extracted = extract_candidate_fields(
         cv_text, filename=filename, content=content, source_kind=kind
