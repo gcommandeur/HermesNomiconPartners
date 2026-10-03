@@ -26,6 +26,7 @@ from cc_crm.api.v1.operational import router as operational_router
 from cc_crm.api.v1.profile_generator import router as profile_generator_router
 from cc_crm.api.v1.recruiting import router as recruiting_router
 from cc_crm.api.v1.region_modifiers import router as region_modifiers_router
+from cc_crm.api.v1.sequences import router as sequences_router
 from cc_crm.api.v1.sourcing import router as sourcing_router
 from cc_crm.api.v1.submissions import router as submissions_router
 from cc_crm.api.v1.system import router as system_router
@@ -69,6 +70,7 @@ protected_router.include_router(notes_router, tags=["notes"])
 protected_router.include_router(operational_router, tags=["operations"])
 protected_router.include_router(recruiting_router, tags=["recruiting-process"])
 protected_router.include_router(region_modifiers_router, tags=["region-modifiers"])
+protected_router.include_router(sequences_router, tags=["outreach-sequences"])
 protected_router.include_router(mailing_groups_router, tags=["mailing-groups"])
 protected_router.include_router(users_router, tags=["users"])
 protected_router.include_router(audit_logs_router, tags=["audit-logs"])

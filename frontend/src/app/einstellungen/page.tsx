@@ -147,6 +147,9 @@ export default function EinstellungenPage() {
               <Link href="/einstellungen/kpi-punkte">
                 <Button size="sm" variant="outline">KPI-Punkte öffnen</Button>
               </Link>
+              <Link href="/einstellungen/sequenzen">
+                <Button size="sm" variant="outline">Outreach-Sequenzen öffnen</Button>
+              </Link>
             </div>
           </CollapsibleSection>
         )}

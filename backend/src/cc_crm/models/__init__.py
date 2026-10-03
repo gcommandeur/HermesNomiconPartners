@@ -19,6 +19,7 @@ from cc_crm.models.mail import MailAccount, MailMessage
 from cc_crm.models.mailing_group import MailingGroup
 from cc_crm.models.note import Note
 from cc_crm.models.operational import Document, EmailDraftLog, SourcingMetric
+from cc_crm.models.outreach import OutreachSequence, OutreachSequenceStep, SequenceEnrollment
 from cc_crm.models.postal_locality import PostalLocality
 from cc_crm.models.rate_limit_attempt import RateLimitAttempt
 from cc_crm.models.recruiting import (
@@ -66,12 +67,15 @@ __all__ = [
     "MailMessage",
     "MailingGroup",
     "Note",
+    "OutreachSequence",
+    "OutreachSequenceStep",
     "Offer",
     "Placement",
     "PostalLocality",
     "RateLimitAttempt",
     "RegionModifier",
     "SubmissionFeedback",
+    "SequenceEnrollment",
     "SourcingLead",
     "SourcingMetric",
     "SourcingRun",

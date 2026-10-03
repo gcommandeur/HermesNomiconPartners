@@ -254,6 +254,29 @@ zweite App-Platform-Komponente vom Typ **Scheduled Job**:
 Die Mail zählt wie jeder Versand zum Tageslimit des Absenderpostfachs
 (`daily_send_limit`) und erscheint als ausgehende Mail ohne Kandidatenbezug.
 
+**Täglicher Lauf der Outreach-Sequenzen**: `backend/scripts/run_outreach_sequences.py`
+führt für jede laufende Einschreibung (Einstellungen → Outreach-Sequenzen,
+Einschreiben am Kandidaten) den fälligen Schritt aus: E-Mail-Schritte werden
+im Namen der zuständigen Person versendet (persönliches Standard-Postfach,
+sonst das globale), alle anderen Kanäle (LinkedIn/Telefon/Sonstiges) legen
+einen Task für sie an. Antwortet der Kandidat (eingehende E-Mail oder
+LinkedIn-Aktivität seit dem Start), pausiert die Einschreibung automatisch.
+Pro Einschreibung läuft höchstens ein Schritt pro Kalendertag, ein zweiter
+Aufruf am selben Tag ist unschädlich. Nicht ausführbare Schritte (Kandidat ohne
+E-Mail-Adresse oder ohne erfasste Einwilligung) beenden die Einschreibung und
+erzeugen einen Task; vorübergehende Probleme (kein Sendekonto, Tageslimit,
+Transportfehler) lassen sie aktiv, der nächste Lauf versucht es erneut. Exit-Code
+1 bei mindestens einem Fehler. Einrichtung als weitere **Scheduled Job**-Komponente:
+
+- Kommando: `python scripts/run_outreach_sequences.py`
+- Zeitplan: einmal täglich, z.B. `15 5 * * *` (UTC; 07:15 MESZ / 06:15 MEZ) -
+  bewusst nach der Fälligkeits-Mail.
+- Dieselben Variablen wie `graph-sync-job`.
+
+Bekannte Grenze: Versand und Fortschritt lassen sich nicht atomar speichern;
+bricht der Job exakt zwischen erfolgreichem Versand und Speichern ab, würde der
+Schritt beim nächsten Lauf noch einmal versendet.
+
 ## Umgebungsvariablen (Frontend-Komponente `hermescrm-frontend`)
 
 - `NEXT_PUBLIC_CC_CRM_API_URL=https://hermescrm-v9sle.ondigitalocean.app/api/v1`
