@@ -369,6 +369,31 @@ Muster wie `candidate.*` oder `*`) benachrichtigt werden.
   Zustellungen werden 6-mal mit wachsendem Abstand versucht, danach "aufgegeben" (per Knopf neu senden).
 - Verarbeitete Outbox-Zeilen werden nach 14 Tagen gelöscht.
 
+## Outlook & Teams (ein Klick, alles verbunden)
+
+"Mit Microsoft anmelden" verbindet jetzt gleichzeitig das **eigene** Postfach und den Kalender
+(`CC_CRM_MS_LOGIN_CONNECTS_MAILBOX=true`, Standard). Danach gehen Mails aus dem eigenen Postfach raus
+(wird automatisch Standard-Absender, sofern die Adresse zur CRM-Adresse passt), Termine werden mit
+Outlook abgeglichen, und bei Interviews/Terminen kann der Kandidat per Outlook eingeladen werden
+(optional mit Teams-Link). Outlook verschickt die Einladung selbst; interne Notizen gehen nie mit.
+
+**Einmalig in Entra ID (App-Registrierung)** – das kann nur ein Admin des Microsoft-Mandanten:
+1. *API-Berechtigungen → Microsoft Graph → Delegierte Berechtigungen*: `offline_access`, `User.Read`,
+   `Mail.Send`, `Mail.ReadWrite`, `Calendars.ReadWrite`. Für den Teams-Link ist **keine** zusätzliche
+   Berechtigung nötig.
+2. **"Administratorzustimmung erteilen"** für den Mandanten. Ohne sie scheitert die Anmeldung mit einer
+   Microsoft-Fehlermeldung. Notbremse: `CC_CRM_MS_LOGIN_CONNECTS_MAILBOX=false` – dann meldet der Login
+   nur noch an (Passwort-Login funktioniert immer).
+3. *Authentifizierung → Redirect-URIs*: `https://hermescrm-v9sle.ondigitalocean.app/api/v1/auth/microsoft/callback`
+   (Login) und die bestehende URI des Postfach-Connects (`…/mail-accounts/oauth/callback`).
+4. Unterstützte Kontotypen: **nur dieser Mandant** (Tenant-ID ist bereits gesetzt).
+
+Sicherheit: nur delegierte Rechte – jede Person erreicht ausschließlich das eigene Postfach/den eigenen
+Kalender. Das Refresh-Token liegt verschlüsselt (`CC_CRM_MAIL_CREDENTIALS_ENCRYPTION_KEY`), nie im Log.
+Unter Einstellungen → "Outlook & Teams" sieht jede Person den Status und kann die Verbindung trennen; ein
+abgelaufener Zugang zeigt oben einen Hinweis zum Neuverbinden. Eingeladen wird nur, wenn der Haken
+gesetzt ist; jede gesendete Einladung steht im Audit-Log (`calendar_event.invite_sent`).
+
 ## Umgebungsvariablen (Frontend-Komponente `hermescrm-frontend`)
 
 - `NEXT_PUBLIC_CC_CRM_API_URL=https://hermescrm-v9sle.ondigitalocean.app/api/v1`

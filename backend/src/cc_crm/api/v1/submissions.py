@@ -19,7 +19,7 @@ from cc_crm.schemas.recruiting import (
     FeedbackCreate,
     FeedbackRead,
     FeedbackUpdate,
-    InterviewCreate,
+    InterviewCreateRequest,
     InterviewRead,
     InterviewUpdate,
     OfferCreate,
@@ -308,7 +308,7 @@ def list_interviews(submission_id: uuid.UUID, session: DatabaseSession) -> list[
 )
 def create_interview(
     submission_id: uuid.UUID,
-    payload: InterviewCreate,
+    payload: InterviewCreateRequest,
     session: DatabaseSession,
     current_user: CurrentUser,
 ) -> InterviewRead:

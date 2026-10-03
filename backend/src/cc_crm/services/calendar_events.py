@@ -10,9 +10,14 @@ from cc_crm.models.calendar_event import CalendarEvent
 from cc_crm.models.enums import CalendarEventType
 from cc_crm.models.user import User
 from cc_crm.repositories.calendar_events import CalendarEventRepository
+from cc_crm.repositories.recruiting import AuditLogRepository
 from cc_crm.schemas.calendar_event import CalendarEventCreate, CalendarEventUpdate
 from cc_crm.services.base import CrudService
-from cc_crm.services.calendar_graph_sync import push_delete_to_graph
+from cc_crm.services.calendar_graph_sync import (
+    has_connected_account,
+    push_delete_to_graph,
+    push_event_now,
+)
 
 # Prod-Vorfall 2026-09-28: ein Termin mit end_at VOR start_at wurde vom
 # Microsoft-Graph-Push dauerhaft mit 400 abgelehnt und liess den Kalender-Sync
@@ -24,6 +29,16 @@ from cc_crm.services.calendar_graph_sync import push_delete_to_graph
 # das abgelehnt statt es stillschweigend zu korrigieren, damit der Nutzer die
 # Diskrepanz bewusst sieht (Nutzer-Vorgabe).
 MINIMUM_EVENT_DURATION_MINUTES = 30
+
+
+def default_invite_message(first_name: str, client_name: str | None, when: datetime) -> str:
+    """Standard-Einladungstext an Kandidaten (statt interner Notizen)."""
+    where = f" mit {client_name}" if client_name else ""
+    return (
+        f"Hallo {first_name},\n\nhiermit lade ich Sie zum Vorstellungsgespraech{where} ein "
+        f"({when:%d.%m.%Y, %H:%M} Uhr). Den Link zum Online-Termin finden Sie in dieser "
+        "Einladung.\n\nBei Rueckfragen melden Sie sich gern."
+    )
 
 
 def apply_minimum_duration(start_at: datetime, end_at: datetime | None) -> datetime:
@@ -92,9 +107,39 @@ class CalendarEventService(CrudService[CalendarEvent, CalendarEventCreate, Calen
         values["owner_user_id"] = owner_user_id
         values["created_by_user_id"] = current_user.id
         values["end_at"] = apply_minimum_duration(payload.start_at, payload.end_at)
+        if payload.attendee_email:
+            self._require_outlook_for_invite(owner_user_id)
+        elif payload.online_meeting:
+            raise BusinessRuleError("Ein Teams-Link braucht einen eingeladenen Teilnehmer.")
         entity = self.repository.create(values)
         self.session.commit()
+        if entity.attendee_email:
+            self.push_invite(entity, current_user)
         return entity
+
+    def _require_outlook_for_invite(self, owner_user_id: uuid.UUID) -> None:
+        if not has_connected_account(self.session, owner_user_id):
+            raise BusinessRuleError(
+                "Einladungen laufen ueber Outlook: bitte zuerst mit Microsoft anmelden "
+                "(Postfach verbinden)."
+            )
+
+    def push_invite(self, event: CalendarEvent, current_user: User | None) -> bool:
+        """Schickt den Termin sofort nach Outlook (dabei geht die Einladung raus)
+        und protokolliert das. False, wenn Outlook gerade nicht erreichbar war -
+        der Zeitplan-Lauf holt es dann nach."""
+        pushed = push_event_now(self.session, event)
+        AuditLogRepository(self.session).create(
+            {
+                "entity_type": "calendar_event",
+                "entity_id": event.id,
+                "action": "invite_sent" if pushed else "invite_pending",
+                "changed_by": current_user.email if current_user else None,
+                "new_values": {"online_meeting": event.online_meeting},
+            }
+        )
+        self.session.commit()
+        return pushed
 
     def get_for_user(self, event_id: uuid.UUID, current_user: User) -> CalendarEvent:
         event = self.get(event_id)
@@ -117,8 +162,22 @@ class CalendarEventService(CrudService[CalendarEvent, CalendarEventCreate, Calen
             merged_start_at = values.get("start_at", event.start_at)
             merged_end_at = values.get("end_at", event.end_at)
             values["end_at"] = apply_minimum_duration(merged_start_at, merged_end_at)
+        if "attendee_email" in values:
+            if not values["attendee_email"] and event.attendee_email:
+                raise BusinessRuleError(
+                    "Ein eingeladener Teilnehmer kann nicht entfernt werden - bitte den "
+                    "Termin loeschen (Outlook verschickt dann eine Absage) und neu anlegen."
+                )
+            if values["attendee_email"]:
+                self._require_outlook_for_invite(event.owner_user_id)
+        if values.get("online_meeting") and not (
+            values.get("attendee_email") or event.attendee_email
+        ):
+            raise BusinessRuleError("Ein Teams-Link braucht einen eingeladenen Teilnehmer.")
         updated = self.repository.update(event, values)
         self.session.commit()
+        if updated.attendee_email:
+            self.push_invite(updated, current_user)
         return updated
 
     def delete_for_user(self, event_id: uuid.UUID, current_user: User) -> None:

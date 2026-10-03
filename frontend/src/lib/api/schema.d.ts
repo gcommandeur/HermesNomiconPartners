@@ -1561,6 +1561,44 @@ export interface paths {
         patch: operations["update_mailing_group_api_v1_mailing_groups__group_id__patch"];
         trace?: never;
     };
+    "/api/v1/me/outlook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Outlook Status */
+        get: operations["outlook_status_api_v1_me_outlook_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/outlook/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Disconnect Outlook
+         * @description Trennt NUR die eigene Verbindung: Token wird geloescht, das Postfach
+         *     inaktiv gesetzt (bereits abgerufene Mails bleiben erhalten).
+         */
+        post: operations["disconnect_outlook_api_v1_me_outlook_disconnect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notes": {
         parameters: {
             query?: never;
@@ -2837,6 +2875,10 @@ export interface components {
         };
         /** CalendarEventCreate */
         CalendarEventCreate: {
+            /** Attendee Email */
+            attendee_email?: string | null;
+            /** Attendee Name */
+            attendee_name?: string | null;
             /** Candidate Id */
             candidate_id?: string | null;
             /** Candidate Submission Id */
@@ -2847,10 +2889,17 @@ export interface components {
             end_at?: string | null;
             /** @default other */
             event_type: components["schemas"]["CalendarEventType"];
+            /** Invite Message */
+            invite_message?: string | null;
             /** Location */
             location?: string | null;
             /** Notes */
             notes?: string | null;
+            /**
+             * Online Meeting
+             * @default false
+             */
+            online_meeting: boolean;
             /** Owner User Id */
             owner_user_id?: string | null;
             /**
@@ -2868,6 +2917,12 @@ export interface components {
         };
         /** CalendarEventRead */
         CalendarEventRead: {
+            /** Attendee Email */
+            attendee_email?: string | null;
+            /** Attendee Name */
+            attendee_name?: string | null;
+            /** Attendee Response */
+            attendee_response?: string | null;
             /** Candidate Id */
             candidate_id?: string | null;
             /** Candidate Submission Id */
@@ -2893,10 +2948,19 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Invite Message */
+            invite_message?: string | null;
             /** Location */
             location?: string | null;
             /** Notes */
             notes?: string | null;
+            /**
+             * Online Meeting
+             * @default false
+             */
+            online_meeting: boolean;
+            /** Online Meeting Url */
+            online_meeting_url?: string | null;
             /**
              * Owner User Id
              * Format: uuid
@@ -2932,6 +2996,10 @@ export interface components {
         CalendarEventType: "interview" | "quali_call" | "other";
         /** CalendarEventUpdate */
         CalendarEventUpdate: {
+            /** Attendee Email */
+            attendee_email?: string | null;
+            /** Attendee Name */
+            attendee_name?: string | null;
             /** Candidate Id */
             candidate_id?: string | null;
             /** Candidate Submission Id */
@@ -2941,10 +3009,14 @@ export interface components {
             /** End At */
             end_at?: string | null;
             event_type?: components["schemas"]["CalendarEventType"] | null;
+            /** Invite Message */
+            invite_message?: string | null;
             /** Location */
             location?: string | null;
             /** Notes */
             notes?: string | null;
+            /** Online Meeting */
+            online_meeting?: boolean | null;
             /** Reminder Minutes Before */
             reminder_minutes_before?: number | null;
             /** Start At */
@@ -4898,10 +4970,22 @@ export interface components {
             /** Row Number */
             row_number: number;
         };
-        /** InterviewCreate */
-        InterviewCreate: {
+        /**
+         * InterviewCreateRequest
+         * @description Body von POST /submissions/{id}/interviews: zusaetzlich zum Interview die
+         *     Einladung des Kandidaten per Outlook (steuern nur den Kalendertermin, werden
+         *     nicht am Interview gespeichert).
+         */
+        InterviewCreateRequest: {
             /** Interview Type */
             interview_type: string;
+            /**
+             * Invite Candidate
+             * @default false
+             */
+            invite_candidate: boolean;
+            /** Invite Message */
+            invite_message?: string | null;
             /** Location Or Link */
             location_or_link?: string | null;
             /** Notes */
@@ -4915,6 +4999,11 @@ export interface components {
             scheduled_at: string;
             /** @default scheduled */
             status: components["schemas"]["InterviewStatus"];
+            /**
+             * Teams Meeting
+             * @default false
+             */
+            teams_meeting: boolean;
         };
         /** InterviewRead */
         InterviewRead: {
@@ -5770,6 +5859,16 @@ export interface components {
             start_date?: string | null;
             /** Variable Compensation */
             variable_compensation?: number | string | null;
+        };
+        /** OutlookStatus */
+        OutlookStatus: {
+            /** Address */
+            address?: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "not_connected" | "connected" | "needs_reconnect";
         };
         /** Page[CandidateRead] */
         Page_CandidateRead_: {
@@ -10373,6 +10472,66 @@ export interface operations {
             };
         };
     };
+    outlook_status_api_v1_me_outlook_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutlookStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disconnect_outlook_api_v1_me_outlook_disconnect_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_notes_api_v1_notes_get: {
         parameters: {
             query?: {
@@ -11768,7 +11927,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["InterviewCreate"];
+                "application/json": components["schemas"]["InterviewCreateRequest"];
             };
         };
         responses: {

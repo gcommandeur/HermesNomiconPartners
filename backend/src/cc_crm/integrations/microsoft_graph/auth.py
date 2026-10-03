@@ -141,7 +141,11 @@ def exchange_code_for_tokens(
 
 
 def build_login_authorization_url(
-    *, redirect_uri: str, state: str, settings: Settings | None = None
+    *,
+    redirect_uri: str,
+    state: str,
+    settings: Settings | None = None,
+    scopes: str = LOGIN_SCOPES,
 ) -> str:
     """Autorisierungs-URL fuer den reinen Anmelde-Flow (LOGIN_SCOPES, eigene
     Redirect-URI) - bewusst getrennt von build_authorization_url oben."""
@@ -151,7 +155,7 @@ def build_login_authorization_url(
         "response_type": "code",
         "redirect_uri": redirect_uri,
         "response_mode": "query",
-        "scope": LOGIN_SCOPES,
+        "scope": scopes,
         "state": state,
         # Microsoft-Kontoauswahl immer zeigen: ohne das meldet ein im Browser
         # schon angemeldetes Microsoft-Konto ungefragt das "falsche" Konto an.
@@ -177,6 +181,23 @@ def exchange_code_for_login(
         require_refresh_token=False,
     )
     return tokens.access_token
+
+
+def exchange_code_for_login_tokens(
+    *, code: str, redirect_uri: str, settings: Settings | None = None
+) -> GraphTokens:
+    """Wie exchange_code_for_login, aber fuer den Anmelde-Flow MIT Postfach-/
+    Kalender-Rechten (GRAPH_SCOPES): liefert auch das Refresh-Token."""
+    settings = _require_settings(settings)
+    return _token_request(
+        {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "scope": GRAPH_SCOPES,
+        },
+        settings,
+    )
 
 
 class GraphReauthRequiredError(GraphAuthError):

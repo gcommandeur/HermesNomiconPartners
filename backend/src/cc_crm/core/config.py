@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     ms_graph_client_id: str | None = None
     ms_graph_tenant_id: str | None = None
     ms_graph_client_secret: str | None = None
+    # "Mit Microsoft anmelden" verbindet gleichzeitig das eigene Postfach/den Kalender
+    # (Mail senden, Termine mit Teams-Link). Braucht die Graph-Rechte in Entra ID
+    # (Admin-Zustimmung). Bei Problemen auf false stellen: dann meldet der Login nur an.
+    ms_login_connects_mailbox: bool = True
     # Name des Session-Cookies, den das Frontend liest (frontend/src/lib/api/
     # client.ts::AUTH_COOKIE_NAME) - der Microsoft-SSO-Callback laeuft im
     # Backend und setzt ihn selbst, siehe api/v1/microsoft_login.py.

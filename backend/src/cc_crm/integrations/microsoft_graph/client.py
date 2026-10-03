@@ -199,6 +199,10 @@ class GraphEvent:
     end_at: datetime | None
     location: str | None
     last_modified_at: datetime
+    # Nur bei Terminen mit Teilnehmer/Teams-Besprechung gesetzt.
+    attendee_response: str | None = None
+    online_meeting_url: str | None = None
+    has_attendees: bool = False
 
 
 @dataclass
@@ -280,12 +284,29 @@ def fetch_calendar_delta(
                     end_at=_parse_graph_event_datetime(end.get("dateTime"), end.get("timeZone")),
                     location=(item.get("location") or {}).get("displayName"),
                     last_modified_at=_parse_graph_datetime(item.get("lastModifiedDateTime")),
+                    attendee_response=_first_attendee_response(item),
+                    online_meeting_url=_online_meeting_url(item),
+                    has_attendees=bool(item.get("attendees")),
                 )
             )
         url = body.get("@odata.nextLink")
         if body.get("@odata.deltaLink"):
             result.delta_link = body["@odata.deltaLink"]
     return result
+
+
+def _first_attendee_response(item: dict[str, Any]) -> str | None:
+    attendees = item.get("attendees") or []
+    if not attendees:
+        return None
+    response = ((attendees[0].get("status") or {}).get("response")) or "none"
+    return "accepted" if response == "organizer" else str(response)
+
+
+def _online_meeting_url(item: dict[str, Any]) -> str | None:
+    meeting = item.get("onlineMeeting") or {}
+    url = meeting.get("joinUrl") or item.get("onlineMeetingUrl")
+    return str(url) if url else None
 
 
 def _naive_isoformat(value: datetime) -> str:
@@ -314,15 +335,27 @@ def _event_payload(
     start_at: datetime,
     end_at: datetime | None,
     location: str | None,
+    attendees: list[tuple[str, str | None]] | None = None,
+    online_meeting: bool = False,
 ) -> dict[str, object]:
     effective_end = end_at or start_at
-    return {
+    payload: dict[str, object] = {
         "subject": title,
         "body": {"contentType": "Text", "content": body_text or ""},
         "start": {"dateTime": _naive_isoformat(start_at), "timeZone": "Europe/Berlin"},
         "end": {"dateTime": _naive_isoformat(effective_end), "timeZone": "Europe/Berlin"},
         "location": {"displayName": location} if location else None,
     }
+    if attendees:
+        # Outlook verschickt die Einladung (bzw. das Update) selbst an diese Adressen.
+        payload["attendees"] = [
+            {"emailAddress": {"address": address, "name": name or address}, "type": "required"}
+            for address, name in attendees
+        ]
+    if online_meeting:
+        payload["isOnlineMeeting"] = True
+        payload["onlineMeetingProvider"] = "teamsForBusiness"
+    return payload
 
 
 def create_event(
@@ -333,14 +366,24 @@ def create_event(
     start_at: datetime,
     end_at: datetime | None,
     location: str | None,
+    attendees: list[tuple[str, str | None]] | None = None,
+    online_meeting: bool = False,
 ) -> str:
     """Legt ein neues Event im Standardkalender an, gibt dessen Graph-ID
-    zurueck (fuer CalendarEvent.external_graph_event_id)."""
+    zurueck (fuer CalendarEvent.external_graph_event_id). Mit `attendees`
+    verschickt Outlook die Einladung; mit `online_meeting` entsteht ein
+    Teams-Link (siehe fetch_join_url)."""
     response = httpx.post(
         f"{_GRAPH_ROOT}/me/calendar/events",
         headers=_headers(access_token),
         json=_event_payload(
-            title=title, body_text=body_text, start_at=start_at, end_at=end_at, location=location
+            title=title,
+            body_text=body_text,
+            start_at=start_at,
+            end_at=end_at,
+            location=location,
+            attendees=attendees,
+            online_meeting=online_meeting,
         ),
         timeout=30,
     )
@@ -358,16 +401,30 @@ def update_event(
     start_at: datetime,
     end_at: datetime | None,
     location: str | None,
+    attendees: list[tuple[str, str | None]] | None = None,
+    online_meeting: bool = False,
 ) -> None:
     response = httpx.patch(
         f"{_GRAPH_ROOT}/me/calendar/events/{graph_event_id}",
         headers=_headers(access_token),
         json=_event_payload(
-            title=title, body_text=body_text, start_at=start_at, end_at=end_at, location=location
+            title=title,
+            body_text=body_text,
+            start_at=start_at,
+            end_at=end_at,
+            location=location,
+            attendees=attendees,
+            online_meeting=online_meeting,
         ),
         timeout=30,
     )
     _raise_for_status(response, "update event")
+
+
+def fetch_join_url(access_token: str, *, graph_event_id: str) -> str | None:
+    """Teams-Beitrittslink eines Events (None, wenn keiner existiert)."""
+    raw = get_event_raw(access_token, graph_event_id=graph_event_id)
+    return _online_meeting_url(raw) if raw else None
 
 
 def delete_event(access_token: str, *, graph_event_id: str) -> None:

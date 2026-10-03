@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cc_crm.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -93,3 +93,18 @@ class CalendarEvent(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # erst eine ECHTE, spaetere Aenderung laesst updated_at > local_last_
     # synced_at wieder wahr werden.
     local_last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Einladung (Outlook/Teams): ein externer Teilnehmer (z.B. der Kandidat).
+    # Outlook verschickt die Einladung selbst, sobald der Termin mit Teilnehmer
+    # nach Graph gepusht wird. WICHTIG: an Outlook geht dann NUR invite_message
+    # als Text, nie `notes` (interne Notizen) - siehe services/calendar_graph_sync.py.
+    attendee_email: Mapped[str | None] = mapped_column(String(320))
+    attendee_name: Mapped[str | None] = mapped_column(String(240))
+    invite_message: Mapped[str | None] = mapped_column(Text)
+    # Teams-Besprechung anlegen lassen; der Link kommt von Graph zurueck.
+    online_meeting: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
+    online_meeting_url: Mapped[str | None] = mapped_column(String(1000))
+    # Antwort des Teilnehmers laut Outlook: none | accepted | declined | tentative.
+    attendee_response: Mapped[str | None] = mapped_column(String(20))

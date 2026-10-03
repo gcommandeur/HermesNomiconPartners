@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, BackgroundJob, CustomFieldDefinition, CustomFieldEntity, CustomFieldValue, WebhookDelivery, WebhookEndpoint, WebhookEndpointWithSecret, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, OutreachSequence, SequenceEnrollment, SequenceStepInput, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, OutlookStatus, BackgroundJob, CustomFieldDefinition, CustomFieldEntity, CustomFieldValue, WebhookDelivery, WebhookEndpoint, WebhookEndpointWithSecret, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, OutreachSequence, SequenceEnrollment, SequenceStepInput, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -741,4 +741,13 @@ export async function saveCustomFieldValues(
     `/${CUSTOM_FIELD_PATHS[entityType]}/${entityId}`,
     { custom_fields: values },
   );
+}
+
+/** Eigene Outlook-Verbindung (Status, Trennen). Verbunden wird beim Microsoft-Login. */
+export async function getOutlookStatus() {
+  return apiGet<OutlookStatus>("/me/outlook", { state: "not_connected", address: null });
+}
+
+export async function disconnectOutlook() {
+  return apiPost<void>("/me/outlook/disconnect", {});
 }

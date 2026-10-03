@@ -55,6 +55,17 @@ class InterviewCreate(BaseModel):
     notes: str | None = None
 
 
+class InterviewCreateRequest(InterviewCreate):
+    """Body von POST /submissions/{id}/interviews: zusaetzlich zum Interview die
+    Einladung des Kandidaten per Outlook (steuern nur den Kalendertermin, werden
+    nicht am Interview gespeichert)."""
+
+    invite_candidate: bool = False
+    teams_meeting: bool = False
+    # Kandidatenfreundlicher Einladungstext - NICHT die internen Notizen.
+    invite_message: str | None = None
+
+
 class InterviewRead(InterviewCreate, EntityRead):
     submission_id: uuid.UUID
 

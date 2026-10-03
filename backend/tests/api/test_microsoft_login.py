@@ -38,6 +38,9 @@ def _settings(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
     monkeypatch.setenv("CC_CRM_MS_GRAPH_TENANT_ID", "tenant-id")
     monkeypatch.setenv("CC_CRM_MS_GRAPH_CLIENT_SECRET", "secret")
     monkeypatch.setenv("CC_CRM_CORS_ORIGINS", f'["{ORIGIN}"]')
+    # Diese Datei testet den reinen Anmelde-Flow; das gleichzeitige Verbinden des
+    # Postfachs steht in test_microsoft_login_connect.py.
+    monkeypatch.setenv("CC_CRM_MS_LOGIN_CONNECTS_MAILBOX", "false")
     yield
     get_settings.cache_clear()
 

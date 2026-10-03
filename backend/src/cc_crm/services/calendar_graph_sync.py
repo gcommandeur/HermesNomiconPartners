@@ -24,6 +24,7 @@ from cc_crm.integrations.microsoft_graph.client import (
     create_event,
     delete_event,
     fetch_calendar_delta,
+    fetch_join_url,
     update_event,
 )
 from cc_crm.models.calendar_event import CalendarEvent
@@ -80,6 +81,65 @@ def sync_account_calendar(session: Session, account: MailAccount) -> None:
     _pull_graph_changes(session, access_token, account)
 
 
+def _invite_fields(event: CalendarEvent) -> dict[str, object]:
+    """Teilnehmer/Teams-Optionen eines Termins. Mit Teilnehmer geht NUR der
+    Einladungstext an Outlook - NIE `notes` (interne Notizen, der Kandidat
+    saehe sie sonst in der Einladung)."""
+    if not event.attendee_email:
+        return {"body_text": event.notes, "attendees": None, "online_meeting": False}
+    return {
+        "body_text": event.invite_message or f"Einladung: {event.title}",
+        "attendees": [(event.attendee_email, event.attendee_name)],
+        "online_meeting": event.online_meeting,
+    }
+
+
+def _push_one(
+    session: Session, access_token: str, event: CalendarEvent, *, force: bool = False
+) -> None:
+    """Pusht einen einzelnen Termin (neu anlegen oder, wenn lokal geaendert -
+    bzw. mit force -, aktualisieren). Fehler werden vom Aufrufer behandelt."""
+    invite = _invite_fields(event)
+    if event.external_graph_event_id is None:
+        graph_id = create_event(
+            access_token,
+            title=event.title,
+            start_at=event.start_at,
+            end_at=event.end_at,
+            location=event.location,
+            **invite,  # type: ignore[arg-type]
+        )
+        event.external_graph_event_id = graph_id
+        event.local_last_synced_at = func.now()
+        if event.attendee_email and event.online_meeting:
+            event.online_meeting_url = fetch_join_url(access_token, graph_event_id=graph_id)
+    elif (
+        force
+        or event.local_last_synced_at is None
+        or naive_utc(event.updated_at) > naive_utc(event.local_last_synced_at)
+    ):
+        # Nur pushen, wenn die CRM-Seite seit dem letzten Abgleich
+        # tatsaechlich geaendert wurde - sonst wuerde jeder Lauf
+        # jedes Event erneut ueberschreiben, auch ohne Aenderung.
+        # Vergleich bewusst gegen local_last_synced_at (eigene Uhr),
+        # NICHT gegen external_graph_last_synced_at (Graph-Uhr) - das
+        # war der Phantom-Push-Bug, siehe Kommentar am Modellfeld.
+        update_event(
+            access_token,
+            graph_event_id=event.external_graph_event_id,
+            title=event.title,
+            start_at=event.start_at,
+            end_at=event.end_at,
+            location=event.location,
+            **invite,  # type: ignore[arg-type]
+        )
+        event.local_last_synced_at = func.now()
+        if event.attendee_email and event.online_meeting and not event.online_meeting_url:
+            event.online_meeting_url = fetch_join_url(
+                access_token, graph_event_id=event.external_graph_event_id
+            )
+
+
 def _push_local_changes(session: Session, access_token: str, account: MailAccount) -> None:
     events = session.scalars(
         select(CalendarEvent).where(
@@ -88,41 +148,36 @@ def _push_local_changes(session: Session, access_token: str, account: MailAccoun
     ).all()
     for event in events:
         try:
-            if event.external_graph_event_id is None:
-                graph_id = create_event(
-                    access_token,
-                    title=event.title,
-                    body_text=event.notes,
-                    start_at=event.start_at,
-                    end_at=event.end_at,
-                    location=event.location,
-                )
-                event.external_graph_event_id = graph_id
-                event.local_last_synced_at = func.now()
-            elif event.local_last_synced_at is None or naive_utc(event.updated_at) > naive_utc(
-                event.local_last_synced_at
-            ):
-                # Nur pushen, wenn die CRM-Seite seit dem letzten Abgleich
-                # tatsaechlich geaendert wurde - sonst wuerde jeder Lauf
-                # jedes Event erneut ueberschreiben, auch ohne Aenderung.
-                # Vergleich bewusst gegen local_last_synced_at (eigene Uhr),
-                # NICHT gegen external_graph_last_synced_at (Graph-Uhr) - das
-                # war der Phantom-Push-Bug, siehe Kommentar am Modellfeld.
-                update_event(
-                    access_token,
-                    graph_event_id=event.external_graph_event_id,
-                    title=event.title,
-                    body_text=event.notes,
-                    start_at=event.start_at,
-                    end_at=event.end_at,
-                    location=event.location,
-                )
-                event.local_last_synced_at = func.now()
+            _push_one(session, access_token, event)
         except GraphApiError:
             logger.warning(
                 "Push von CalendarEvent %s nach Graph fehlgeschlagen", event.id, exc_info=True
             )
     session.commit()
+
+
+def push_event_now(session: Session, event: CalendarEvent) -> bool:
+    """Sofort-Push eines einzelnen Termins (z.B. damit eine Einladung direkt
+    beim Speichern rausgeht statt erst beim naechsten Zeitplan-Lauf). Best
+    effort: True bei Erfolg, False wenn der Besitzer kein verbundenes
+    Microsoft-Postfach hat oder Graph fehlschlaegt (wird geloggt; der
+    Zeitplan-Lauf versucht es spaeter erneut)."""
+    account = _account_for_user(session, event.owner_user_id)
+    if account is None:
+        return False
+    try:
+        access_token = get_valid_access_token(session, account)
+        _push_one(session, access_token, event, force=True)
+        session.commit()
+    except Exception:  # noqa: BLE001 - Speichern im CRM darf daran nie scheitern
+        session.rollback()
+        logger.warning("Sofort-Push von Termin %s fehlgeschlagen", event.id, exc_info=True)
+        return False
+    return True
+
+
+def has_connected_account(session: Session, user_id: object) -> bool:
+    return _account_for_user(session, user_id) is not None
 
 
 def _pull_graph_changes(session: Session, access_token: str, account: MailAccount) -> None:
@@ -176,8 +231,16 @@ def _pull_graph_changes(session: Session, access_token: str, account: MailAccoun
             event.title = graph_event.subject
             event.start_at = graph_event.start_at
             event.end_at = graph_event.end_at
-            event.notes = graph_event.body_text
-            event.location = graph_event.location
+            if not event.attendee_email:
+                # Bei Terminen mit Einladung ist der Outlook-Text der EINLADUNGSTEXT -
+                # er darf die internen Notizen nicht ueberschreiben (und der Ort
+                # "Microsoft Teams-Besprechung" nicht den eigenen Ort).
+                event.notes = graph_event.body_text
+                event.location = graph_event.location
+            else:
+                event.attendee_response = graph_event.attendee_response
+                if graph_event.online_meeting_url:
+                    event.online_meeting_url = graph_event.online_meeting_url
             event.external_graph_last_synced_at = graph_event.last_modified_at
             # Siehe Kommentar oben/am Modellfeld: verhindert, dass diese
             # Pull-Aenderung beim naechsten Lauf als "lokale Aenderung"

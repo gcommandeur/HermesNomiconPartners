@@ -65,7 +65,18 @@ interface FormState {
   candidate_submission_id: string;
   reminder_minutes_before: string;
   owner_user_id: string;
+  attendee_email: string;
+  attendee_name: string;
+  invite_message: string;
+  online_meeting: boolean;
 }
+
+const RESPONSE_LABELS: Record<string, string> = {
+  accepted: "zugesagt",
+  declined: "abgesagt",
+  tentative: "vorläufig zugesagt",
+  none: "noch keine Antwort",
+};
 
 function emptyForm(defaultStart: string, ownerUserId: string): FormState {
   return {
@@ -80,6 +91,10 @@ function emptyForm(defaultStart: string, ownerUserId: string): FormState {
     candidate_submission_id: "",
     reminder_minutes_before: "30",
     owner_user_id: ownerUserId,
+    attendee_email: "",
+    attendee_name: "",
+    invite_message: "",
+    online_meeting: false,
   };
 }
 
@@ -119,6 +134,10 @@ export function CalendarEventModal({
           candidate_submission_id: event.candidate_submission_id ?? "",
           reminder_minutes_before: String(event.reminder_minutes_before),
           owner_user_id: event.owner_user_id,
+          attendee_email: event.attendee_email ?? "",
+          attendee_name: event.attendee_name ?? "",
+          invite_message: event.invite_message ?? "",
+          online_meeting: event.online_meeting ?? false,
         }
       : emptyForm(defaultStart ?? "", currentUserId),
   );
@@ -192,6 +211,15 @@ export function CalendarEventModal({
         candidate_submission_id: form.candidate_submission_id || null,
         reminder_minutes_before: Number(form.reminder_minutes_before) || 0,
         ...(isAdmin ? { owner_user_id: form.owner_user_id || currentUserId } : {}),
+        // Einladung: bei bestehendem Teilnehmer kann dieser nicht entfernt werden (Backend).
+        ...(form.attendee_email.trim()
+          ? {
+              attendee_email: form.attendee_email.trim(),
+              attendee_name: form.attendee_name.trim() || null,
+              invite_message: form.invite_message.trim() || null,
+              online_meeting: form.online_meeting,
+            }
+          : {}),
       };
 
       if (event) {
@@ -364,6 +392,65 @@ export function CalendarEventModal({
         <div>
           <label className={labelClass}>Notiz (optional)</label>
           <textarea className={textareaClass} value={form.notes} onChange={(e) => set("notes", e.target.value)} />
+        </div>
+
+        <div className="space-y-3 rounded-lg border border-white/10 p-3">
+          <p className="text-xs font-semibold text-[#F8FAFC]">Einladung per Outlook (optional)</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className={labelClass}>E-Mail des Eingeladenen</label>
+              <Input
+                type="email"
+                disabled={Boolean(event?.attendee_email)}
+                value={form.attendee_email}
+                onChange={(e) => set("attendee_email", e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Name</label>
+              <Input
+                disabled={Boolean(event?.attendee_email)}
+                value={form.attendee_name}
+                onChange={(e) => set("attendee_name", e.target.value)}
+              />
+            </div>
+          </div>
+          {form.attendee_email.trim() && (
+            <>
+              <label className="flex items-center gap-2 text-sm text-[#F8FAFC]">
+                <input
+                  type="checkbox"
+                  checked={form.online_meeting}
+                  onChange={(e) => set("online_meeting", e.target.checked)}
+                />
+                Teams-Link erzeugen
+              </label>
+              <div>
+                <label className={labelClass}>Einladungstext (sieht der Eingeladene – die Notiz oben bleibt intern)</label>
+                <textarea
+                  className={textareaClass}
+                  value={form.invite_message}
+                  onChange={(e) => set("invite_message", e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-[#94A3B8]">
+                Beim Speichern geht die Einladung sofort aus deinem Outlook raus (Voraussetzung: Microsoft-Anmeldung).
+              </p>
+            </>
+          )}
+          {event?.attendee_email && (
+            <p className="text-xs text-[#94A3B8]">
+              Antwort: {RESPONSE_LABELS[event.attendee_response ?? "none"] ?? event.attendee_response}
+              {event.online_meeting_url && (
+                <>
+                  {" · "}
+                  <a href={event.online_meeting_url} target="_blank" rel="noreferrer" className="text-[#7FB2E5] underline">
+                    Teams-Link öffnen
+                  </a>
+                </>
+              )}
+            </p>
+          )}
         </div>
 
         <ErrorBanner message={error} />
