@@ -90,9 +90,9 @@ Der Nutzer arbeitet auch rein vom Handy ueber Claude-Code-Cloud-Sitzungen. Dafue
 
 ## Gemeinsamer Projektstand (PFLICHT)
 
-Laptop- und Cloud-Sitzungen sehen die Gespraeche der jeweils anderen NICHT. Der gemeinsame Stand lebt in **`docs/PROJEKT_STAND.md`** (offene Punkte, Entscheidungen, Stolperfallen, Protokoll).
+Laptop- und Cloud-Sitzungen sehen die Gespraeche der jeweils anderen NICHT. Der gemeinsame Stand lebt in **`docs/PROJEKT_STAND.md`** (kurz: Regeln, offene Punkte, Entscheidungen, Stolperfallen). Die Historie steht in **`docs/PROTOKOLL.md`** (neueste zuerst), Entscheidungen im Detail in `docs/ENTSCHEIDUNGEN.md`, erledigte Plaene in `docs/ARCHIV_PLAENE.md`.
 
-- **Vor jeder Aufgabe:** `git fetch`, `git pull --rebase origin entwicklung`, dann `docs/PROJEKT_STAND.md` lesen.
-- **Nach jeder Aufgabe, im selben Commit:** Protokoll-Eintrag (Datum, Laptop/Cloud, was, Commits, was NICHT geprueft wurde, `Gemeldet:` = was dem Nutzer mitgeteilt wurde), offene Punkte und neue Entscheidungen/Stolperfallen pflegen. Ohne aktualisierte Datei ist eine Aufgabe nicht fertig.
+- **Vor jeder Aufgabe:** `git fetch`, `git pull --rebase origin entwicklung`, dann `docs/PROJEKT_STAND.md` lesen. `docs/PROTOKOLL.md` nur bei Bedarf und nur die ersten ca. 100 Zeilen (die Datei ist gross).
+- **Nach jeder Aufgabe, im selben Commit:** neuer Protokoll-Eintrag OBEN in `docs/PROTOKOLL.md` (Datum, Laptop/Cloud, was, Commits, was NICHT geprueft wurde, `Gemeldet:` = was dem Nutzer mitgeteilt wurde); in `docs/PROJEKT_STAND.md` nur offene Punkte und neue Entscheidungen/Stolperfallen pflegen (kurz halten, Ziel unter ca. 12 KB). Ohne aktualisierte Datei ist eine Aufgabe nicht fertig.
 - **Lokaler Branch `main` = `entwicklung` (Regel des Nutzers vom 2026-10-04, gilt ohne Rueckfrage):** Nach jeder Aufgabe, nach dem Push auf `entwicklung`, setzt die Sitzung den LOKALEN Branch `main` auf `entwicklung` (`git branch -f main entwicklung`, ohne den Branch auszuchecken). Das ist rein lokal und deployt nichts. **Ausdruecklich NICHT von der Regel gedeckt:** `origin/main` (GitHub, deployt nach DigitalOcean) - dorthin geht weiterhin nur mit dem gruenen Licht des Nutzers per Pull Request.
 - Nichts Geheimes eintragen.
