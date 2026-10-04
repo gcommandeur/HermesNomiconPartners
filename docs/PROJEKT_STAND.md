@@ -24,6 +24,10 @@ Weitere Dateien: `PROTOKOLL.md` (jede erledigte Aufgabe, neueste zuerst; nur bei
 
 Ziel des Nutzers: moeglichst alles vom Handy aus erledigen koennen.
 
+## Uebergabe an die Cloud (2026-10-04, Laptop hoert auf)
+
+Stand: `entwicklung` = `ec5e838` plus dieser Commit, **CI gruen** (backend SQLite 1274 bestanden/32 uebersprungen, backend-postgres 1306 bestanden/0 uebersprungen, frontend). `origin/main` steht auf `192497c` und ist NICHT nachgezogen - alle Review-Nachbesserungen (Punkte 1-9) liegen nur auf `entwicklung`, Merge nach `main` nur mit gruenem Licht. Weiterarbeiten: erst `PROTOKOLL.md` (oberste ca. 15 Eintraege), dann die Liste "Offen (Claude)" unten. Die Kopie `HermesNomiconPartners` liegt nur auf dem Laptop des Nutzers - nicht anfassen. Lehre: Tests, die nur auf Postgres laufen, erst nach gruener CI als fertig melden.
+
 ## Offene Punkte
 
 **Wartet auf den Nutzer (nie von Claude):**
