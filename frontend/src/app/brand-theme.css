@@ -38,10 +38,10 @@
   /* Flaechen (hell) */
   --background: #faf9f6;
   --surface: #ffffff;
-  --surface-muted: #f3f1ec;
+  --surface-muted: #eef1f6; /* Navy-Schattierung statt Creme */
   --surface-elevated: #ffffff;
-  --surface-hover: #ebe8e1;
-  --sidebar: #f3f1ec; /* in Hermes auch als vertiefter Eingabe-Grund genutzt */
+  --surface-hover: #e3e8f0;
+  --sidebar: #eef1f6; /* in Hermes auch als vertiefter Eingabe-Grund genutzt */
 
   /* Schrift */
   --foreground: #001c4a;
@@ -56,7 +56,7 @@
   /* Linien und Akzent */
   --border: rgba(0, 28, 74, 0.14);
   --accent: #001c4a;
-  --accent-soft: #e7eaf1;
+  --accent-soft: #e1e7f1;
   --accent-light: #34507f;
   --accent-strong: #1b3a73;
 
@@ -208,7 +208,7 @@ aside .text-\[\#5F6B7A\], nav.fixed .text-\[\#5F6B7A\] { color: #9aa3b5; }
 .hover\:bg-\[\#7F1D1D\]\/60:hover { background-color: rgba(179, 38, 30, 0.18); }
 .text-red-100 { color: #8e1b14; }
 .bg-\[\#334155\] { background-color: #c5cbd8; }
-.bg-\[\#e8e9e8\] { background-color: #ebe8e1; }
+.bg-\[\#e8e9e8\] { background-color: #e3e8f0; }
 .bg-\[\#020711\]\/80 { background-color: rgba(0, 28, 74, 0.55); }
 .text-\[\#F5D68A\] { color: #7a5200; }
 .text-\[\#8FB4E3\], .text-\[\#7FB2E5\] { color: var(--accent-light); }
