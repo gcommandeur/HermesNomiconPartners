@@ -35,11 +35,11 @@ Ziel des Nutzers: moeglichst alles vom Handy aus erledigen koennen.
 - Kopie `HermesNomiconPartners`: lokal ca. 20 Commits vor GitHub, bewusst nicht gepusht; Freigabe zum Pushen offen.
 
 **Offen (Claude):**
-1. Review-Nachbesserungen vom 2026-10-04 (siehe `PROTOKOLL.md` oben): Microsoft-Login haerten (`ms_oid`, Gaeste, Tenant), OAuth-Registrierung Rate-Limit, Prozesse ohne Owner, Zugriffstest, Postgres-Tests, MCP-Whitelist, Webhook-DNS-Rebinding, DSGVO-Inventur.
+1. Review-Nachbesserungen vom 2026-10-04 sind umgesetzt (Punkte 1-9, Einzelheiten im `PROTOKOLL.md`). Offen daraus: Entscheidung zu `short_profile` (siehe oben), ob/wie die DSGVO-Luecken geschlossen werden, und die echte Microsoft-/Claude-Anbindung live pruefen.
 2. Nachmessung bei 200.000 Kandidaten: `scripts/perf_bench.py` laeuft nur auf Postgres (`CC_CRM_DATABASE_URL=...bench... python scripts/perf_bench.py --candidates 200000 --clients 2000 --submissions 20000 --report ../docs/PERFORMANCE.md`).
 3. Start-Hook in einer frischen Cloud-Sitzung gegenpruefen (manuell ok, Start ungetestet).
 4. Nicht live im Browser geprueft: Teamleiter-Verwaltung, Freigabe-Inbox, Rechnungen, Sourcing-Umkreis, Kandidaten-Timeline, Prozess-Sperren mit echten Logins, "Geteilt mit" (auch Migration auf Postgres-Kopie).
-5. DSGVO-Anonymisierung vervollstaendigen (nach der Inventur, Nutzer entscheidet).
+5. DSGVO-Anonymisierung vervollstaendigen: Inventur steht in `docs/DSGVO_INVENTUR.md` (groesste Luecken: `cv_extraction_raw`, liegen gebliebener CV in fehlgeschlagenen Scan-Jobs, Notizen/Mails/Termine); der Nutzer entscheidet, ob und wie.
 6. Typ-Abweichungen Frontend/Backend (`frontend/src/lib/api/schema-conformance.ts`, behobene Eintraege streichen).
 7. Kopie: Mail-Texte mit Firmenbezug (`mail_sync.py`, `due_reminders.py`) pruefen, Briefkopf-Vorlage der Kopie ersetzen.
 8. Optional: Browser-Tests (Playwright, Demo-Modus). Kleinigkeiten: Quick-Log auf Kandidat mit offenem Kollegen-Prozess fuehrt dessen Prozess weiter (bewusst); Aktivitaet "Prozess angelegt" hat keinen Autor.
@@ -60,7 +60,8 @@ Ziel des Nutzers: moeglichst alles vom Handy aus erledigen koennen.
 - Mandanten: kein Mandantenmodell; zweite Firma = eigene Kopie. Groessenordnung bis ca. 200.000 Kandidaten / 50+ Nutzer.
 - Sequenzen nur mit Einwilligung (`consent_received`). Claude-Schnittstelle (MCP) standardmaessig AUS, nur lesen plus Vorschlaege mit Freigabe, Kommunikation sendet immer ein Mensch; MCP-Schluessel (`scope=mcp`) gelten nur fuer `/api/v1/mcp`.
 - Microsoft-Login: nur bestehende aktive Nutzer, nie automatisch anlegen, SSO ohne 2FA.
-- Prozesse ohne Owner sind fuer Nicht-Admins unsichtbar (Teamleiter: ihr Team, Admin: alle).
+- Prozesse ohne Owner sind fuer Nicht-Admins unsichtbar (Teamleiter: ihr Team, Admin: alle); neue Prozesse brauchen einen Owner (Service erzwingt es), Admin sieht Altfaelle unter `/prozesse/ohne-verantwortlichen` und weist zu.
+- Microsoft-Login bindet beim ersten Login die unveraenderliche Kennung (`users.ms_oid`), lehnt Gaeste ab und bleibt bei Multi-Tenant-Konfiguration (`common` usw.) deaktiviert; Admin kann die Bindung loesen.
 
 ## Stolperfallen
 
