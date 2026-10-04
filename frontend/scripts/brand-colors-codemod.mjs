@@ -23,7 +23,9 @@ import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
-const css = readFileSync(join(root, "src/app/globals.css"), "utf8");
+const css =
+  readFileSync(join(root, "src/app/brand-theme.css"), "utf8") +
+  readFileSync(join(root, "src/app/globals.css"), "utf8");
 
 // Variablen: --name: #hex;  und  --color-brand-x: var(--name);
 const hexByVar = new Map();
@@ -52,7 +54,7 @@ function collect(paths) {
         if (name === "node_modules" || name === ".next") continue;
         visit(join(p, name));
       }
-    } else if (/\.(tsx|ts|css)$/.test(p) && !/(schema\.d\.ts|openapi)/.test(p) && !p.endsWith("globals.css")) {
+    } else if (/\.(tsx|ts|css)$/.test(p) && !/(schema\.d\.ts|openapi)/.test(p) && !p.endsWith("globals.css") && !p.endsWith("brand-theme.css")) {
       out.push(p);
     }
   };
