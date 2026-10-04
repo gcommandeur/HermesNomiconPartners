@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from cc_crm.api.dependencies import get_current_user
 from cc_crm.api.v1.activities import router as activities_router
+from cc_crm.api.v1.ai_proposals import router as ai_proposals_router
 from cc_crm.api.v1.approvals import router as approvals_router
 from cc_crm.api.v1.audit_logs import router as audit_logs_router
 from cc_crm.api.v1.auth import router as auth_router
@@ -24,9 +25,12 @@ from cc_crm.api.v1.mailing_groups import router as mailing_groups_router
 from cc_crm.api.v1.matching import router as matching_router
 from cc_crm.api.v1.mcp import router as mcp_router
 from cc_crm.api.v1.microsoft_login import public_router as microsoft_login_router
+from cc_crm.api.v1.my_mail_accounts import router as my_mail_accounts_router
 from cc_crm.api.v1.my_outlook import router as my_outlook_router
 from cc_crm.api.v1.nl_search import router as nl_search_router
 from cc_crm.api.v1.notes import router as notes_router
+from cc_crm.api.v1.oauth import public_router as oauth_public_router
+from cc_crm.api.v1.oauth import router as oauth_router
 from cc_crm.api.v1.operational import router as operational_router
 from cc_crm.api.v1.profile_generator import router as profile_generator_router
 from cc_crm.api.v1.recruiting import router as recruiting_router
@@ -53,12 +57,20 @@ api_router.include_router(calendar_feed_router, tags=["calendar-feed"])
 # protected_router und lieferte 401 statt den OAuth-Flow abzuschliessen.
 api_router.include_router(mail_accounts_public_router, tags=["mail-accounts-oauth-callback"])
 api_router.include_router(microsoft_login_router, tags=["auth-microsoft"])
+# Hermes als OAuth-Anbieter fuer Claude (Q4): Metadaten/Registrierung/Token sind
+# oeffentlich (Claude hat noch keinen Hermes-Login), alles hinter CC_CRM_AI_ENABLED.
+api_router.include_router(oauth_public_router, tags=["oauth"])
+# /mcp prueft selbst (API-Key ODER OAuth-Token) und antwortet ohne Anmeldung mit 401 +
+# Verweis auf die OAuth-Metadaten.
+api_router.include_router(mcp_router, tags=["mcp"])
 
 protected_router = APIRouter(dependencies=[Depends(get_current_user)])
-protected_router.include_router(mcp_router, tags=["mcp"])
 protected_router.include_router(background_jobs_router, tags=["background-jobs"])
 protected_router.include_router(webhooks_router, tags=["webhooks"])
 protected_router.include_router(my_outlook_router, tags=["outlook"])
+protected_router.include_router(oauth_router, tags=["oauth"])
+protected_router.include_router(ai_proposals_router, tags=["ai-proposals"])
+protected_router.include_router(my_mail_accounts_router, tags=["my-mail-accounts"])
 protected_router.include_router(custom_fields_router, tags=["custom-fields"])
 protected_router.include_router(calendar_events_router, tags=["calendar-events"])
 protected_router.include_router(candidates_router, tags=["candidates"])

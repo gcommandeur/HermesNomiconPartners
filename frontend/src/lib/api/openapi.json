@@ -246,6 +246,239 @@
         "title": "ActivityUpdate",
         "type": "object"
       },
+      "AiProposalApprove": {
+        "description": "Freigabe; mit `payload` wird der Vorschlag vorher bearbeitet uebernommen.",
+        "properties": {
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          }
+        },
+        "title": "AiProposalApprove",
+        "type": "object"
+      },
+      "AiProposalRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Name"
+          },
+          "created_by_user_id": {
+            "format": "uuid",
+            "title": "Created By User Id",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By User Id"
+          },
+          "decision_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Note"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "note",
+              "task",
+              "mail_draft"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "recipient_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Email"
+          },
+          "result_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Entity Id"
+          },
+          "result_entity_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Entity Type"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "target_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Label"
+          },
+          "target_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "candidate",
+                  "client",
+                  "contact"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Type"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "target_type",
+          "target_id",
+          "payload",
+          "created_by_user_id",
+          "decided_by_user_id",
+          "decided_at",
+          "decision_note",
+          "result_entity_type",
+          "result_entity_id",
+          "created_at"
+        ],
+        "title": "AiProposalRead",
+        "type": "object"
+      },
+      "AiProposalReject": {
+        "properties": {
+          "decision_note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Note"
+          }
+        },
+        "title": "AiProposalReject",
+        "type": "object"
+      },
+      "AiProposalSummary": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "enabled",
+          "pending"
+        ],
+        "title": "AiProposalSummary",
+        "type": "object"
+      },
       "AnonymousProfileResponse": {
         "properties": {
           "profile_text": {
@@ -664,6 +897,68 @@
           "file"
         ],
         "title": "Body_preview_cv_fields_api_v1_candidates_cv_preview_post",
+        "type": "object"
+      },
+      "Body_token_api_v1_oauth_token_post": {
+        "properties": {
+          "client_id": {
+            "title": "Client Id",
+            "type": "string"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "code_verifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code Verifier"
+          },
+          "grant_type": {
+            "title": "Grant Type",
+            "type": "string"
+          },
+          "redirect_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redirect Uri"
+          },
+          "refresh_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Token"
+          }
+        },
+        "required": [
+          "grant_type",
+          "client_id"
+        ],
+        "title": "Body_token_api_v1_oauth_token_post",
         "type": "object"
       },
       "Body_upload_document_api_v1_documents_upload_post": {
@@ -5289,6 +5584,66 @@
         "title": "CockpitRead",
         "type": "object"
       },
+      "ConsentDecision": {
+        "properties": {
+          "approve": {
+            "title": "Approve",
+            "type": "boolean"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "approve"
+        ],
+        "title": "ConsentDecision",
+        "type": "object"
+      },
+      "ConsentInfo": {
+        "properties": {
+          "client_name": {
+            "title": "Client Name",
+            "type": "string"
+          },
+          "redirect_host": {
+            "title": "Redirect Host",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "user_email": {
+            "title": "User Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_name",
+          "redirect_host",
+          "scope",
+          "user_email"
+        ],
+        "title": "ConsentInfo",
+        "type": "object"
+      },
+      "ConsentResult": {
+        "properties": {
+          "redirect_url": {
+            "title": "Redirect Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "redirect_url"
+        ],
+        "title": "ConsentResult",
+        "type": "object"
+      },
       "ContactPersonCreate": {
         "properties": {
           "client_company_id": {
@@ -9129,6 +9484,18 @@
               }
             ]
           },
+          "owner_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner User Id"
+          },
           "provider": {
             "$ref": "#/components/schemas/MailAccountProvider"
           },
@@ -9153,6 +9520,11 @@
           },
           "smtp_use_ssl": {
             "title": "Smtp Use Ssl",
+            "type": "boolean"
+          },
+          "sync_enabled": {
+            "default": true,
+            "title": "Sync Enabled",
             "type": "boolean"
           },
           "sync_error": {
@@ -9445,6 +9817,106 @@
           "sent_count"
         ],
         "title": "MailBulkSendResult",
+        "type": "object"
+      },
+      "MailConnectionTestRequest": {
+        "description": "Verbindungstest VOR dem Speichern (Passwort wird nicht gespeichert).",
+        "properties": {
+          "imap_host": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Imap Host",
+            "type": "string"
+          },
+          "imap_port": {
+            "default": 993,
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Imap Port",
+            "type": "integer"
+          },
+          "imap_use_ssl": {
+            "default": true,
+            "title": "Imap Use Ssl",
+            "type": "boolean"
+          },
+          "password": {
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          },
+          "smtp_host": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Smtp Host",
+            "type": "string"
+          },
+          "smtp_port": {
+            "default": 587,
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Smtp Port",
+            "type": "integer"
+          },
+          "smtp_use_ssl": {
+            "default": true,
+            "title": "Smtp Use Ssl",
+            "type": "boolean"
+          },
+          "username": {
+            "maxLength": 320,
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "imap_host",
+          "smtp_host",
+          "username",
+          "password"
+        ],
+        "title": "MailConnectionTestRequest",
+        "type": "object"
+      },
+      "MailConnectionTestResult": {
+        "properties": {
+          "imap_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imap Error"
+          },
+          "imap_ok": {
+            "title": "Imap Ok",
+            "type": "boolean"
+          },
+          "smtp_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp Error"
+          },
+          "smtp_ok": {
+            "title": "Smtp Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "imap_ok",
+          "smtp_ok"
+        ],
+        "title": "MailConnectionTestResult",
         "type": "object"
       },
       "MailMatchStatus": {
@@ -10074,6 +10546,434 @@
         "title": "MailingRecipient",
         "type": "object"
       },
+      "MyMailAccountCreate": {
+        "description": "Eigenes IMAP/SMTP-Postfach anlegen (Einstellungen -> Mein Postfach).\nAnders als MailAccountCreate ohne Admin-Felder (kein CV-Out-Standard); das\nPasswort ist auch hier nur schreibend (bei Gmail/Outlook/GMX: App-Passwort).",
+        "properties": {
+          "address": {
+            "format": "email",
+            "title": "Address",
+            "type": "string"
+          },
+          "daily_send_limit": {
+            "default": 150,
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Daily Send Limit",
+            "type": "integer"
+          },
+          "imap_host": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Imap Host",
+            "type": "string"
+          },
+          "imap_port": {
+            "default": 993,
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Imap Port",
+            "type": "integer"
+          },
+          "imap_use_ssl": {
+            "default": true,
+            "title": "Imap Use Ssl",
+            "type": "boolean"
+          },
+          "label": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "password": {
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          },
+          "send_throttle_seconds": {
+            "default": 8,
+            "maximum": 3600.0,
+            "minimum": 0.0,
+            "title": "Send Throttle Seconds",
+            "type": "integer"
+          },
+          "smtp_host": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Smtp Host",
+            "type": "string"
+          },
+          "smtp_port": {
+            "default": 587,
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Smtp Port",
+            "type": "integer"
+          },
+          "smtp_use_ssl": {
+            "default": true,
+            "title": "Smtp Use Ssl",
+            "type": "boolean"
+          },
+          "username": {
+            "maxLength": 320,
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "address",
+          "label",
+          "imap_host",
+          "smtp_host",
+          "username",
+          "password"
+        ],
+        "title": "MyMailAccountCreate",
+        "type": "object"
+      },
+      "MyMailAccountRead": {
+        "description": "Wie MailAccountRead (ohne Passwort), dazu die Standard-Absender-Info.",
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "daily_send_limit": {
+            "title": "Daily Send Limit",
+            "type": "integer"
+          },
+          "default_for_cv_out": {
+            "title": "Default For Cv Out",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "imap_host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imap Host"
+          },
+          "imap_port": {
+            "title": "Imap Port",
+            "type": "integer"
+          },
+          "imap_use_ssl": {
+            "title": "Imap Use Ssl",
+            "type": "boolean"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "is_default_sender": {
+            "default": false,
+            "title": "Is Default Sender",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
+          "oauth_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MailAccountOAuthStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "owner_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner User Id"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/MailAccountProvider"
+          },
+          "send_throttle_seconds": {
+            "title": "Send Throttle Seconds",
+            "type": "integer"
+          },
+          "smtp_host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp Host"
+          },
+          "smtp_port": {
+            "title": "Smtp Port",
+            "type": "integer"
+          },
+          "smtp_use_ssl": {
+            "title": "Smtp Use Ssl",
+            "type": "boolean"
+          },
+          "sync_enabled": {
+            "default": true,
+            "title": "Sync Enabled",
+            "type": "boolean"
+          },
+          "sync_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Error"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "updated_at",
+          "address",
+          "label",
+          "provider",
+          "imap_host",
+          "imap_port",
+          "imap_use_ssl",
+          "smtp_host",
+          "smtp_port",
+          "smtp_use_ssl",
+          "username",
+          "oauth_status",
+          "is_active",
+          "default_for_cv_out",
+          "send_throttle_seconds",
+          "daily_send_limit",
+          "last_synced_at",
+          "sync_error"
+        ],
+        "title": "MyMailAccountRead",
+        "type": "object"
+      },
+      "MyMailAccountUpdate": {
+        "properties": {
+          "daily_send_limit": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Send Limit"
+          },
+          "imap_host": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imap Host"
+          },
+          "imap_port": {
+            "anyOf": [
+              {
+                "maximum": 65535.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imap Port"
+          },
+          "imap_use_ssl": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imap Use Ssl"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "send_throttle_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Send Throttle Seconds"
+          },
+          "smtp_host": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp Host"
+          },
+          "smtp_port": {
+            "anyOf": [
+              {
+                "maximum": 65535.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp Port"
+          },
+          "smtp_use_ssl": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp Use Ssl"
+          },
+          "sync_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Enabled"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "maxLength": 320,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "title": "MyMailAccountUpdate",
+        "type": "object"
+      },
       "NlSearchRequest": {
         "properties": {
           "query": {
@@ -10280,6 +11180,43 @@
           "body"
         ],
         "title": "NoteUpdate",
+        "type": "object"
+      },
+      "OAuthConnection": {
+        "properties": {
+          "client_name": {
+            "title": "Client Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          }
+        },
+        "required": [
+          "id",
+          "client_name",
+          "created_at"
+        ],
+        "title": "OAuthConnection",
         "type": "object"
       },
       "OfferCreate": {
@@ -13865,6 +14802,298 @@
         "summary": "Update Kpi Point Rules",
         "tags": [
           "kpi"
+        ]
+      }
+    },
+    "/api/v1/ai-proposals": {
+      "get": {
+        "operationId": "list_proposals_api_v1_ai_proposals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "approved",
+                    "rejected"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AiProposalRead"
+                  },
+                  "title": "Response List Proposals Api V1 Ai Proposals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Proposals",
+        "tags": [
+          "ai-proposals"
+        ]
+      }
+    },
+    "/api/v1/ai-proposals/summary": {
+      "get": {
+        "description": "Fuer die Seitenleiste: ist die Claude-Schnittstelle an, und wie viele\nVorschlaege warten (nur die fuer den Nutzer sichtbaren).",
+        "operationId": "proposal_summary_api_v1_ai_proposals_summary_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiProposalSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Proposal Summary",
+        "tags": [
+          "ai-proposals"
+        ]
+      }
+    },
+    "/api/v1/ai-proposals/{proposal_id}/approve": {
+      "post": {
+        "operationId": "approve_proposal_api_v1_ai_proposals__proposal_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiProposalApprove"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiProposalRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve Proposal",
+        "tags": [
+          "ai-proposals"
+        ]
+      }
+    },
+    "/api/v1/ai-proposals/{proposal_id}/reject": {
+      "post": {
+        "operationId": "reject_proposal_api_v1_ai_proposals__proposal_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiProposalReject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiProposalRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reject Proposal",
+        "tags": [
+          "ai-proposals"
         ]
       }
     },
@@ -20806,7 +22035,7 @@
     },
     "/api/v1/mcp": {
       "post": {
-        "description": "MCP (Streamable HTTP, JSON-Modus) - lesender Zugriff fuer Claude.\n\nNur mit API-Key (X-API-Key), nicht mit einer Browser-Sitzung; es gelten die\nRechte des Key-Besitzers. Ausgeschaltet (404), solange CC_CRM_AI_ENABLED\nnicht gesetzt ist. Details: services/mcp_server.py.",
+        "description": "MCP (Streamable HTTP, JSON-Modus) - Zugriff fuer Claude.\n\nZwei Wege, beide gebunden an einen Hermes-Nutzer (es gelten genau dessen\nRechte): ein API-Key (X-API-Key) oder ein OAuth-Token, das Claude ueber die\nAnmeldung bei Hermes erhalten hat (Authorization: Bearer ..., siehe\nservices/oauth_provider.py). Eine Browser-Sitzung gilt hier nicht. Lesend,\ndazu Vorschlaege mit Freigabe-Pflicht. Ausgeschaltet (404), solange\nCC_CRM_AI_ENABLED nicht gesetzt ist. Details: services/mcp_server.py.",
         "operationId": "mcp_endpoint_api_v1_mcp_post",
         "parameters": [
           {
@@ -20823,6 +22052,22 @@
                 }
               ],
               "title": "X-Api-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -20858,14 +22103,624 @@
             "description": "Validation Error"
           }
         },
+        "summary": "Mcp Endpoint",
+        "tags": [
+          "mcp"
+        ]
+      }
+    },
+    "/api/v1/me/mail-accounts": {
+      "get": {
+        "operationId": "list_my_mail_accounts_api_v1_me_mail_accounts_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MyMailAccountRead"
+                  },
+                  "title": "Response List My Mail Accounts Api V1 Me Mail Accounts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
         "security": [
           {
             "HTTPBearer": []
           }
         ],
-        "summary": "Mcp Endpoint",
+        "summary": "List My Mail Accounts",
         "tags": [
-          "mcp"
+          "my-mail-accounts"
+        ]
+      },
+      "post": {
+        "operationId": "create_my_mail_account_api_v1_me_mail_accounts_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MyMailAccountCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyMailAccountRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create My Mail Account",
+        "tags": [
+          "my-mail-accounts"
+        ]
+      }
+    },
+    "/api/v1/me/mail-accounts/test": {
+      "post": {
+        "description": "Zugangsdaten pruefen (IMAP-Login, SMTP-Login), ohne etwas zu speichern oder zu senden.",
+        "operationId": "test_connection_before_saving_api_v1_me_mail_accounts_test_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailConnectionTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailConnectionTestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test Connection Before Saving",
+        "tags": [
+          "my-mail-accounts"
+        ]
+      }
+    },
+    "/api/v1/me/mail-accounts/{account_id}": {
+      "delete": {
+        "operationId": "delete_my_mail_account_api_v1_me_mail_accounts__account_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete My Mail Account",
+        "tags": [
+          "my-mail-accounts"
+        ]
+      },
+      "patch": {
+        "operationId": "update_my_mail_account_api_v1_me_mail_accounts__account_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MyMailAccountUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyMailAccountRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update My Mail Account",
+        "tags": [
+          "my-mail-accounts"
+        ]
+      }
+    },
+    "/api/v1/me/mail-accounts/{account_id}/default": {
+      "post": {
+        "operationId": "set_default_sender_api_v1_me_mail_accounts__account_id__default_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyMailAccountRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Default Sender",
+        "tags": [
+          "my-mail-accounts"
+        ]
+      }
+    },
+    "/api/v1/me/mail-accounts/{account_id}/messages": {
+      "get": {
+        "description": "Posteingang eines persoenlichen Kontos: nur fuer den Besitzer lesbar.",
+        "operationId": "list_my_mail_messages_api_v1_me_mail_accounts__account_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "items": {
+                      "$ref": "#/components/schemas/MailMatchStatus"
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Match Status"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MailMessageRead"
+                  },
+                  "title": "Response List My Mail Messages Api V1 Me Mail Accounts  Account Id  Messages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Mail Messages",
+        "tags": [
+          "my-mail-accounts"
+        ]
+      }
+    },
+    "/api/v1/me/mail-accounts/{account_id}/sync": {
+      "post": {
+        "operationId": "sync_my_mail_account_api_v1_me_mail_accounts__account_id__sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailSyncResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sync My Mail Account",
+        "tags": [
+          "my-mail-accounts"
+        ]
+      }
+    },
+    "/api/v1/me/mail-accounts/{account_id}/test": {
+      "post": {
+        "operationId": "test_my_mail_account_api_v1_me_mail_accounts__account_id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailConnectionTestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test My Mail Account",
+        "tags": [
+          "my-mail-accounts"
         ]
       }
     },
@@ -21353,6 +23208,397 @@
         "summary": "Update Note",
         "tags": [
           "notes"
+        ]
+      }
+    },
+    "/api/v1/oauth/.well-known/oauth-authorization-server": {
+      "get": {
+        "operationId": "authorization_server_metadata_api_v1_oauth__well_known_oauth_authorization_server_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Authorization Server Metadata Api V1 Oauth  Well Known Oauth Authorization Server Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Authorization Server Metadata",
+        "tags": [
+          "oauth"
+        ]
+      }
+    },
+    "/api/v1/oauth/.well-known/openid-configuration": {
+      "get": {
+        "operationId": "openid_configuration_api_v1_oauth__well_known_openid_configuration_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Openid Configuration Api V1 Oauth  Well Known Openid Configuration Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Openid Configuration",
+        "tags": [
+          "oauth"
+        ]
+      }
+    },
+    "/api/v1/oauth/connections": {
+      "get": {
+        "operationId": "list_connections_api_v1_oauth_connections_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OAuthConnection"
+                  },
+                  "title": "Response List Connections Api V1 Oauth Connections Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Connections",
+        "tags": [
+          "oauth"
+        ]
+      }
+    },
+    "/api/v1/oauth/connections/{token_id}": {
+      "delete": {
+        "operationId": "revoke_connection_api_v1_oauth_connections__token_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Token Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Connection",
+        "tags": [
+          "oauth"
+        ]
+      }
+    },
+    "/api/v1/oauth/consent": {
+      "post": {
+        "operationId": "decide_consent_api_v1_oauth_consent_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decide Consent",
+        "tags": [
+          "oauth"
+        ]
+      }
+    },
+    "/api/v1/oauth/consent/{request_id}": {
+      "get": {
+        "operationId": "consent_info_api_v1_oauth_consent__request_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Consent Info",
+        "tags": [
+          "oauth"
+        ]
+      }
+    },
+    "/api/v1/oauth/protected-resource": {
+      "get": {
+        "description": "RFC 9728 - ueber `resource_metadata` im 401 von /mcp referenziert.",
+        "operationId": "protected_resource_metadata_api_v1_oauth_protected_resource_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Protected Resource Metadata Api V1 Oauth Protected Resource Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Protected Resource Metadata",
+        "tags": [
+          "oauth"
+        ]
+      }
+    },
+    "/api/v1/oauth/register": {
+      "post": {
+        "operationId": "register_client_api_v1_oauth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "title": "Metadata"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Client",
+        "tags": [
+          "oauth"
+        ]
+      }
+    },
+    "/api/v1/oauth/token": {
+      "post": {
+        "operationId": "token_api_v1_oauth_token_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_token_api_v1_oauth_token_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Token",
+        "tags": [
+          "oauth"
         ]
       }
     },

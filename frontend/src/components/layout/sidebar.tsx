@@ -18,7 +18,7 @@ import {
   subscribeRecentCandidates,
   type RecentCandidate,
 } from "@/lib/recent-candidates";
-import { useCurrentUser, usePendingApprovalCount } from "@/lib/api/hooks";
+import { useAiProposalSummary, useCurrentUser, usePendingApprovalCount } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
 import { brand } from "@/lib/brand";
 
@@ -49,9 +49,15 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
   const isAdmin = meData?.data.is_admin ?? false;
   const isTeamLead = meData?.data.role === "team_lead";
   const pendingApprovals = usePendingApprovalCount(isAdmin);
+  const ai = useAiProposalSummary();
   const visibleGroups = navigationGroups
     .filter((group) => !group.adminOnly || isAdmin)
-    .map((group) => ({ ...group, items: visibleItems(group.items, isAdmin, isTeamLead) }))
+    .map((group) => ({
+      ...group,
+      items: visibleItems(group.items, isAdmin, isTeamLead).filter(
+        (item) => !item.requiresAi || ai.enabled,
+      ),
+    }))
     .filter((group) => group.items.length > 0);
 
   // Eingeklappte Gruppen, gemerkt pro Nutzer (localStorage). Erst nach dem Mount
@@ -82,7 +88,8 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
   const renderItem = (item: NavigationItem) => {
     const active = isNavigationItemActive(item, pathname);
     const Icon = item.icon;
-    const badgeCount = item.badge === "approvals" ? pendingApprovals : 0;
+    const badgeCount =
+      item.badge === "approvals" ? pendingApprovals : item.badge === "aiProposals" ? ai.pending : 0;
 
     return (
       <Link
@@ -160,7 +167,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
                     type="button"
                     onClick={() => toggleGroup(group.id)}
                     aria-expanded={open}
-                    className="mb-1 flex h-7 w-full items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-wider text-[#5F6B7A] hover:text-brand-silver"
+                    className="mb-1 flex h-7 w-full items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-wider text-brand-dim hover:text-brand-silver"
                   >
                     {group.label}
                     <ChevronDown size={12} className={cn("transition-transform", !open && "-rotate-90")} />

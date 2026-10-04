@@ -5,6 +5,7 @@ import { mutate } from "swr";
 import {
   getAdminUsers,
   getApprovalRequests,
+  getAiProposalSummary,
   getAppSettings,
   getAssignableUsers,
   getScopeUsers,
@@ -144,6 +145,16 @@ export function usePendingApprovalCount(enabled: boolean): number {
     { ...swrConfig, refreshInterval: 60_000, revalidateOnFocus: true, revalidateIfStale: true },
   );
   return data?.data.length ?? 0;
+}
+
+/** Claude-Vorschläge: ist die Schnittstelle an, wie viele warten (Seitenleiste). */
+export function useAiProposalSummary(): { enabled: boolean; pending: number } {
+  const { data } = useSWR<DataResult<{ enabled: boolean; pending: number }>>(
+    "/ai-proposals/summary",
+    getAiProposalSummary,
+    { ...swrConfig, refreshInterval: 60_000, revalidateOnFocus: true, revalidateIfStale: true },
+  );
+  return data?.data ?? { enabled: false, pending: 0 };
 }
 
 /** Kalender-Termine fuer einen Zeitraum (Monats-/Wochenansicht) - der

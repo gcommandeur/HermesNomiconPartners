@@ -68,7 +68,13 @@ def _resolve_send_account(
 ) -> MailAccount:
     account_service = MailAccountService(session)
     if account_id is not None:
-        return account_service.get(account_id)
+        requested = account_service.get(account_id)
+        # Persoenliche Postfaecher (owner_user_id gesetzt) darf NUR ihr Besitzer
+        # zum Senden nutzen; fuer alle anderen "existiert" es nicht (404).
+        owner_id = requested.owner_user_id
+        if owner_id is not None and owner_id != getattr(current_user, "id", None):
+            raise EntityNotFoundError("Postfach nicht gefunden")
+        return requested
     account = account_service.resolve_send_account(current_user)  # type: ignore[arg-type]
     if account is None:
         raise BusinessRuleError(

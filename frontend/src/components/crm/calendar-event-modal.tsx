@@ -444,7 +444,7 @@ export function CalendarEventModal({
               {event.online_meeting_url && (
                 <>
                   {" · "}
-                  <a href={event.online_meeting_url} target="_blank" rel="noreferrer" className="text-[#7FB2E5] underline">
+                  <a href={event.online_meeting_url} target="_blank" rel="noreferrer" className="text-brand-accent-light underline">
                     Teams-Link öffnen
                   </a>
                 </>

@@ -676,4 +676,5 @@ def sync_all_active(
     service = MailSyncService(session, fetcher=fetcher)
     if accounts is None:
         accounts = session.scalars(select(MailAccount).where(MailAccount.is_active.is_(True))).all()
-    return [service.sync_account(account) for account in accounts]
+    # Persoenliche Postfaecher ohne eingeschalteten Abruf (nur Versand) werden nie gelesen.
+    return [service.sync_account(account) for account in accounts if account.sync_enabled]

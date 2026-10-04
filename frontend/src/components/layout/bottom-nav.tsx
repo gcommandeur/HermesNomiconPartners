@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Building2, KanbanSquare, LayoutDashboard, MoreHorizontal, Users } from "lucide-react";
-import { useCurrentUser, usePendingApprovalCount } from "@/lib/api/hooks";
+import { useAiProposalSummary, useCurrentUser, usePendingApprovalCount } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
 
 /** Mobile-only Bottom-Tab-Bar (analog zum bestehenden lg:hidden-Muster von
@@ -21,7 +21,8 @@ const items: { href: string; label: string; icon: typeof LayoutDashboard }[] = [
 export function BottomNav({ onMenu }: { onMenu: () => void }) {
   const pathname = usePathname();
   const { data: meData } = useCurrentUser();
-  const pendingApprovals = usePendingApprovalCount(meData?.data.is_admin ?? false);
+  const pendingApprovals =
+    usePendingApprovalCount(meData?.data.is_admin ?? false) + useAiProposalSummary().pending;
 
   return (
     <nav
@@ -37,7 +38,7 @@ export function BottomNav({ onMenu }: { onMenu: () => void }) {
             href={item.href}
             className={cn(
               "flex flex-1 flex-col items-center gap-1 py-2 text-[9px]",
-              active ? "text-brand-accent-light" : "text-[#5F6B7A]",
+              active ? "text-brand-accent-light" : "text-brand-dim",
             )}
           >
             <Icon size={20} strokeWidth={active ? 2 : 1.7} />
@@ -48,7 +49,7 @@ export function BottomNav({ onMenu }: { onMenu: () => void }) {
       <button
         type="button"
         onClick={onMenu}
-        className="flex flex-1 flex-col items-center gap-1 py-2 text-[9px] text-[#5F6B7A]"
+        className="flex flex-1 flex-col items-center gap-1 py-2 text-[9px] text-brand-dim"
       >
         <span className="relative">
           <MoreHorizontal size={20} strokeWidth={1.7} />

@@ -12,6 +12,7 @@ import {
   Map,
   Settings,
   ShieldCheck,
+  Sparkles,
   Trophy,
   Users,
 } from "lucide-react";
@@ -28,7 +29,9 @@ export type NavigationItem = {
   /** Pfade, bei denen der Eintrag trotz passendem Praefix NICHT aktiv ist. */
   notActiveFor?: string[];
   /** Zaehler-Badge (Daten holt die Seitenleiste). */
-  badge?: "approvals";
+  badge?: "approvals" | "aiProposals";
+  /** Nur zeigen, wenn die Claude-Schnittstelle eingeschaltet ist. */
+  requiresAi?: boolean;
 };
 
 export type NavigationGroup = {
@@ -65,6 +68,7 @@ export const navigationGroups: NavigationGroup[] = [
       { label: "Übersicht", href: "/", icon: LayoutDashboard },
       { label: "Kalender", href: "/kalender", icon: CalendarDays },
       { label: "Mailing", href: "/mailing", icon: Mail },
+      { label: "Claude-Vorschläge", href: "/claude-vorschlaege", icon: Sparkles, badge: "aiProposals", requiresAi: true },
     ],
   },
   {

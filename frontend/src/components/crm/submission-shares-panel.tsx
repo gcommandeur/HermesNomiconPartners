@@ -86,7 +86,7 @@ export function SubmissionSharesPanel({
     <div className="space-y-2 rounded-lg border border-white/10 bg-brand-surface/60 p-3">
       <p className="text-xs text-brand-muted">Geteilt mit</p>
       <div className="flex flex-wrap items-center gap-2">
-        {shares.length === 0 && <span className="text-xs text-[#64748B]">Noch mit niemandem geteilt.</span>}
+        {shares.length === 0 && <span className="text-xs text-brand-dim">Noch mit niemandem geteilt.</span>}
         {shares.map((share) => {
           const removable = canManage || share.shared_with_user_id === me?.id;
           return (

@@ -94,7 +94,7 @@ export function CandidateSequencesPanel({ candidateId }: { candidateId: string }
     <div className="mb-6 space-y-2 rounded-lg border border-white/10 bg-brand-surface/60 p-3">
       <p className="text-xs text-brand-muted">Outreach-Sequenzen</p>
       {enrollments.length === 0 && (
-        <p className="text-xs text-[#64748B]">In keiner Sequenz eingeschrieben.</p>
+        <p className="text-xs text-brand-dim">In keiner Sequenz eingeschrieben.</p>
       )}
       {enrollments.map((enrollment) => (
         <div
