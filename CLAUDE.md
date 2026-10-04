@@ -94,4 +94,5 @@ Laptop- und Cloud-Sitzungen sehen die Gespraeche der jeweils anderen NICHT. Der 
 
 - **Vor jeder Aufgabe:** `git fetch`, `git pull --rebase origin entwicklung`, dann `docs/PROJEKT_STAND.md` lesen.
 - **Nach jeder Aufgabe, im selben Commit:** Protokoll-Eintrag (Datum, Laptop/Cloud, was, Commits, was NICHT geprueft wurde, `Gemeldet:` = was dem Nutzer mitgeteilt wurde), offene Punkte und neue Entscheidungen/Stolperfallen pflegen. Ohne aktualisierte Datei ist eine Aufgabe nicht fertig.
+- **Lokaler Branch `main` = `entwicklung` (Regel des Nutzers vom 2026-10-04, gilt ohne Rueckfrage):** Nach jeder Aufgabe, nach dem Push auf `entwicklung`, setzt die Sitzung den LOKALEN Branch `main` auf `entwicklung` (`git branch -f main entwicklung`, ohne den Branch auszuchecken). Das ist rein lokal und deployt nichts. **Ausdruecklich NICHT von der Regel gedeckt:** `origin/main` (GitHub, deployt nach DigitalOcean) - dorthin geht weiterhin nur mit dem gruenen Licht des Nutzers per Pull Request.
 - Nichts Geheimes eintragen.
