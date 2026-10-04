@@ -1,3 +1,9 @@
 # Shell-Skripte muessen auf Linux (Cloud-Sitzungen, CI) mit LF-Zeilenenden
 # ankommen - mit CRLF bricht bash am "\r" ab.
 *.sh text eol=lf
+
+# Firmenschicht der Kopie: bei Merges aus Hermes (upstream) bleibt IMMER die
+# eigene Fassung. Einmalig pro Klon: git config merge.ours.driver true
+frontend/src/app/brand-theme.css merge=ours
+frontend/public/brand/** merge=ours
+backend/templates/** merge=ours
