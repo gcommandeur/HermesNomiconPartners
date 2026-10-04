@@ -13679,6 +13679,11 @@
             ],
             "title": "Manager Name"
           },
+          "ms_bound": {
+            "default": false,
+            "title": "Ms Bound",
+            "type": "boolean"
+          },
           "role": {
             "default": "member",
             "title": "Role",
@@ -28064,6 +28069,71 @@
           }
         ],
         "summary": "Update User",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{user_id}/reset-microsoft-binding": {
+      "post": {
+        "description": "Nur Admin: loest die gebundene Microsoft-Kennung (Audit-Eintrag).",
+        "operationId": "reset_microsoft_binding_api_v1_users__user_id__reset_microsoft_binding_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserAdminRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reset Microsoft Binding",
         "tags": [
           "users"
         ]

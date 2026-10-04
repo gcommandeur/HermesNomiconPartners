@@ -55,7 +55,7 @@ Hermes ist ein Recruiting-CRM fuer Steuer-/Rechts-Kanzleien: Kandidaten, Kanzlei
 - Wichtige Fachbereiche: `candidates`, `clients` (Kanzleien), `submissions` + `recruiting` (Prozesse mit Stufen qualification_call -> cv_in -> cv_out -> interview -> offer -> placement, dazu Feedback/Interview/Offer/Placement/Fee), `approvals` + `invoices` (Freigabe-Inbox, Rechnungsstatus), `notes`, `sourcing` (Verzeichnis-/Team-Seiten-Suche mit Umkreis), `geo` (PLZ-Koordinaten, Umkreissuche), `mail_*`, `kpi_scoring`, `operational` (Cockpit/Uebersicht).
 - Auth: Login mit Passwort + E-Mail-2FA-Code; `api/dependencies.py` hat `CurrentUser`, `AdminUser` und die Zugriffsgrenzen (siehe unten).
 - Tests: `backend/tests/` (pytest, SQLite im Speicher, Fixture `client` = angemeldeter Nicht-Admin). Pruefen mit `ruff check src tests`, `mypy src`, `pytest`.
-- Migrationen: `backend/alembic/versions/`, aktueller Head `c1f5a9b3d7e8` (oauth_*). Neue Migration immer auf einer KOPIE der lokalen DB per upgrade -> downgrade -> upgrade pruefen.
+- Migrationen: `backend/alembic/versions/`, aktueller Head `e1c3d5a7b9f2` (users.ms_oid). Neue Migration immer auf einer KOPIE der lokalen DB per upgrade -> downgrade -> upgrade pruefen.
 
 **Frontend** (`frontend/`, Next.js 15 App Router, TypeScript, Tailwind, pnpm):
 - Seiten in `frontend/src/app/*` (z.B. `kandidaten`, `kanzleien`, `prozesse`, `sourcing`, `freigaben`, `geschaeftsfuehrung`, `einstellungen/*`), Komponenten in `src/components/crm/*`, API-Zugriff in `src/lib/api/` (`queries.ts`, `hooks.ts` mit SWR, `types.ts`). Browser-Aufrufe laufen ueber `/api/proxy/...`, das den Login-Cookie serverseitig anhaengt.

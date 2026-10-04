@@ -2829,6 +2829,26 @@ export interface paths {
         patch: operations["update_user_api_v1_users__user_id__patch"];
         trace?: never;
     };
+    "/api/v1/users/{user_id}/reset-microsoft-binding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Microsoft Binding
+         * @description Nur Admin: loest die gebundene Microsoft-Kennung (Audit-Eintrag).
+         */
+        post: operations["reset_microsoft_binding_api_v1_users__user_id__reset_microsoft_binding_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{user_id}/rotate-calendar-feed-token": {
         parameters: {
             query?: never;
@@ -7444,6 +7464,11 @@ export interface components {
             manager_id?: string | null;
             /** Manager Name */
             manager_name?: string | null;
+            /**
+             * Ms Bound
+             * @default false
+             */
+            ms_bound: boolean;
             /**
              * Role
              * @default member
@@ -14342,6 +14367,39 @@ export interface operations {
                 "application/json": components["schemas"]["UserAdminUpdate"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserAdminRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_microsoft_binding_api_v1_users__user_id__reset_microsoft_binding_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

@@ -175,6 +175,8 @@ export interface AdminUser {
   /** Zugeordneter Teamleiter (wirkt nur, wenn dieser role="team_lead" hat). */
   manager_id: string | null;
   manager_name: string | null;
+  /** Ob schon eine Microsoft-Kennung gebunden ist (die Kennung selbst wird nicht ausgeliefert). */
+  ms_bound: boolean;
 }
 
 /** Minimale Nutzerliste (GET /users/assignable) fuer Owner-Dropdowns beim
