@@ -169,7 +169,9 @@ def _my_processes(session: Session, user: User, arguments: dict[str, Any]) -> An
             {
                 "id": str(item.id),
                 "candidate_id": str(item.candidate_id),
-                "client_company_id": str(item.client_company_id),
+                "client_company_id": (
+                    str(item.client_company_id) if item.client_company_id else None
+                ),
                 "status": str(item.status),
                 "created_at": item.created_at.isoformat(),
             }
