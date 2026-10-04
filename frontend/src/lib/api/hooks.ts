@@ -4,6 +4,7 @@ import useSWR, { type SWRConfiguration } from "swr";
 import { mutate } from "swr";
 import {
   getAdminUsers,
+  getApprovalRequests,
   getAppSettings,
   getAssignableUsers,
   getScopeUsers,
@@ -131,6 +132,18 @@ export function invalidateEmailTemplatesCache() {
  * Standard-swrConfig aus - aendert sich waehrend einer Session praktisch nie. */
 export function useCurrentUser() {
   return useSWR<DataResult<CurrentUserInfo>>("/auth/me", getCurrentUser, swrConfig);
+}
+
+/** Anzahl offener Freigabe-Anfragen fuer das Badge in der Seitenleiste. Nur Admins
+ * (`enabled`) fragen ab, alle anderen bekommen nie einen Request. Aktualisiert sich
+ * jede Minute und beim Zurueckkehren in den Tab. */
+export function usePendingApprovalCount(enabled: boolean): number {
+  const { data } = useSWR<DataResult<unknown[]>>(
+    enabled ? "/approval-requests?status=pending" : null,
+    getApprovalRequests,
+    { ...swrConfig, refreshInterval: 60_000, revalidateOnFocus: true, revalidateIfStale: true },
+  );
+  return data?.data.length ?? 0;
 }
 
 /** Kalender-Termine fuer einen Zeitraum (Monats-/Wochenansicht) - der

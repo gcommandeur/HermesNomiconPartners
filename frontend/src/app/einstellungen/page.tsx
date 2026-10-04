@@ -129,39 +129,13 @@ export default function EinstellungenPage() {
         {user.is_admin && (
           <CollapsibleSection
             title="Administration"
-            description="Nutzer, Postfächer und Protokolle verwalten."
+            description="Nutzer, Postfächer, Automatisierung und Protokolle verwalten."
             icon={<Users size={16} className="mt-0.5 text-[#69A7EA]" />}
             defaultOpen={false}
           >
-            <div className="flex flex-wrap gap-2">
-              <Link href="/einstellungen/nutzer">
-                <Button size="sm" variant="outline">Nutzerverwaltung öffnen</Button>
-              </Link>
-              <Link href="/einstellungen/postfaecher">
-                <Button size="sm" variant="outline">E-Mails &amp; Konten öffnen</Button>
-              </Link>
-              <Link href="/einstellungen/audit-log">
-                <Button size="sm" variant="outline">Audit-Log öffnen</Button>
-              </Link>
-              <Link href="/einstellungen/loeschanfragen">
-                <Button size="sm" variant="outline">Löschanfragen öffnen</Button>
-              </Link>
-              <Link href="/einstellungen/kpi-punkte">
-                <Button size="sm" variant="outline">KPI-Punkte öffnen</Button>
-              </Link>
-              <Link href="/einstellungen/sequenzen">
-                <Button size="sm" variant="outline">Outreach-Sequenzen öffnen</Button>
-              </Link>
-              <Link href="/einstellungen/felder">
-                <Button size="sm" variant="outline">Eigene Felder öffnen</Button>
-              </Link>
-              <Link href="/einstellungen/webhooks">
-                <Button size="sm" variant="outline">Webhooks öffnen</Button>
-              </Link>
-              <Link href="/einstellungen/jobs">
-                <Button size="sm" variant="outline">Hintergrundjobs öffnen</Button>
-              </Link>
-            </div>
+            <Link href="/einstellungen/administration">
+              <Button size="sm" variant="outline">Administration öffnen</Button>
+            </Link>
           </CollapsibleSection>
         )}
       </div>

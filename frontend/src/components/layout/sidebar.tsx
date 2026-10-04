@@ -4,19 +4,23 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { primaryNavigation, utilityNavigation } from "./navigation";
+import { ChevronDown, ChevronLeft, ChevronRight, X } from "lucide-react";
+import {
+  isNavigationItemActive,
+  navigationGroups,
+  utilityNavigation,
+  visibleItems,
+  type NavigationItem,
+} from "./navigation";
 import {
   getRecentCandidatesSnapshot,
   removeRecentCandidate,
   subscribeRecentCandidates,
   type RecentCandidate,
 } from "@/lib/recent-candidates";
-import { useCurrentUser } from "@/lib/api/hooks";
+import { useCurrentUser, usePendingApprovalCount } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
 import { brand } from "@/lib/brand";
-
-type NavigationItem = (typeof primaryNavigation)[number];
 
 export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
   collapsed: boolean;
@@ -39,19 +43,46 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
     return subscribeRecentCandidates(() => setRecentCandidates(getRecentCandidatesSnapshot()));
   }, []);
 
-  // "Geschäftsführung" ist admin-only (gleiche Sichtbarkeitslogik wie der
-  // Administration-Block in einstellungen/page.tsx) - vor dem Laden von
+  // Admin-only-Eintraege ("Geschäftsführung", Administration) sind vor dem Laden von
   // useCurrentUser() sicherheitshalber ausgeblendet statt kurz aufzublitzen.
   const { data: meData } = useCurrentUser();
   const isAdmin = meData?.data.is_admin ?? false;
   const isTeamLead = meData?.data.role === "team_lead";
-  const visiblePrimaryNavigation = primaryNavigation.filter(
-    (item) => !item.adminOnly || isAdmin || (item.teamLeadToo && isTeamLead),
-  );
+  const pendingApprovals = usePendingApprovalCount(isAdmin);
+  const visibleGroups = navigationGroups
+    .filter((group) => !group.adminOnly || isAdmin)
+    .map((group) => ({ ...group, items: visibleItems(group.items, isAdmin, isTeamLead) }))
+    .filter((group) => group.items.length > 0);
+
+  // Eingeklappte Gruppen, gemerkt pro Nutzer (localStorage). Erst nach dem Mount
+  // gelesen (sonst Hydration-Abweichung), jede Storage-Nutzung in try/catch.
+  const storageKey = `hermes-nav-closed-groups:${meData?.data.id ?? "anon"}`;
+  const [closedGroups, setClosedGroups] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      setClosedGroups(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : []);
+    } catch {
+      setClosedGroups([]);
+    }
+  }, [storageKey]);
+  const toggleGroup = (id: string) => {
+    setClosedGroups((current) => {
+      const next = current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id];
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {
+        // Storage nicht verfuegbar - Zustand gilt nur fuer diese Sitzung.
+      }
+      return next;
+    });
+  };
 
   const renderItem = (item: NavigationItem) => {
-    const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+    const active = isNavigationItemActive(item, pathname);
     const Icon = item.icon;
+    const badgeCount = item.badge === "approvals" ? pendingApprovals : 0;
 
     return (
       <Link
@@ -60,13 +91,22 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
         title={collapsed ? item.label : undefined}
         onClick={onMobileClose}
         className={cn(
-          "flex h-10 items-center gap-3 rounded-md px-3 text-[13px] transition-all duration-200",
+          "relative flex h-10 items-center gap-3 rounded-md px-3 text-[13px] transition-all duration-200",
           active ? "border-l-2 border-[#D8DADF] bg-gradient-to-r from-[#153A66]/80 to-[#102A4C]/55 text-white shadow-[inset_0_1px_0_rgba(255,255,255,.04)]" : "text-[#A7ADB7] hover:bg-[#203A5A]/45 hover:text-white hover:translate-x-[1px]",
           collapsed && "justify-center px-0",
         )}
       >
         <Icon size={17} strokeWidth={1.7} />
-        {!collapsed && <span>{item.label}</span>}
+        {!collapsed && <span className="flex-1">{item.label}</span>}
+        {badgeCount > 0 && (
+          collapsed ? (
+            <span className="absolute right-2 top-2 size-2 rounded-full bg-[#E5484D]" aria-label={`${badgeCount} offen`} />
+          ) : (
+            <span className="min-w-5 rounded-full bg-[#E5484D] px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white">
+              {badgeCount}
+            </span>
+          )
+        )}
       </Link>
     );
   };
@@ -109,52 +149,76 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
         </div>
 
         <nav className="scrollbar-subtle flex-1 space-y-1 overflow-y-auto px-3 py-5">
-          {visiblePrimaryNavigation.map((item) => (
-            <div key={item.href}>
-              {renderItem(item)}
-              {/* Zuletzt geoeffnete Kandidaten (Phase L.3, Bullhorn-Vorbild):
-                  bleiben als eigene Eintraege unter "Kandidaten" erreichbar,
-                  damit mehrere Profile parallel offen bleiben koennen. */}
-              {item.href === "/kandidaten" && !collapsed && recentCandidates.length > 0 && (
-                <div className="ml-[26px] mt-1 space-y-0.5 border-l border-white/10 pl-3">
-                  {recentCandidates.map((recent) => {
-                    const href = `/kandidaten/${recent.id}`;
-                    const active = pathname === href;
-                    return (
-                      <div
-                        key={recent.id}
-                        className={cn(
-                          "group flex h-8 items-center gap-1.5 rounded-md pr-1.5 text-[12px] transition-colors",
-                          active ? "text-white" : "text-[#8a9095] hover:text-white",
+          {visibleGroups.map((group, groupIndex) => {
+            const hasActiveItem = group.items.some((item) => isNavigationItemActive(item, pathname));
+            // Die Gruppe der aktuellen Seite bleibt offen, auch wenn sie eingeklappt wurde.
+            const open = !closedGroups.includes(group.id) || hasActiveItem;
+            return (
+              <div key={group.id} className={cn(groupIndex > 0 && (collapsed ? "mt-3 border-t border-white/10 pt-3" : "mt-4"))}>
+                {!collapsed && (
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.id)}
+                    aria-expanded={open}
+                    className="mb-1 flex h-7 w-full items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-wider text-[#5F6B7A] hover:text-[#A7ADB7]"
+                  >
+                    {group.label}
+                    <ChevronDown size={12} className={cn("transition-transform", !open && "-rotate-90")} />
+                  </button>
+                )}
+                {(collapsed || open) && (
+                  <div className="space-y-1">
+                    {group.items.map((item) => (
+                      <div key={item.href}>
+                        {renderItem(item)}
+                        {/* Zuletzt geoeffnete Kandidaten (Phase L.3, Bullhorn-Vorbild):
+                            bleiben als eigene Eintraege unter "Kandidaten" erreichbar,
+                            damit mehrere Profile parallel offen bleiben koennen. */}
+                        {item.href === "/kandidaten" && !collapsed && recentCandidates.length > 0 && (
+                          <div className="ml-[26px] mt-1 space-y-0.5 border-l border-white/10 pl-3">
+                            {recentCandidates.map((recent) => {
+                              const href = `/kandidaten/${recent.id}`;
+                              const active = pathname === href;
+                              return (
+                                <div
+                                  key={recent.id}
+                                  className={cn(
+                                    "group flex h-8 items-center gap-1.5 rounded-md pr-1.5 text-[12px] transition-colors",
+                                    active ? "text-white" : "text-[#8a9095] hover:text-white",
+                                  )}
+                                >
+                                  <Link
+                                    href={href}
+                                    onClick={onMobileClose}
+                                    className="min-w-0 flex-1 truncate px-2 py-1"
+                                    title={recent.label}
+                                  >
+                                    {recent.label}
+                                  </Link>
+                                  <button
+                                    type="button"
+                                    aria-label={`${recent.label} schließen`}
+                                    title="Aus Verlauf entfernen"
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      removeRecentCandidate(recent.id);
+                                    }}
+                                    className="shrink-0 rounded p-1 text-[#5b6167] opacity-0 hover:text-white group-hover:opacity-100"
+                                  >
+                                    <X size={11} />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
-                      >
-                        <Link
-                          href={href}
-                          onClick={onMobileClose}
-                          className="min-w-0 flex-1 truncate px-2 py-1"
-                          title={recent.label}
-                        >
-                          {recent.label}
-                        </Link>
-                        <button
-                          type="button"
-                          aria-label={`${recent.label} schließen`}
-                          title="Aus Verlauf entfernen"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            removeRecentCandidate(recent.id);
-                          }}
-                          className="shrink-0 rounded p-1 text-[#5b6167] opacity-0 hover:text-white group-hover:opacity-100"
-                        >
-                          <X size={11} />
-                        </button>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         <div className="space-y-2 border-t border-white/10 p-3">
