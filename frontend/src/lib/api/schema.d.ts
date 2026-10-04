@@ -2399,6 +2399,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/submissions/without-owner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Submissions Without Owner
+         * @description Nur Admin: Prozesse ohne Verantwortlichen (aus der Zeit vor dem Feld). Fuer
+         *     Nicht-Admins sind sie unsichtbar - hier tauchen sie sichtbar auf, bis sie zugewiesen sind.
+         */
+        get: operations["list_submissions_without_owner_api_v1_submissions_without_owner_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/submissions/{submission_id}": {
         parameters: {
             query?: never;
@@ -2435,6 +2456,26 @@ export interface paths {
          *     status=='placement' erlaubt.
          */
         post: operations["archive_submission_api_v1_submissions__submission_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/submissions/{submission_id}/assign-owner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign Submission Owner
+         * @description Nur Admin: Verantwortlichen setzen (Audit-Eintrag `updated` mit alt/neu).
+         */
+        post: operations["assign_submission_owner_api_v1_submissions__submission_id__assign_owner_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7261,6 +7302,17 @@ export interface components {
          * @enum {string}
          */
         SubmissionCancellationReason: "candidate_rejected" | "client_rejected" | "candidate_ghosting";
+        /**
+         * SubmissionOwnerAssign
+         * @description Admin weist einem Prozess ohne Verantwortlichen einen Nutzer zu.
+         */
+        SubmissionOwnerAssign: {
+            /**
+             * Owner User Id
+             * Format: uuid
+             */
+            owner_user_id: string;
+        };
         /** SubmissionShareCreate */
         SubmissionShareCreate: {
             /**
@@ -7438,6 +7490,42 @@ export interface components {
             target?: null;
             /** User Id */
             user_id: string;
+        };
+        /** UnownedSubmissionList */
+        UnownedSubmissionList: {
+            /** Items */
+            items: components["schemas"]["UnownedSubmissionRead"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * UnownedSubmissionRead
+         * @description Zeile der Admin-Liste "Prozesse ohne Verantwortlichen" (mit Namen, damit die
+         *     Oberflaeche nicht pro Zeile nachladen muss).
+         */
+        UnownedSubmissionRead: {
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Candidate Name */
+            candidate_name: string;
+            /** Client Company Id */
+            client_company_id: string | null;
+            /** Client Name */
+            client_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            status: components["schemas"]["SubmissionStatus"];
         };
         /**
          * UserAdminRead
@@ -13075,6 +13163,37 @@ export interface operations {
             };
         };
     };
+    list_submissions_without_owner_api_v1_submissions_without_owner_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnownedSubmissionList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_submission_api_v1_submissions__submission_id__get: {
         parameters: {
             query?: never;
@@ -13188,6 +13307,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateSubmissionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_submission_owner_api_v1_submissions__submission_id__assign_owner_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                submission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmissionOwnerAssign"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

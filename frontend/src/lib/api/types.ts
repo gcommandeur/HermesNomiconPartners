@@ -64,6 +64,22 @@ export type ClosingStatus = "hot" | "warm" | "risk" | "stop";
 
 /** Freigabe eines Prozesses an einen Kollegen (Backend schemas/submission.py::
  * SubmissionShareRead) - gewaehrt vollen Zugriff auf genau diesen Prozess. */
+/** Prozess ohne Verantwortlichen (Admin-Liste, siehe UnownedSubmissionRead). */
+export interface UnownedSubmission {
+  id: string;
+  candidate_id: string;
+  candidate_name: string;
+  client_company_id: string | null;
+  client_name: string | null;
+  status: string;
+  created_at: string;
+}
+
+export interface UnownedSubmissionList {
+  total: number;
+  items: UnownedSubmission[];
+}
+
 export interface SubmissionShare {
   id: string;
   submission_id: string;

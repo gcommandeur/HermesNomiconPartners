@@ -13070,6 +13070,21 @@
         "title": "SubmissionCancellationReason",
         "type": "string"
       },
+      "SubmissionOwnerAssign": {
+        "description": "Admin weist einem Prozess ohne Verantwortlichen einen Nutzer zu.",
+        "properties": {
+          "owner_user_id": {
+            "format": "uuid",
+            "title": "Owner User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "owner_user_id"
+        ],
+        "title": "SubmissionOwnerAssign",
+        "type": "object"
+      },
       "SubmissionShareCreate": {
         "properties": {
           "shared_with_user_id": {
@@ -13623,6 +13638,88 @@
           "points"
         ],
         "title": "TeamMemberKpis",
+        "type": "object"
+      },
+      "UnownedSubmissionList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UnownedSubmissionRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "UnownedSubmissionList",
+        "type": "object"
+      },
+      "UnownedSubmissionRead": {
+        "description": "Zeile der Admin-Liste \"Prozesse ohne Verantwortlichen\" (mit Namen, damit die\nOberflaeche nicht pro Zeile nachladen muss).",
+        "properties": {
+          "candidate_id": {
+            "format": "uuid",
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "candidate_name": {
+            "title": "Candidate Name",
+            "type": "string"
+          },
+          "client_company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Company Id"
+          },
+          "client_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SubmissionStatus"
+          }
+        },
+        "required": [
+          "id",
+          "candidate_id",
+          "candidate_name",
+          "client_company_id",
+          "client_name",
+          "status",
+          "created_at"
+        ],
+        "title": "UnownedSubmissionRead",
         "type": "object"
       },
       "UserAdminRead": {
@@ -25383,6 +25480,61 @@
         ]
       }
     },
+    "/api/v1/submissions/without-owner": {
+      "get": {
+        "description": "Nur Admin: Prozesse ohne Verantwortlichen (aus der Zeit vor dem Feld). Fuer\nNicht-Admins sind sie unsichtbar - hier tauchen sie sichtbar auf, bis sie zugewiesen sind.",
+        "operationId": "list_submissions_without_owner_api_v1_submissions_without_owner_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnownedSubmissionList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Submissions Without Owner",
+        "tags": [
+          "candidate-submissions"
+        ]
+      }
+    },
     "/api/v1/submissions/{submission_id}": {
       "delete": {
         "operationId": "delete_submission_api_v1_submissions__submission_id__delete",
@@ -25634,6 +25786,81 @@
           }
         ],
         "summary": "Archive Submission",
+        "tags": [
+          "candidate-submissions"
+        ]
+      }
+    },
+    "/api/v1/submissions/{submission_id}/assign-owner": {
+      "post": {
+        "description": "Nur Admin: Verantwortlichen setzen (Audit-Eintrag `updated` mit alt/neu).",
+        "operationId": "assign_submission_owner_api_v1_submissions__submission_id__assign_owner_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Submission Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmissionOwnerAssign"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateSubmissionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Assign Submission Owner",
         "tags": [
           "candidate-submissions"
         ]
