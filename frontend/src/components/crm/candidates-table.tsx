@@ -621,12 +621,12 @@ export function CandidatesTable() {
                 )}
               </div>
             )}
-            <div className="mt-2 flex items-center justify-between text-[11px] text-brand-gray">
+            <div className="mt-2 flex items-center justify-between text-[10.45px] text-brand-gray">
               <span>Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</span>
               {candidate.salary_expectation && <span>{candidate.salary_expectation}</span>}
             </div>
             {candidate.search_match_fields && candidate.search_match_fields.length > 0 && (
-              <p className="mt-1.5 text-[11px] text-brand-warning">
+              <p className="mt-1.5 text-[10.45px] text-brand-warning">
                 Treffer in: {candidate.search_match_fields.map(searchFieldLabel).join(", ")}
                 {candidate.search_matched_values && candidate.search_matched_values.length > 0 && (
                   <> ({candidate.search_matched_values.join(", ")})</>
@@ -660,12 +660,12 @@ export function CandidatesTable() {
         {displayedCandidates.map((candidate) => (
           <tr key={candidate.id} className="hover:bg-brand-hover/35">
             <td className="px-4 py-3.5 text-xs text-brand-muted">{candidate.candidate_number ?? "—"}</td>
-            <td className="px-4 py-3.5"><button type="button" onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-brand-platinum hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</button>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-brand-danger-soft" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[11px] text-brand-muted">Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</p>
+            <td className="px-4 py-3.5"><button type="button" onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-brand-platinum hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</button>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-brand-danger-soft" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[10.45px] text-brand-muted">Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</p>
               {/* Nachvollziehbarkeit der Freitextsuche (Punkt 5) - nur
                * gesetzt, wenn `search` aktiv ist (siehe Backend
                * repositories/candidates.py::compute_search_match_fields). */}
               {candidate.search_match_fields && candidate.search_match_fields.length > 0 && (
-                <p className="mt-1 text-[11px] text-brand-warning">
+                <p className="mt-1 text-[10.45px] text-brand-warning">
                   Treffer in: {candidate.search_match_fields.map(searchFieldLabel).join(", ")}
                   {candidate.search_matched_values && candidate.search_matched_values.length > 0 && (
                     <> ({candidate.search_matched_values.join(", ")})</>
@@ -673,7 +673,7 @@ export function CandidatesTable() {
                 </p>
               )}
             </td>
-            <td className="px-4 py-3.5"><p>{candidate.job_title ?? "—"}</p><p className="mt-1 text-[11px] text-brand-muted">{candidate.qualification ?? "Qualifikation offen"}</p></td>
+            <td className="px-4 py-3.5"><p>{candidate.job_title ?? "—"}</p><p className="mt-1 text-[10.45px] text-brand-muted">{candidate.qualification ?? "Qualifikation offen"}</p></td>
             <td className="px-4 py-3.5">
               {candidate.rollen && candidate.rollen.length > 0 ? (
                 <div className="flex flex-wrap items-center gap-1">
@@ -694,7 +694,7 @@ export function CandidatesTable() {
             </td>
             <td className="px-4 py-3.5 text-brand-soft">{candidate.city ?? candidate.postal_code ?? "—"}</td>
             <td className="px-4 py-3.5">{candidate.salary_expectation ?? "—"}</td>
-            <td className="px-4 py-3.5"><p>{candidate.notice_period ?? "—"}</p><p className="mt-1 text-[11px] text-brand-muted">{candidate.available_from ? formatDate(candidate.available_from) : "nach Absprache"}</p></td>
+            <td className="px-4 py-3.5"><p>{candidate.notice_period ?? "—"}</p><p className="mt-1 text-[10.45px] text-brand-muted">{candidate.available_from ? formatDate(candidate.available_from) : "nach Absprache"}</p></td>
             <td className="px-4 py-3.5"><div className="flex gap-1.5"><span className={`size-2 rounded-full ${candidate.cv_available ? "bg-brand-silver" : "bg-[#334155]"}`} title="CV" /><span className={`size-2 rounded-full ${candidate.short_profile ? "bg-brand-accent" : "bg-[#334155]"}`} title="Kurzprofil" /></div></td>
             <td className="px-4 py-3.5"><StatusPill status={candidate.status} /></td>
             <td className="px-4 py-3.5 text-brand-soft">{candidate.next_step ?? "Kontakt aufnehmen"}</td>

@@ -184,21 +184,21 @@ export default async function CandidateDetailPage({
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_.7fr]">
             <Card><CardContent><h2 className="font-semibold">Profil</h2><p className="mt-4 text-sm leading-7 text-brand-soft">{candidate.summary ?? "Noch keine Zusammenfassung hinterlegt."}</p>
               <div className="mt-6 grid grid-cols-1 gap-5 border-t border-white/10 pt-5 sm:grid-cols-2">
-                {[["Rolle", candidate.job_title], ["Gehaltswunsch", candidate.salary_expectation], ["Kündigungsfrist", candidate.notice_period], ["Region", `${candidate.postal_code ?? ""} ${candidate.city ?? ""}`.trim()], ["Anrede", candidate.anrede === "frau" ? "Frau" : candidate.anrede === "herr" ? "Herr" : candidate.anrede === "divers" ? "Divers" : null], ["Empfohlen von", candidate.referred_by]].map(([label, value]) => <div key={label}><p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
+                {[["Rolle", candidate.job_title], ["Gehaltswunsch", candidate.salary_expectation], ["Kündigungsfrist", candidate.notice_period], ["Region", `${candidate.postal_code ?? ""} ${candidate.city ?? ""}`.trim()], ["Anrede", candidate.anrede === "frau" ? "Frau" : candidate.anrede === "herr" ? "Herr" : candidate.anrede === "divers" ? "Divers" : null], ["Empfohlen von", candidate.referred_by]].map(([label, value]) => <div key={label}><p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
               </div>
               <div className="mt-6 grid grid-cols-1 gap-5 border-t border-white/10 pt-5 sm:grid-cols-2">
-                {[["Ausbildung / Weiterbildung", candidate.ausbildung_titel], ["Aktuelles Umfeld", [candidate.aktuelles_umfeld_kanzleityp, candidate.aktuelles_umfeld_kanzleigroesse].filter(Boolean).join(" · ")], ["Remote-/Teilzeit-Wünsche", candidate.remote_teilzeit_wuensche], ["Passender Kanzleityp", candidate.passender_kanzleityp]].map(([label, value]) => <div key={label}><p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
+                {[["Ausbildung / Weiterbildung", candidate.ausbildung_titel], ["Aktuelles Umfeld", [candidate.aktuelles_umfeld_kanzleityp, candidate.aktuelles_umfeld_kanzleigroesse].filter(Boolean).join(" · ")], ["Remote-/Teilzeit-Wünsche", candidate.remote_teilzeit_wuensche], ["Passender Kanzleityp", candidate.passender_kanzleityp]].map(([label, value]) => <div key={label}><p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
                 {/* Nur bei rechtsanwalt relevant, siehe models/candidate.py::
                  * examensnoten - wird nur angezeigt, wenn tatsaechlich gesetzt. */}
                 {candidate.examensnoten && (
-                  <div><p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">Examensnote</p><p className="mt-1.5 text-sm">{candidate.examensnoten}</p></div>
+                  <div><p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">Examensnote</p><p className="mt-1.5 text-sm">{candidate.examensnoten}</p></div>
                 )}
               </div>
               {/* Nur bei rechtsanwalt/rechtsfachangestellte inhaltlich
                * relevant, siehe models/candidate.py::rechtsgebiete. */}
               {candidate.rechtsgebiete && candidate.rechtsgebiete.length > 0 && (
                 <div className="mt-6 border-t border-white/10 pt-5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">Rechtsgebiete</p>
+                  <p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">Rechtsgebiete</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {candidate.rechtsgebiete.map((rechtsgebiet) => (
                       <span key={rechtsgebiet} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-brand-platinum">{rechtsgebietLabel(rechtsgebiet)}</span>
@@ -208,7 +208,7 @@ export default async function CandidateDetailPage({
               )}
               {candidate.fachliche_schwerpunkte && candidate.fachliche_schwerpunkte.length > 0 && (
                 <div className="mt-6 border-t border-white/10 pt-5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">Fachliche Schwerpunkte</p>
+                  <p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">Fachliche Schwerpunkte</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {candidate.fachliche_schwerpunkte.map((item) => <span key={item} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-brand-platinum">{item}</span>)}
                   </div>
@@ -216,7 +216,7 @@ export default async function CandidateDetailPage({
               )}
               {candidate.edv_kenntnisse && candidate.edv_kenntnisse.length > 0 && (
                 <div className="mt-6 border-t border-white/10 pt-5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">EDV-Kenntnisse</p>
+                  <p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">EDV-Kenntnisse</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {candidate.edv_kenntnisse.map((item) => <span key={item} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-brand-platinum">{item}</span>)}
                   </div>
@@ -224,7 +224,7 @@ export default async function CandidateDetailPage({
               )}
               {candidate.berufliche_stationen && candidate.berufliche_stationen.length > 0 && (
                 <div className="mt-6 border-t border-white/10 pt-5">
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-brand-gray">Berufliche Stationen</p>
+                  <p className="mb-2 text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">Berufliche Stationen</p>
                   <div className="space-y-1.5">
                     {candidate.berufliche_stationen.map((station, index) => (
                       <p key={index} className="text-sm text-brand-soft">{station.kanzleityp} · {station.kanzleigroesse} · {station.dauer_jahre} Jahre</p>
@@ -234,17 +234,17 @@ export default async function CandidateDetailPage({
               )}
               {candidate.freitext_notizen && (
                 <div className="mt-6 border-t border-white/10 pt-5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">Freitextnotizen</p>
+                  <p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">Freitextnotizen</p>
                   <p className="mt-1.5 text-sm text-brand-soft">{candidate.freitext_notizen}</p>
                 </div>
               )}
               {(candidate.wechselgrund || (candidate.no_gos && candidate.no_gos.length > 0)) && (
                 <div className="mt-6 rounded-lg border border-brand-warning/25 bg-brand-warning/5 p-4">
-                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-brand-warning">Nur intern — nie in ausgehende Dokumente</p>
-                  {candidate.wechselgrund && <div className="mb-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">Wechselgrund</p><p className="mt-1.5 text-sm text-brand-soft">{candidate.wechselgrund}</p></div>}
+                  <p className="mb-3 text-[9.5px] font-semibold uppercase tracking-wider text-brand-warning">Nur intern — nie in ausgehende Dokumente</p>
+                  {candidate.wechselgrund && <div className="mb-3"><p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">Wechselgrund</p><p className="mt-1.5 text-sm text-brand-soft">{candidate.wechselgrund}</p></div>}
                   {candidate.no_gos && candidate.no_gos.length > 0 && (
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">No-Gos</p>
+                      <p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">No-Gos</p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {candidate.no_gos.map((item) => <span key={item} className="rounded-full border border-brand-warning/25 bg-brand-warning/10 px-2.5 py-1 text-xs text-brand-warning">{item}</span>)}
                       </div>

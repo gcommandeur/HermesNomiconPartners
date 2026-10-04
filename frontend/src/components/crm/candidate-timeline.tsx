@@ -151,7 +151,7 @@ export function CandidateTimeline({
               </div>
               {item.detail && <p className="mt-1 text-xs text-brand-muted">{item.detail}</p>}
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="inline-block rounded bg-brand-panel px-2 py-0.5 text-[10px] uppercase tracking-wider text-brand-muted">
+                <span className="inline-block rounded bg-brand-panel px-2 py-0.5 text-[9.5px] uppercase tracking-wider text-brand-muted">
                   {item.kind}
                 </span>
                 {item.author && <span className="text-xs text-brand-soft">von {item.author}</span>}

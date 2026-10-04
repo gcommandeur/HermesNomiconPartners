@@ -144,7 +144,7 @@ function MessageList({ accountId }: { accountId: string }) {
             <select
               value={filter}
               onChange={(e) => changeFilter(e.target.value)}
-              className="h-8 rounded-md border border-white/10 bg-brand-surface px-2 text-[11px] text-brand-platinum outline-none focus:border-brand-accent"
+              className="h-8 rounded-md border border-white/10 bg-brand-surface px-2 text-[10.45px] text-brand-platinum outline-none focus:border-brand-accent"
             >
               {FILTER_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -613,26 +613,26 @@ export default function PostfaecherPage() {
                     <div className="min-w-0">
                       <p className="flex flex-wrap items-center gap-2 font-medium text-brand-text">
                         {account.address}
-                        <span className="rounded bg-brand-panel px-2 py-0.5 text-[10px] uppercase tracking-wider text-brand-muted">
+                        <span className="rounded bg-brand-panel px-2 py-0.5 text-[9.5px] uppercase tracking-wider text-brand-muted">
                           {account.label}
                         </span>
                         {account.default_for_cv_out && (
-                          <span className="flex items-center gap-1 rounded bg-brand-accent/25 px-2 py-0.5 text-[10px] text-brand-accent-light">
+                          <span className="flex items-center gap-1 rounded bg-brand-accent/25 px-2 py-0.5 text-[9.5px] text-brand-accent-light">
                             <Star size={10} />CV-OUT-Standard
                           </span>
                         )}
                         {!account.is_active && (
-                          <span className="rounded bg-[#3A2416] px-2 py-0.5 text-[10px] text-brand-warning">
+                          <span className="rounded bg-[#3A2416] px-2 py-0.5 text-[9.5px] text-brand-warning">
                             inaktiv
                           </span>
                         )}
                         {account.provider === "microsoft_graph" && (
-                          <span className="rounded bg-brand-accent/25 px-2 py-0.5 text-[10px] text-brand-accent-light">
+                          <span className="rounded bg-brand-accent/25 px-2 py-0.5 text-[9.5px] text-brand-accent-light">
                             Microsoft 365
                           </span>
                         )}
                         {account.oauth_status === "needs_reconnect" && (
-                          <span className="flex items-center gap-1 rounded bg-[#3A2416] px-2 py-0.5 text-[10px] text-brand-warning">
+                          <span className="flex items-center gap-1 rounded bg-[#3A2416] px-2 py-0.5 text-[9.5px] text-brand-warning">
                             <Unplug size={10} />Verbindung abgelaufen
                           </span>
                         )}
@@ -712,7 +712,7 @@ export default function PostfaecherPage() {
                         <p className="text-xs font-semibold text-brand-warning">
                           Letzter Abruf fehlgeschlagen
                         </p>
-                        <p className="mt-1 break-words font-mono text-[11px] text-brand-platinum">
+                        <p className="mt-1 break-words font-mono text-[10.45px] text-brand-platinum">
                           {result?.error ?? account.sync_error}
                         </p>
                       </div>

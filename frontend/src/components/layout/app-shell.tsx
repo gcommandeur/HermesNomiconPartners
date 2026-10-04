@@ -15,7 +15,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div>
       <ScreenWatermark />
       <Sidebar collapsed={collapsed} mobileOpen={mobileOpen} onToggle={() => setCollapsed((v) => !v)} onMobileClose={() => setMobileOpen(false)} />
-      <div className={cn("min-h-screen transition-[margin] duration-200", collapsed ? "lg:ml-[76px]" : "lg:ml-[248px]")}>
+      <div className={cn("min-h-screen transition-[margin] duration-200", collapsed ? "lg:ml-[72px]" : "lg:ml-[236px]")}>
         <Topbar onMenu={() => setMobileOpen(true)} />
         {/* pb-20 auf Mobile, damit Inhalte nicht hinter der neuen BottomNav
          * verschwinden - ab lg (wo die BottomNav per lg:hidden ausgeblendet

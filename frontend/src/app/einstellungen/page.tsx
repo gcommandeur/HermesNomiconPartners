@@ -93,7 +93,7 @@ export default function EinstellungenPage() {
                   {copied ? "Kopiert" : "Kopieren"}
                 </Button>
               </div>
-              <p className="mt-2 text-[11px] text-brand-dim">
+              <p className="mt-2 text-[10.45px] text-brand-dim">
                 Diese URL ist geheim (wie ein Passwort) - nicht weitergeben. Falls sie versehentlich
                 geteilt wurde, hier neu generieren:
               </p>
@@ -107,7 +107,7 @@ export default function EinstellungenPage() {
               <p className="mb-2 text-xs font-semibold text-brand-platinum">So abonnierst du diesen Kalender</p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-brand-accent-light">
+                  <p className="mb-1 text-[10.45px] font-semibold uppercase tracking-wider text-brand-accent-light">
                     Outlook (Desktop)
                   </p>
                   <ol className="list-decimal space-y-1 pl-4 text-xs text-brand-soft">
@@ -117,7 +117,7 @@ export default function EinstellungenPage() {
                   </ol>
                 </div>
                 <div>
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-brand-accent-light">
+                  <p className="mb-1 text-[10.45px] font-semibold uppercase tracking-wider text-brand-accent-light">
                     Outlook im Web
                   </p>
                   <ol className="list-decimal space-y-1 pl-4 text-xs text-brand-soft">

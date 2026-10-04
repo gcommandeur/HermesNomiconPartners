@@ -37,7 +37,7 @@ export function BottomNav({ onMenu }: { onMenu: () => void }) {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-1 flex-col items-center gap-1 py-2 text-[9px]",
+              "flex flex-1 flex-col items-center gap-1 py-2 text-[8.55px]",
               active ? "text-brand-accent-light" : "text-brand-dim",
             )}
           >
@@ -49,7 +49,7 @@ export function BottomNav({ onMenu }: { onMenu: () => void }) {
       <button
         type="button"
         onClick={onMenu}
-        className="flex flex-1 flex-col items-center gap-1 py-2 text-[9px] text-brand-dim"
+        className="flex flex-1 flex-col items-center gap-1 py-2 text-[8.55px] text-brand-dim"
       >
         <span className="relative">
           <MoreHorizontal size={20} strokeWidth={1.7} />
@@ -59,7 +59,7 @@ export function BottomNav({ onMenu }: { onMenu: () => void }) {
         </span>
         {/* Eigenes span: globals.css setzt `font: inherit` auf Buttons ausserhalb der
             Tailwind-Layer, die Groesse am Button selbst wuerde ueberschrieben. */}
-        <span className="text-[9px]">Mehr</span>
+        <span className="text-[8.55px]">Mehr</span>
       </button>
     </nav>
   );

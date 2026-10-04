@@ -103,7 +103,7 @@ export default function GeschaeftsfuehrungPage() {
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-brand-muted">
+                <tr className="border-b border-white/10 text-[9.5px] uppercase tracking-wider text-brand-muted">
                   <th className="px-4 py-3">Mitarbeiter:in</th>
                   {STAGE_COLUMNS.map((column) => (
                     <th key={column.key} className="px-3 py-3 text-right">{column.label}</th>
