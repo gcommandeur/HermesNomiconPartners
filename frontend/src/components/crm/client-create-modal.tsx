@@ -13,8 +13,8 @@ import { invalidateClientsCache, useAssignableUsersCache, useCurrentUser } from 
 import { checkClientDuplicate } from "@/lib/api/queries";
 import type { ClientCompany, ClientDuplicateCandidate } from "@/lib/api/types";
 
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
-const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const labelClass = "mb-1 block text-xs text-brand-muted";
+const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 const emptyForm = {
   name: "", kanzleigruppe: "", status: "prospect", website: "", email: "", phone: "",
   street: "", city: "", postal_code: "", region: "", focus: "", company_size: "",
@@ -136,7 +136,7 @@ export function ClientCreateForm({
         </div>
       </div>
       {duplicates.length > 0 && (
-        <div className="rounded-lg border border-[#F0B429]/25 bg-[#F0B429]/5 p-3 text-xs text-[#F0B429]">
+        <div className="rounded-lg border border-brand-warning/25 bg-brand-warning/5 p-3 text-xs text-brand-warning">
           <div className="mb-1.5 flex items-center gap-1.5 font-semibold"><TriangleAlert size={13} />Ähnliche Kanzlei(en) bereits vorhanden</div>
           <ul className="space-y-0.5 text-[#F5D68A]">
             {duplicates.map((dup) => (
@@ -146,11 +146,11 @@ export function ClientCreateForm({
               </li>
             ))}
           </ul>
-          <p className="mt-1.5 text-[#94A3B8]">Nur ein Hinweis — mehrere Standorte derselben Marke sind ausdrücklich erlaubt.</p>
+          <p className="mt-1.5 text-brand-muted">Nur ein Hinweis — mehrere Standorte derselben Marke sind ausdrücklich erlaubt.</p>
           {!form.kanzleigruppe.trim() && duplicates.some((dup) => dup.kanzleigruppe) && (
             <button
               type="button"
-              className="mt-2 rounded-md border border-[#1F5FA8]/40 bg-[#153A66]/45 px-2.5 py-1 text-[11px] text-[#c5dcfa] hover:bg-[#153A66]/70"
+              className="mt-2 rounded-md border border-brand-accent/40 bg-brand-accent-strong/45 px-2.5 py-1 text-[11px] text-brand-info hover:bg-brand-accent-strong/70"
               onClick={() => set("kanzleigruppe", duplicates.find((dup) => dup.kanzleigruppe)?.kanzleigruppe ?? "")}
             >
               Kanzleigruppe &quot;{duplicates.find((dup) => dup.kanzleigruppe)?.kanzleigruppe}&quot; übernehmen
@@ -186,7 +186,7 @@ export function ClientCreateForm({
         <div><label className={labelClass}>Kanzleigröße</label><Input value={form.company_size} onChange={(e) => set("company_size", e.target.value)} /></div>
       </div>
       <div className="border-t border-white/10 pt-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#92979c]">Honorar</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-gray">Honorar</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelClass}>Honorarsatz (%)</label><Input type="number" step="0.01" value={form.fee_percentage} onChange={(e) => set("fee_percentage", e.target.value)} /></div>
           <div>

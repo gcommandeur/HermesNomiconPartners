@@ -54,7 +54,7 @@ function StatementPicker({ title, options, value, onChange }: {
 }) {
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#92979c]">{title}</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-gray">{title}</p>
       <div className="space-y-1.5">
         {options.map((option) => (
           <button
@@ -63,8 +63,8 @@ function StatementPicker({ title, options, value, onChange }: {
             onClick={() => onChange(option.value)}
             className={`block w-full rounded-md border px-3 py-2 text-left text-xs transition-colors ${
               value === option.value
-                ? "border-[#1F5FA8]/60 bg-[#153A66]/60 text-[#F8FAFC]"
-                : "border-white/10 bg-[#0D1B2E] text-[#CBD5E1] hover:border-white/20"
+                ? "border-brand-accent/60 bg-brand-accent-strong/60 text-brand-text"
+                : "border-white/10 bg-brand-surface text-brand-soft hover:border-white/20"
             }`}
           >
             {option.label}
@@ -132,7 +132,7 @@ export function ClosingScoreForm({ submissionId, onScored }: {
                 <Badge tone={closingStatusTone[result.closing_status]}>{closingStatusLabel[result.closing_status]}</Badge>
                 <span className="text-lg font-semibold">{result.closing_probability} %</span>
               </div>
-              <p className="text-sm text-[#CBD5E1]">Empfehlung: {result.action_recommendation}</p>
+              <p className="text-sm text-brand-soft">Empfehlung: {result.action_recommendation}</p>
               <div className="flex justify-end"><Button size="sm" onClick={() => setOpen(false)}>Schließen</Button></div>
             </div>
           ) : (

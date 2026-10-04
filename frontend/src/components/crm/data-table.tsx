@@ -28,7 +28,7 @@ export function DataTable({
       <div className="scrollbar-subtle overflow-x-auto">
         <table className={cn("w-full min-w-[980px] border-collapse text-left text-sm", className)}>
           <thead>
-            <tr className="border-b bg-[#102A4C]/65">
+            <tr className="border-b bg-brand-accent-soft/65">
               {headers.map((header) => {
                 const isSortable = typeof header !== "string" && Boolean(onSort);
                 const label = typeof header === "string" ? header : header.label;
@@ -39,7 +39,7 @@ export function DataTable({
                     key={label}
                     onClick={isSortable && key ? () => onSort?.(key) : undefined}
                     className={cn(
-                      "px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-[#CBD5E1]",
+                      "px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-brand-soft",
                       isSortable && "cursor-pointer select-none hover:text-white",
                     )}
                   >

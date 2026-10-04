@@ -18,9 +18,9 @@ import { createUserLabels } from "@/lib/user-labels";
 import { formatDateTime } from "@/lib/utils";
 import type { CandidateSubmission, Feedback, FeedbackTargetStatus, SubmissionStatus } from "@/lib/api/types";
 
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
-const textareaClass = "min-h-16 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
-const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const labelClass = "mb-1 block text-xs text-brand-muted";
+const textareaClass = "min-h-16 w-full rounded-md border border-white/10 bg-brand-surface p-3 text-sm text-brand-text outline-none focus:border-brand-accent";
+const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 // Nur diese drei Stufen sind gueltige Ziele fuer das Status-Feld einer Notiz -
 // Interview/Offer/Placement brauchen eine verknuepfte Kanzlei und haben eigene
@@ -189,7 +189,7 @@ export function FeedbackPanel({
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">
+        <p className="text-xs font-semibold uppercase tracking-wider text-brand-muted">
           Notizen &amp; Feedback
         </p>
         {!form && (
@@ -202,7 +202,7 @@ export function FeedbackPanel({
       <ErrorBanner message={message} className="mb-3" />
 
       {form && (
-        <form className="mb-4 space-y-3 rounded-lg border border-white/10 bg-[#0D1B2E] p-3" onSubmit={handleSubmit}>
+        <form className="mb-4 space-y-3 rounded-lg border border-white/10 bg-brand-surface p-3" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelClass}>Datum *</label>
@@ -264,11 +264,11 @@ export function FeedbackPanel({
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 2 }).map((_, index) => (
-            <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+            <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
           ))}
         </div>
       ) : sorted.length === 0 && !form ? (
-        <p className="rounded-lg border border-dashed border-white/10 p-4 text-center text-xs text-[#94A3B8]">
+        <p className="rounded-lg border border-dashed border-white/10 p-4 text-center text-xs text-brand-muted">
           Noch keine Einträge.
         </p>
       ) : (
@@ -278,19 +278,19 @@ export function FeedbackPanel({
               key={entry.id}
               type="button"
               onClick={() => setForm(formFromEntry(entry, stage as FeedbackTargetStatus))}
-              className="block w-full rounded-lg border border-white/10 bg-[#0D1B2E] p-3 text-left text-xs hover:border-[#1F5FA8]/50"
+              className="block w-full rounded-lg border border-white/10 bg-brand-surface p-3 text-left text-xs hover:border-brand-accent/50"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-semibold text-[#F8FAFC]">
+                <span className="font-semibold text-brand-text">
                   {entry.stage ? STAGE_LABELS[entry.stage] : "–"}
                 </span>
-                <span className="text-[#94A3B8]">
+                <span className="text-brand-muted">
                   {formatDateTime(entry.received_at)} · {userLabels.byEmail(entry.created_by) ?? "Unbekannt"}
                 </span>
               </div>
-              <p className="mt-1 text-[#CBD5E1]">{entry.feedback_text}</p>
+              <p className="mt-1 text-brand-soft">{entry.feedback_text}</p>
               {entry.next_step && (
-                <p className="mt-1 text-[#747C89]">Nächster Schritt: {entry.next_step}</p>
+                <p className="mt-1 text-brand-dim">Nächster Schritt: {entry.next_step}</p>
               )}
             </button>
           ))}

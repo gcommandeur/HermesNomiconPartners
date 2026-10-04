@@ -132,7 +132,7 @@ function MessageList({ accountId }: { accountId: string }) {
       <button
         type="button"
         onClick={toggleOpen}
-        className="flex items-center gap-1.5 text-xs font-medium text-[#94A3B8] hover:text-white"
+        className="flex items-center gap-1.5 text-xs font-medium text-brand-muted hover:text-white"
       >
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         Eingelesene Mails
@@ -144,7 +144,7 @@ function MessageList({ accountId }: { accountId: string }) {
             <select
               value={filter}
               onChange={(e) => changeFilter(e.target.value)}
-              className="h-8 rounded-md border border-white/10 bg-[#0D1B2E] px-2 text-[11px] text-[#D8DADF] outline-none focus:border-[#1F5FA8]"
+              className="h-8 rounded-md border border-white/10 bg-brand-surface px-2 text-[11px] text-brand-platinum outline-none focus:border-brand-accent"
             >
               {FILTER_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -159,13 +159,13 @@ function MessageList({ accountId }: { accountId: string }) {
           {loading && messages.length === 0 && (
             <div className="space-y-1.5">
               {Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="h-10 animate-pulse rounded-md bg-[#0D1B2E]" />
+                <div key={index} className="h-10 animate-pulse rounded-md bg-brand-surface" />
               ))}
             </div>
           )}
 
           {!loading && messages.length === 0 && !error && (
-            <p className="py-4 text-center text-xs text-[#747C89]">Keine Mails für diesen Filter.</p>
+            <p className="py-4 text-center text-xs text-brand-dim">Keine Mails für diesen Filter.</p>
           )}
 
           <div className="divide-y divide-white/5 overflow-hidden rounded-md border border-white/5">
@@ -174,24 +174,24 @@ function MessageList({ accountId }: { accountId: string }) {
               return (
                 <div
                   key={message.id}
-                  className="flex flex-wrap items-center gap-2 bg-[#071426]/60 px-3 py-2 text-xs"
+                  className="flex flex-wrap items-center gap-2 bg-brand-sidebar/60 px-3 py-2 text-xs"
                 >
-                  <span className="shrink-0 text-[#747C89]">{formatMessageDate(message.received_at)}</span>
-                  {message.is_linkedin && <Linkedin size={12} className="shrink-0 text-[#69A7EA]" />}
-                  <span className="min-w-0 flex-1 truncate text-[#D8DADF]">
+                  <span className="shrink-0 text-brand-dim">{formatMessageDate(message.received_at)}</span>
+                  {message.is_linkedin && <Linkedin size={12} className="shrink-0 text-brand-accent-light" />}
+                  <span className="min-w-0 flex-1 truncate text-brand-platinum">
                     <span className="font-medium">{message.from_name ?? message.from_address ?? "Unbekannt"}</span>
-                    {message.subject && <span className="text-[#747C89]"> — {message.subject}</span>}
+                    {message.subject && <span className="text-brand-dim"> — {message.subject}</span>}
                   </span>
                   <Badge tone={STATUS_TONE[message.match_status]}>{STATUS_LABEL[message.match_status]}</Badge>
                   {link ? (
-                    <Link href={link.href} className="shrink-0 text-[#69A7EA] hover:underline">
+                    <Link href={link.href} className="shrink-0 text-brand-accent-light hover:underline">
                       {link.label} →
                     </Link>
                   ) : message.match_status === "pending_review" ? (
                     // Kernfall: LinkedIn-Antwort ohne Namenstreffer - kein
                     // Link, aber der Name aus der Mail bleibt sichtbar,
                     // damit klar ist, wer manuelles Eingreifen braucht.
-                    <span className="shrink-0 text-[#F0B429]">
+                    <span className="shrink-0 text-brand-warning">
                       {message.from_name ?? "Name unbekannt"} – kein Treffer
                     </span>
                   ) : null}
@@ -254,7 +254,7 @@ function ThrottleSettingsEditor({
     Number(dailyLimit) !== account.daily_send_limit;
 
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[#94A3B8]">
+    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-brand-muted">
       <span>Versand-Pause</span>
       <input
         type="number"
@@ -262,7 +262,7 @@ function ThrottleSettingsEditor({
         max={3600}
         value={throttleSeconds}
         onChange={(e) => setThrottleSeconds(e.target.value)}
-        className="h-7 w-16 rounded border border-white/10 bg-[#0D1B2E] px-1.5 text-center text-[#F8FAFC] outline-none focus:border-[#1F5FA8]"
+        className="h-7 w-16 rounded border border-white/10 bg-brand-surface px-1.5 text-center text-brand-text outline-none focus:border-brand-accent"
       />
       <span>s · Tageslimit</span>
       <input
@@ -271,7 +271,7 @@ function ThrottleSettingsEditor({
         max={10000}
         value={dailyLimit}
         onChange={(e) => setDailyLimit(e.target.value)}
-        className="h-7 w-20 rounded border border-white/10 bg-[#0D1B2E] px-1.5 text-center text-[#F8FAFC] outline-none focus:border-[#1F5FA8]"
+        className="h-7 w-20 rounded border border-white/10 bg-brand-surface px-1.5 text-center text-brand-text outline-none focus:border-brand-accent"
       />
       <span>Mails/Tag</span>
       {dirty && (
@@ -432,7 +432,7 @@ export default function PostfaecherPage() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="h-16 animate-pulse rounded-lg bg-[#0D1B2E]" />
+          <div key={index} className="h-16 animate-pulse rounded-lg bg-brand-surface" />
         ))}
       </div>
     );
@@ -444,8 +444,8 @@ export default function PostfaecherPage() {
         <PageHeader eyebrow="Hermes" title="E-Mails & Konten" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <ShieldOff size={28} className="text-[#747C89]" />
-            <p className="text-sm text-[#94A3B8]">
+            <ShieldOff size={28} className="text-brand-dim" />
+            <p className="text-sm text-brand-muted">
               Diese Seite ist Administratoren vorbehalten - hier liegen die Zugangsdaten aller
               Firmen-Postfächer.
             </p>
@@ -474,7 +474,7 @@ export default function PostfaecherPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="font-semibold">Verbundene Postfächer</h2>
-                <p className="mt-1 text-xs text-[#94A3B8]">
+                <p className="mt-1 text-xs text-brand-muted">
                   Eingehende Mails werden Kandidat:innen und Kanzlei-Kontakten zugeordnet und in
                   der Timeline abgelegt. Passwörter werden verschlüsselt gespeichert und nie
                   wieder angezeigt.
@@ -495,7 +495,7 @@ export default function PostfaecherPage() {
 
           <CardContent className="space-y-4">
             {msConnectedNotice && (
-              <div className="rounded-lg border border-[#4f8a68]/35 bg-[#244d38]/45 p-3 text-xs text-[#a9d6b8]">
+              <div className="rounded-lg border border-brand-success/35 bg-brand-success-bg/45 p-3 text-xs text-brand-success-text">
                 Postfach {msConnectedNotice} erfolgreich über Microsoft verbunden.
               </div>
             )}
@@ -506,7 +506,7 @@ export default function PostfaecherPage() {
             {showForm && (
               <form
                 onSubmit={handleCreate}
-                className="rounded-lg border border-white/10 bg-[#071426] p-4"
+                className="rounded-lg border border-white/10 bg-brand-sidebar p-4"
               >
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field label="E-Mail-Adresse *">
@@ -589,15 +589,15 @@ export default function PostfaecherPage() {
             {isLoading && accounts.length === 0 && (
               <div className="space-y-2">
                 {Array.from({ length: 2 }).map((_, index) => (
-                  <div key={index} className="h-20 animate-pulse rounded-lg bg-[#0D1B2E]" />
+                  <div key={index} className="h-20 animate-pulse rounded-lg bg-brand-surface" />
                 ))}
               </div>
             )}
 
             {!isLoading && accounts.length === 0 && (
               <div className="flex flex-col items-center gap-2 py-10 text-center">
-                <Mail size={24} className="text-[#747C89]" />
-                <p className="text-sm text-[#94A3B8]">Noch kein Postfach verbunden.</p>
+                <Mail size={24} className="text-brand-dim" />
+                <p className="text-sm text-brand-muted">Noch kein Postfach verbunden.</p>
               </div>
             )}
 
@@ -607,37 +607,37 @@ export default function PostfaecherPage() {
               return (
                 <div
                   key={account.id}
-                  className="rounded-lg border border-white/10 bg-[#0D1B2E]/60 p-4"
+                  className="rounded-lg border border-white/10 bg-brand-surface/60 p-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="flex flex-wrap items-center gap-2 font-medium text-[#F8FAFC]">
+                      <p className="flex flex-wrap items-center gap-2 font-medium text-brand-text">
                         {account.address}
-                        <span className="rounded bg-[#12243A] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[#94A3B8]">
+                        <span className="rounded bg-brand-panel px-2 py-0.5 text-[10px] uppercase tracking-wider text-brand-muted">
                           {account.label}
                         </span>
                         {account.default_for_cv_out && (
-                          <span className="flex items-center gap-1 rounded bg-[#1F5FA8]/25 px-2 py-0.5 text-[10px] text-[#69A7EA]">
+                          <span className="flex items-center gap-1 rounded bg-brand-accent/25 px-2 py-0.5 text-[10px] text-brand-accent-light">
                             <Star size={10} />CV-OUT-Standard
                           </span>
                         )}
                         {!account.is_active && (
-                          <span className="rounded bg-[#3A2416] px-2 py-0.5 text-[10px] text-[#F0B429]">
+                          <span className="rounded bg-[#3A2416] px-2 py-0.5 text-[10px] text-brand-warning">
                             inaktiv
                           </span>
                         )}
                         {account.provider === "microsoft_graph" && (
-                          <span className="rounded bg-[#1F5FA8]/25 px-2 py-0.5 text-[10px] text-[#69A7EA]">
+                          <span className="rounded bg-brand-accent/25 px-2 py-0.5 text-[10px] text-brand-accent-light">
                             Microsoft 365
                           </span>
                         )}
                         {account.oauth_status === "needs_reconnect" && (
-                          <span className="flex items-center gap-1 rounded bg-[#3A2416] px-2 py-0.5 text-[10px] text-[#F0B429]">
+                          <span className="flex items-center gap-1 rounded bg-[#3A2416] px-2 py-0.5 text-[10px] text-brand-warning">
                             <Unplug size={10} />Verbindung abgelaufen
                           </span>
                         )}
                       </p>
-                      <p className="mt-1 text-xs text-[#747C89]">
+                      <p className="mt-1 text-xs text-brand-dim">
                         {account.provider === "microsoft_graph"
                           ? "Microsoft Graph (OAuth)"
                           : `IMAP ${account.imap_host}:${account.imap_port} · SMTP ${account.smtp_host}:${account.smtp_port}`}
@@ -706,13 +706,13 @@ export default function PostfaecherPage() {
                       erkennbar sein, ob es an den Zugangsdaten oder an
                       etwas anderem lag. */}
                   {(account.sync_error || result?.error) && (
-                    <div className="mt-3 flex gap-2 rounded-md border border-[#F0B429]/30 bg-[#3A2416]/40 p-3">
-                      <AlertTriangle size={14} className="mt-0.5 shrink-0 text-[#F0B429]" />
+                    <div className="mt-3 flex gap-2 rounded-md border border-brand-warning/30 bg-[#3A2416]/40 p-3">
+                      <AlertTriangle size={14} className="mt-0.5 shrink-0 text-brand-warning" />
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-[#F0B429]">
+                        <p className="text-xs font-semibold text-brand-warning">
                           Letzter Abruf fehlgeschlagen
                         </p>
-                        <p className="mt-1 break-words font-mono text-[11px] text-[#D8DADF]">
+                        <p className="mt-1 break-words font-mono text-[11px] text-brand-platinum">
                           {result?.error ?? account.sync_error}
                         </p>
                       </div>
@@ -720,7 +720,7 @@ export default function PostfaecherPage() {
                   )}
 
                   {result?.ok && (
-                    <p className="mt-3 rounded-md border border-[#1F5FA8]/30 bg-[#102A4C]/50 p-2.5 text-xs text-[#69A7EA]">
+                    <p className="mt-3 rounded-md border border-brand-accent/30 bg-brand-accent-soft/50 p-2.5 text-xs text-brand-accent-light">
                       {result.fetched} neue Mail(s) · {result.created_activities} Aktivität(en)
                       angelegt · {result.pending_review} zur Prüfung · {result.skipped_duplicates}{" "}
                       bereits bekannt
@@ -742,12 +742,12 @@ export default function PostfaecherPage() {
 }
 
 const inputClass =
-  "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+  "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-xs text-brand-text outline-none focus:border-brand-accent";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1 block text-xs text-[#94A3B8]">{label}</label>
+      <label className="mb-1 block text-xs text-brand-muted">{label}</label>
       {children}
     </div>
   );

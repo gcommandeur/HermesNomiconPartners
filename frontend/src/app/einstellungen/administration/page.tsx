@@ -59,7 +59,7 @@ export default function AdministrationPage() {
   const isAdmin = meData?.data.is_admin ?? false;
 
   if (isLoading) {
-    return <div className="h-16 animate-pulse rounded-lg bg-[#0D1B2E]" />;
+    return <div className="h-16 animate-pulse rounded-lg bg-brand-surface" />;
   }
 
   if (!isAdmin) {
@@ -67,7 +67,7 @@ export default function AdministrationPage() {
       <>
         <PageHeader eyebrow="Administration" title="Administration" />
         <Card>
-          <CardContent className="flex items-center gap-3 text-sm text-[#94A3B8]">
+          <CardContent className="flex items-center gap-3 text-sm text-brand-muted">
             <ShieldOff size={18} /> Nur für Admins zugänglich.
           </CardContent>
         </Card>
@@ -81,18 +81,18 @@ export default function AdministrationPage() {
       <div className="space-y-8">
         {GROUPS.map((group) => (
           <section key={group.title}>
-            <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#D8DADF]">
-              <group.icon size={15} className="text-[#69A7EA]" /> {group.title}
+            <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-platinum">
+              <group.icon size={15} className="text-brand-accent-light" /> {group.title}
             </h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {group.tiles.map((tile) => (
                 <Link key={tile.href} href={tile.href} className="group block">
-                  <Card className="h-full transition-colors group-hover:border-[#1F5FA8]/60">
+                  <Card className="h-full transition-colors group-hover:border-brand-accent/60">
                     <CardContent className="flex items-start gap-3">
-                      <tile.icon size={18} className="mt-0.5 shrink-0 text-[#69A7EA]" />
+                      <tile.icon size={18} className="mt-0.5 shrink-0 text-brand-accent-light" />
                       <div>
-                        <p className="font-medium text-[#F8FAFC]">{tile.label}</p>
-                        <p className="mt-1 text-xs text-[#94A3B8]">{tile.description}</p>
+                        <p className="font-medium text-brand-text">{tile.label}</p>
+                        <p className="mt-1 text-xs text-brand-muted">{tile.description}</p>
                       </div>
                     </CardContent>
                   </Card>

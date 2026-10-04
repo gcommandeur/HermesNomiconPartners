@@ -10,7 +10,7 @@ import { apiPost } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import type { SourcingMetric } from "@/lib/api/types";
 
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
+const labelClass = "mb-1 block text-xs text-brand-muted";
 
 function isoToday(): string {
   return new Date().toISOString().slice(0, 10);

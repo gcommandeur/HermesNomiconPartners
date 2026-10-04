@@ -14,7 +14,7 @@ export function ListSkeleton({ rows = 8 }: { rows?: number }) {
   return (
     <div className="space-y-2">
       {Array.from({ length: rows }).map((_, index) => (
-        <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+        <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
       ))}
     </div>
   );

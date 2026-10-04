@@ -51,21 +51,21 @@ export default async function WarrantyOverviewPage() {
                     <p className="font-semibold">{candidateName(submission?.candidate_id ?? null)}</p>
                     <Badge tone={warrantyTone[placement.warranty_status]}>{warrantyLabel[placement.warranty_status]}</Badge>
                   </div>
-                  <p className="mt-1 text-xs text-[#94A3B8]">{clientName(submission?.client_company_id ?? null)}</p>
+                  <p className="mt-1 text-xs text-brand-muted">{clientName(submission?.client_company_id ?? null)}</p>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="text-right text-xs text-[#A7ADB7]">
-                    <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Gewährleistung bis</p>
-                    <p className="mt-1 text-sm text-[#F8FAFC]">{formatDate(placement.warranty_end_date)}</p>
+                  <div className="text-right text-xs text-brand-silver">
+                    <p className="text-[10px] uppercase tracking-wider text-brand-muted">Gewährleistung bis</p>
+                    <p className="mt-1 text-sm text-brand-text">{formatDate(placement.warranty_end_date)}</p>
                   </div>
-                  <div className="text-right text-xs text-[#A7ADB7]">
-                    <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Fee</p>
-                    <p className="mt-1 text-sm text-[#F8FAFC]">{formatCurrency(Number(placement.calculated_fee))}</p>
+                  <div className="text-right text-xs text-brand-silver">
+                    <p className="text-[10px] uppercase tracking-wider text-brand-muted">Fee</p>
+                    <p className="mt-1 text-sm text-brand-text">{formatCurrency(Number(placement.calculated_fee))}</p>
                   </div>
                   {submission && (
                     <Link
                       href={`/kandidaten/${submission.candidate_id}?from=prozesse`}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-[#1F5FA8]/40 bg-[#153A66]/45 px-3 py-1.5 text-xs text-[#c5dcfa] hover:bg-[#153A66]/70"
+                      className="inline-flex items-center gap-1.5 rounded-md border border-brand-accent/40 bg-brand-accent-strong/45 px-3 py-1.5 text-xs text-brand-info hover:bg-brand-accent-strong/70"
                     >
                       Profil öffnen <ArrowUpRight size={13} />
                     </Link>
@@ -76,7 +76,7 @@ export default async function WarrantyOverviewPage() {
           );
         })}
         {placements.length === 0 && (
-          <Card><CardContent className="py-12 text-center text-sm text-[#858b90]">Keine laufenden Gewährleistungen.</CardContent></Card>
+          <Card><CardContent className="py-12 text-center text-sm text-brand-gray">Keine laufenden Gewährleistungen.</CardContent></Card>
         )}
       </div>
     </>

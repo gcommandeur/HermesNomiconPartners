@@ -12,7 +12,7 @@ const WeeklyChart = dynamic(
   () => import("./weekly-chart").then((mod) => mod.WeeklyChart),
   {
     ssr: false,
-    loading: () => <div className="h-[290px] w-full animate-pulse rounded-lg bg-[#0D1B2E]" />,
+    loading: () => <div className="h-[290px] w-full animate-pulse rounded-lg bg-brand-surface" />,
   },
 );
 

@@ -12,7 +12,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import type { EnrollmentStatus, OutreachSequence, SequenceChannel, SequenceEnrollment } from "@/lib/api/types";
 
-const selectClass = "h-8 rounded-md border border-white/10 bg-[#0D1B2E] px-2 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const selectClass = "h-8 rounded-md border border-white/10 bg-brand-surface px-2 text-xs text-brand-text outline-none focus:border-brand-accent";
 
 const STATUS_LABEL: Record<EnrollmentStatus, string> = {
   active: "Läuft",
@@ -91,23 +91,23 @@ export function CandidateSequencesPanel({ candidateId }: { candidateId: string }
   }
 
   return (
-    <div className="mb-6 space-y-2 rounded-lg border border-white/10 bg-[#0D1B2E]/60 p-3">
-      <p className="text-xs text-[#94A3B8]">Outreach-Sequenzen</p>
+    <div className="mb-6 space-y-2 rounded-lg border border-white/10 bg-brand-surface/60 p-3">
+      <p className="text-xs text-brand-muted">Outreach-Sequenzen</p>
       {enrollments.length === 0 && (
         <p className="text-xs text-[#64748B]">In keiner Sequenz eingeschrieben.</p>
       )}
       {enrollments.map((enrollment) => (
         <div
           key={enrollment.id}
-          className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs text-[#D8DADF]"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs text-brand-platinum"
         >
           <div>
             <span className="font-medium">{enrollment.sequence_name}</span>
-            <span className="ml-2 text-[#94A3B8]">{STATUS_LABEL[enrollment.status]}</span>
+            <span className="ml-2 text-brand-muted">{STATUS_LABEL[enrollment.status]}</span>
             {enrollment.stopped_reason && (
-              <span className="ml-2 text-[#94A3B8]">({enrollment.stopped_reason})</span>
+              <span className="ml-2 text-brand-muted">({enrollment.stopped_reason})</span>
             )}
-            <div className="mt-0.5 text-[#94A3B8]">
+            <div className="mt-0.5 text-brand-muted">
               Schritt {Math.min(enrollment.current_step_index, enrollment.total_steps)} von{" "}
               {enrollment.total_steps} erledigt
               {enrollment.next_step_due_on && enrollment.next_step_channel && (

@@ -128,11 +128,11 @@ export function SourcingRunForm() {
   }
 
   return (
-    <div className="mb-6 rounded-lg border border-white/10 bg-[#0D1B2E] p-4">
+    <div className="mb-6 rounded-lg border border-white/10 bg-brand-surface p-4">
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <p className="text-sm font-semibold text-[#D8DADF]">Sourcing-Lauf starten</p>
+        <p className="text-sm font-semibold text-brand-platinum">Sourcing-Lauf starten</p>
         {activeRun && (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#1F5FA8]/40 bg-[#1F5FA8]/15 px-2.5 py-0.5 text-[11px] font-medium text-[#8FB4E3]">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-accent/40 bg-brand-accent/15 px-2.5 py-0.5 text-[11px] font-medium text-[#8FB4E3]">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#8FB4E3]" />
             Läuft: {activeRun.processed}/{activeRun.total} {runUnit}
             {activeRun.leads_created > 0 && ` · ${activeRun.leads_created} neue Leads`}
@@ -140,7 +140,7 @@ export function SourcingRunForm() {
           </span>
         )}
       </div>
-      <p className="mb-3 text-xs text-[#94A3B8]">{selectedOption?.hint}</p>
+      <p className="mb-3 text-xs text-brand-muted">{selectedOption?.hint}</p>
       <div className="flex flex-wrap items-center gap-2">
         <select
           value={source}
@@ -150,7 +150,7 @@ export function SourcingRunForm() {
             setResult(null);
             setError(null);
           }}
-          className="h-9 rounded-md border border-white/15 bg-[#0D1B2E] px-2 text-sm text-[#D8DADF] focus:outline-none focus:ring-2 focus:ring-[#1F5FA8]/30 disabled:opacity-50"
+          className="h-9 rounded-md border border-white/15 bg-brand-surface px-2 text-sm text-brand-platinum focus:outline-none focus:ring-2 focus:ring-brand-accent/30 disabled:opacity-50"
         >
           {SOURCE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -164,7 +164,7 @@ export function SourcingRunForm() {
             disabled={!!activeRun}
             onChange={(event) => setInput(event.target.value)}
             placeholder={isRadius ? "PLZ oder Ort, z.B. 70191" : "z.B. 70173, 80331, Würzburg"}
-            className="h-9 w-full max-w-md rounded-md border border-white/15 bg-white/5 px-3 text-sm text-[#D8DADF] placeholder:text-[#5b6167] focus:outline-none focus:ring-2 focus:ring-[#1F5FA8]/30 disabled:opacity-50"
+            className="h-9 w-full max-w-md rounded-md border border-white/15 bg-white/5 px-3 text-sm text-brand-platinum placeholder:text-brand-gray-dark focus:outline-none focus:ring-2 focus:ring-brand-accent/30 disabled:opacity-50"
           />
         )}
         <select
@@ -175,7 +175,7 @@ export function SourcingRunForm() {
             setResult(null);
             setError(null);
           }}
-          className="h-9 rounded-md border border-white/15 bg-[#0D1B2E] px-2 text-sm text-[#D8DADF] focus:outline-none focus:ring-2 focus:ring-[#1F5FA8]/30 disabled:opacity-50"
+          className="h-9 rounded-md border border-white/15 bg-brand-surface px-2 text-sm text-brand-platinum focus:outline-none focus:ring-2 focus:ring-brand-accent/30 disabled:opacity-50"
         >
           <option value="">{isTeamScrape ? "Alle Kanzleien" : "Kein Umkreis"}</option>
           {RADIUS_OPTIONS.map((km) => (
@@ -208,14 +208,14 @@ export function SourcingRunForm() {
         )}
       </div>
       {!isRadius && areas.length > 20 && !isTeamScrape && (
-        <p className="mt-2 text-xs text-[#e4aeb4]">Maximal 20 Gebiete pro Lauf.</p>
+        <p className="mt-2 text-xs text-brand-danger-soft">Maximal 20 Gebiete pro Lauf.</p>
       )}
       {isRadius && areas.length > 1 && (
-        <p className="mt-2 text-xs text-[#e4aeb4]">Für die Umkreissuche genau eine PLZ oder einen Ort angeben.</p>
+        <p className="mt-2 text-xs text-brand-danger-soft">Für die Umkreissuche genau eine PLZ oder einen Ort angeben.</p>
       )}
       <ErrorBanner message={error} className="mt-3" />
       {result && (
-        <div className="mt-3 rounded-md border border-[#1F5FA8]/30 bg-[#1F5FA8]/10 p-3 text-xs text-[#CBD5E1]">
+        <div className="mt-3 rounded-md border border-brand-accent/30 bg-brand-accent/10 p-3 text-xs text-brand-soft">
           {result.background_started > 0 ? (
             <>
               {isTeamScrape
@@ -237,7 +237,7 @@ export function SourcingRunForm() {
             </>
           )}
           {result.errors.length > 0 && (
-            <ul className="mt-2 list-disc pl-4 text-[#e4aeb4]">
+            <ul className="mt-2 list-disc pl-4 text-brand-danger-soft">
               {result.errors.map((message) => (
                 <li key={message}>{message}</li>
               ))}

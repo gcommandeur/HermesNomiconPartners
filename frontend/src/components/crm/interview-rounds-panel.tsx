@@ -18,7 +18,7 @@ const STATUS_LABELS: Record<Interview["status"], string> = {
 };
 
 const STATUS_TONE: Record<Interview["status"], string> = {
-  scheduled: "border-[#1F5FA8]/40 text-[#69A7EA]",
+  scheduled: "border-brand-accent/40 text-brand-accent-light",
   completed: "border-emerald-400/40 text-emerald-300",
   cancelled: "border-red-400/40 text-red-300",
   no_show: "border-red-400/40 text-red-300",
@@ -67,7 +67,7 @@ export function InterviewRoundsPanel({
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">
+        <p className="text-xs font-semibold uppercase tracking-wider text-brand-muted">
           Interview-Runden
         </p>
         {canPlanNew && (
@@ -82,11 +82,11 @@ export function InterviewRoundsPanel({
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 2 }).map((_, index) => (
-            <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+            <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
           ))}
         </div>
       ) : sorted.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-white/10 p-4 text-center text-xs text-[#94A3B8]">
+        <p className="rounded-lg border border-dashed border-white/10 p-4 text-center text-xs text-brand-muted">
           {canPlanNew
             ? "Noch keine Interview-Runde geplant."
             : "Interviews koennen erst geplant werden, sobald der Prozess im Status „Interview“ ist."}
@@ -98,15 +98,15 @@ export function InterviewRoundsPanel({
               key={interview.id}
               type="button"
               onClick={() => setModalState({ interview })}
-              className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/10 bg-[#0D1B2E] p-3 text-left text-xs hover:border-[#1F5FA8]/50"
+              className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/10 bg-brand-surface p-3 text-left text-xs hover:border-brand-accent/50"
             >
               <div className="min-w-0">
-                <p className="font-semibold text-[#F8FAFC]">
+                <p className="font-semibold text-brand-text">
                   Runde {index + 1} · {interview.interview_type}
                 </p>
-                <p className="mt-1 text-[#94A3B8]">{formatDateTime(interview.scheduled_at)}</p>
+                <p className="mt-1 text-brand-muted">{formatDateTime(interview.scheduled_at)}</p>
                 {interview.location_or_link && (
-                  <p className="mt-1 truncate text-[#747C89]">{interview.location_or_link}</p>
+                  <p className="mt-1 truncate text-brand-dim">{interview.location_or_link}</p>
                 )}
               </div>
               <span

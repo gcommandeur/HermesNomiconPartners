@@ -114,7 +114,7 @@ export function SearchSelect({
         required={required && !value}
         autoComplete="off"
         className={cn(
-          "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]",
+          "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent",
           className,
         )}
         placeholder={placeholder}
@@ -127,31 +127,31 @@ export function SearchSelect({
         }}
       />
       {open && (
-        <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-white/10 bg-[#0D1B2E] shadow-xl">
+        <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-white/10 bg-brand-surface shadow-xl">
           {clearLabel && (
             <button
               type="button"
-              className="block w-full px-3 py-2 text-left text-sm text-[#94A3B8] hover:bg-[#1F5FA8]/15"
+              className="block w-full px-3 py-2 text-left text-sm text-brand-muted hover:bg-brand-accent/15"
               onClick={() => selectOption(null)}
             >
               {clearLabel}
             </button>
           )}
           {onSearch && asyncLoading && (
-            <p className="px-3 py-2 text-sm text-[#747C89]">Sucht…</p>
+            <p className="px-3 py-2 text-sm text-brand-dim">Sucht…</p>
           )}
           {!(onSearch && asyncLoading) && filtered.length === 0 && (
-            <p className="px-3 py-2 text-sm text-[#747C89]">{emptyLabel}</p>
+            <p className="px-3 py-2 text-sm text-brand-dim">{emptyLabel}</p>
           )}
           {filtered.map((option) => (
             <button
               key={option.value}
               type="button"
-              className="block w-full px-3 py-2 text-left text-sm text-[#F8FAFC] hover:bg-[#1F5FA8]/15"
+              className="block w-full px-3 py-2 text-left text-sm text-brand-text hover:bg-brand-accent/15"
               onClick={() => selectOption(option)}
             >
               {option.label}
-              {option.sublabel && <span className="ml-2 text-xs text-[#747C89]">{option.sublabel}</span>}
+              {option.sublabel && <span className="ml-2 text-xs text-brand-dim">{option.sublabel}</span>}
             </button>
           ))}
         </div>

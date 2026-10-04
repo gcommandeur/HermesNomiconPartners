@@ -8,7 +8,7 @@ import { useAssignableUsersCache, useCurrentUser } from "@/lib/api/hooks";
 import { createSubmissionShare, deleteSubmissionShare, getSubmissionShares } from "@/lib/api/queries";
 import type { SubmissionShare } from "@/lib/api/types";
 
-const selectClass = "h-8 rounded-md border border-white/10 bg-[#0D1B2E] px-2 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const selectClass = "h-8 rounded-md border border-white/10 bg-brand-surface px-2 text-xs text-brand-text outline-none focus:border-brand-accent";
 
 /** "Geteilt mit": gezielte Freigabe EINES Prozesses an Kollegen (Vertretung,
  * Vier-Augen-Pruefung) - voller Zugriff, kein Berechtigungslevel. Teilen und
@@ -83,8 +83,8 @@ export function SubmissionSharesPanel({
   if (!canManage && shares.length === 0) return null;
 
   return (
-    <div className="space-y-2 rounded-lg border border-white/10 bg-[#0D1B2E]/60 p-3">
-      <p className="text-xs text-[#94A3B8]">Geteilt mit</p>
+    <div className="space-y-2 rounded-lg border border-white/10 bg-brand-surface/60 p-3">
+      <p className="text-xs text-brand-muted">Geteilt mit</p>
       <div className="flex flex-wrap items-center gap-2">
         {shares.length === 0 && <span className="text-xs text-[#64748B]">Noch mit niemandem geteilt.</span>}
         {shares.map((share) => {
@@ -92,7 +92,7 @@ export function SubmissionSharesPanel({
           return (
             <span
               key={share.id}
-              className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 py-0.5 pl-2.5 pr-1 text-xs text-[#D8DADF]"
+              className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 py-0.5 pl-2.5 pr-1 text-xs text-brand-platinum"
               title={share.created_by_name ? `Geteilt von ${share.created_by_name}` : undefined}
             >
               {share.shared_with_name ?? "Nutzer"}
@@ -102,7 +102,7 @@ export function SubmissionSharesPanel({
                   aria-label={`Freigabe für ${share.shared_with_name ?? "Nutzer"} entfernen`}
                   disabled={busy}
                   onClick={() => handleRemove(share)}
-                  className="rounded-full p-0.5 text-[#94A3B8] hover:bg-white/10 hover:text-white disabled:opacity-45"
+                  className="rounded-full p-0.5 text-brand-muted hover:bg-white/10 hover:text-white disabled:opacity-45"
                 >
                   <X className="size-3" />
                 </button>

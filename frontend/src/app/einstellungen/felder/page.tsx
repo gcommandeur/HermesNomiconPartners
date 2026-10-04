@@ -11,7 +11,7 @@ import { createCustomField, getCustomFields, updateCustomField } from "@/lib/api
 import type { CustomFieldDefinition, CustomFieldEntity, CustomFieldType } from "@/lib/api/types";
 
 const selectClass =
-  "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+  "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 const ENTITY_LABELS: Record<CustomFieldEntity, string> = {
   candidate: "Kandidaten",
@@ -58,7 +58,7 @@ export default function EigeneFelderPage() {
   }
 
   if (meLoading) {
-    return <div className="h-16 animate-pulse rounded-lg bg-[#0D1B2E]" />;
+    return <div className="h-16 animate-pulse rounded-lg bg-brand-surface" />;
   }
 
   if (!isAdmin) {
@@ -66,7 +66,7 @@ export default function EigeneFelderPage() {
       <>
         <PageHeader eyebrow="Einstellungen" title="Eigene Felder" />
         <Card>
-          <CardContent className="flex items-center gap-3 text-sm text-[#94A3B8]">
+          <CardContent className="flex items-center gap-3 text-sm text-brand-muted">
             <ShieldOff size={18} /> Nur für Admins zugänglich.
           </CardContent>
         </Card>
@@ -77,7 +77,7 @@ export default function EigeneFelderPage() {
   return (
     <>
       <PageHeader eyebrow="Einstellungen" title="Eigene Felder" />
-      <p className="mb-5 max-w-3xl text-sm text-[#94A3B8]">
+      <p className="mb-5 max-w-3xl text-sm text-brand-muted">
         Zusätzliche Felder für Kandidaten, Kanzleien und Kontakte – ohne Programmierung. Sie erscheinen auf der
         Detailseite im Block „Eigene Felder“ und lassen sich in der Kandidatenliste per Auswahl-/Ja-Nein-Wert
         filtern. Typ und Schlüssel sind nach dem Anlegen fest; ein Feld wird deaktiviert statt gelöscht, damit
@@ -125,16 +125,16 @@ export default function EigeneFelderPage() {
       {message && <p className="mb-3 text-sm text-red-300">{message}</p>}
 
       <div className="space-y-3">
-        {fields.length === 0 && <p className="text-sm text-[#94A3B8]">Noch keine eigenen Felder.</p>}
+        {fields.length === 0 && <p className="text-sm text-brand-muted">Noch keine eigenen Felder.</p>}
         {fields.map((field) => (
           <Card key={field.id}>
             <CardContent className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="font-medium">
                   {field.label}
-                  {!field.is_active && <span className="ml-2 text-xs text-[#94A3B8]">(deaktiviert)</span>}
+                  {!field.is_active && <span className="ml-2 text-xs text-brand-muted">(deaktiviert)</span>}
                 </p>
-                <p className="text-xs text-[#94A3B8]">
+                <p className="text-xs text-brand-muted">
                   {ENTITY_LABELS[field.entity_type]} · {TYPE_LABELS[field.field_type]} · Schlüssel {field.key}
                   {field.options.length > 0 && ` · ${field.options.join(", ")}`}
                 </p>

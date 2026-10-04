@@ -24,6 +24,13 @@
   --accent-strong: #153a66;
   --warning: #f0b429;
   --danger: #e5484d;
+  --danger-soft: #e4aeb4;
+  --success: #4f8a68;
+  --success-text: #a9d6b8;
+  --success-bg: #244d38;
+  --info-soft: #c5dcfa;
+  --text-gray: #8b9196;
+  --text-gray-dark: #5b6167;
 }
 
 /* Tailwind-Klassen fuer die Variablen: bg-brand-panel, text-brand-muted, ...
@@ -48,6 +55,13 @@
   --color-brand-accent-soft: var(--accent-soft);
   --color-brand-warning: var(--warning);
   --color-brand-danger: var(--danger);
+  --color-brand-danger-soft: var(--danger-soft);
+  --color-brand-success: var(--success);
+  --color-brand-success-text: var(--success-text);
+  --color-brand-success-bg: var(--success-bg);
+  --color-brand-info: var(--info-soft);
+  --color-brand-gray: var(--text-gray);
+  --color-brand-gray-dark: var(--text-gray-dark);
 }
 
 * { border-color: var(--border); }

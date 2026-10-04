@@ -33,8 +33,8 @@ const METRIC_OPTIONS = [
   ...STAGE_ORDER_WITH_PITCH.map(({ key, label }) => ({ value: key, label })),
 ];
 
-const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
+const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
+const labelClass = "mb-1 block text-xs text-brand-muted";
 
 function pointsFromRules(rules: KpiPointRule[]): Record<string, number> {
   return Object.fromEntries(rules.map((rule) => [rule.stage, rule.points]));
@@ -73,7 +73,7 @@ export default function KpiPunktePage() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+          <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
         ))}
       </div>
     );
@@ -85,9 +85,9 @@ export default function KpiPunktePage() {
         <PageHeader eyebrow="Hermes" title="KPI-Punkte" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <ShieldOff size={28} className="text-[#94A3B8]" />
-            <p className="text-sm font-semibold text-[#F8FAFC]">Nur für Admins zugänglich</p>
-            <p className="max-w-sm text-xs text-[#94A3B8]">
+            <ShieldOff size={28} className="text-brand-muted" />
+            <p className="text-sm font-semibold text-brand-text">Nur für Admins zugänglich</p>
+            <p className="max-w-sm text-xs text-brand-muted">
               Das Punkte-System steuert die Geschäftsführer-Ansicht und das Live-Ranking für alle
               Nutzer. Wende dich an einen Admin, falls du Zugriff benötigst.
             </p>
@@ -145,7 +145,7 @@ export default function KpiPunktePage() {
           <CardHeader>
             <div>
               <h2 className="font-semibold">Punkte je Pipeline-Stufe</h2>
-              <p className="mt-1 text-xs text-[#94A3B8]">
+              <p className="mt-1 text-xs text-brand-muted">
                 Steuert die Gesamt-Punktzahl in der Geschäftsführer-Ansicht und im Live-Ranking
                 (Metrik &quot;Punkte&quot;). Werte sind noch nicht definiert (alle auf 0) - hier
                 eintragen.
@@ -156,14 +156,14 @@ export default function KpiPunktePage() {
             {rulesLoading ? (
               <div className="space-y-2">
                 {Array.from({ length: 7 }).map((_, index) => (
-                  <div key={index} className="h-10 animate-pulse rounded-lg bg-[#0D1B2E]" />
+                  <div key={index} className="h-10 animate-pulse rounded-lg bg-brand-surface" />
                 ))}
               </div>
             ) : (
               <div className="space-y-2">
                 {STAGE_ORDER_WITH_PITCH.map(({ key, label }) => (
                   <div key={key} className="flex items-center justify-between gap-3">
-                    <label className="text-sm text-[#D8DADF]">{label}</label>
+                    <label className="text-sm text-brand-platinum">{label}</label>
                     <Input
                       type="number"
                       min={0}
@@ -182,7 +182,7 @@ export default function KpiPunktePage() {
               <Button size="sm" disabled={rulesBusy || rulesLoading} onClick={handleSaveRules}>
                 {rulesBusy ? "Speichern…" : "Punkte-Regeln speichern"}
               </Button>
-              {rulesSaved && <span className="text-xs text-[#a9d6b8]">Gespeichert.</span>}
+              {rulesSaved && <span className="text-xs text-brand-success-text">Gespeichert.</span>}
             </div>
           </CardContent>
         </Card>
@@ -191,7 +191,7 @@ export default function KpiPunktePage() {
           <CardHeader>
             <div>
               <h2 className="font-semibold">Live-Ranking-Voreinstellung</h2>
-              <p className="mt-1 text-xs text-[#94A3B8]">
+              <p className="mt-1 text-xs text-brand-muted">
                 Standard-Metrik und -Zeitraum für das Ranking-Widget auf dem Cockpit - jede:r
                 Nutzer:in kann Tag/Woche im Widget selbst umschalten, die Metrik ist global.
               </p>
@@ -199,7 +199,7 @@ export default function KpiPunktePage() {
           </CardHeader>
           <CardContent>
             {settingsLoading ? (
-              <div className="h-20 animate-pulse rounded-lg bg-[#0D1B2E]" />
+              <div className="h-20 animate-pulse rounded-lg bg-brand-surface" />
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
@@ -241,7 +241,7 @@ export default function KpiPunktePage() {
               <Button size="sm" disabled={settingsBusy || settingsLoading} onClick={handleSaveSettings}>
                 {settingsBusy ? "Speichern…" : "Voreinstellung speichern"}
               </Button>
-              {settingsSaved && <span className="text-xs text-[#a9d6b8]">Gespeichert.</span>}
+              {settingsSaved && <span className="text-xs text-brand-success-text">Gespeichert.</span>}
             </div>
           </CardContent>
         </Card>

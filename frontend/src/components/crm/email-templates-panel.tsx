@@ -11,9 +11,9 @@ import { updateEmailTemplate } from "@/lib/api/queries";
 import { invalidateEmailTemplatesCache, useEmailTemplatesCache } from "@/lib/api/hooks";
 import type { EmailTemplate } from "@/lib/api/types";
 
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
+const labelClass = "mb-1 block text-xs text-brand-muted";
 const textareaClass =
-  "min-h-40 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+  "min-h-40 w-full rounded-md border border-white/10 bg-brand-surface p-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 /** Verwaltungsansicht fuer die editierbaren Mail-Vorlagen (Auftrag
  * "Mailvorlagen editierbar machen") - Name/Betreff/Text sind jetzt in der DB
@@ -69,7 +69,7 @@ export function EmailTemplatesPanel() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+          <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
         ))}
       </div>
     );
@@ -84,9 +84,9 @@ export function EmailTemplatesPanel() {
             <CardContent className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
               <div className="min-w-0">
                 <p className="font-semibold">{template.name}</p>
-                <p className="mt-1 truncate text-xs text-[#94A3B8]">{template.subject}</p>
+                <p className="mt-1 truncate text-xs text-brand-muted">{template.subject}</p>
                 {template.placeholders.length > 0 && (
-                  <p className="mt-1 text-[10px] text-[#69A7EA]">
+                  <p className="mt-1 text-[10px] text-brand-accent-light">
                     Platzhalter: {template.placeholders.map((p) => `{${p}}`).join(", ")}
                   </p>
                 )}
@@ -119,7 +119,7 @@ export function EmailTemplatesPanel() {
               <label className={labelClass}>Text</label>
               <textarea className={textareaClass} value={body} onChange={(e) => setBody(e.target.value)} />
             </div>
-            <p className="text-xs text-[#94A3B8]">
+            <p className="text-xs text-brand-muted">
               {livePlaceholders.length > 0
                 ? `Verwendete Platzhalter: ${livePlaceholders.map((p) => `{${p}}`).join(", ")} - werden beim Versand automatisch aus den Profildaten befüllt.`
                 : "Diese Vorlage verwendet aktuell keine Platzhalter."}{" "}

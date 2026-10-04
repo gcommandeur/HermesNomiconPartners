@@ -92,7 +92,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
         onClick={onMobileClose}
         className={cn(
           "relative flex h-10 items-center gap-3 rounded-md px-3 text-[13px] transition-all duration-200",
-          active ? "border-l-2 border-[#D8DADF] bg-gradient-to-r from-[#153A66]/80 to-[#102A4C]/55 text-white shadow-[inset_0_1px_0_rgba(255,255,255,.04)]" : "text-[#A7ADB7] hover:bg-[#203A5A]/45 hover:text-white hover:translate-x-[1px]",
+          active ? "border-l-2 border-brand-platinum bg-gradient-to-r from-brand-accent-strong/80 to-brand-accent-soft/55 text-white shadow-[inset_0_1px_0_rgba(255,255,255,.04)]" : "text-brand-silver hover:bg-brand-hover/45 hover:text-white hover:translate-x-[1px]",
           collapsed && "justify-center px-0",
         )}
       >
@@ -100,9 +100,9 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
         {!collapsed && <span className="flex-1">{item.label}</span>}
         {badgeCount > 0 && (
           collapsed ? (
-            <span className="absolute right-2 top-2 size-2 rounded-full bg-[#E5484D]" aria-label={`${badgeCount} offen`} />
+            <span className="absolute right-2 top-2 size-2 rounded-full bg-brand-danger" aria-label={`${badgeCount} offen`} />
           ) : (
-            <span className="min-w-5 rounded-full bg-[#E5484D] px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white">
+            <span className="min-w-5 rounded-full bg-brand-danger px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white">
               {badgeCount}
             </span>
           )
@@ -115,7 +115,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
     <>
       {mobileOpen && <button aria-label="Navigation schließen" className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={onMobileClose} />}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/10 bg-[#071426] text-white shadow-[12px_0_40px_rgba(0,0,0,.22)] transition-all duration-200",
+        "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/10 bg-brand-sidebar text-white shadow-[12px_0_40px_rgba(0,0,0,.22)] transition-all duration-200",
         collapsed ? "w-[76px]" : "w-[248px]",
         mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
       )}>
@@ -160,7 +160,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
                     type="button"
                     onClick={() => toggleGroup(group.id)}
                     aria-expanded={open}
-                    className="mb-1 flex h-7 w-full items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-wider text-[#5F6B7A] hover:text-[#A7ADB7]"
+                    className="mb-1 flex h-7 w-full items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-wider text-[#5F6B7A] hover:text-brand-silver"
                   >
                     {group.label}
                     <ChevronDown size={12} className={cn("transition-transform", !open && "-rotate-90")} />
@@ -184,7 +184,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
                                   key={recent.id}
                                   className={cn(
                                     "group flex h-8 items-center gap-1.5 rounded-md pr-1.5 text-[12px] transition-colors",
-                                    active ? "text-white" : "text-[#8a9095] hover:text-white",
+                                    active ? "text-white" : "text-brand-gray hover:text-white",
                                   )}
                                 >
                                   <Link
@@ -203,7 +203,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
                                       event.preventDefault();
                                       removeRecentCandidate(recent.id);
                                     }}
-                                    className="shrink-0 rounded p-1 text-[#5b6167] opacity-0 hover:text-white group-hover:opacity-100"
+                                    className="shrink-0 rounded p-1 text-brand-gray-dark opacity-0 hover:text-white group-hover:opacity-100"
                                   >
                                     <X size={11} />
                                   </button>

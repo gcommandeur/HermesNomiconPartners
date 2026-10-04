@@ -19,7 +19,7 @@ export default function SsoCompletePage() {
   }, [router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#050B14] text-sm text-[#94A3B8]">
+    <div className="flex min-h-screen items-center justify-center bg-[#050B14] text-sm text-brand-muted">
       Anmeldung wird abgeschlossen…
     </div>
   );

@@ -105,7 +105,7 @@ export function AnonymousProfilePanel({
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
             <h2 className="font-semibold">Anonymes Profil vorbereiten</h2>
-            <p className="mt-1 text-xs text-[#7b8187]">
+            <p className="mt-1 text-xs text-brand-dim">
               Vorlagenbasierter, editierbarer Entwurf für CV-Outs und Mailing. Kein automatischer Versand.
             </p>
           </div>
@@ -121,7 +121,7 @@ export function AnonymousProfilePanel({
           </div>
         </div>
         {rollenUnbestaetigt && (
-          <div className="mt-4 flex items-start gap-2 rounded-lg border border-[#F0B429]/25 bg-[#F0B429]/5 p-3 text-xs text-[#F0B429]">
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-brand-warning/25 bg-brand-warning/5 p-3 text-xs text-brand-warning">
             <ShieldAlert size={14} className="mt-0.5 shrink-0" />
             <span>
               Titel unbestätigt (siehe Hinweis oben) - die zugehörige Rollen-Klassifikation
@@ -134,10 +134,10 @@ export function AnonymousProfilePanel({
         <textarea
           value={text}
           onChange={(event) => setText(event.target.value)}
-          className="mt-5 min-h-56 w-full rounded-lg border border-white/10 bg-[#0D1B2E] p-4 text-sm leading-7 text-[#F8FAFC] outline-none focus:border-[#1F5FA8]"
+          className="mt-5 min-h-56 w-full rounded-lg border border-white/10 bg-brand-surface p-4 text-sm leading-7 text-brand-text outline-none focus:border-brand-accent"
         />
         <div className="mt-3 flex items-center justify-end gap-3">
-          {savedAt && <span className="text-xs text-[#7b8187]">Gespeichert {savedAt.toLocaleTimeString("de-DE")}</span>}
+          {savedAt && <span className="text-xs text-brand-dim">Gespeichert {savedAt.toLocaleTimeString("de-DE")}</span>}
           <Button variant="dark" size="sm" onClick={handleSave} disabled={saving || text.trim() === ""}>
             {saving ? "Speichert…" : "Im Kandidatenprofil speichern"}
           </Button>

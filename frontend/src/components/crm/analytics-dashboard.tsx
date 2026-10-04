@@ -63,17 +63,17 @@ function UserFilter({
     <div className="relative" ref={containerRef}>
       <button
         type="button"
-        className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-xs text-[#CBD5E1] hover:border-white/20"
+        className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-brand-surface px-3 text-xs text-brand-soft hover:border-white/20"
         onClick={() => setOpen((o) => !o)}
       >
         {summary}
         <ChevronDown size={13} />
       </button>
       {open && (
-        <div className="absolute right-0 z-10 mt-1 w-56 rounded-md border border-white/10 bg-[#0D1B2E] p-2 shadow-lg">
+        <div className="absolute right-0 z-10 mt-1 w-56 rounded-md border border-white/10 bg-brand-surface p-2 shadow-lg">
           <button
             type="button"
-            className="mb-1 w-full rounded px-2 py-1.5 text-left text-xs text-[#94A3B8] hover:bg-white/5"
+            className="mb-1 w-full rounded px-2 py-1.5 text-left text-xs text-brand-muted hover:bg-white/5"
             onClick={() => onChange(null)}
           >
             Alle auswählen
@@ -82,7 +82,7 @@ function UserFilter({
             {users.map((user) => (
               <label
                 key={user.id}
-                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs text-[#CBD5E1] hover:bg-white/5"
+                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs text-brand-soft hover:bg-white/5"
               >
                 <input
                   type="checkbox"
@@ -116,7 +116,7 @@ export function AnalyticsDashboard() {
     return <ErrorState onRetry={() => void mutate()} />;
   }
   if (!data) {
-    return <div className="h-40 animate-pulse rounded-lg border border-white/10 bg-[#0D1B2E]/50" />;
+    return <div className="h-40 animate-pulse rounded-lg border border-white/10 bg-brand-surface/50" />;
   }
 
   const { kpis, rates, recruiting_kpis: recruitingKpis } = data.data;
@@ -168,7 +168,7 @@ export function AnalyticsDashboard() {
        * zu wenige Datenpunkte, um aussagekraeftig zu sein. */}
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {recruitingKpiCards.map(([label, value]) => (
-          <Card key={label}><CardContent className="p-4"><p className="text-[11px] text-[#94A3B8]">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></CardContent></Card>
+          <Card key={label}><CardContent className="p-4"><p className="text-[11px] text-brand-muted">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></CardContent></Card>
         ))}
       </div>
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_.8fr]">
@@ -178,10 +178,10 @@ export function AnalyticsDashboard() {
             <div className="mt-5 space-y-2">
               {funnel.map(([label, value]) => (
                 <div key={label} className="flex items-center gap-3">
-                  <span className="w-28 shrink-0 text-xs text-[#CBD5E1]">{label}</span>
-                  <div className="h-8 flex-1 overflow-hidden rounded-md bg-[#071426]">
+                  <span className="w-28 shrink-0 text-xs text-brand-soft">{label}</span>
+                  <div className="h-8 flex-1 overflow-hidden rounded-md bg-brand-sidebar">
                     <div
-                      className="flex h-full items-center justify-end rounded-md bg-gradient-to-r from-[#153A66] to-[#69A7EA] px-2 text-xs font-semibold text-white"
+                      className="flex h-full items-center justify-end rounded-md bg-gradient-to-r from-brand-accent-strong to-brand-accent-light px-2 text-xs font-semibold text-white"
                       style={{ width: `${Math.max(6, (value / maxFunnelValue) * 100)}%` }}
                     >
                       {value}
@@ -192,7 +192,7 @@ export function AnalyticsDashboard() {
             </div>
           </CardContent>
         </Card>
-        <Card><CardContent><h2 className="font-semibold">Conversion Rates</h2><div className="mt-5 divide-y divide-white/10">{conversions.map(([label,value]) => <div key={String(label)} className="py-3"><div className="flex justify-between text-xs"><span className="text-[#CBD5E1]">{label}</span><strong>{typeof value === "string" ? value : `${value} %`}</strong></div><div className="mt-2 h-1.5 rounded-full bg-[#071426]"><div className="h-full rounded-full bg-gradient-to-r from-[#153A66] to-[#69A7EA]" style={{width:`${typeof value === "string" ? 0 : Math.min(value,100)}%`}} /></div></div>)}</div><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-lg border p-3"><p className="text-[10px] text-[#94A3B8]">Erwartet</p><p className="mt-2 font-semibold">{formatCurrency(kpis.expected_fees)}</p></div><div className="rounded-lg border p-3"><p className="text-[10px] text-[#94A3B8]">Realisiert</p><p className="mt-2 font-semibold">{formatCurrency(kpis.realized_fees)}</p></div></div></CardContent></Card>
+        <Card><CardContent><h2 className="font-semibold">Conversion Rates</h2><div className="mt-5 divide-y divide-white/10">{conversions.map(([label,value]) => <div key={String(label)} className="py-3"><div className="flex justify-between text-xs"><span className="text-brand-soft">{label}</span><strong>{typeof value === "string" ? value : `${value} %`}</strong></div><div className="mt-2 h-1.5 rounded-full bg-brand-sidebar"><div className="h-full rounded-full bg-gradient-to-r from-brand-accent-strong to-brand-accent-light" style={{width:`${typeof value === "string" ? 0 : Math.min(value,100)}%`}} /></div></div>)}</div><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-lg border p-3"><p className="text-[10px] text-brand-muted">Erwartet</p><p className="mt-2 font-semibold">{formatCurrency(kpis.expected_fees)}</p></div><div className="rounded-lg border p-3"><p className="text-[10px] text-brand-muted">Realisiert</p><p className="mt-2 font-semibold">{formatCurrency(kpis.realized_fees)}</p></div></div></CardContent></Card>
       </div>
     </>
   );

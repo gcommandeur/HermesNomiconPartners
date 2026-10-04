@@ -29,14 +29,14 @@ export function Modal({
     return (
       <div className="fixed inset-0 z-[80] bg-[#020711]/80 backdrop-blur-sm" onClick={onClose}>
         <div
-          className="ml-auto flex h-full w-full min-w-0 max-w-full flex-col overflow-auto border-l border-white/10 bg-[#0D1B2E] p-5 shadow-2xl duration-200 sm:min-w-[480px] sm:max-w-xl lg:w-[42vw]"
+          className="ml-auto flex h-full w-full min-w-0 max-w-full flex-col overflow-auto border-l border-white/10 bg-brand-surface p-5 shadow-2xl duration-200 sm:min-w-[480px] sm:max-w-xl lg:w-[42vw]"
           onClick={(event) => event.stopPropagation()}
         >
           <div className="flex items-start justify-between">
             <div>
-              {eyebrow && <p className="text-[10px] uppercase tracking-[.2em] text-[#69A7EA]">{eyebrow}</p>}
-              <h2 className="mt-2 text-xl font-semibold text-[#F8FAFC]">{title}</h2>
-              {description && <p className="mt-1 text-xs text-[#94A3B8]">{description}</p>}
+              {eyebrow && <p className="text-[10px] uppercase tracking-[.2em] text-brand-accent-light">{eyebrow}</p>}
+              <h2 className="mt-2 text-xl font-semibold text-brand-text">{title}</h2>
+              {description && <p className="mt-1 text-xs text-brand-muted">{description}</p>}
             </div>
             <Button variant="ghost" size="icon" onClick={onClose}><X size={18} /></Button>
           </div>
@@ -49,14 +49,14 @@ export function Modal({
   return (
     <div className="fixed inset-0 z-[80] grid place-items-center bg-[#020711]/80 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className={cn(`max-h-[90vh] w-full ${maxWidth} overflow-auto rounded-xl border border-white/10 bg-[#0D1B2E] p-5 shadow-2xl`)}
+        className={cn(`max-h-[90vh] w-full ${maxWidth} overflow-auto rounded-xl border border-white/10 bg-brand-surface p-5 shadow-2xl`)}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between">
           <div>
-            {eyebrow && <p className="text-[10px] uppercase tracking-[.2em] text-[#69A7EA]">{eyebrow}</p>}
-            <h2 className="mt-2 text-xl font-semibold text-[#F8FAFC]">{title}</h2>
-            {description && <p className="mt-1 text-xs text-[#94A3B8]">{description}</p>}
+            {eyebrow && <p className="text-[10px] uppercase tracking-[.2em] text-brand-accent-light">{eyebrow}</p>}
+            <h2 className="mt-2 text-xl font-semibold text-brand-text">{title}</h2>
+            {description && <p className="mt-1 text-xs text-brand-muted">{description}</p>}
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}><X size={18} /></Button>
         </div>

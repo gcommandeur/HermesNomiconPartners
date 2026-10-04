@@ -8,8 +8,8 @@ import { createPlacement, deletePlacement, getPlacement, updatePlacement } from 
 import { InvoiceSection } from "@/components/crm/invoice-section";
 import type { Placement, PlacementStatus } from "@/lib/api/types";
 
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
-const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const labelClass = "mb-1 block text-xs text-brand-muted";
+const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 const STATUS_OPTIONS: { value: PlacementStatus; label: string }[] = [
   { value: "planned", label: "Geplant" },
@@ -199,7 +199,7 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
     return (
       <div className="space-y-2">
         {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+          <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
         ))}
       </div>
     );
@@ -207,7 +207,7 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
 
   return (
     <div>
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Placement</p>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-muted">Placement</p>
       <ErrorBanner message={message} className="mb-3" />
       <form className="space-y-3" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -228,17 +228,17 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
           </div>
         </div>
 
-        <div className="flex gap-1 rounded-md border border-white/10 bg-[#0D1B2E] p-1 text-xs">
+        <div className="flex gap-1 rounded-md border border-white/10 bg-brand-surface p-1 text-xs">
           <button
             type="button"
-            className={`flex-1 rounded px-2 py-1.5 transition ${form.fee_mode === "berechnet" ? "bg-[#1F5FA8] text-white" : "text-[#94A3B8] hover:text-[#F8FAFC]"}`}
+            className={`flex-1 rounded px-2 py-1.5 transition ${form.fee_mode === "berechnet" ? "bg-brand-accent text-white" : "text-brand-muted hover:text-brand-text"}`}
             onClick={() => set("fee_mode", "berechnet")}
           >
             Berechnet
           </button>
           <button
             type="button"
-            className={`flex-1 rounded px-2 py-1.5 transition ${form.fee_mode === "fix" ? "bg-[#1F5FA8] text-white" : "text-[#94A3B8] hover:text-[#F8FAFC]"}`}
+            className={`flex-1 rounded px-2 py-1.5 transition ${form.fee_mode === "fix" ? "bg-brand-accent text-white" : "text-brand-muted hover:text-brand-text"}`}
             onClick={() => set("fee_mode", "fix")}
           >
             Fixe Fee eingeben
@@ -293,7 +293,7 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
           </div>
         )}
 
-        <p className="text-sm font-medium text-[#F8FAFC]">
+        <p className="text-sm font-medium text-brand-text">
           Fee (Vorschau):{" "}
           {feePreview != null
             ? feePreview.toLocaleString("de-DE", { style: "currency", currency: "EUR" })
@@ -324,7 +324,7 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
           </div>
         </div>
         {placement && (
-          <p className="text-xs text-[#747C89]">
+          <p className="text-xs text-brand-dim">
             Gespeicherte Fee: {placement.calculated_fee.toLocaleString("de-DE")} € · Gewährleistung bis{" "}
             {placement.warranty_end_date}
           </p>

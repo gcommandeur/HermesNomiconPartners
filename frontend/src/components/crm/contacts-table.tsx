@@ -73,19 +73,19 @@ export function ContactsTable() {
        * Feedback "mobile Version nicht passend"). */}
       <div className="space-y-2 lg:hidden">
         {contacts.map((contact) => (
-          <div key={contact.id} className="rounded-lg border border-white/10 bg-[#12243A] p-3">
+          <div key={contact.id} className="rounded-lg border border-white/10 bg-brand-panel p-3">
             <div className="flex items-start justify-between gap-2">
-              <p className="min-w-0 truncate text-sm font-semibold text-[#D8DADF]">{contactName(contact)}</p>
+              <p className="min-w-0 truncate text-sm font-semibold text-brand-platinum">{contactName(contact)}</p>
               {contact.is_primary ? (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#D8DADF]/25 bg-[#D8DADF]/10 px-2 py-1 text-[10px] text-[#F8FAFC]"><Star size={11} />Hauptkontakt</span>
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-brand-platinum/25 bg-brand-platinum/10 px-2 py-1 text-[10px] text-brand-text"><Star size={11} />Hauptkontakt</span>
               ) : (
                 <StatusPill status="draft" />
               )}
             </div>
-            <p className="mt-0.5 truncate text-xs text-[#94A3B8]">
+            <p className="mt-0.5 truncate text-xs text-brand-muted">
               {contact.client_company_name ?? "Kanzlei"}{contact.role_title ? ` · ${contact.role_title}` : ""}
             </p>
-            <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-[#8a9095]">
+            <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-brand-gray">
               <span className="min-w-0 truncate">{contact.email ?? "—"} {contact.phone ? `· ${contact.phone}` : ""}</span>
               {contact.email && (
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -104,19 +104,19 @@ export function ContactsTable() {
           </div>
         ))}
         {contacts.length === 0 && (
-          <p className="py-8 text-center text-xs text-[#94A3B8]">Keine Kontakte gefunden.</p>
+          <p className="py-8 text-center text-xs text-brand-muted">Keine Kontakte gefunden.</p>
         )}
       </div>
       <div className="hidden lg:block">
       <DataTable headers={["Kontakt", "Kanzlei", "Rolle", "E-Mail", "Telefon", "Hauptkontakt", "Mailing"]}>
         {contacts.map((contact) => (
-          <tr key={contact.id} className="hover:bg-[#203A5A]/35">
-            <td className="px-4 py-3.5 font-semibold text-[#D8DADF]">{contactName(contact)}</td>
+          <tr key={contact.id} className="hover:bg-brand-hover/35">
+            <td className="px-4 py-3.5 font-semibold text-brand-platinum">{contactName(contact)}</td>
             <td className="px-4 py-3.5">{contact.client_company_name ?? "Kanzlei"}</td>
             <td className="px-4 py-3.5">{contact.role_title ?? "—"}</td>
             <td className="px-4 py-3.5">{contact.email ?? "—"}</td>
             <td className="px-4 py-3.5">{contact.phone ?? "—"}</td>
-            <td className="px-4 py-3.5">{contact.is_primary ? <span className="inline-flex items-center gap-1 rounded-full border border-[#D8DADF]/25 bg-[#D8DADF]/10 px-2 py-1 text-[10px] text-[#F8FAFC]"><Star size={11} />Hauptkontakt</span> : <StatusPill status="draft" />}</td>
+            <td className="px-4 py-3.5">{contact.is_primary ? <span className="inline-flex items-center gap-1 rounded-full border border-brand-platinum/25 bg-brand-platinum/10 px-2 py-1 text-[10px] text-brand-text"><Star size={11} />Hauptkontakt</span> : <StatusPill status="draft" />}</td>
             <td className="px-4 py-3.5">
               {contact.email && (
                 <div className="flex items-center gap-1.5">
@@ -137,7 +137,7 @@ export function ContactsTable() {
       </DataTable>
       </div>
       <PaginationControls page={page} pageCount={pageCount} onChange={setPage} />
-      <p className="mt-3 text-xs text-[#8a9095]">{contacts.length} von {totalCount} Kontakten</p>
+      <p className="mt-3 text-xs text-brand-gray">{contacts.length} von {totalCount} Kontakten</p>
     </>
   );
 }

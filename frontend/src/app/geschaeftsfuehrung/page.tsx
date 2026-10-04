@@ -37,7 +37,7 @@ export default function GeschaeftsfuehrungPage() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+          <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
         ))}
       </div>
     );
@@ -49,9 +49,9 @@ export default function GeschaeftsfuehrungPage() {
         <PageHeader eyebrow="Hermes" title="Geschäftsführung" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <ShieldOff size={28} className="text-[#94A3B8]" />
-            <p className="text-sm font-semibold text-[#F8FAFC]">Nur für Teamleiter und Admins zugänglich</p>
-            <p className="max-w-sm text-xs text-[#94A3B8]">
+            <ShieldOff size={28} className="text-brand-muted" />
+            <p className="text-sm font-semibold text-brand-text">Nur für Teamleiter und Admins zugänglich</p>
+            <p className="max-w-sm text-xs text-brand-muted">
               Diese Übersicht zeigt die KPI-Werte aller Mitarbeiter:innen. Wende dich an einen
               Admin, falls du Zugriff benötigst.
             </p>
@@ -89,12 +89,12 @@ export default function GeschaeftsfuehrungPage() {
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+            <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
           ))}
         </div>
       ) : members.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-xs text-[#94A3B8]">
+          <CardContent className="py-12 text-center text-xs text-brand-muted">
             Keine aktiven Mitarbeiter:innen gefunden.
           </CardContent>
         </Card>
@@ -103,7 +103,7 @@ export default function GeschaeftsfuehrungPage() {
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-[#94A3B8]">
+                <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-brand-muted">
                   <th className="px-4 py-3">Mitarbeiter:in</th>
                   {STAGE_COLUMNS.map((column) => (
                     <th key={column.key} className="px-3 py-3 text-right">{column.label}</th>
@@ -115,20 +115,20 @@ export default function GeschaeftsfuehrungPage() {
               <tbody>
                 {members.map((member) => (
                   <tr key={member.user_id} className="border-b border-white/5">
-                    <td className="px-4 py-3 font-semibold text-[#F8FAFC]">{member.display_name}</td>
+                    <td className="px-4 py-3 font-semibold text-brand-text">{member.display_name}</td>
                     {STAGE_COLUMNS.map((column) => (
-                      <td key={column.key} className="px-3 py-3 text-right text-[#D8DADF]">
+                      <td key={column.key} className="px-3 py-3 text-right text-brand-platinum">
                         {member.stages[column.key] ?? 0}
                       </td>
                     ))}
-                    <td className="px-3 py-3 text-right text-sm font-bold text-[#69A7EA]">
+                    <td className="px-3 py-3 text-right text-sm font-bold text-brand-accent-light">
                       {member.points}
                     </td>
                     {/* Ziel-Spalte bewusst vorbereitet, aber leer - Soll-Werte
                      * pro Mitarbeiter sind noch nicht definiert (Nutzer-
                      * Vorgabe: nicht raten), Backend liefert dafuer immer
                      * `target: null`. */}
-                    <td className="px-3 py-3 text-right text-[#5b6167]">–</td>
+                    <td className="px-3 py-3 text-right text-brand-gray-dark">–</td>
                   </tr>
                 ))}
               </tbody>

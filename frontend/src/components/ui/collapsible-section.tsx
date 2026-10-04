@@ -38,13 +38,13 @@ export function CollapsibleSection({
           {icon}
           <div>
             <h2 className="font-semibold">{title}</h2>
-            {description && <p className="mt-1 text-xs text-[#94A3B8]">{description}</p>}
+            {description && <p className="mt-1 text-xs text-brand-muted">{description}</p>}
           </div>
         </div>
         <ChevronDown
           size={18}
           className={cn(
-            "mt-0.5 shrink-0 text-[#94A3B8] transition-transform duration-200",
+            "mt-0.5 shrink-0 text-brand-muted transition-transform duration-200",
             open && "rotate-180",
           )}
         />

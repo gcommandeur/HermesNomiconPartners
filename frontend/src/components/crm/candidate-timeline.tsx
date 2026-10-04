@@ -41,7 +41,7 @@ const unknownAuthor = (
   <span title="Aus der Zeit vor der Autorenerfassung - kein Nutzer gespeichert">Unbekannt</span>
 );
 const automaticAuthor = (
-  <span className="text-[#69A7EA]" title="Automatisch ausgelöst, keinem Nutzer zugeordnet">
+  <span className="text-brand-accent-light" title="Automatisch ausgelöst, keinem Nutzer zugeordnet">
     Automatisch
   </span>
 );
@@ -129,7 +129,7 @@ export function CandidateTimeline({
   if (items.length === 0) {
     return (
       <Card>
-        <CardContent className="py-12 text-center text-sm text-[#858b90]">
+        <CardContent className="py-12 text-center text-sm text-brand-gray">
           Noch keine Ereignisse für diesen Kandidaten.
         </CardContent>
       </Card>
@@ -141,20 +141,20 @@ export function CandidateTimeline({
       {items.map((item) => (
         <Card key={item.key}>
           <CardContent className="flex items-start gap-3">
-            <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-[#102A4C] text-[#D8DADF]">
+            <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-brand-accent-soft text-brand-platinum">
               {item.icon}
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="whitespace-pre-wrap text-sm font-semibold text-[#F8FAFC]">{item.text}</p>
-                <span className="text-xs text-[#8b9196]">{formatDateTime(item.at)}</span>
+                <p className="whitespace-pre-wrap text-sm font-semibold text-brand-text">{item.text}</p>
+                <span className="text-xs text-brand-gray">{formatDateTime(item.at)}</span>
               </div>
-              {item.detail && <p className="mt-1 text-xs text-[#94A3B8]">{item.detail}</p>}
+              {item.detail && <p className="mt-1 text-xs text-brand-muted">{item.detail}</p>}
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="inline-block rounded bg-[#12243A] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[#94A3B8]">
+                <span className="inline-block rounded bg-brand-panel px-2 py-0.5 text-[10px] uppercase tracking-wider text-brand-muted">
                   {item.kind}
                 </span>
-                {item.author && <span className="text-xs text-[#CBD5E1]">von {item.author}</span>}
+                {item.author && <span className="text-xs text-brand-soft">von {item.author}</span>}
               </div>
             </div>
           </CardContent>

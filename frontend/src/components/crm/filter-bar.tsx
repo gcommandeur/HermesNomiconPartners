@@ -70,14 +70,14 @@ export function FilterBar({
         <div className="flex overflow-hidden rounded-lg border border-white/10">
           <button
             type="button"
-            className={`px-3 py-2 text-xs font-medium transition ${!ownerFilter.mineOnly ? "bg-white/10 text-white" : "text-[#94A3B8] hover:bg-white/5"}`}
+            className={`px-3 py-2 text-xs font-medium transition ${!ownerFilter.mineOnly ? "bg-white/10 text-white" : "text-brand-muted hover:bg-white/5"}`}
             onClick={() => ownerFilter.onChange(false)}
           >
             Alle
           </button>
           <button
             type="button"
-            className={`px-3 py-2 text-xs font-medium transition ${ownerFilter.mineOnly ? "bg-white/10 text-white" : "text-[#94A3B8] hover:bg-white/5"}`}
+            className={`px-3 py-2 text-xs font-medium transition ${ownerFilter.mineOnly ? "bg-white/10 text-white" : "text-brand-muted hover:bg-white/5"}`}
             onClick={() => ownerFilter.onChange(true)}
           >
             Meine
@@ -90,9 +90,9 @@ export function FilterBar({
             <Filter size={15} />Filter{statusValue ? ": " + (statusOptions.find((o) => o.value === statusValue)?.label ?? "") : ""}
           </Button>
           {filterOpen && (
-            <div className="absolute right-0 top-11 z-40 w-52 rounded-lg border border-white/10 bg-[#0D1B2E] p-1.5 shadow-2xl">
+            <div className="absolute right-0 top-11 z-40 w-52 rounded-lg border border-white/10 bg-brand-surface p-1.5 shadow-2xl">
               <button
-                className="flex w-full items-center rounded-md px-3 py-2 text-left text-xs text-[#D8DADF] hover:bg-white/8"
+                className="flex w-full items-center rounded-md px-3 py-2 text-left text-xs text-brand-platinum hover:bg-white/8"
                 onClick={() => { onStatusChange?.(""); setFilterOpen(false); }}
               >
                 Alle Status
@@ -100,7 +100,7 @@ export function FilterBar({
               {statusOptions.map((option) => (
                 <button
                   key={option.value}
-                  className="flex w-full items-center rounded-md px-3 py-2 text-left text-xs text-[#D8DADF] hover:bg-white/8"
+                  className="flex w-full items-center rounded-md px-3 py-2 text-left text-xs text-brand-platinum hover:bg-white/8"
                   onClick={() => { onStatusChange?.(option.value); setFilterOpen(false); }}
                 >
                   {option.label}

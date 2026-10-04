@@ -54,7 +54,7 @@ function ValuesTable({ request }: { request: ApprovalRequest }) {
   return (
     <table className="mt-3 w-full text-xs">
       <thead>
-        <tr className="text-left text-[10px] uppercase tracking-wider text-[#94A3B8]">
+        <tr className="text-left text-[10px] uppercase tracking-wider text-brand-muted">
           <th className="pb-1 pr-3 font-medium">Feld</th>
           {showOld && <th className="pb-1 pr-3 font-medium">Bisher</th>}
           <th className="pb-1 font-medium">{showOld ? "Neu" : "Wert"}</th>
@@ -63,9 +63,9 @@ function ValuesTable({ request }: { request: ApprovalRequest }) {
       <tbody>
         {keys.map((key) => (
           <tr key={key} className="border-t border-white/5">
-            <td className="py-1.5 pr-3 text-[#94A3B8]">{FIELD_LABELS[key] ?? key}</td>
-            {showOld && <td className="py-1.5 pr-3 text-[#CBD5E1]">{display(old[key])}</td>}
-            <td className="py-1.5 font-medium text-[#F8FAFC]">{display(proposed[key])}</td>
+            <td className="py-1.5 pr-3 text-brand-muted">{FIELD_LABELS[key] ?? key}</td>
+            {showOld && <td className="py-1.5 pr-3 text-brand-soft">{display(old[key])}</td>}
+            <td className="py-1.5 font-medium text-brand-text">{display(proposed[key])}</td>
           </tr>
         ))}
       </tbody>
@@ -105,7 +105,7 @@ export default function FreigabenPage() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="h-20 animate-pulse rounded-lg bg-[#0D1B2E]" />
+          <div key={index} className="h-20 animate-pulse rounded-lg bg-brand-surface" />
         ))}
       </div>
     );
@@ -117,9 +117,9 @@ export default function FreigabenPage() {
         <PageHeader eyebrow="Hermes" title="Freigaben" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <ShieldOff size={28} className="text-[#94A3B8]" />
-            <p className="text-sm font-semibold text-[#F8FAFC]">Nur für Admins zugänglich</p>
-            <p className="max-w-sm text-xs text-[#94A3B8]">
+            <ShieldOff size={28} className="text-brand-muted" />
+            <p className="text-sm font-semibold text-brand-text">Nur für Admins zugänglich</p>
+            <p className="max-w-sm text-xs text-brand-muted">
               Hier entscheidet die Geschäftsführung über neue Kanzleien, Honorar-Änderungen und
               das Stellen von Rechnungen.
             </p>
@@ -135,10 +135,10 @@ export default function FreigabenPage() {
     <>
       <PageHeader eyebrow="Hermes" title="Freigaben" />
       <ErrorBanner message={actionError} className="mb-3" />
-      {isLoading && <div className="h-24 animate-pulse rounded-lg bg-[#0D1B2E]" />}
+      {isLoading && <div className="h-24 animate-pulse rounded-lg bg-brand-surface" />}
       {!isLoading && requests.length === 0 && (
         <Card>
-          <CardContent className="py-12 text-center text-sm text-[#94A3B8]">
+          <CardContent className="py-12 text-center text-sm text-brand-muted">
             Keine offenen Freigaben.
           </CardContent>
         </Card>
@@ -152,14 +152,14 @@ export default function FreigabenPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone="amber">{KIND_LABELS[request.kind] ?? request.kind}</Badge>
                     {request.entity_type === "client_company" ? (
-                      <Link href={`/kanzleien/${request.entity_id}`} className="text-sm font-semibold text-[#F8FAFC] hover:underline">
+                      <Link href={`/kanzleien/${request.entity_id}`} className="text-sm font-semibold text-brand-text hover:underline">
                         {request.entity_label ?? "Kanzlei"}
                       </Link>
                     ) : (
-                      <span className="text-sm font-semibold text-[#F8FAFC]">{request.entity_label ?? "Rechnung"}</span>
+                      <span className="text-sm font-semibold text-brand-text">{request.entity_label ?? "Rechnung"}</span>
                     )}
                   </div>
-                  <p className="mt-1 text-xs text-[#94A3B8]">
+                  <p className="mt-1 text-xs text-brand-muted">
                     Angefragt von {request.requested_by ?? "unbekannt"} · {formatDate(request.requested_at)}
                   </p>
                 </div>
@@ -187,7 +187,7 @@ export default function FreigabenPage() {
                     value={rejectNote}
                     onChange={(event) => setRejectNote(event.target.value)}
                     placeholder="Begründung (optional)"
-                    className="h-9 min-w-0 flex-1 rounded-md border border-white/15 bg-white/5 px-3 text-xs text-[#D8DADF] placeholder:text-[#5b6167] focus:outline-none focus:ring-2 focus:ring-[#1F5FA8]/30"
+                    className="h-9 min-w-0 flex-1 rounded-md border border-white/15 bg-white/5 px-3 text-xs text-brand-platinum placeholder:text-brand-gray-dark focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
                   />
                   <Button size="sm" variant="outline" disabled={busyId === request.id} onClick={() => void decide(request.id, "reject")}>
                     Ablehnung bestätigen
@@ -195,7 +195,7 @@ export default function FreigabenPage() {
                 </div>
               )}
               {request.kind === "new_client" && rejectingId === request.id && (
-                <p className="mt-2 text-[11px] text-[#94A3B8]">
+                <p className="mt-2 text-[11px] text-brand-muted">
                   Eine abgelehnte neue Kanzlei wird nicht gelöscht, sondern als „Gesperrt“ markiert.
                 </p>
               )}

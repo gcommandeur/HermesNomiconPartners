@@ -39,8 +39,8 @@ export function OutlookBanner() {
   }, []);
   if (!status || status.state === "connected" || hidden) return null;
   return (
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#1F5FA8]/40 bg-[#0D1B2E] px-4 py-3 text-sm">
-      <span className="text-[#CBD5E1]">
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand-accent/40 bg-brand-surface px-4 py-3 text-sm">
+      <span className="text-brand-soft">
         {status.state === "needs_reconnect"
           ? "Deine Outlook-Verbindung ist abgelaufen. Bitte neu anmelden, damit Mails, Termine und Teams-Einladungen weiter funktionieren."
           : "Outlook ist nicht verbunden. Einmal mit Microsoft anmelden – dann gehen Mails aus deinem Postfach raus und Termine landen mit Teams-Link im Kalender."}
@@ -79,7 +79,7 @@ export function OutlookConnectionCard() {
       <CardContent className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-semibold">Outlook &amp; Teams</p>
-          <p className="mt-1 text-xs text-[#94A3B8]">
+          <p className="mt-1 text-xs text-brand-muted">
             {connected
               ? `Verbunden als ${status.address}. Mails, Kalender und Teams-Einladungen laufen über dein Konto.`
               : status.state === "needs_reconnect"

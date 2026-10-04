@@ -13,7 +13,7 @@ export function TabsList({ className, ...props }: React.ComponentProps<typeof Ta
 export function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   return (
       <TabsPrimitive.Trigger
-      className={cn("border-b-2 border-transparent px-0 py-3 text-sm font-medium text-[#94A3B8] transition-colors data-[state=active]:border-[#D8DADF] data-[state=active]:text-[#F8FAFC]", className)}
+      className={cn("border-b-2 border-transparent px-0 py-3 text-sm font-medium text-brand-muted transition-colors data-[state=active]:border-brand-platinum data-[state=active]:text-brand-text", className)}
       {...props}
     />
   );

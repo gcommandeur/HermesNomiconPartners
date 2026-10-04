@@ -1,12 +1,12 @@
 import { cn } from "@/lib/utils";
 
 const tones = {
-  blue: "border-[#1F5FA8]/40 bg-[#153A66]/45 text-[#c5dcfa]",
-  gray: "border-white/10 bg-white/5 text-[#CBD5E1]",
+  blue: "border-brand-accent/40 bg-brand-accent-strong/45 text-brand-info",
+  gray: "border-white/10 bg-white/5 text-brand-soft",
   dark: "border-[#2e3338] bg-[#1c2024] text-white",
-  green: "border-[#4f8a68]/35 bg-[#244d38]/45 text-[#a9d6b8]",
+  green: "border-brand-success/35 bg-brand-success-bg/45 text-brand-success-text",
   amber: "border-[#a7894c]/35 bg-[#5b4726]/40 text-[#e0c991]",
-  red: "border-[#9b5757]/35 bg-[#5a2f35]/40 text-[#e4aeb4]",
+  red: "border-[#9b5757]/35 bg-[#5a2f35]/40 text-brand-danger-soft",
 };
 
 export function Badge({ children, tone = "gray", className, title }: {

@@ -43,10 +43,10 @@ const CV_FIELD_LABELS: Record<CvStringSuggestionField, string> = {
   ausbildung_titel: "Ausbildung/Weiterbildung",
 };
 
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
-const textareaClass = "min-h-20 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
-const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
-const internClass = "mb-1 flex items-center gap-1.5 text-xs text-[#F0B429]";
+const labelClass = "mb-1 block text-xs text-brand-muted";
+const textareaClass = "min-h-20 w-full rounded-md border border-white/10 bg-brand-surface p-3 text-sm text-brand-text outline-none focus:border-brand-accent";
+const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
+const internClass = "mb-1 flex items-center gap-1.5 text-xs text-brand-warning";
 
 const emptyForm = {
   candidate_number: "", first_name: "", last_name: "", email: "", phone: "", job_title: "", anrede: "",
@@ -378,13 +378,13 @@ export function CandidateCreateForm({
   return (
     <div className="relative" {...cvDragHandlers}>
       {dragActive && !isEdit && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-[#1F5FA8] bg-[#0D1B2E]/90 text-sm font-semibold text-[#D8DADF]">
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-brand-accent bg-brand-surface/90 text-sm font-semibold text-brand-platinum">
           CV hier ablegen…
         </div>
       )}
       <form className="space-y-4" onSubmit={handleSubmit}>
       {!isEdit && (
-        <div className="rounded-lg border border-white/10 bg-[#0D1B2E]/75 p-3 text-xs text-[#94A3B8]">
+        <div className="rounded-lg border border-white/10 bg-brand-surface/75 p-3 text-xs text-brand-muted">
           <div className="flex items-center justify-between gap-3">
             <span>CV hochladen, um Name/E-Mail/Rolle/Qualifikation/PLZ/Ort/Telefon/Ausbildung automatisch zu befüllen — oder Datei per Drag&Drop auf dieses Fenster ziehen.</span>
             <input ref={cvInputRef} type="file" className="hidden" onChange={handleCvInputChange} />
@@ -394,30 +394,30 @@ export function CandidateCreateForm({
             </Button>
           </div>
           {cvExtracting && cvScanJobRunning && (
-            <p className="mt-2 text-[#69A7EA]">
+            <p className="mt-2 text-brand-accent-light">
               Gescanntes Dokument erkannt — die Auswertung läuft im Hintergrund und kann bis zu einer Minute dauern.
             </p>
           )}
           {cvFile && !cvExtracting && !cvError && (
-            <div className="mt-3 rounded-md border border-[#1F5FA8]/30 bg-[#102A4C]/50 p-2.5">
-              <p className="flex items-center gap-1.5 font-semibold text-[#69A7EA]">
+            <div className="mt-3 rounded-md border border-brand-accent/30 bg-brand-accent-soft/50 p-2.5">
+              <p className="flex items-center gap-1.5 font-semibold text-brand-accent-light">
                 <Sparkles size={13} />{cvFile.name} ausgelesen
               </p>
               {cvAppliedFields.length > 0 ? (
                 <div className="mt-2 space-y-1">
                   {cvAppliedFields.map(({ label, value }) => (
                     <div key={label} className="flex items-center gap-2">
-                      <span className="w-40 shrink-0 text-[#94A3B8]">{label}</span>
-                      <span className="text-[#D8DADF]">{value}</span>
+                      <span className="w-40 shrink-0 text-brand-muted">{label}</span>
+                      <span className="text-brand-platinum">{value}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="mt-1 text-[#94A3B8]">Keine zusätzlichen Felder erkannt.</p>
+                <p className="mt-1 text-brand-muted">Keine zusätzlichen Felder erkannt.</p>
               )}
             </div>
           )}
-          {cvError && <p className="mt-2 text-[#F0B429]">{cvError}</p>}
+          {cvError && <p className="mt-2 text-brand-warning">{cvError}</p>}
         </div>
       )}
       {isEdit && (
@@ -453,16 +453,16 @@ export function CandidateCreateForm({
         </select>
       </div>
       <div>
-        <label className="flex items-center gap-2 text-sm text-[#F8FAFC]">
+        <label className="flex items-center gap-2 text-sm text-brand-text">
           <input
             type="checkbox"
-            className="size-4 accent-[#1F5FA8]"
+            className="size-4 accent-brand-accent"
             checked={consentReceived}
             onChange={(e) => setConsentReceived(e.target.checked)}
           />
           Einwilligung für CV-Out-Kampagne erhalten
         </label>
-        <p className="mt-1 text-xs text-[#94A3B8]">
+        <p className="mt-1 text-xs text-brand-muted">
           Einwilligung zur Weitergabe des Profils an Kanzleien liegt vor - ohne diese kann die
           CV-Out-Kampagne (Kandidaten-Detailseite) nicht ausgelöst werden.
         </p>
@@ -491,7 +491,7 @@ export function CandidateCreateForm({
       </div>
 
       <div className="border-t border-white/10 pt-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#92979c]">Quali-Call-Details</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-gray">Quali-Call-Details</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelClass}>Fachliche Schwerpunkte (Komma-getrennt)</label><Input placeholder="z.B. Jahresabschluss, Umsatzsteuer, M&A" value={form.fachliche_schwerpunkte} onChange={(e) => set("fachliche_schwerpunkte", e.target.value)} /></div>
           <div><label className={labelClass}>EDV-Kenntnisse (Komma-getrennt)</label><Input placeholder="z.B. DATEV, SAP FI/CO, MS Excel" value={form.edv_kenntnisse} onChange={(e) => set("edv_kenntnisse", e.target.value)} /></div>
@@ -529,8 +529,8 @@ export function CandidateCreateForm({
         <div className="mt-3"><label className={labelClass}>Freitextnotizen</label><textarea className={textareaClass} value={form.freitext_notizen} onChange={(e) => set("freitext_notizen", e.target.value)} /></div>
       </div>
 
-      <div className="rounded-lg border border-[#F0B429]/25 bg-[#F0B429]/5 p-3">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#F0B429]">Nur intern — nie in ausgehende Dokumente</p>
+      <div className="rounded-lg border border-brand-warning/25 bg-brand-warning/5 p-3">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-warning">Nur intern — nie in ausgehende Dokumente</p>
         <div>
           <label className={internClass}>Wechselgrund</label>
           <textarea className={textareaClass} value={form.wechselgrund} onChange={(e) => set("wechselgrund", e.target.value)} />

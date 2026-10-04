@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Interview, InterviewCreate, InterviewStatus, InterviewUpdate } from "@/lib/api/types";
 
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
-const textareaClass = "min-h-20 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
-const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const labelClass = "mb-1 block text-xs text-brand-muted";
+const textareaClass = "min-h-20 w-full rounded-md border border-white/10 bg-brand-surface p-3 text-sm text-brand-text outline-none focus:border-brand-accent";
+const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 const INTERVIEW_TYPE_SUGGESTIONS = ["Erstgespräch", "2. Runde", "Finale", "Video-Interview", "Vor-Ort-Termin"];
 
@@ -189,7 +189,7 @@ export function InterviewModal({
 
         {!interview && (
           <div className="space-y-3 rounded-lg border border-white/10 p-3">
-            <label className="flex items-center gap-2 text-sm text-[#F8FAFC]">
+            <label className="flex items-center gap-2 text-sm text-brand-text">
               <input
                 type="checkbox"
                 checked={form.invite_candidate}
@@ -199,7 +199,7 @@ export function InterviewModal({
             </label>
             {form.invite_candidate && (
               <>
-                <label className="flex items-center gap-2 text-sm text-[#F8FAFC]">
+                <label className="flex items-center gap-2 text-sm text-brand-text">
                   <input
                     type="checkbox"
                     checked={form.teams_meeting}
@@ -216,7 +216,7 @@ export function InterviewModal({
                     onChange={(e) => set("invite_message", e.target.value)}
                   />
                 </div>
-                <p className="text-xs text-[#94A3B8]">
+                <p className="text-xs text-brand-muted">
                   Die Einladung geht sofort aus deinem Outlook raus (Voraussetzung: Microsoft-Anmeldung und
                   E-Mail-Adresse beim Kandidaten). Interne Notizen werden nie mitgeschickt.
                 </p>

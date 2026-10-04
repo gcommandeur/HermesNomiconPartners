@@ -90,7 +90,7 @@ function interviewDotClass(interview: Interview): string {
   if (interview.status === "completed") return "bg-emerald-400";
   if (interview.status === "cancelled" || interview.status === "no_show") return "bg-red-400";
   const isOverdue = naiveScheduledAt(interview.scheduled_at) < toLocalIsoString(new Date());
-  return isOverdue ? "bg-[#94A3B8]" : "bg-[#1F5FA8]";
+  return isOverdue ? "bg-brand-muted" : "bg-brand-accent";
 }
 
 /** Nachfassen faellig, wenn follow_up_at heute oder in der Vergangenheit
@@ -378,8 +378,8 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
     const expanded = expandedIds.has(item.id);
     const dueFollowUp = isFollowUpDue(item);
     const iconBtnClass = mobile
-      ? "flex size-11 shrink-0 items-center justify-center rounded-lg text-[#94A3B8]"
-      : "rounded p-1 text-[#94A3B8]";
+      ? "flex size-11 shrink-0 items-center justify-center rounded-lg text-brand-muted"
+      : "rounded p-1 text-brand-muted";
     const iconSize = mobile ? 18 : 12;
     const nextStages = allowedTransitions[item.status]?.filter((s) => s !== "cancelled") ?? [];
 
@@ -395,7 +395,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
           !mobile && "active:cursor-grabbing",
           dueFollowUp
             ? "border-red-400/50 bg-red-950/20 hover:border-red-400/70"
-            : "border-white/10 bg-[#12243A] hover:border-[#1F5FA8]/50",
+            : "border-white/10 bg-brand-panel hover:border-brand-accent/50",
         )}
       >
         {/* Name und Kanzlei je auf eigener Zeile, in einer eigenen Kopfzeile
@@ -409,16 +409,16 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
         <div className="min-w-0">
           <p className={cn("truncate font-semibold hover:underline", mobile ? "text-sm" : "text-xs")}>{candidateName(item.candidate_id)}</p>
           <p
-            className={cn("mt-0.5 truncate text-[#94A3B8]", mobile ? "text-xs" : "text-[10px]")}
+            className={cn("mt-0.5 truncate text-brand-muted", mobile ? "text-xs" : "text-[10px]")}
             title={clientName(item.client_company_id)}
           >
             {clientName(item.client_company_id)}
           </p>
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-2">
-          <span className="shrink-0 text-[10px] text-[#94A3B8]">{formatDate(item.follow_up_at)}</span>
+          <span className="shrink-0 text-[10px] text-brand-muted">{formatDate(item.follow_up_at)}</span>
           <div className={cn("flex shrink-0 items-center", mobile ? "gap-1" : "gap-0.5")}>
-            {isHot(item.status) && <span className="rounded-full bg-[#1F5FA8]/20 px-1.5 py-0.5 text-[9px] text-[#69A7EA]">Hot</span>}
+            {isHot(item.status) && <span className="rounded-full bg-brand-accent/20 px-1.5 py-0.5 text-[9px] text-brand-accent-light">Hot</span>}
             {item.archived_at && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] text-emerald-300">Abgeschlossen</span>}
             <button
               type="button"
@@ -494,7 +494,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                 key={stage}
                 type="button"
                 onClick={() => changeStage(item.id, stage)}
-                className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-lg border border-[#1F5FA8]/40 bg-[#1F5FA8]/10 px-2 text-xs text-[#69A7EA] hover:bg-[#1F5FA8]/20"
+                className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-lg border border-brand-accent/40 bg-brand-accent/10 px-2 text-xs text-brand-accent-light hover:bg-brand-accent/20"
               >
                 → {STAGE_LABELS[stage]}
               </button>
@@ -506,12 +506,12 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
             {item.closing_status && <ClosingScoreBadge status={item.closing_status} probability={item.closing_probability} />}
             <ClosingScoreForm submissionId={item.id} />
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Nächster Schritt</p>
+              <p className="text-[10px] uppercase tracking-wider text-brand-muted">Nächster Schritt</p>
               <p className="mt-1 text-xs">{item.next_step ?? item.summary ?? "Follow-up festlegen"}</p>
             </div>
             {(interviewsBySubmission.get(item.id)?.length ?? 0) > 0 && (
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Interview-Runden</p>
+                <p className="text-[10px] uppercase tracking-wider text-brand-muted">Interview-Runden</p>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {(interviewsBySubmission.get(item.id) ?? []).map((interview, index) => (
                     <button
@@ -519,7 +519,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                       type="button"
                       title={`${interview.interview_type} — ${formatChipDateTime(interview.scheduled_at)}`}
                       onClick={() => setInterviewModal({ submissionId: item.id, interview })}
-                      className="flex items-center gap-1 rounded-full border border-white/10 bg-[#0D1B2E] px-2 py-1 text-[10px] text-[#CBD5E1] hover:border-[#1F5FA8]/50 hover:text-white"
+                      className="flex items-center gap-1 rounded-full border border-white/10 bg-brand-surface px-2 py-1 text-[10px] text-brand-soft hover:border-brand-accent/50 hover:text-white"
                     >
                       <span className={`size-1.5 rounded-full ${interviewDotClass(interview)}`} />
                       R{index + 1} · {formatChipDateTime(interview.scheduled_at)}
@@ -528,7 +528,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                 </div>
               </div>
             )}
-            <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[10px] text-[#A7ADB7]">
+            <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[10px] text-brand-silver">
               {nextUpcomingInterview(item.id) ? (
                 <span>Nächstes Interview: {formatChipDateTime(nextUpcomingInterview(item.id)!.scheduled_at)}</span>
               ) : (
@@ -554,8 +554,8 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
   return (
     <>
       <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
-        <div className="rounded-lg border border-white/10 bg-[#0D1B2E]/85 px-3 py-2 text-xs text-[#CBD5E1]">
-          <strong className="text-[#D8DADF]">Prozesslogik:</strong> Ein Prozess entspricht einer CandidateSubmission und kann je Kandidat mehrfach vorkommen. Ab Interview ist eine Kanzlei zwingend verknüpft.
+        <div className="rounded-lg border border-white/10 bg-brand-surface/85 px-3 py-2 text-xs text-brand-soft">
+          <strong className="text-brand-platinum">Prozesslogik:</strong> Ein Prozess entspricht einer CandidateSubmission und kann je Kandidat mehrfach vorkommen. Ab Interview ist eine Kanzlei zwingend verknüpft.
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           <ExportActions filename="prozesse" rows={exportRows} />
@@ -599,10 +599,10 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
           </Badge>
         </div>
       )}
-      {message && <div className="mb-4 flex items-center gap-2 rounded-lg border border-[#D8DADF]/20 bg-[#102A4C]/65 p-3 text-xs text-[#CBD5E1]"><ShieldAlert size={15} />{message}</div>}
+      {message && <div className="mb-4 flex items-center gap-2 rounded-lg border border-brand-platinum/20 bg-brand-accent-soft/65 p-3 text-xs text-brand-soft"><ShieldAlert size={15} />{message}</div>}
 
       {clientPrompt && (
-        <div className="mb-4 rounded-lg border border-[#1F5FA8]/30 bg-[#102A4C]/60 p-3 text-xs text-[#CBD5E1]">
+        <div className="mb-4 rounded-lg border border-brand-accent/30 bg-brand-accent-soft/60 p-3 text-xs text-brand-soft">
           <p className="mb-2">
             {clientPrompt.target
               ? "Ab Interview muss eine Kanzlei verknüpft sein. Bitte auswählen:"
@@ -610,7 +610,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <select
-              className="rounded-md border border-white/10 bg-[#071426] px-2 py-1.5 text-xs text-[#F8FAFC]"
+              className="rounded-md border border-white/10 bg-brand-sidebar px-2 py-1.5 text-xs text-brand-text"
               defaultValue=""
               onChange={(event) => {
                 if (!event.target.value) return;
@@ -691,15 +691,15 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                     className={cn(
                       "flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium",
                       active
-                        ? "border-[#1F5FA8]/60 bg-[#1F5FA8]/25 text-white"
-                        : "border-white/10 bg-[#0D1B2E] text-[#94A3B8]",
+                        ? "border-brand-accent/60 bg-brand-accent/25 text-white"
+                        : "border-white/10 bg-brand-surface text-brand-muted",
                     )}
                   >
                     {column.title}
                     <span
                       className={cn(
                         "grid size-5 place-items-center rounded-full text-[10px]",
-                        active ? "bg-[#1F5FA8]/40 text-white" : "bg-[#12243A] text-[#CBD5E1]",
+                        active ? "bg-brand-accent/40 text-white" : "bg-brand-panel text-brand-soft",
                       )}
                     >
                       {count}
@@ -713,7 +713,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
               {/* Leere Stufe kompakt statt als grosse leere Flaeche - Nutzer-
                * Vorgabe "Mobile". */}
               {filteredItems.filter((s) => s.status === mobileStage).length === 0 && (
-                <p className="py-6 text-center text-xs text-[#94A3B8]">Keine Prozesse in dieser Stufe.</p>
+                <p className="py-6 text-center text-xs text-brand-muted">Keine Prozesse in dieser Stufe.</p>
               )}
             </div>
           </div>
@@ -724,17 +724,17 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
               return (
                 <section
                   key={column.status}
-                  className="min-w-0 rounded-xl border border-white/10 bg-[#0D1B2E] p-2 shadow-[0_12px_30px_rgba(0,0,0,.18)]"
+                  className="min-w-0 rounded-xl border border-white/10 bg-brand-surface p-2 shadow-[0_12px_30px_rgba(0,0,0,.18)]"
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={() => moveToStatus(column.status)}
                 >
                   <header className="flex items-center justify-between px-2 py-2">
-                    <h2 className="truncate text-xs font-semibold text-[#F8FAFC]">{column.title}</h2>
-                    <span className="grid size-5 shrink-0 place-items-center rounded-full border border-white/10 bg-[#12243A] text-[10px] text-[#CBD5E1]">{columnItems.length}</span>
+                    <h2 className="truncate text-xs font-semibold text-brand-text">{column.title}</h2>
+                    <span className="grid size-5 shrink-0 place-items-center rounded-full border border-white/10 bg-brand-panel text-[10px] text-brand-soft">{columnItems.length}</span>
                   </header>
                   <div className="scrollbar-subtle max-h-[calc(100vh-360px)] space-y-2 overflow-y-auto">
                     {columnItems.map((item) => renderCard(item, { mobile: false }))}
-                    {columnItems.length === 0 && <div className="rounded-lg border border-dashed border-white/10 p-5 text-center text-[11px] text-[#94A3B8]">Keine Prozesse</div>}
+                    {columnItems.length === 0 && <div className="rounded-lg border border-dashed border-white/10 p-5 text-center text-[11px] text-brand-muted">Keine Prozesse</div>}
                   </div>
                 </section>
               );
@@ -753,24 +753,24 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
             <div
               key={item.id}
               onClick={() => openCandidate(item.candidate_id)}
-              className="cursor-pointer rounded-lg border border-white/10 bg-[#12243A] p-3 active:bg-[#203A5A]/35"
+              className="cursor-pointer rounded-lg border border-white/10 bg-brand-panel p-3 active:bg-brand-hover/35"
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="min-w-0 truncate text-sm font-semibold text-[#D8DADF] hover:underline">{candidateName(item.candidate_id)}</p>
+                <p className="min-w-0 truncate text-sm font-semibold text-brand-platinum hover:underline">{candidateName(item.candidate_id)}</p>
                 <StatusPill status={item.status} />
               </div>
-              <p className="mt-0.5 truncate text-xs text-[#94A3B8]">{clientName(item.client_company_id)}</p>
-              <div className="mt-2 flex items-center justify-between text-[11px] text-[#8a9095]">
+              <p className="mt-0.5 truncate text-xs text-brand-muted">{clientName(item.client_company_id)}</p>
+              <div className="mt-2 flex items-center justify-between text-[11px] text-brand-gray">
                 <span>Follow-up {formatDate(item.follow_up_at)}</span>
                 <span>{expectedFee(item).toLocaleString("de-DE")} €</span>
               </div>
-              <p className="mt-1 truncate text-[11px] text-[#8a9095]">{item.next_step ?? "Nächster Schritt offen"}</p>
+              <p className="mt-1 truncate text-[11px] text-brand-gray">{item.next_step ?? "Nächster Schritt offen"}</p>
               <div className="mt-2 flex items-center gap-1" onClick={(event) => event.stopPropagation()}>
                 <button
                   type="button"
                   title="Kanzlei hinzufügen/ändern"
                   onClick={() => setClientPrompt({ submissionId: item.id })}
-                  className="flex size-11 items-center justify-center rounded-lg text-[#94A3B8] hover:bg-white/10 hover:text-white"
+                  className="flex size-11 items-center justify-center rounded-lg text-brand-muted hover:bg-white/10 hover:text-white"
                 >
                   <Building2 size={18} />
                 </button>
@@ -778,7 +778,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                   type="button"
                   title="Kandidat seitlich anzeigen (Prozesse bleibt offen)"
                   onClick={() => setQuickViewCandidateId(item.candidate_id)}
-                  className="flex size-11 items-center justify-center rounded-lg text-[#94A3B8] hover:bg-white/10 hover:text-white"
+                  className="flex size-11 items-center justify-center rounded-lg text-brand-muted hover:bg-white/10 hover:text-white"
                 >
                   <Eye size={18} />
                 </button>
@@ -786,13 +786,13 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
             </div>
           ))}
           {filteredItems.length === 0 && (
-            <p className="py-8 text-center text-xs text-[#94A3B8]">Keine Prozesse gefunden.</p>
+            <p className="py-8 text-center text-xs text-brand-muted">Keine Prozesse gefunden.</p>
           )}
         </div>
         <div className="hidden lg:block">
         <DataTable headers={["Kandidat", "Kanzlei", "Ansprechpartner", "Status", "Closing", "Versendet", "Follow-up", "Nächster Schritt", "Erwartete Fee", "Export"]}>
           {filteredItems.map((item) => (
-            <tr key={item.id} className="cursor-pointer hover:bg-[#203A5A]/35" onClick={() => openCandidate(item.candidate_id)}>
+            <tr key={item.id} className="cursor-pointer hover:bg-brand-hover/35" onClick={() => openCandidate(item.candidate_id)}>
               <td className="px-4 py-3.5 font-semibold hover:underline">{candidateName(item.candidate_id)}</td>
               <td className="px-4 py-3.5">{clientName(item.client_company_id)}</td>
               <td className="px-4 py-3.5">{contactPersonName(item.contact_person_id)}</td>
@@ -808,7 +808,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                     type="button"
                     title="Kanzlei hinzufügen/ändern"
                     onClick={(event) => { event.stopPropagation(); setClientPrompt({ submissionId: item.id }); }}
-                    className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
+                    className="rounded p-1 text-brand-muted hover:bg-white/10 hover:text-white"
                   >
                     <Building2 size={13} />
                   </button>
@@ -816,7 +816,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                     type="button"
                     title="Kandidat seitlich anzeigen (Prozesse bleibt offen)"
                     onClick={(event) => { event.stopPropagation(); setQuickViewCandidateId(item.candidate_id); }}
-                    className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
+                    className="rounded p-1 text-brand-muted hover:bg-white/10 hover:text-white"
                   >
                     <Eye size={13} />
                   </button>
@@ -838,7 +838,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                         },
                       ]);
                     }}
-                    className="rounded p-1 text-[#94A3B8] hover:bg-white/10 hover:text-white"
+                    className="rounded p-1 text-brand-muted hover:bg-white/10 hover:text-white"
                   >
                     <Download size={14} />
                   </button>

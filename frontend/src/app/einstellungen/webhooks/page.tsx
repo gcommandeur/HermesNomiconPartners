@@ -64,7 +64,7 @@ export default function WebhooksPage() {
   }
 
   if (meLoading) {
-    return <div className="h-16 animate-pulse rounded-lg bg-[#0D1B2E]" />;
+    return <div className="h-16 animate-pulse rounded-lg bg-brand-surface" />;
   }
 
   if (!isAdmin) {
@@ -72,7 +72,7 @@ export default function WebhooksPage() {
       <>
         <PageHeader eyebrow="Einstellungen" title="Webhooks" />
         <Card>
-          <CardContent className="flex items-center gap-3 text-sm text-[#94A3B8]">
+          <CardContent className="flex items-center gap-3 text-sm text-brand-muted">
             <ShieldOff size={18} /> Nur für Admins zugänglich.
           </CardContent>
         </Card>
@@ -83,7 +83,7 @@ export default function WebhooksPage() {
   return (
     <>
       <PageHeader eyebrow="Einstellungen" title="Webhooks" />
-      <p className="mb-5 max-w-3xl text-sm text-[#94A3B8]">
+      <p className="mb-5 max-w-3xl text-sm text-brand-muted">
         Meldet Ereignisse (z. B. <code>candidate_submission.status_changed</code>) signiert an eine https-Adresse. Die
         Nachricht enthält nur Ereignisart und IDs, keine Personendaten – Details holt der Empfänger per API-Key. Muster:
         <code> *</code> für alles oder <code>candidate.*</code> für eine Gruppe. Adressen im internen Netz sind nicht
@@ -94,7 +94,7 @@ export default function WebhooksPage() {
         <Card className="mb-4">
           <CardContent className="text-sm">
             <p className="font-medium">Geheimnis für „{secret.name}“ – wird nur jetzt angezeigt:</p>
-            <p className="mt-1 break-all font-mono text-[#F8FAFC]">{secret.value}</p>
+            <p className="mt-1 break-all font-mono text-brand-text">{secret.value}</p>
             <Button size="sm" variant="outline" className="mt-2" onClick={() => setSecret(null)}>
               Gespeichert, ausblenden
             </Button>
@@ -134,7 +134,7 @@ export default function WebhooksPage() {
       </Card>
 
       <div className="space-y-3">
-        {hooks.length === 0 && <p className="text-sm text-[#94A3B8]">Noch keine Webhooks angelegt.</p>}
+        {hooks.length === 0 && <p className="text-sm text-brand-muted">Noch keine Webhooks angelegt.</p>}
         {hooks.map((hook) => (
           <Card key={hook.id}>
             <CardContent className="space-y-3">
@@ -142,10 +142,10 @@ export default function WebhooksPage() {
                 <div className="min-w-0">
                   <p className="font-medium">
                     {hook.name}
-                    {!hook.is_active && <span className="ml-2 text-xs text-[#94A3B8]">(deaktiviert)</span>}
+                    {!hook.is_active && <span className="ml-2 text-xs text-brand-muted">(deaktiviert)</span>}
                   </p>
-                  <p className="break-all text-xs text-[#94A3B8]">{hook.url}</p>
-                  <p className="text-xs text-[#94A3B8]">Ereignisse: {hook.event_types.join(", ")}</p>
+                  <p className="break-all text-xs text-brand-muted">{hook.url}</p>
+                  <p className="text-xs text-brand-muted">Ereignisse: {hook.event_types.join(", ")}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={() => void run(async () => { await sendWebhookTest(hook.id); await showDeliveries(hook.id); })}>
@@ -195,7 +195,7 @@ export default function WebhooksPage() {
               </div>
               {openId === hook.id && (
                 <div className="space-y-1 border-t border-white/10 pt-3 text-xs">
-                  {deliveries.length === 0 && <p className="text-[#94A3B8]">Noch keine Zustellungen.</p>}
+                  {deliveries.length === 0 && <p className="text-brand-muted">Noch keine Zustellungen.</p>}
                   {deliveries.map((delivery) => (
                     <div key={delivery.id} className="flex flex-wrap items-center justify-between gap-2">
                       <span>

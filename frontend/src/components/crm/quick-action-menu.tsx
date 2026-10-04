@@ -31,14 +31,14 @@ export function QuickActionMenu() {
         <Plus size={15} />Quick Action<ChevronDown size={14} />
       </Button>
       {menuOpen && (
-        <div className="absolute right-0 top-11 z-50 w-56 rounded-lg border border-white/10 bg-[#0D1B2E] p-1.5 shadow-2xl">
-          <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#D8DADF] hover:bg-white/8" onClick={() => { setActive("candidate"); setMenuOpen(false); }}>
+        <div className="absolute right-0 top-11 z-50 w-56 rounded-lg border border-white/10 bg-brand-surface p-1.5 shadow-2xl">
+          <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-platinum hover:bg-white/8" onClick={() => { setActive("candidate"); setMenuOpen(false); }}>
             <Users size={15} />Kandidat anlegen
           </button>
-          <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#D8DADF] hover:bg-white/8" onClick={() => { setActive("client"); setMenuOpen(false); }}>
+          <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-platinum hover:bg-white/8" onClick={() => { setActive("client"); setMenuOpen(false); }}>
             <Building2 size={15} />Kanzlei anlegen
           </button>
-          <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#D8DADF] hover:bg-white/8" onClick={() => { setActive("submission"); setMenuOpen(false); }}>
+          <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-platinum hover:bg-white/8" onClick={() => { setActive("submission"); setMenuOpen(false); }}>
             <Briefcase size={15} />Prozess erstellen
           </button>
         </div>

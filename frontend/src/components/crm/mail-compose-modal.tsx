@@ -10,11 +10,11 @@ import { getDocumentsForOwner, sendMail } from "@/lib/api/queries";
 import { useEmailTemplatesCache, useMailAccountsCache } from "@/lib/api/hooks";
 import type { DocumentMeta } from "@/lib/api/types";
 
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
+const labelClass = "mb-1 block text-xs text-brand-muted";
 const selectClass =
-  "h-9 w-full rounded-md border border-white/10 bg-[#071426] px-2 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+  "h-9 w-full rounded-md border border-white/10 bg-brand-sidebar px-2 text-xs text-brand-text outline-none focus:border-brand-accent";
 const textareaClass =
-  "min-h-40 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+  "min-h-40 w-full rounded-md border border-white/10 bg-brand-surface p-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 function renderTemplate(text: string, values: Record<string, string>): string {
   return text.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
@@ -134,7 +134,7 @@ export function MailComposeModal({
     <Modal title="Mail schreiben" eyebrow={`An ${toName ?? toAddress}`} maxWidth="max-w-2xl" onClose={onClose}>
       {sent ? (
         <div className="space-y-4">
-          <p className="text-sm text-[#a9d6b8]">Mail wurde versendet.</p>
+          <p className="text-sm text-brand-success-text">Mail wurde versendet.</p>
           <div className="flex justify-end">
             <Button onClick={onClose}>Schließen</Button>
           </div>
@@ -163,7 +163,7 @@ export function MailComposeModal({
             // ueber MailAccountService.resolve_send_account (persoenliches
             // Standardpostfach), ohne dass hier eine Auswahl noetig ist.
             !accountsLoading && (
-              <p className="text-xs text-[#94A3B8]">
+              <p className="text-xs text-brand-muted">
                 Wird über dein Standardpostfach gesendet (siehe Einstellungen).
               </p>
             )
@@ -200,7 +200,7 @@ export function MailComposeModal({
               </label>
               <div className="space-y-1">
                 {documents.map((doc) => (
-                  <label key={doc.id} className="flex items-center gap-2 text-xs text-[#CBD5E1]">
+                  <label key={doc.id} className="flex items-center gap-2 text-xs text-brand-soft">
                     <input
                       type="checkbox"
                       checked={selectedAttachmentIds.has(doc.id)}

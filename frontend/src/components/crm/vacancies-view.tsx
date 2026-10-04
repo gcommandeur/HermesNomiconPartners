@@ -79,14 +79,14 @@ export function VacanciesView({ vacancies, clients }: {
           <Card key={vacancy.id}>
             <CardHeader>
               <div>
-                <div className="flex items-center gap-2"><BriefcaseBusiness size={16} className="text-[#D8DADF]" /><h2 className="font-semibold">{vacancy.title}</h2></div>
-                <p className="mt-1 text-xs text-[#94A3B8]">{clientName(vacancy.client_company_id)} · {vacancy.location}</p>
+                <div className="flex items-center gap-2"><BriefcaseBusiness size={16} className="text-brand-platinum" /><h2 className="font-semibold">{vacancy.title}</h2></div>
+                <p className="mt-1 text-xs text-brand-muted">{clientName(vacancy.client_company_id)} · {vacancy.location}</p>
               </div>
               <StatusPill status={vacancy.status} />
             </CardHeader>
             <CardContent>
-              <p className="text-sm leading-6 text-[#CBD5E1]">{vacancy.description}</p>
-              <div className="mt-4 flex flex-wrap gap-1.5">{[...vacancy.must_have, ...vacancy.nice_to_have.slice(0, 2)].map((tag) => <span key={tag} className="rounded bg-[#102A4C]/70 px-2 py-1 text-[10px] text-[#CBD5E1]">{tag}</span>)}</div>
+              <p className="text-sm leading-6 text-brand-soft">{vacancy.description}</p>
+              <div className="mt-4 flex flex-wrap gap-1.5">{[...vacancy.must_have, ...vacancy.nice_to_have.slice(0, 2)].map((tag) => <span key={tag} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[10px] text-brand-soft">{tag}</span>)}</div>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <Button size="sm" variant="outline" onClick={() => setExpandedId((current) => (current === vacancy.id ? null : vacancy.id))}>
                   {expandedId === vacancy.id ? "Matching ausblenden" : "Passende Kandidaten anzeigen"}
@@ -104,7 +104,7 @@ export function VacanciesView({ vacancies, clients }: {
             </CardContent>
           </Card>
         ))}
-        {filtered.length === 0 && <Card><CardContent className="py-12 text-center text-sm text-[#858b90]">Keine Vakanzen gefunden.</CardContent></Card>}
+        {filtered.length === 0 && <Card><CardContent className="py-12 text-center text-sm text-brand-gray">Keine Vakanzen gefunden.</CardContent></Card>}
       </section>
       {/* Nur ab lg: die Kartenansicht oben deckt Mobile bereits vollstaendig
        * ab (grid-cols-1) - diese Tabelle darunter zeigt dieselben Vakanzen
@@ -114,8 +114,8 @@ export function VacanciesView({ vacancies, clients }: {
       <div className="hidden lg:block">
       <DataTable headers={["Vakanz", "Kanzlei", "Standort", "Umkreis", "Qualifikation", "Gehalt", "Arbeitsmodell", "Status", "Priorität"]}>
         {filtered.map((vacancy) => (
-          <tr key={vacancy.id} className="hover:bg-[#203A5A]/35">
-            <td className="px-4 py-3.5 font-semibold text-[#D8DADF]">{vacancy.title}</td>
+          <tr key={vacancy.id} className="hover:bg-brand-hover/35">
+            <td className="px-4 py-3.5 font-semibold text-brand-platinum">{vacancy.title}</td>
             <td className="px-4 py-3.5">{clientName(vacancy.client_company_id)}</td>
             <td className="px-4 py-3.5">{vacancy.location}</td>
             <td className="px-4 py-3.5">{vacancy.search_radius_km ? `${vacancy.search_radius_km} km` : "—"}</td>
@@ -128,7 +128,7 @@ export function VacanciesView({ vacancies, clients }: {
         ))}
       </DataTable>
       </div>
-      <p className="mt-3 text-xs text-[#8a9095]">{filtered.length} von {vacancies.length} Vakanzen</p>
+      <p className="mt-3 text-xs text-brand-gray">{filtered.length} von {vacancies.length} Vakanzen</p>
     </>
   );
 }
