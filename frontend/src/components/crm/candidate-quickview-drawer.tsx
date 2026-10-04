@@ -42,7 +42,7 @@ export function CandidateQuickViewDrawer({
             <div className="mb-2 flex items-center gap-2">
               <StatusPill status={candidate.status} />
               {candidate.has_ghosting_history && <Badge tone="red" className="gap-1"><Ghost size={11} />Ghosting</Badge>}
-              <span className="text-[11px] text-brand-gray">Aktualisiert {formatDate(candidate.updated_at)}</span>
+              <span className="text-[10.45px] text-brand-gray">Aktualisiert {formatDate(candidate.updated_at)}</span>
             </div>
             <h2 className="text-xl font-semibold tracking-[-.03em]">{candidate.first_name} {candidate.last_name}</h2>
             <p className="mt-1 text-sm text-brand-soft">{candidate.job_title ?? "Rolle offen"} · {candidate.city ?? candidate.postal_code ?? "Region offen"}</p>
@@ -72,18 +72,18 @@ export function CandidateQuickViewDrawer({
 
         <div className="mt-4 grid grid-cols-1 gap-3 border-t border-white/10 pt-4 text-xs sm:grid-cols-2">
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-brand-muted">Gehaltsrahmen</p>
+            <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Gehaltsrahmen</p>
             <p className="mt-1 text-brand-text">{candidate.salary_expectation ?? "offen"}</p>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-brand-muted">Verfügbarkeit</p>
+            <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Verfügbarkeit</p>
             <p className="mt-1 text-brand-text">{candidate.notice_period ?? "offen"}</p>
           </div>
         </div>
 
         {(candidate.short_profile || candidate.summary) && (
           <div className="mt-4 border-t border-white/10 pt-4">
-            <p className="mb-1 text-[10px] uppercase tracking-wider text-brand-muted">Kurzprofil</p>
+            <p className="mb-1 text-[9.5px] uppercase tracking-wider text-brand-muted">Kurzprofil</p>
             <p className="whitespace-pre-line text-xs text-brand-soft">{candidate.short_profile ?? candidate.summary}</p>
           </div>
         )}

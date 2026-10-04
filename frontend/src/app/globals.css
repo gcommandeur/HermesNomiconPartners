@@ -1,6 +1,18 @@
 @import "tailwindcss";
 @import "./brand-theme.css";
 
+/* Schriftgroessen insgesamt 5 % kleiner als die Tailwind-Standardwerte (2026-10-04). */
+@theme {
+  --text-xs: 0.7125rem;
+  --text-sm: 0.83125rem;
+  --text-base: 0.95rem;
+  --text-lg: 1.06875rem;
+  --text-xl: 1.1875rem;
+  --text-2xl: 1.425rem;
+  --text-3xl: 1.78125rem;
+  --text-4xl: 2.1375rem;
+}
+
 
 /* Tailwind-Klassen fuer die Variablen: bg-brand-panel, text-brand-muted, ...
    NEUE Oberflaeche nutzt diese Klassen, keine festen Hex-Farben (siehe
@@ -41,7 +53,7 @@ body {
   background: var(--page-gradient);
   color: var(--foreground);
   font-family: Inter, "Segoe UI", Arial, sans-serif;
-  font-size: 14px;
+  font-size: 13.3px;
   -webkit-font-smoothing: antialiased;
 }
 button,input,select,textarea { font: inherit; }

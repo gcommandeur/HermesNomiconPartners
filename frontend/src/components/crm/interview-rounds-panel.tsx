@@ -110,7 +110,7 @@ export function InterviewRoundsPanel({
                 )}
               </div>
               <span
-                className={`shrink-0 rounded-full border px-2 py-1 text-[10px] ${STATUS_TONE[interview.status]}`}
+                className={`shrink-0 rounded-full border px-2 py-1 text-[9.5px] ${STATUS_TONE[interview.status]}`}
               >
                 {STATUS_LABELS[interview.status]}
               </span>

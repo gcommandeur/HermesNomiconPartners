@@ -173,7 +173,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      <div className="mb-4 flex gap-3 text-[11px] text-brand-muted">
+      <div className="mb-4 flex gap-3 text-[10.45px] text-brand-muted">
         {(Object.entries(EVENT_TYPE_LABEL) as [keyof typeof EVENT_TYPE_LABEL, string][]).map(([key, label]) => (
           <span key={key} className="flex items-center gap-1.5">
             <span

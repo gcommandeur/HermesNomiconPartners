@@ -77,7 +77,7 @@ export function ContactsTable() {
             <div className="flex items-start justify-between gap-2">
               <p className="min-w-0 truncate text-sm font-semibold text-brand-platinum">{contactName(contact)}</p>
               {contact.is_primary ? (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-brand-platinum/25 bg-brand-platinum/10 px-2 py-1 text-[10px] text-brand-text"><Star size={11} />Hauptkontakt</span>
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-brand-platinum/25 bg-brand-platinum/10 px-2 py-1 text-[9.5px] text-brand-text"><Star size={11} />Hauptkontakt</span>
               ) : (
                 <StatusPill status="draft" />
               )}
@@ -85,7 +85,7 @@ export function ContactsTable() {
             <p className="mt-0.5 truncate text-xs text-brand-muted">
               {contact.client_company_name ?? "Kanzlei"}{contact.role_title ? ` · ${contact.role_title}` : ""}
             </p>
-            <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-brand-gray">
+            <div className="mt-2 flex items-center justify-between gap-2 text-[10.45px] text-brand-gray">
               <span className="min-w-0 truncate">{contact.email ?? "—"} {contact.phone ? `· ${contact.phone}` : ""}</span>
               {contact.email && (
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -116,7 +116,7 @@ export function ContactsTable() {
             <td className="px-4 py-3.5">{contact.role_title ?? "—"}</td>
             <td className="px-4 py-3.5">{contact.email ?? "—"}</td>
             <td className="px-4 py-3.5">{contact.phone ?? "—"}</td>
-            <td className="px-4 py-3.5">{contact.is_primary ? <span className="inline-flex items-center gap-1 rounded-full border border-brand-platinum/25 bg-brand-platinum/10 px-2 py-1 text-[10px] text-brand-text"><Star size={11} />Hauptkontakt</span> : <StatusPill status="draft" />}</td>
+            <td className="px-4 py-3.5">{contact.is_primary ? <span className="inline-flex items-center gap-1 rounded-full border border-brand-platinum/25 bg-brand-platinum/10 px-2 py-1 text-[9.5px] text-brand-text"><Star size={11} />Hauptkontakt</span> : <StatusPill status="draft" />}</td>
             <td className="px-4 py-3.5">
               {contact.email && (
                 <div className="flex items-center gap-1.5">

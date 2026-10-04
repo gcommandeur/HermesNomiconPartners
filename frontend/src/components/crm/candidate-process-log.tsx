@@ -168,10 +168,10 @@ export function CandidateProcessLog({ candidateId }: { candidateId: string }) {
         {STAGE_TILES.map((tile) => (
           <div
             key={tile.key}
-            className="flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-brand-surface/75 px-3 py-1.5 text-[11px] text-brand-soft"
+            className="flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-brand-surface/75 px-3 py-1.5 text-[10.45px] text-brand-soft"
           >
             <span>{tile.label}</span>
-            <span className="grid size-5 place-items-center rounded-full bg-brand-panel text-[10px] font-semibold text-brand-platinum">
+            <span className="grid size-5 place-items-center rounded-full bg-brand-panel text-[9.5px] font-semibold text-brand-platinum">
               {summary ? summary[tile.key] : "…"}
             </span>
           </div>

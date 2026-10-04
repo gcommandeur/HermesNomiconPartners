@@ -86,7 +86,7 @@ export function VacanciesView({ vacancies, clients }: {
             </CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-brand-soft">{vacancy.description}</p>
-              <div className="mt-4 flex flex-wrap gap-1.5">{[...vacancy.must_have, ...vacancy.nice_to_have.slice(0, 2)].map((tag) => <span key={tag} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[10px] text-brand-soft">{tag}</span>)}</div>
+              <div className="mt-4 flex flex-wrap gap-1.5">{[...vacancy.must_have, ...vacancy.nice_to_have.slice(0, 2)].map((tag) => <span key={tag} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[9.5px] text-brand-soft">{tag}</span>)}</div>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <Button size="sm" variant="outline" onClick={() => setExpandedId((current) => (current === vacancy.id ? null : vacancy.id))}>
                   {expandedId === vacancy.id ? "Matching ausblenden" : "Passende Kandidaten anzeigen"}

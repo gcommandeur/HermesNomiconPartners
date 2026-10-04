@@ -322,11 +322,11 @@ export function MailingGroupsPanel({
             </select>
             {selectedTemplate ? (
               <>
-                <p className="text-[10px] uppercase tracking-wider text-brand-muted">
+                <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">
                   Betreff (Beispiel für {exampleRecipient?.name ?? "erste:n Empfänger:in"})
                 </p>
                 <p className="text-sm text-brand-platinum">{renderedSubject}</p>
-                <p className="mt-3 text-[10px] uppercase tracking-wider text-brand-muted">Entwurf</p>
+                <p className="mt-3 text-[9.5px] uppercase tracking-wider text-brand-muted">Entwurf</p>
                 <pre className="whitespace-pre-wrap rounded-md bg-brand-sidebar p-3 text-xs leading-6 text-brand-soft">{renderedBody}</pre>
                 <p className="text-xs text-brand-gray">
                   Betreff/Text wurden mit den Daten von {exampleRecipient?.name ?? "der ersten Person"} befüllt — beim Versand geht genau dieser Text unverändert an alle {previewGroup.recipients.length} Empfänger:innen (keine Personalisierung pro Person). Vor dem Senden oben bei Bedarf noch anpassen bzw. hier kopieren.

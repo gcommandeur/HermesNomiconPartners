@@ -59,7 +59,7 @@ export function SubmissionStageBar({
               >
                 <div
                   className={cn(
-                    "grid size-6 shrink-0 place-items-center rounded-full border text-[10px] transition-colors group-hover:border-brand-accent",
+                    "grid size-6 shrink-0 place-items-center rounded-full border text-[9.5px] transition-colors group-hover:border-brand-accent",
                     reached
                       ? "border-brand-accent bg-brand-accent text-white"
                       : "border-white/15 bg-transparent text-brand-gray-dark",
@@ -68,7 +68,7 @@ export function SubmissionStageBar({
                 >
                   {reached ? <Check size={12} /> : index + 1}
                 </div>
-                <span className={cn("whitespace-nowrap text-[10px] group-hover:text-white", reached ? "text-brand-platinum" : "text-brand-gray-dark")}>
+                <span className={cn("whitespace-nowrap text-[9.5px] group-hover:text-white", reached ? "text-brand-platinum" : "text-brand-gray-dark")}>
                   {stage.label}
                 </span>
               </button>
@@ -79,7 +79,7 @@ export function SubmissionStageBar({
           );
         })}
         {isCancelled && (
-          <div className="ml-3 flex shrink-0 items-center gap-1.5 rounded-full border border-red-400/30 bg-red-950/30 px-2.5 py-1 text-[10px] text-red-200">
+          <div className="ml-3 flex shrink-0 items-center gap-1.5 rounded-full border border-red-400/30 bg-red-950/30 px-2.5 py-1 text-[9.5px] text-red-200">
             <X size={11} />Abgebrochen
           </div>
         )}

@@ -150,7 +150,7 @@ export function ClientCreateForm({
           {!form.kanzleigruppe.trim() && duplicates.some((dup) => dup.kanzleigruppe) && (
             <button
               type="button"
-              className="mt-2 rounded-md border border-brand-accent/40 bg-brand-accent-strong/45 px-2.5 py-1 text-[11px] text-brand-info hover:bg-brand-accent-strong/70"
+              className="mt-2 rounded-md border border-brand-accent/40 bg-brand-accent-strong/45 px-2.5 py-1 text-[10.45px] text-brand-info hover:bg-brand-accent-strong/70"
               onClick={() => set("kanzleigruppe", duplicates.find((dup) => dup.kanzleigruppe)?.kanzleigruppe ?? "")}
             >
               Kanzleigruppe &quot;{duplicates.find((dup) => dup.kanzleigruppe)?.kanzleigruppe}&quot; übernehmen

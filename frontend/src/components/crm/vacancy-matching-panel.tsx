@@ -49,7 +49,7 @@ export function VacancyMatchingPanel({ vacancyId }: { vacancyId: string }) {
                 <p className="mt-1 text-xs text-brand-muted">{match.candidate.city ?? match.candidate.postal_code ?? "Ort offen"} · {match.candidate.job_title ?? "Rolle offen"}</p>
                 {match.reasons.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {match.reasons.map((reason) => <span key={reason} className="rounded bg-brand-panel px-2 py-0.5 text-[10px] text-brand-muted">{reason}</span>)}
+                    {match.reasons.map((reason) => <span key={reason} className="rounded bg-brand-panel px-2 py-0.5 text-[9.5px] text-brand-muted">{reason}</span>)}
                   </div>
                 )}
               </div>

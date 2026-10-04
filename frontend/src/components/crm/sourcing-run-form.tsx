@@ -132,7 +132,7 @@ export function SourcingRunForm() {
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <p className="text-sm font-semibold text-brand-platinum">Sourcing-Lauf starten</p>
         {activeRun && (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-accent/40 bg-brand-accent/15 px-2.5 py-0.5 text-[11px] font-medium text-[#8FB4E3]">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-accent/40 bg-brand-accent/15 px-2.5 py-0.5 text-[10.45px] font-medium text-[#8FB4E3]">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#8FB4E3]" />
             Läuft: {activeRun.processed}/{activeRun.total} {runUnit}
             {activeRun.leads_created > 0 && ` · ${activeRun.leads_created} neue Leads`}

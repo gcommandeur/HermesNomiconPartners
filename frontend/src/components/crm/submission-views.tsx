@@ -409,17 +409,17 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
         <div className="min-w-0">
           <p className={cn("truncate font-semibold hover:underline", mobile ? "text-sm" : "text-xs")}>{candidateName(item.candidate_id)}</p>
           <p
-            className={cn("mt-0.5 truncate text-brand-muted", mobile ? "text-xs" : "text-[10px]")}
+            className={cn("mt-0.5 truncate text-brand-muted", mobile ? "text-xs" : "text-[9.5px]")}
             title={clientName(item.client_company_id)}
           >
             {clientName(item.client_company_id)}
           </p>
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-2">
-          <span className="shrink-0 text-[10px] text-brand-muted">{formatDate(item.follow_up_at)}</span>
+          <span className="shrink-0 text-[9.5px] text-brand-muted">{formatDate(item.follow_up_at)}</span>
           <div className={cn("flex shrink-0 items-center", mobile ? "gap-1" : "gap-0.5")}>
-            {isHot(item.status) && <span className="rounded-full bg-brand-accent/20 px-1.5 py-0.5 text-[9px] text-brand-accent-light">Hot</span>}
-            {item.archived_at && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] text-emerald-300">Abgeschlossen</span>}
+            {isHot(item.status) && <span className="rounded-full bg-brand-accent/20 px-1.5 py-0.5 text-[8.55px] text-brand-accent-light">Hot</span>}
+            {item.archived_at && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8.55px] text-emerald-300">Abgeschlossen</span>}
             <button
               type="button"
               title="Kanzlei hinzufügen/ändern"
@@ -506,12 +506,12 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
             {item.closing_status && <ClosingScoreBadge status={item.closing_status} probability={item.closing_probability} />}
             <ClosingScoreForm submissionId={item.id} />
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-brand-muted">Nächster Schritt</p>
+              <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Nächster Schritt</p>
               <p className="mt-1 text-xs">{item.next_step ?? item.summary ?? "Follow-up festlegen"}</p>
             </div>
             {(interviewsBySubmission.get(item.id)?.length ?? 0) > 0 && (
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-brand-muted">Interview-Runden</p>
+                <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Interview-Runden</p>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {(interviewsBySubmission.get(item.id) ?? []).map((interview, index) => (
                     <button
@@ -519,7 +519,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                       type="button"
                       title={`${interview.interview_type} — ${formatChipDateTime(interview.scheduled_at)}`}
                       onClick={() => setInterviewModal({ submissionId: item.id, interview })}
-                      className="flex items-center gap-1 rounded-full border border-white/10 bg-brand-surface px-2 py-1 text-[10px] text-brand-soft hover:border-brand-accent/50 hover:text-white"
+                      className="flex items-center gap-1 rounded-full border border-white/10 bg-brand-surface px-2 py-1 text-[9.5px] text-brand-soft hover:border-brand-accent/50 hover:text-white"
                     >
                       <span className={`size-1.5 rounded-full ${interviewDotClass(interview)}`} />
                       R{index + 1} · {formatChipDateTime(interview.scheduled_at)}
@@ -528,7 +528,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                 </div>
               </div>
             )}
-            <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[10px] text-brand-silver">
+            <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[9.5px] text-brand-silver">
               {nextUpcomingInterview(item.id) ? (
                 <span>Nächstes Interview: {formatChipDateTime(nextUpcomingInterview(item.id)!.scheduled_at)}</span>
               ) : (
@@ -540,7 +540,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
               <button
                 type="button"
                 onClick={(event) => { event.stopPropagation(); setClientPrompt({ submissionId: item.id }); }}
-                className="flex w-full items-center justify-center gap-1.5 rounded bg-[#7F1D1D]/40 px-2 py-1.5 text-[10px] text-red-100 hover:bg-[#7F1D1D]/60"
+                className="flex w-full items-center justify-center gap-1.5 rounded bg-[#7F1D1D]/40 px-2 py-1.5 text-[9.5px] text-red-100 hover:bg-[#7F1D1D]/60"
               >
                 <Building2 size={11} />Ab Interview Kanzlei verknüpfen — jetzt hinzufügen
               </button>
@@ -666,7 +666,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setCancelPrompt(null)}>Zurück</Button>
           </div>
-          <p className="mt-2 text-[11px] text-red-200/70">
+          <p className="mt-2 text-[10.45px] text-red-200/70">
             „Fehler“ löscht den Prozess unwiderruflich (kein Eintrag in „Abgebrochen“) — die anderen Gründe archivieren ihn stattdessen.
           </p>
         </div>
@@ -698,7 +698,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                     {column.title}
                     <span
                       className={cn(
-                        "grid size-5 place-items-center rounded-full text-[10px]",
+                        "grid size-5 place-items-center rounded-full text-[9.5px]",
                         active ? "bg-brand-accent/40 text-white" : "bg-brand-panel text-brand-soft",
                       )}
                     >
@@ -730,11 +730,11 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                 >
                   <header className="flex items-center justify-between px-2 py-2">
                     <h2 className="truncate text-xs font-semibold text-brand-text">{column.title}</h2>
-                    <span className="grid size-5 shrink-0 place-items-center rounded-full border border-white/10 bg-brand-panel text-[10px] text-brand-soft">{columnItems.length}</span>
+                    <span className="grid size-5 shrink-0 place-items-center rounded-full border border-white/10 bg-brand-panel text-[9.5px] text-brand-soft">{columnItems.length}</span>
                   </header>
                   <div className="scrollbar-subtle max-h-[calc(100vh-360px)] space-y-2 overflow-y-auto">
                     {columnItems.map((item) => renderCard(item, { mobile: false }))}
-                    {columnItems.length === 0 && <div className="rounded-lg border border-dashed border-white/10 p-5 text-center text-[11px] text-brand-muted">Keine Prozesse</div>}
+                    {columnItems.length === 0 && <div className="rounded-lg border border-dashed border-white/10 p-5 text-center text-[10.45px] text-brand-muted">Keine Prozesse</div>}
                   </div>
                 </section>
               );
@@ -760,11 +760,11 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                 <StatusPill status={item.status} />
               </div>
               <p className="mt-0.5 truncate text-xs text-brand-muted">{clientName(item.client_company_id)}</p>
-              <div className="mt-2 flex items-center justify-between text-[11px] text-brand-gray">
+              <div className="mt-2 flex items-center justify-between text-[10.45px] text-brand-gray">
                 <span>Follow-up {formatDate(item.follow_up_at)}</span>
                 <span>{expectedFee(item).toLocaleString("de-DE")} €</span>
               </div>
-              <p className="mt-1 truncate text-[11px] text-brand-gray">{item.next_step ?? "Nächster Schritt offen"}</p>
+              <p className="mt-1 truncate text-[10.45px] text-brand-gray">{item.next_step ?? "Nächster Schritt offen"}</p>
               <div className="mt-2 flex items-center gap-1" onClick={(event) => event.stopPropagation()}>
                 <button
                   type="button"
