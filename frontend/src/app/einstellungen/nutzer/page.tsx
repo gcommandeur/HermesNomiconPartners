@@ -142,7 +142,7 @@ export default function NutzerverwaltungPage() {
                         ))}
                       </select>
                       {managerStale && (
-                        <p className="mt-1 text-[11px] text-brand-warning">Zugeordneter Teamleiter nicht in der Liste.</p>
+                        <p className="mt-1 text-[10.45px] text-brand-warning">Zugeordneter Teamleiter nicht in der Liste.</p>
                       )}
                     </>
                   )}

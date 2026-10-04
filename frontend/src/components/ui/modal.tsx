@@ -34,7 +34,7 @@ export function Modal({
         >
           <div className="flex items-start justify-between">
             <div>
-              {eyebrow && <p className="text-[10px] uppercase tracking-[.2em] text-brand-accent-light">{eyebrow}</p>}
+              {eyebrow && <p className="text-[9.5px] uppercase tracking-[.2em] text-brand-accent-light">{eyebrow}</p>}
               <h2 className="mt-2 text-xl font-semibold text-brand-text">{title}</h2>
               {description && <p className="mt-1 text-xs text-brand-muted">{description}</p>}
             </div>
@@ -54,7 +54,7 @@ export function Modal({
       >
         <div className="flex items-start justify-between">
           <div>
-            {eyebrow && <p className="text-[10px] uppercase tracking-[.2em] text-brand-accent-light">{eyebrow}</p>}
+            {eyebrow && <p className="text-[9.5px] uppercase tracking-[.2em] text-brand-accent-light">{eyebrow}</p>}
             <h2 className="mt-2 text-xl font-semibold text-brand-text">{title}</h2>
             {description && <p className="mt-1 text-xs text-brand-muted">{description}</p>}
           </div>

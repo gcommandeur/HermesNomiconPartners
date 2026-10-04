@@ -196,7 +196,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   }
 
   const selectClass = "h-9 w-full rounded-md border border-white/10 bg-brand-surface px-2.5 text-xs text-brand-text outline-none focus:border-brand-accent";
-  const labelClass = "mb-1 block text-[10px] uppercase tracking-wider text-brand-muted";
+  const labelClass = "mb-1 block text-[9.5px] uppercase tracking-wider text-brand-muted";
 
   const allVisibleSelected = clientPagination.pageItems.length > 0 && clientPagination.pageItems.every((item) => selectedIds.has(item.id));
 
@@ -318,10 +318,10 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
               </p>
               {item.tags.length > 0 && (
                 <div className="mt-1.5 flex flex-wrap gap-1">
-                  {item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[10px] text-brand-soft">{tag}</span>)}
+                  {item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[9.5px] text-brand-soft">{tag}</span>)}
                 </div>
               )}
-              <p className="mt-1.5 text-[11px] text-brand-gray">{item.mailing_ready ? "übertragbar" : "gesperrt"}</p>
+              <p className="mt-1.5 text-[10.45px] text-brand-gray">{item.mailing_ready ? "übertragbar" : "gesperrt"}</p>
             </div>
           </label>
         ))}
@@ -345,7 +345,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
               <td className="px-4 py-3.5">{item.location}</td>
               <td className="px-4 py-3.5">{item.postal_code ?? "—"}</td>
               <td className="px-4 py-3.5"><StatusPill status={item.status} /></td>
-              <td className="px-4 py-3.5"><div className="flex flex-wrap gap-1">{item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[10px] text-brand-soft">{tag}</span>)}</div></td>
+              <td className="px-4 py-3.5"><div className="flex flex-wrap gap-1">{item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[9.5px] text-brand-soft">{tag}</span>)}</div></td>
               <td className="px-4 py-3.5">{item.mailing_ready ? "übertragbar" : "gesperrt"}</td>
             </tr>
           ))}

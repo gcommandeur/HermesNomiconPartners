@@ -202,7 +202,7 @@ export default function DeletionRequestsPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right text-xs">
-                        <p className="text-[10px] uppercase tracking-wider text-brand-muted">Deadline</p>
+                        <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Deadline</p>
                         <p className={overdue ? "font-semibold text-red-400" : "text-brand-text"}>
                           {formatDateTime(request.deadline)}
                         </p>

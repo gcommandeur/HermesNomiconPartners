@@ -162,7 +162,7 @@ export function ClientsTable() {
                   {client.region ?? client.city ?? client.postal_code ?? "Region offen"}
                   {client.focus ? ` · ${client.focus}` : ""}
                 </p>
-                <div className="mt-2 flex items-center justify-between text-[11px] text-brand-gray">
+                <div className="mt-2 flex items-center justify-between text-[10.45px] text-brand-gray">
                   <span>Kontakt {formatDate(client.last_contact_at ?? client.last_contact ?? client.updated_at)}</span>
                   <span>{client.fee_percentage ?? 27} % Honorar</span>
                 </div>
@@ -184,7 +184,7 @@ export function ClientsTable() {
                   {isExpanded ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
                   <span className="truncate">{groupKey}</span>
                 </span>
-                <span className="shrink-0 text-[11px] text-brand-muted">{locations.length} Standorte</span>
+                <span className="shrink-0 text-[10.45px] text-brand-muted">{locations.length} Standorte</span>
               </button>
               {isExpanded && (
                 <div className="space-y-2 border-t border-white/10 p-2">
@@ -206,7 +206,7 @@ export function ClientsTable() {
                 </div>
               )}
               {!isExpanded && postalCodes.length > 0 && (
-                <p className="px-3 pb-3 text-[11px] text-brand-muted">PLZ: {postalCodes.join(", ")}</p>
+                <p className="px-3 pb-3 text-[10.45px] text-brand-muted">PLZ: {postalCodes.join(", ")}</p>
               )}
             </div>
           );
@@ -271,13 +271,13 @@ export function ClientsTable() {
                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     {groupKey}
                   </span>
-                  <p className="mt-1 text-[11px] text-brand-muted">{locations.length} Standorte</p>
+                  <p className="mt-1 text-[10.45px] text-brand-muted">{locations.length} Standorte</p>
                 </td>
                 <td className="px-4 py-3.5">
                   <div className="flex flex-wrap gap-1">
                     {postalCodes.length > 0
                       ? postalCodes.map((plz) => (
-                          <span key={plz} className="rounded-full border border-white/10 bg-brand-surface px-2 py-0.5 text-[11px] text-brand-soft">{plz}</span>
+                          <span key={plz} className="rounded-full border border-white/10 bg-brand-surface px-2 py-0.5 text-[10.45px] text-brand-soft">{plz}</span>
                         ))
                       : "—"}
                   </div>

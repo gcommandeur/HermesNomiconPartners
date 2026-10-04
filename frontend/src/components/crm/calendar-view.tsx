@@ -51,7 +51,7 @@ function EventChip({ event, onClick, compact }: { event: CalendarEvent; onClick:
         onClick();
       }}
       className={cn(
-        "block w-full truncate rounded border px-1.5 py-0.5 text-left text-[11px] hover:brightness-110",
+        "block w-full truncate rounded border px-1.5 py-0.5 text-left text-[10.45px] hover:brightness-110",
         EVENT_TYPE_COLOR[event.event_type],
         compact ? "mt-0.5" : "mt-1",
       )}
@@ -111,7 +111,7 @@ function AgendaList({
                 ))}
               </div>
             ) : (
-              <p className="mt-1.5 text-[11px] text-brand-gray-dark">Keine Termine</p>
+              <p className="mt-1.5 text-[10.45px] text-brand-gray-dark">Keine Termine</p>
             )}
           </div>
         );
@@ -190,7 +190,7 @@ export function CalendarView({
       <AgendaList days={days} eventsByDay={eventsByDay} currentDate={currentDate} onDayClick={onDayClick} onEventClick={onEventClick} />
       <div className="hidden sm:grid sm:grid-cols-7 sm:gap-2">
       {WEEKDAY_LABELS.map((label) => (
-        <div key={label} className="pb-1 text-center text-[10px] uppercase tracking-wider text-brand-gray">
+        <div key={label} className="pb-1 text-center text-[9.5px] uppercase tracking-wider text-brand-gray">
           {label}
         </div>
       ))}
@@ -211,12 +211,12 @@ export function CalendarView({
               isToday && "border-brand-accent/50 bg-brand-accent-soft/40",
             )}
           >
-            <span className="text-[11px] text-brand-gray">{day.getDate()}</span>
+            <span className="text-[10.45px] text-brand-gray">{day.getDate()}</span>
             {visible.map((event) => (
               <EventChip key={event.id} event={event} onClick={() => onEventClick(event)} compact />
             ))}
             {overflow > 0 && (
-              <p className="mt-0.5 text-[10px] text-brand-accent-light">+{overflow} mehr</p>
+              <p className="mt-0.5 text-[9.5px] text-brand-accent-light">+{overflow} mehr</p>
             )}
           </button>
         );

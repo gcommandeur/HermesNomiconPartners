@@ -83,7 +83,7 @@ function FeeRow({ fee, onChanged }: { fee: Fee; onChanged: () => void }) {
           )}
         </div>
       </div>
-      <p className="mt-1.5 text-[11px] text-brand-dim">
+      <p className="mt-1.5 text-[10.45px] text-brand-dim">
         {fee.invoice_date && <>Rechnungsdatum {formatDate(fee.invoice_date)} · </>}
         {fee.paid_at ? <>Bezahlt am {formatDate(fee.paid_at)}</> : <>Angelegt {formatDate(fee.created_at)}</>}
       </p>

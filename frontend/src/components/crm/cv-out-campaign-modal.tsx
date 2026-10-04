@@ -199,7 +199,7 @@ export function CvOutCampaignModal({
                             <p className="mt-0.5 text-xs text-brand-muted">{client.location}</p>
                           </div>
                         </div>
-                        <span className="shrink-0 rounded-full bg-brand-accent-soft px-2.5 py-1 text-[10px] text-brand-platinum">
+                        <span className="shrink-0 rounded-full bg-brand-accent-soft px-2.5 py-1 text-[9.5px] text-brand-platinum">
                           {client.distance_km} km
                         </span>
                       </div>

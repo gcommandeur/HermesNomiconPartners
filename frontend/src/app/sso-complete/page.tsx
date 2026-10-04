@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { resetClientSession } from "@/lib/reset-client-session";
+import { takePostLoginTarget } from "@/lib/post-login";
 
 /** Landeseite nach dem Microsoft-Login: das Backend hat den Session-Cookie
  * bereits gesetzt (api/v1/microsoft_login.py). Wie beim Passwort-Login zuerst
@@ -13,7 +14,7 @@ export default function SsoCompletePage() {
   useEffect(() => {
     void (async () => {
       await resetClientSession();
-      router.replace("/");
+      router.replace(takePostLoginTarget());
       router.refresh();
     })();
   }, [router]);

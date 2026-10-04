@@ -101,7 +101,7 @@ export default function AuditLogPage() {
                 Von: {entry.changed_by ?? "unbekannt"}
               </p>
               {(describeValues(entry.old_values) || describeValues(entry.new_values)) && (
-                <p className="mt-1 text-[11px] text-brand-dim">
+                <p className="mt-1 text-[10.45px] text-brand-dim">
                   {describeValues(entry.old_values) && `vorher: ${describeValues(entry.old_values)}`}
                   {describeValues(entry.old_values) && describeValues(entry.new_values) && " · "}
                   {describeValues(entry.new_values) && `nachher: ${describeValues(entry.new_values)}`}

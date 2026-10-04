@@ -189,7 +189,7 @@ export function DashboardCockpit({
             key={warning}
             title={warning}
             className={cn(
-              "flex max-w-[240px] shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-[11px] lg:w-full lg:max-w-none lg:shrink lg:rounded-xl lg:text-xs",
+              "flex max-w-[240px] shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-[10.45px] lg:w-full lg:max-w-none lg:shrink lg:rounded-xl lg:text-xs",
               index === 0
                 ? "border-brand-accent/40 bg-brand-accent-strong/60 text-white"
                 : "border-brand-platinum/20 bg-brand-accent-soft/55 text-brand-soft",
@@ -210,7 +210,7 @@ export function DashboardCockpit({
             <Badge tone="amber">{cockpit.important.length} offen</Badge>
           </CardHeader>
           <CardContent className="space-y-2">
-            {cockpit.important.map((item, index) => <div key={`${item.title}-${index}`} className="flex items-center gap-3 rounded-lg border bg-brand-surface/75 p-3"><CalendarClock size={15} className="text-brand-platinum" /><div className="min-w-0 flex-1"><p className="text-xs font-semibold">{item.title}</p><p className="mt-1 truncate text-xs text-brand-muted">{item.detail}</p></div><span className="text-[10px] text-brand-silver">{item.due_at ? formatDate(item.due_at) : "Offen"}</span></div>)}
+            {cockpit.important.map((item, index) => <div key={`${item.title}-${index}`} className="flex items-center gap-3 rounded-lg border bg-brand-surface/75 p-3"><CalendarClock size={15} className="text-brand-platinum" /><div className="min-w-0 flex-1"><p className="text-xs font-semibold">{item.title}</p><p className="mt-1 truncate text-xs text-brand-muted">{item.detail}</p></div><span className="text-[9.5px] text-brand-silver">{item.due_at ? formatDate(item.due_at) : "Offen"}</span></div>)}
           </CardContent>
         </Card>
         <Card>
@@ -226,7 +226,7 @@ export function DashboardCockpit({
 
       <div className="mb-3 mt-7 flex items-center gap-2"><Gauge size={16} className="text-brand-accent-light" /><h2 className="text-sm font-semibold">Kurzüberblick</h2></div>
       <section className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {quickMetrics.map(({ label, value, Icon, href }) => <Link key={label} href={href} className="block rounded-xl transition hover:ring-1 hover:ring-brand-accent/60"><Card><CardContent className="p-4"><Icon size={16} className="text-brand-platinum" /><p className="mt-3 text-[11px] text-brand-muted">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></CardContent></Card></Link>)}
+        {quickMetrics.map(({ label, value, Icon, href }) => <Link key={label} href={href} className="block rounded-xl transition hover:ring-1 hover:ring-brand-accent/60"><Card><CardContent className="p-4"><Icon size={16} className="text-brand-platinum" /><p className="mt-3 text-[10.45px] text-brand-muted">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></CardContent></Card></Link>)}
       </section>
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>

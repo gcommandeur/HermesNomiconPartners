@@ -141,7 +141,7 @@ export function DashboardTodo({ items }: { items: CockpitItem[] }) {
                     <p className="text-xs font-semibold">{row.title}</p>
                   )}
                   <p className="mt-1 truncate text-xs text-brand-muted">{row.detail}</p>
-                  <p className="mt-1 text-[10px] text-brand-silver">{row.due_at ? formatDate(row.due_at) : "Kein Fälligkeitsdatum"}</p>
+                  <p className="mt-1 text-[9.5px] text-brand-silver">{row.due_at ? formatDate(row.due_at) : "Kein Fälligkeitsdatum"}</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -200,7 +200,7 @@ export function DashboardTodo({ items }: { items: CockpitItem[] }) {
                 </div>
               ) : null}
 
-              {rowError ? <p className="mt-2 text-[10px] text-red-400">{rowError}</p> : null}
+              {rowError ? <p className="mt-2 text-[9.5px] text-red-400">{rowError}</p> : null}
             </div>
           );
         })}

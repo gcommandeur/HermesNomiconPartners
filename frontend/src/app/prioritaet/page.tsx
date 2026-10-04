@@ -46,7 +46,7 @@ export default async function PriorityViewPage() {
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right text-xs text-brand-silver">
-                  <p className="text-[10px] uppercase tracking-wider text-brand-muted">Erwartetes Honorar</p>
+                  <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Erwartetes Honorar</p>
                   <p className="mt-1 text-sm text-brand-text">{submission.expected_fee ? formatCurrency(Number(submission.expected_fee)) : "—"}</p>
                 </div>
                 <Link

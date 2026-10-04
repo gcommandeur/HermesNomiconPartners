@@ -55,11 +55,11 @@ export default async function WarrantyOverviewPage() {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right text-xs text-brand-silver">
-                    <p className="text-[10px] uppercase tracking-wider text-brand-muted">Gewährleistung bis</p>
+                    <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Gewährleistung bis</p>
                     <p className="mt-1 text-sm text-brand-text">{formatDate(placement.warranty_end_date)}</p>
                   </div>
                   <div className="text-right text-xs text-brand-silver">
-                    <p className="text-[10px] uppercase tracking-wider text-brand-muted">Fee</p>
+                    <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Fee</p>
                     <p className="mt-1 text-sm text-brand-text">{formatCurrency(Number(placement.calculated_fee))}</p>
                   </div>
                   {submission && (

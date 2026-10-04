@@ -210,7 +210,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             )}
             {!loading && results.candidates.length > 0 && (
               <div className="py-1">
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-dim">Kandidaten</p>
+                <p className="px-3 py-1 text-[9.5px] font-semibold uppercase tracking-wider text-brand-dim">Kandidaten</p>
                 {results.candidates.map((candidate) => (
                   <button
                     key={candidate.id}
@@ -228,7 +228,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             )}
             {!loading && results.clients.length > 0 && (
               <div className="py-1">
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-dim">Kanzleien</p>
+                <p className="px-3 py-1 text-[9.5px] font-semibold uppercase tracking-wider text-brand-dim">Kanzleien</p>
                 {results.clients.map((client) => (
                   <button
                     key={client.id}
@@ -243,7 +243,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             )}
             {!loading && results.contacts.length > 0 && (
               <div className="py-1">
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-dim">Kontakte</p>
+                <p className="px-3 py-1 text-[9.5px] font-semibold uppercase tracking-wider text-brand-dim">Kontakte</p>
                 {results.contacts.map((contact) => (
                   <button
                     key={contact.id}
@@ -284,7 +284,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             className="ml-1 flex items-center gap-2 rounded-md p-1.5 hover:bg-white/6"
             onClick={() => setAccountOpen((current) => !current)}
           >
-            <span className="grid size-8 place-items-center rounded-full bg-[#202327] text-[11px] font-semibold text-white">{userInitials}</span>
+            <span className="grid size-8 place-items-center rounded-full bg-[#202327] text-[10.45px] font-semibold text-white">{userInitials}</span>
             <span className="hidden max-w-40 truncate text-left text-xs font-medium text-white md:block">
               {userLabel}
             </span>
@@ -293,7 +293,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             <div className="absolute right-0 z-20 mt-1 w-56 rounded-md border border-white/10 bg-brand-surface p-1.5 text-xs shadow-xl">
               <div className="px-2.5 py-2 text-brand-soft">
                 <p className="font-medium text-white">{currentUserData?.data.display_name ?? "Angemeldet"}</p>
-                <p className="mt-0.5 text-[11px] text-brand-gray">{currentUserData?.data.email ?? ""}</p>
+                <p className="mt-0.5 text-[10.45px] text-brand-gray">{currentUserData?.data.email ?? ""}</p>
               </div>
               <button
                 className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-brand-platinum hover:bg-white/8"

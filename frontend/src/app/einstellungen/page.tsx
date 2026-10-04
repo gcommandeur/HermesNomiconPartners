@@ -6,6 +6,8 @@ import { mutate } from "swr";
 import { CalendarDays, Check, Copy, RefreshCw, Users } from "lucide-react";
 import { PageHeader } from "@/components/crm/page-header";
 import { OutlookConnectionCard } from "@/components/crm/outlook-connection";
+import { MyMailAccountCard } from "@/components/crm/my-mail-account-card";
+import { ClaudeConnectionCard } from "@/components/crm/claude-connection-card";
 import { ErrorState } from "@/components/crm/error-state";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
@@ -66,6 +68,8 @@ export default function EinstellungenPage() {
     <>
       <PageHeader eyebrow="Hermes" title="Einstellungen" />
       <OutlookConnectionCard />
+      <MyMailAccountCard />
+      <ClaudeConnectionCard />
 
       <div className="space-y-5">
         <CollapsibleSection
@@ -89,7 +93,7 @@ export default function EinstellungenPage() {
                   {copied ? "Kopiert" : "Kopieren"}
                 </Button>
               </div>
-              <p className="mt-2 text-[11px] text-brand-dim">
+              <p className="mt-2 text-[10.45px] text-brand-dim">
                 Diese URL ist geheim (wie ein Passwort) - nicht weitergeben. Falls sie versehentlich
                 geteilt wurde, hier neu generieren:
               </p>
@@ -103,7 +107,7 @@ export default function EinstellungenPage() {
               <p className="mb-2 text-xs font-semibold text-brand-platinum">So abonnierst du diesen Kalender</p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-brand-accent-light">
+                  <p className="mb-1 text-[10.45px] font-semibold uppercase tracking-wider text-brand-accent-light">
                     Outlook (Desktop)
                   </p>
                   <ol className="list-decimal space-y-1 pl-4 text-xs text-brand-soft">
@@ -113,7 +117,7 @@ export default function EinstellungenPage() {
                   </ol>
                 </div>
                 <div>
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-brand-accent-light">
+                  <p className="mb-1 text-[10.45px] font-semibold uppercase tracking-wider text-brand-accent-light">
                     Outlook im Web
                   </p>
                   <ol className="list-decimal space-y-1 pl-4 text-xs text-brand-soft">

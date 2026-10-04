@@ -38,6 +38,8 @@ export function MailComposeModal({
   clientCompanyId,
   contactPersonId,
   placeholderValues = {},
+  initialSubject = "",
+  initialBody = "",
 }: {
   onClose: () => void;
   onSent?: () => void;
@@ -54,6 +56,9 @@ export function MailComposeModal({
    * {candidate: "Max Muster", role: "Steuerberater:in"} - je nachdem, von
    * welcher Seite aus der Dialog geöffnet wurde. */
   placeholderValues?: Record<string, string>;
+  /** Vorbefüllung, z. B. aus einem freigegebenen Claude-Vorschlag (Senden macht der Mensch). */
+  initialSubject?: string;
+  initialBody?: string;
 }) {
   const { data: accountsResult, isLoading: accountsLoading } = useMailAccountsCache(true);
   const { data: templatesResult, isLoading: templatesLoading } = useEmailTemplatesCache();
@@ -65,8 +70,8 @@ export function MailComposeModal({
 
   const [accountId, setAccountId] = useState("");
   const [templateKey, setTemplateKey] = useState("");
-  const [subject, setSubject] = useState("");
-  const [bodyText, setBodyText] = useState("");
+  const [subject, setSubject] = useState(initialSubject);
+  const [bodyText, setBodyText] = useState(initialBody);
   const [documents, setDocuments] = useState<DocumentMeta[]>([]);
   const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);

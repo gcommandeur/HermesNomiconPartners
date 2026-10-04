@@ -39,7 +39,7 @@ export function DataTable({
                     key={label}
                     onClick={isSortable && key ? () => onSort?.(key) : undefined}
                     className={cn(
-                      "px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-brand-soft",
+                      "px-4 py-3 text-[9.5px] font-semibold uppercase tracking-[.1em] text-brand-soft",
                       isSortable && "cursor-pointer select-none hover:text-white",
                     )}
                   >

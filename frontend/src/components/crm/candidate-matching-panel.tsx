@@ -125,7 +125,7 @@ export function CandidateMatchingPanel({ candidateId }: { candidateId: string })
                   <p className="mt-1 text-xs text-brand-muted">{match.client.city ?? match.client.postal_code ?? "Region offen"} · {match.client.focus ?? "Fokus offen"}</p>
                   {match.reasons.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {match.reasons.map((reason) => <span key={reason} className="rounded bg-brand-panel px-2 py-0.5 text-[10px] text-brand-muted">{reason}</span>)}
+                      {match.reasons.map((reason) => <span key={reason} className="rounded bg-brand-panel px-2 py-0.5 text-[9.5px] text-brand-muted">{reason}</span>)}
                     </div>
                   )}
                 </div>

@@ -54,7 +54,7 @@ function ValuesTable({ request }: { request: ApprovalRequest }) {
   return (
     <table className="mt-3 w-full text-xs">
       <thead>
-        <tr className="text-left text-[10px] uppercase tracking-wider text-brand-muted">
+        <tr className="text-left text-[9.5px] uppercase tracking-wider text-brand-muted">
           <th className="pb-1 pr-3 font-medium">Feld</th>
           {showOld && <th className="pb-1 pr-3 font-medium">Bisher</th>}
           <th className="pb-1 font-medium">{showOld ? "Neu" : "Wert"}</th>
@@ -195,7 +195,7 @@ export default function FreigabenPage() {
                 </div>
               )}
               {request.kind === "new_client" && rejectingId === request.id && (
-                <p className="mt-2 text-[11px] text-brand-muted">
+                <p className="mt-2 text-[10.45px] text-brand-muted">
                   Eine abgelehnte neue Kanzlei wird nicht gelöscht, sondern als „Gesperrt“ markiert.
                 </p>
               )}

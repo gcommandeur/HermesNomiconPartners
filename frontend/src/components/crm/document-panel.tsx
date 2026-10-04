@@ -48,7 +48,7 @@ function CvExtractionPanel({ suggestion, onDismiss }: {
           <Sparkles size={15} />Aus dem CV übernommen
         </div>
         {suggestion.source_is_agency_profile && (
-          <p className="mt-2 rounded bg-brand-warning/10 px-2 py-1.5 text-[11px] text-brand-warning">
+          <p className="mt-2 rounded bg-brand-warning/10 px-2 py-1.5 text-[10.45px] text-brand-warning">
             Dieses Dokument enthält den Commandeur-Briefkopf (anonymisiertes Bewerberprofil) — Adresse/Telefon
             wurden deshalb nicht übernommen, nur Rolle/Qualifikation.
           </p>
