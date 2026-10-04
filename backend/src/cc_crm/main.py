@@ -70,7 +70,7 @@ def create_app() -> FastAPI:
     docs_enabled = settings.environment in _DOCS_ENABLED_ENVIRONMENTS
     app = FastAPI(
         title="Hermes API",
-        description="Backend API for Hermes (Recruiting CRM for Commandeur Consulting)",
+        description=f"Backend API for Hermes (Recruiting CRM for {settings.company_name})",
         version="0.1.0",
         docs_url="/docs" if docs_enabled else None,
         redoc_url="/redoc" if docs_enabled else None,

@@ -14,6 +14,40 @@
   --accent: #1f5fa8;
   --accent-soft: #102a4c;
   --sidebar: #071426;
+
+  /* Firmenschicht (Design): zusaetzliche Farben, die bisher fest als Hex im Code
+     standen. Fuer eine andere Firma reicht es, die Werte hier (oder in einer
+     Ueberschreibung) zu aendern. */
+  --text-soft: #cbd5e1;
+  --text-dim: #747c89;
+  --accent-light: #69a7ea;
+  --accent-strong: #153a66;
+  --warning: #f0b429;
+  --danger: #e5484d;
+}
+
+/* Tailwind-Klassen fuer die Variablen: bg-brand-panel, text-brand-muted, ...
+   NEUE Oberflaeche nutzt diese Klassen, keine festen Hex-Farben (siehe
+   docs/PROJEKT_STAND.md > Design-Regel). */
+@theme inline {
+  --color-brand-bg: var(--background);
+  --color-brand-panel: var(--surface);
+  --color-brand-surface: var(--surface-muted);
+  --color-brand-elevated: var(--surface-elevated);
+  --color-brand-hover: var(--surface-hover);
+  --color-brand-sidebar: var(--sidebar);
+  --color-brand-text: var(--foreground);
+  --color-brand-soft: var(--text-soft);
+  --color-brand-muted: var(--muted);
+  --color-brand-dim: var(--text-dim);
+  --color-brand-platinum: var(--platinum);
+  --color-brand-silver: var(--silver);
+  --color-brand-accent: var(--accent);
+  --color-brand-accent-light: var(--accent-light);
+  --color-brand-accent-strong: var(--accent-strong);
+  --color-brand-accent-soft: var(--accent-soft);
+  --color-brand-warning: var(--warning);
+  --color-brand-danger: var(--danger);
 }
 
 * { border-color: var(--border); }
