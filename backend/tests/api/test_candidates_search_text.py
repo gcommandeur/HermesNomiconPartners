@@ -173,18 +173,18 @@ def test_the_fast_search_expression_can_use_the_trigram_index(
 ) -> None:
     """Planer-Beleg: mit abgeschaltetem Seq-Scan muss der LIKE-Ausdruck des Repositories den
     Trigram-Index waehlen (er passt also zur Index-Definition)."""
-    from sqlalchemy.dialects import postgresql
-
     with seeded() as session:
         session.execute(text("SET LOCAL enable_seqscan = off"))
         statement = select(Candidate.id).where(
             _search_term_filter("steuerberater", use_search_text=True)
         )
-        compiled = statement.compile(
-            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
-        )
-        sql = str(compiled).replace("%%", "%")  # exec_driver_sql gibt die Zeichenkette 1:1 weiter
+        # Mit Bind-Parametern des Treibers (wie jede normale Abfrage) - ein ausgeschriebenes
+        # LIKE '%...%' wuerde psycopg als Platzhalter missverstehen.
+        compiled = statement.compile(dialect=session.get_bind().dialect)
         plan = "\n".join(
-            str(row[0]) for row in session.connection().exec_driver_sql("EXPLAIN " + sql)
+            str(row[0])
+            for row in session.connection().exec_driver_sql(
+                "EXPLAIN " + compiled.string, compiled.params
+            )
         )
     assert "ix_trgm_candidates_search_text" in plan, plan
