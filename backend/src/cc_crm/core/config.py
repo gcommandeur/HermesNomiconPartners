@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     # Aenderungen aus Hermes ohne Konflikte in eine Kopie fuer eine andere Firma
     # uebernehmen. Standard = Commandeur Consulting (nichts aendert sich).
     company_name: str = "Commandeur Consulting"
+    # Text im Briefkopf der von der Agentur selbst erzeugten anonymen Profile
+    # (services/cv_extraction.py::is_agency_letterhead): daran erkennt Hermes ein
+    # eigenes Profil und uebernimmt die Agenturadresse nicht als Kandidatendaten.
+    # In der Kopie auf den Namen im eigenen Briefkopf setzen.
+    agency_letterhead_marker: str = "Commandeur Consulting GmbH"
     # Word-Vorlage mit dem Briefkopf des anonymen Profils (docx). Leer = die
     # mitgelieferte backend/templates/anonymes_profil_master.docx.
     profile_template_path: str | None = None

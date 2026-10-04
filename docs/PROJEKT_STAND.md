@@ -40,12 +40,12 @@ Stand: `entwicklung` = `ec5e838` plus dieser Commit, **CI gruen** (backend SQLit
 
 **Offen (Claude):**
 1. Review-Nachbesserungen vom 2026-10-04 sind umgesetzt (Punkte 1-9, Einzelheiten im `PROTOKOLL.md`). Offen daraus: Entscheidung zu `short_profile` (siehe oben), ob/wie die DSGVO-Luecken geschlossen werden, und die echte Microsoft-/Claude-Anbindung live pruefen.
-2. Nachmessung bei 200.000 Kandidaten: `scripts/perf_bench.py` laeuft nur auf Postgres (`CC_CRM_DATABASE_URL=...bench... python scripts/perf_bench.py --candidates 200000 --clients 2000 --submissions 20000 --report ../docs/PERFORMANCE.md`).
+2. Nachmessung bei 200.000 Kandidaten ist erledigt (2026-10-04, Cloud, lokales Postgres): alle sechs Vorgaenge innerhalb der Ziele, Details in `docs/PERFORMANCE.md`. Nicht gemessen: Eigene-Felder-Filter, echte DigitalOcean-Latenz.
 3. Start-Hook in einer frischen Cloud-Sitzung gegenpruefen (manuell ok, Start ungetestet).
 4. Nicht live im Browser geprueft: Teamleiter-Verwaltung, Freigabe-Inbox, Rechnungen, Sourcing-Umkreis, Kandidaten-Timeline, Prozess-Sperren mit echten Logins, "Geteilt mit" (auch Migration auf Postgres-Kopie).
 5. DSGVO-Anonymisierung vervollstaendigen: Inventur steht in `docs/DSGVO_INVENTUR.md` (groesste Luecken: `cv_extraction_raw`, liegen gebliebener CV in fehlgeschlagenen Scan-Jobs, Notizen/Mails/Termine); der Nutzer entscheidet, ob und wie.
-6. Typ-Abweichungen Frontend/Backend (`frontend/src/lib/api/schema-conformance.ts`, behobene Eintraege streichen).
-7. Kopie: Mail-Texte mit Firmenbezug (`mail_sync.py`, `due_reminders.py`) pruefen, Briefkopf-Vorlage der Kopie ersetzen.
+6. Typ-Abweichungen: Geldfelder (Decimal kommt als String) sind bereinigt. Bewusst stehen geblieben: vier reine Demo-Felder bei Kanzleien (`last_contact`, `size`, `contact_name`, `active_mandates`) und `Candidate.last_contact` in `schema-conformance.ts`; Entfernen heisst Spalten in `clients-table.tsx` streichen (Entscheidung des Nutzers).
+7. Kopie: `mail_sync.py`/`due_reminders.py` enthalten keinen Firmentext. Konfigurierbar gemacht: Briefkopf-Erkennung (`CC_CRM_AGENCY_LETTERHEAD_MARKER`) und Sourcing-User-Agent (`CC_CRM_COMPANY_NAME`). Offen: die Prompts in `profile_generator.py` sind Commandeur-spezifisch (Stil), in der Kopie anpassen; Briefkopf-Vorlage der Kopie ersetzen.
 8. Optional: Browser-Tests (Playwright, Demo-Modus). Kleinigkeiten: Quick-Log auf Kandidat mit offenem Kollegen-Prozess fuehrt dessen Prozess weiter (bewusst); Aktivitaet "Prozess angelegt" hat keinen Autor.
 
 ## Zweite Firma: Kopie `HermesNomiconPartners` (Regeln)

@@ -302,7 +302,8 @@ export interface ClientCompany extends Entity {
   last_contact_at?: string | null;
   next_follow_up_at?: string | null;
   terms_status?: string;
-  fee_percentage?: number;
+  /** Als Text ("27.00"): Decimal im Backend, vor dem Rechnen mit Number() umwandeln. */
+  fee_percentage?: string;
   honorar_stufe?: HonorarStufe;
   nachlass_begruendung?: string | null;
   agb_version?: string | null;
@@ -485,8 +486,9 @@ export interface CandidateSubmission extends Entity {
   summary: string | null;
   sent_profile_text?: string | null;
   salary_at_submission?: string | null;
-  fee_percentage?: number | null;
-  expected_fee?: number | null;
+  /** Geldbetraege/Saetze kommen als Text (Decimal im Backend) - vor dem Rechnen Number(). */
+  fee_percentage?: string | null;
+  expected_fee?: string | null;
   refund_terms?: string | null;
   feedback_summary?: string | null;
   next_step?: string | null;
@@ -664,8 +666,9 @@ export type OfferStatus = "draft" | "received" | "accepted" | "declined" | "with
 
 export interface Offer extends Entity {
   submission_id: string;
-  offered_salary: number;
-  variable_compensation: number | null;
+  /** Als Text (Decimal im Backend) - vor dem Rechnen Number(). */
+  offered_salary: string;
+  variable_compensation: string | null;
   start_date: string | null;
   offer_status: OfferStatus;
   notes: string | null;
@@ -706,16 +709,17 @@ export type PlacementStatus = "planned" | "started" | "completed" | "cancelled";
 export interface Placement extends Entity {
   submission_id: string;
   start_date: string;
-  final_salary: number;
-  fee_percentage: number;
+  /** Geldbetraege/Saetze kommen als Text (Decimal im Backend) - vor dem Rechnen Number(). */
+  final_salary: string;
+  fee_percentage: string;
   /** Additiver Rabatt in % auf die berechnete Fee, nur im "Berechnet"-Modus
    * wirksam (siehe fee_fix). 0 = kein Rabatt. */
-  rabatt_percentage: number;
+  rabatt_percentage: string;
   /** Wenn gesetzt: dieser Betrag ist die Fee 1:1, fee_percentage/
    * rabatt_percentage werden ignoriert (aber weiterhin gespeichert/angezeigt,
    * falls spaeter zurueck auf "Berechnet" gewechselt wird). */
-  fee_fix: number | null;
-  calculated_fee: number;
+  fee_fix: string | null;
+  calculated_fee: string;
   guarantee_period_months: number;
   status: PlacementStatus;
   warranty_end_date: string;

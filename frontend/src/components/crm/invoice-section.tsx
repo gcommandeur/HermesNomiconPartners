@@ -108,7 +108,7 @@ export function InvoiceSection({ placement }: { placement: Placement }) {
     setBusy(true);
     setError(null);
     try {
-      await createDraftFee(placement.id, placement.calculated_fee);
+      await createDraftFee(placement.id, Number(placement.calculated_fee));
       await mutate();
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Rechnung konnte nicht angelegt werden.");
@@ -128,7 +128,7 @@ export function InvoiceSection({ placement }: { placement: Placement }) {
       </div>
       {!hasOpenInvoice && (
         <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void createDraft()} className="mt-2">
-          Rechnung als Entwurf anlegen ({placement.calculated_fee.toLocaleString("de-DE", { style: "currency", currency: "EUR" })} netto)
+          Rechnung als Entwurf anlegen ({Number(placement.calculated_fee).toLocaleString("de-DE", { style: "currency", currency: "EUR" })} netto)
         </Button>
       )}
       <ErrorBanner message={error} className="mt-2" />

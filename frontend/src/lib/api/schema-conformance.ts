@@ -40,30 +40,16 @@ type ExpectExactly<Actual, Expected> = [Actual] extends [Expected]
   : { neueAbweichung: Exclude<Actual, Expected> };
 
 /**
- * Bekannte Abweichungen (Stand der Einfuehrung dieses Abgleichs):
- *  - Geldbetraege und Prozentsaetze (`Decimal` im Backend) kommen als TEXT ("12000.00")
- *    an, sind hier aber als `number` deklariert. Anzeige per Intl.NumberFormat vertraegt
- *    Text, Rechnen mit `+` wuerde stillschweigend Text verketten - vor jeder Rechnung
- *    mit Number() umwandeln oder die Typen auf `string` stellen.
+ * Bekannte Abweichungen:
  *  - `last_contact`, `size`, `contact_name`, `active_mandates`: nur im Frontend
  *    deklariert, vom Backend nie gesendet (Altlast aus der Demo-Phase); die Oberflaeche
- *    zeigt dafuer nichts bzw. einen Platzhalter.
+ *    zeigt dafuer nichts bzw. einen Platzhalter ("—", 0). Entfernen heisst Spalten der
+ *    Kanzlei-Tabelle streichen - Entscheidung des Nutzers.
+ * Geldbetraege und Prozentsaetze (`Decimal` im Backend) sind hier als `string` deklariert,
+ * wie sie ankommen ("12000.00"); vor dem Rechnen oder Formatieren Number() verwenden.
  */
 type KnownCandidate = "last_contact";
-type KnownClientCompany =
-  | "fee_percentage"
-  | "size"
-  | "contact_name"
-  | "active_mandates"
-  | "last_contact";
-type KnownSubmission = "fee_percentage" | "expected_fee";
-type KnownPlacement =
-  | "final_salary"
-  | "fee_percentage"
-  | "rabatt_percentage"
-  | "fee_fix"
-  | "calculated_fee";
-type KnownOffer = "offered_salary" | "variable_compensation";
+type KnownClientCompany = "size" | "contact_name" | "active_mandates" | "last_contact";
 
 type CandidateCheck = ExpectExactly<
   Mismatch<Candidate, Schemas["CandidateRead"]>,
@@ -76,12 +62,12 @@ type ClientCompanyCheck = ExpectExactly<
 type ContactCheck = ExpectExactly<Mismatch<Contact, Schemas["ContactPersonRead"]>, never>;
 type SubmissionCheck = ExpectExactly<
   Mismatch<CandidateSubmission, Schemas["CandidateSubmissionRead"]>,
-  KnownSubmission
+  never
 >;
 type TaskCheck = ExpectExactly<Mismatch<Task, Schemas["TaskRead"]>, never>;
-type PlacementCheck = ExpectExactly<Mismatch<Placement, Schemas["PlacementRead"]>, KnownPlacement>;
+type PlacementCheck = ExpectExactly<Mismatch<Placement, Schemas["PlacementRead"]>, never>;
 type FeeCheck = ExpectExactly<Mismatch<Fee, Schemas["FeeRead"]>, never>;
-type OfferCheck = ExpectExactly<Mismatch<Offer, Schemas["OfferRead"]>, KnownOffer>;
+type OfferCheck = ExpectExactly<Mismatch<Offer, Schemas["OfferRead"]>, never>;
 type InterviewCheck = ExpectExactly<Mismatch<Interview, Schemas["InterviewRead"]>, never>;
 
 const assertTrue = <T extends true>() => undefined as unknown as T;
