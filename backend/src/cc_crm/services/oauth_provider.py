@@ -39,6 +39,9 @@ REQUEST_LIFETIME = timedelta(minutes=10)
 CODE_LIFETIME = timedelta(minutes=5)
 MAX_CLIENTS = 500
 MAX_REDIRECT_URIS = 5
+MAX_CLIENT_NAME = 120
+# Clients ohne jedes Token werden nach dieser Zeit beim naechsten Registrieren geloescht.
+STALE_CLIENT_DAYS = 30
 HOSTED_CALLBACKS = (
     "https://claude.ai/api/mcp/auth_callback",
     "https://claude.com/api/mcp/auth_callback",
@@ -105,24 +108,52 @@ class OAuthProvider:
         for uri in uris:
             if not isinstance(uri, str) or not redirect_uri_allowed(uri):
                 raise OAuthError("invalid_redirect_uri", "Diese Redirect-URI ist nicht erlaubt")
-        name = str(metadata.get("client_name") or "Claude")[:120]
+        raw_name = metadata.get("client_name")
+        if raw_name is not None and not isinstance(raw_name, str):
+            raise OAuthError("invalid_client_metadata", "client_name muss Text sein")
+        name = (raw_name or "").strip() or "Claude"
+        if len(name) > MAX_CLIENT_NAME or not name.isprintable():
+            raise OAuthError(
+                "invalid_client_metadata",
+                f"client_name: hoechstens {MAX_CLIENT_NAME} druckbare Zeichen",
+            )
+        self._purge_unused_clients(older_than_days=STALE_CLIENT_DAYS)
         count = self.session.scalar(select(func.count()).select_from(OAuthClient)) or 0
         if count >= MAX_CLIENTS:
             # Aelteste Clients ohne Token verdraengen (jede neue Claude-Verbindung
             # registriert sich neu, siehe Doku).
-            stale = self.session.scalars(
-                select(OAuthClient.client_id).order_by(OAuthClient.created_at).limit(count // 2)
-            ).all()
-            used = set(self.session.scalars(select(OAuthToken.client_id)).all())
-            drop = [c for c in stale if c not in used]
-            if drop:
-                self.session.execute(delete(OAuthClient).where(OAuthClient.client_id.in_(drop)))
+            self._purge_unused_clients(oldest=count // 2)
+            count = self.session.scalar(select(func.count()).select_from(OAuthClient)) or 0
+            if count >= MAX_CLIENTS:
+                # Harte Obergrenze: alle bestehenden Clients sind in Benutzung.
+                raise OAuthError(
+                    "temporarily_unavailable", "Zu viele registrierte Clients", status_code=503
+                )
         client = OAuthClient(
             client_id=f"hmc_{secrets.token_urlsafe(24)}", client_name=name, redirect_uris=uris
         )
         self.session.add(client)
         self.session.commit()
         return client
+
+    def _purge_unused_clients(
+        self, *, older_than_days: int | None = None, oldest: int | None = None
+    ) -> None:
+        """Loescht registrierte Clients, die nie ein Token bekommen haben: entweder die
+        aelter als `older_than_days` Tage oder die `oldest` aeltesten. Zugehoerige
+        offene Anmelde-Anfragen gehen mit. Clients mit Token bleiben immer."""
+        used = set(self.session.scalars(select(OAuthToken.client_id)).all())
+        query = select(OAuthClient.client_id).order_by(OAuthClient.created_at)
+        if older_than_days is not None:
+            query = query.where(OAuthClient.created_at < _now() - timedelta(days=older_than_days))
+        if oldest is not None:
+            query = query.limit(oldest)
+        drop = [c for c in self.session.scalars(query).all() if c not in used]
+        if drop:
+            self.session.execute(
+                delete(OAuthAuthorization).where(OAuthAuthorization.client_id.in_(drop))
+            )
+            self.session.execute(delete(OAuthClient).where(OAuthClient.client_id.in_(drop)))
 
     def _client(self, client_id: str) -> OAuthClient:
         client = self.session.scalar(select(OAuthClient).where(OAuthClient.client_id == client_id))
