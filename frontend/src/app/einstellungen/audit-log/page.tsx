@@ -38,7 +38,7 @@ export default function AuditLogPage() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+          <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
         ))}
       </div>
     );
@@ -50,9 +50,9 @@ export default function AuditLogPage() {
         <PageHeader eyebrow="Hermes" title="Audit-Log" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <ShieldOff size={28} className="text-[#94A3B8]" />
-            <p className="text-sm font-semibold text-[#F8FAFC]">Nur für Admins zugänglich</p>
-            <p className="max-w-sm text-xs text-[#94A3B8]">
+            <ShieldOff size={28} className="text-brand-muted" />
+            <p className="text-sm font-semibold text-brand-text">Nur für Admins zugänglich</p>
+            <p className="max-w-sm text-xs text-brand-muted">
               Dieser Bereich ist der Nachvollziehbarkeit sicherheits-/administrativ relevanter
               Aktionen vorbehalten. Wende dich an einen Admin, falls du Zugriff benötigst.
             </p>
@@ -72,12 +72,12 @@ export default function AuditLogPage() {
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 8 }).map((_, index) => (
-            <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+            <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
           ))}
         </div>
       ) : entries.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-xs text-[#94A3B8]">
+          <CardContent className="py-12 text-center text-xs text-brand-muted">
             Noch keine Einträge.
           </CardContent>
         </Card>
@@ -86,22 +86,22 @@ export default function AuditLogPage() {
           {entries.map((entry) => (
             <div
               key={entry.id}
-              className="rounded-lg border border-white/10 bg-[#0D1B2E]/85 p-3 text-xs"
+              className="rounded-lg border border-white/10 bg-brand-surface/85 p-3 text-xs"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-semibold text-[#F8FAFC]">
+                <span className="font-semibold text-brand-text">
                   {ACTION_LABELS[entry.action] ?? entry.action}
-                  <span className="ml-2 font-normal text-[#94A3B8]">
+                  <span className="ml-2 font-normal text-brand-muted">
                     {ENTITY_LABELS[entry.entity_type] ?? entry.entity_type}
                   </span>
                 </span>
-                <span className="text-[#94A3B8]">{formatDateTime(entry.changed_at)}</span>
+                <span className="text-brand-muted">{formatDateTime(entry.changed_at)}</span>
               </div>
-              <p className="mt-1 text-[#CBD5E1]">
+              <p className="mt-1 text-brand-soft">
                 Von: {entry.changed_by ?? "unbekannt"}
               </p>
               {(describeValues(entry.old_values) || describeValues(entry.new_values)) && (
-                <p className="mt-1 text-[11px] text-[#747C89]">
+                <p className="mt-1 text-[11px] text-brand-dim">
                   {describeValues(entry.old_values) && `vorher: ${describeValues(entry.old_values)}`}
                   {describeValues(entry.old_values) && describeValues(entry.new_values) && " · "}
                   {describeValues(entry.new_values) && `nachher: ${describeValues(entry.new_values)}`}

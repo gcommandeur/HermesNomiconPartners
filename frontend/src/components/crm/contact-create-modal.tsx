@@ -11,7 +11,7 @@ import { ErrorBanner } from "@/components/crm/error-banner";
 import { invalidateContactsCache, useClientsCache } from "@/lib/api/hooks";
 import type { Contact } from "@/lib/api/types";
 
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
+const labelClass = "mb-1 block text-xs text-brand-muted";
 
 export function ContactCreateModal({ onCreated }: { onCreated?: (contact: Contact) => void }) {
   const router = useRouter();
@@ -68,7 +68,7 @@ export function ContactCreateModal({ onCreated }: { onCreated?: (contact: Contac
               <label className={labelClass}>Kanzlei *</label>
               <select
                 required
-                className="h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]"
+                className="h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent"
                 value={form.client_company_id}
                 onChange={(e) => set("client_company_id", e.target.value)}
               >
@@ -85,7 +85,7 @@ export function ContactCreateModal({ onCreated }: { onCreated?: (contact: Contac
               <div><label className={labelClass}>E-Mail</label><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /></div>
               <div><label className={labelClass}>Telefon</label><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} /></div>
             </div>
-            <label className="flex items-center gap-2 text-xs text-[#CBD5E1]">
+            <label className="flex items-center gap-2 text-xs text-brand-soft">
               <input type="checkbox" checked={form.is_primary} onChange={(e) => set("is_primary", e.target.checked)} />
               Hauptkontakt dieser Kanzlei
             </label>

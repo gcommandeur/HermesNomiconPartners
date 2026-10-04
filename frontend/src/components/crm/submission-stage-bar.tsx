@@ -39,7 +39,7 @@ export function SubmissionStageBar({
 
   return (
     <div data-submission-id={submissionId}>
-      {label && <p className="mb-2 text-xs font-semibold text-[#D8DADF]">{label}</p>}
+      {label && <p className="mb-2 text-xs font-semibold text-brand-platinum">{label}</p>}
       {/* Auf schmalen Viewports quetschen sich 6 Stufen + Verbindungslinien
        * sonst zusammen bis zur Unlesbarkeit - overflow-x-auto + min-w-max
        * lassen die Leiste stattdessen horizontal scrollen, statt zu
@@ -59,21 +59,21 @@ export function SubmissionStageBar({
               >
                 <div
                   className={cn(
-                    "grid size-6 shrink-0 place-items-center rounded-full border text-[10px] transition-colors group-hover:border-[#1F5FA8]",
+                    "grid size-6 shrink-0 place-items-center rounded-full border text-[10px] transition-colors group-hover:border-brand-accent",
                     reached
-                      ? "border-[#1F5FA8] bg-[#1F5FA8] text-white"
-                      : "border-white/15 bg-transparent text-[#5b6167]",
-                    isCurrent && "ring-2 ring-[#1F5FA8]/40",
+                      ? "border-brand-accent bg-brand-accent text-white"
+                      : "border-white/15 bg-transparent text-brand-gray-dark",
+                    isCurrent && "ring-2 ring-brand-accent/40",
                   )}
                 >
                   {reached ? <Check size={12} /> : index + 1}
                 </div>
-                <span className={cn("whitespace-nowrap text-[10px] group-hover:text-white", reached ? "text-[#D8DADF]" : "text-[#5b6167]")}>
+                <span className={cn("whitespace-nowrap text-[10px] group-hover:text-white", reached ? "text-brand-platinum" : "text-brand-gray-dark")}>
                   {stage.label}
                 </span>
               </button>
               {index < STAGE_ORDER.length - 1 && (
-                <div className={cn("mx-1.5 h-px flex-1", reached && index < reachedIndex ? "bg-[#1F5FA8]" : "bg-white/10")} />
+                <div className={cn("mx-1.5 h-px flex-1", reached && index < reachedIndex ? "bg-brand-accent" : "bg-white/10")} />
               )}
             </div>
           );

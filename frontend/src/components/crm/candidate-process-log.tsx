@@ -11,9 +11,9 @@ import { PITCH_LABEL } from "@/lib/stage-labels";
 import { getStageSummary, logCandidatePitch, quickLogCandidateStage } from "@/lib/api/queries";
 import type { CandidateStageSummary, FeedbackTargetStatus } from "@/lib/api/types";
 
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
-const textareaClass = "min-h-16 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
-const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const labelClass = "mb-1 block text-xs text-brand-muted";
+const textareaClass = "min-h-16 w-full rounded-md border border-white/10 bg-brand-surface p-3 text-sm text-brand-text outline-none focus:border-brand-accent";
+const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 /** "pitch" ist bewusst KEIN FeedbackTargetStatus/SubmissionStatus (Nutzer-
  * Entscheidung: kein eigener Kanban-Status) - die Notiz-Auswahl hier deckt
@@ -156,7 +156,7 @@ export function CandidateProcessLog({ candidateId }: { candidateId: string }) {
   return (
     <div className="mb-6 space-y-4 border-b border-white/10 pb-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Prozess-Timeline</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-brand-muted">Prozess-Timeline</p>
         {!form && (
           <Button size="sm" variant="outline" onClick={() => setForm(emptyForm(defaultStage(summary)))}>
             <Plus size={13} />Notiz
@@ -168,10 +168,10 @@ export function CandidateProcessLog({ candidateId }: { candidateId: string }) {
         {STAGE_TILES.map((tile) => (
           <div
             key={tile.key}
-            className="flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-[#0D1B2E]/75 px-3 py-1.5 text-[11px] text-[#CBD5E1]"
+            className="flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-brand-surface/75 px-3 py-1.5 text-[11px] text-brand-soft"
           >
             <span>{tile.label}</span>
-            <span className="grid size-5 place-items-center rounded-full bg-[#12243A] text-[10px] font-semibold text-[#D8DADF]">
+            <span className="grid size-5 place-items-center rounded-full bg-brand-panel text-[10px] font-semibold text-brand-platinum">
               {summary ? summary[tile.key] : "…"}
             </span>
           </div>
@@ -181,8 +181,8 @@ export function CandidateProcessLog({ candidateId }: { candidateId: string }) {
       <ErrorBanner message={message} />
 
       {form && (
-        <form className="space-y-3 rounded-lg border border-white/10 bg-[#0D1B2E] p-3" onSubmit={handleSubmit}>
-          <p className="text-xs font-semibold text-[#D8DADF]">Neue Notiz</p>
+        <form className="space-y-3 rounded-lg border border-white/10 bg-brand-surface p-3" onSubmit={handleSubmit}>
+          <p className="text-xs font-semibold text-brand-platinum">Neue Notiz</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelClass}>Datum *</label>

@@ -42,16 +42,16 @@ export default async function PriorityViewPage() {
                     </Badge>
                   )}
                 </div>
-                <p className="mt-1 text-xs text-[#94A3B8]">{clientName(submission.client_company_id)}</p>
+                <p className="mt-1 text-xs text-brand-muted">{clientName(submission.client_company_id)}</p>
               </div>
               <div className="flex items-center gap-4">
-                <div className="text-right text-xs text-[#A7ADB7]">
-                  <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Erwartetes Honorar</p>
-                  <p className="mt-1 text-sm text-[#F8FAFC]">{submission.expected_fee ? formatCurrency(Number(submission.expected_fee)) : "—"}</p>
+                <div className="text-right text-xs text-brand-silver">
+                  <p className="text-[10px] uppercase tracking-wider text-brand-muted">Erwartetes Honorar</p>
+                  <p className="mt-1 text-sm text-brand-text">{submission.expected_fee ? formatCurrency(Number(submission.expected_fee)) : "—"}</p>
                 </div>
                 <Link
                   href={`/kandidaten/${submission.candidate_id}?from=prozesse`}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-[#1F5FA8]/40 bg-[#153A66]/45 px-3 py-1.5 text-xs text-[#c5dcfa] hover:bg-[#153A66]/70"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-brand-accent/40 bg-brand-accent-strong/45 px-3 py-1.5 text-xs text-brand-info hover:bg-brand-accent-strong/70"
                 >
                   Profil öffnen <ArrowUpRight size={13} />
                 </Link>
@@ -60,7 +60,7 @@ export default async function PriorityViewPage() {
           </Card>
         ))}
         {submissions.length === 0 && (
-          <Card><CardContent className="py-12 text-center text-sm text-[#858b90]">Noch keine bewerteten offenen Prozesse.</CardContent></Card>
+          <Card><CardContent className="py-12 text-center text-sm text-brand-gray">Noch keine bewerteten offenen Prozesse.</CardContent></Card>
         )}
       </div>
     </>

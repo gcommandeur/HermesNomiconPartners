@@ -11,8 +11,8 @@ import { ErrorBanner } from "@/components/crm/error-banner";
 import { invalidatePendingApprovals } from "@/components/crm/approval-pending-notice";
 import type { ClientCompany, HonorarStufe } from "@/lib/api/types";
 
-const labelClass = "mb-1 block text-xs text-[#777d83]";
-const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const labelClass = "mb-1 block text-xs text-brand-dim";
+const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 const honorarStufeOptions: { value: HonorarStufe; label: string }[] = [
   { value: "standard", label: "Standard (27 %) — größere/etablierte Kanzleien" },
@@ -72,17 +72,17 @@ export function ClientHonorarEditor({ client }: { client: ClientCompany }) {
         <CardContent>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs text-[#777d83]">Honorarsatz</p>
+              <p className="text-xs text-brand-dim">Honorarsatz</p>
               <p className="mt-2 font-medium">{client.fee_percentage ?? 27} %</p>
             </div>
             <Button size="sm" variant="outline" onClick={() => { reset(); setEditing(true); }}><Pencil size={13} />Bearbeiten</Button>
           </div>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div><p className="text-xs text-[#777d83]">Honorar-Stufe</p><p className="mt-2 text-sm">{honorarStufeLabel(client.honorar_stufe)}</p></div>
-            <div><p className="text-xs text-[#777d83]">AGB-Version</p><p className="mt-2 text-sm">{client.agb_version ?? "—"}</p></div>
+            <div><p className="text-xs text-brand-dim">Honorar-Stufe</p><p className="mt-2 text-sm">{honorarStufeLabel(client.honorar_stufe)}</p></div>
+            <div><p className="text-xs text-brand-dim">AGB-Version</p><p className="mt-2 text-sm">{client.agb_version ?? "—"}</p></div>
           </div>
           {client.nachlass_begruendung && (
-            <div className="mt-4"><p className="text-xs text-[#777d83]">Nachlass-Begründung</p><p className="mt-2 text-sm text-[#CBD5E1]">{client.nachlass_begruendung}</p></div>
+            <div className="mt-4"><p className="text-xs text-brand-dim">Nachlass-Begründung</p><p className="mt-2 text-sm text-brand-soft">{client.nachlass_begruendung}</p></div>
           )}
         </CardContent>
       </Card>

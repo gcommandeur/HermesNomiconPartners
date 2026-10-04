@@ -12,8 +12,8 @@ import { searchCandidates, searchClients } from "@/lib/api/search-select-helpers
 import { useAssignableUsersCache, useCurrentUser } from "@/lib/api/hooks";
 import type { CandidateSubmission } from "@/lib/api/types";
 
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
-const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const labelClass = "mb-1 block text-xs text-brand-muted";
+const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 export function SubmissionCreateForm({
   onDone,

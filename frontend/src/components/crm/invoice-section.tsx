@@ -60,12 +60,12 @@ function FeeRow({ fee, onChanged }: { fee: Fee; onChanged: () => void }) {
 
   const canCancel = fee.invoice_status !== "paid" && fee.invoice_status !== "cancelled";
   return (
-    <div className="rounded-lg border border-white/10 bg-[#0D1B2E]/70 p-3">
+    <div className="rounded-lg border border-white/10 bg-brand-surface/70 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm">
-          <FileText size={14} className="text-[#94A3B8]" />
-          <span className="font-medium text-[#F8FAFC]">{money(fee.amount_net)} netto</span>
-          <span className="text-xs text-[#94A3B8]">({money(fee.amount_gross)} brutto)</span>
+          <FileText size={14} className="text-brand-muted" />
+          <span className="font-medium text-brand-text">{money(fee.amount_net)} netto</span>
+          <span className="text-xs text-brand-muted">({money(fee.amount_gross)} brutto)</span>
           <Badge tone={fee.invoice_status === "paid" ? "green" : fee.invoice_status === "cancelled" ? "red" : "blue"}>
             {STATUS_LABELS[fee.invoice_status]}
           </Badge>
@@ -83,12 +83,12 @@ function FeeRow({ fee, onChanged }: { fee: Fee; onChanged: () => void }) {
           )}
         </div>
       </div>
-      <p className="mt-1.5 text-[11px] text-[#747C89]">
+      <p className="mt-1.5 text-[11px] text-brand-dim">
         {fee.invoice_date && <>Rechnungsdatum {formatDate(fee.invoice_date)} · </>}
         {fee.paid_at ? <>Bezahlt am {formatDate(fee.paid_at)}</> : <>Angelegt {formatDate(fee.created_at)}</>}
       </p>
       <ApprovalPendingNotice entityType="fee" entityId={fee.id} />
-      {info && <p className="mt-2 text-xs text-[#F0B429]">{info}</p>}
+      {info && <p className="mt-2 text-xs text-brand-warning">{info}</p>}
       <ErrorBanner message={error} className="mt-2" />
     </div>
   );
@@ -120,7 +120,7 @@ export function InvoiceSection({ placement }: { placement: Placement }) {
   const hasOpenInvoice = fees.some((fee) => fee.invoice_status !== "cancelled");
   return (
     <div className="mt-5 border-t border-white/10 pt-4">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Rechnung</p>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-muted">Rechnung</p>
       <div className="space-y-2">
         {fees.map((fee) => (
           <FeeRow key={fee.id} fee={fee} onChanged={() => void mutate()} />

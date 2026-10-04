@@ -56,28 +56,28 @@ export function SourcingLeadsTable() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+          <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
         ))}
       </div>
     );
   }
 
   const renderRow = (lead: SourcingLead) => (
-    <tr key={lead.id} className="hover:bg-[#203A5A]/35">
+    <tr key={lead.id} className="hover:bg-brand-hover/35">
       <td className="px-4 py-3.5">
-        <span className="font-semibold text-[#D8DADF]">{lead.first_name} {lead.last_name}</span>
+        <span className="font-semibold text-brand-platinum">{lead.first_name} {lead.last_name}</span>
         {lead.status === "possible_duplicate" && lead.duplicate_of_candidate_id && (
           <p className="mt-1 text-[11px]">
             <Link
               href={`/kandidaten/${lead.duplicate_of_candidate_id}`}
-              className="text-[#F0B429] hover:underline"
+              className="text-brand-warning hover:underline"
             >
               Möglicherweise bereits als Kandidat vorhanden – Profil öffnen
             </Link>
           </p>
         )}
       </td>
-      <td className="px-4 py-3.5 text-[#CBD5E1]">
+      <td className="px-4 py-3.5 text-brand-soft">
         {lead.source_url ? (
           <a
             href={lead.source_url}
@@ -94,17 +94,17 @@ export function SourcingLeadsTable() {
         {lead.notes_text && (
           <p
             title={lead.notes_text}
-            className="mt-1 line-clamp-3 max-w-xs whitespace-pre-line text-[11px] text-[#94A3B8]"
+            className="mt-1 line-clamp-3 max-w-xs whitespace-pre-line text-[11px] text-brand-muted"
           >
             {lead.notes_text}
           </p>
         )}
       </td>
-      <td className="px-4 py-3.5 text-[#CBD5E1]">{lead.current_employer ?? "—"}</td>
-      <td className="px-4 py-3.5 text-[#CBD5E1]">
+      <td className="px-4 py-3.5 text-brand-soft">{lead.current_employer ?? "—"}</td>
+      <td className="px-4 py-3.5 text-brand-soft">
         {[lead.postal_code, lead.city].filter(Boolean).join(" ") || "—"}
       </td>
-      <td className="px-4 py-3.5 text-xs text-[#94A3B8]">{formatDate(lead.found_at)}</td>
+      <td className="px-4 py-3.5 text-xs text-brand-muted">{formatDate(lead.found_at)}</td>
       <td className="px-4 py-3.5">
         <div className="flex gap-2">
           <Button
@@ -134,16 +134,16 @@ export function SourcingLeadsTable() {
   // candidates-table.tsx fuer denselben Fix + Begruendung (Nutzer-Feedback
   // "mobile Version nicht passend").
   const renderCard = (lead: SourcingLead) => (
-    <div key={lead.id} className="rounded-lg border border-white/10 bg-[#12243A] p-3">
-      <p className="font-semibold text-[#D8DADF]">{lead.first_name} {lead.last_name}</p>
+    <div key={lead.id} className="rounded-lg border border-white/10 bg-brand-panel p-3">
+      <p className="font-semibold text-brand-platinum">{lead.first_name} {lead.last_name}</p>
       {lead.status === "possible_duplicate" && lead.duplicate_of_candidate_id && (
         <p className="mt-1 text-[11px]">
-          <Link href={`/kandidaten/${lead.duplicate_of_candidate_id}`} className="text-[#F0B429] hover:underline">
+          <Link href={`/kandidaten/${lead.duplicate_of_candidate_id}`} className="text-brand-warning hover:underline">
             Möglicherweise bereits als Kandidat vorhanden – Profil öffnen
           </Link>
         </p>
       )}
-      <p className="mt-1 text-xs text-[#CBD5E1]">
+      <p className="mt-1 text-xs text-brand-soft">
         {lead.source_url ? (
           <a href={lead.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-white hover:underline">
             {SOURCE_LABELS[lead.source_type]}<ExternalLink size={12} />
@@ -153,11 +153,11 @@ export function SourcingLeadsTable() {
         )}
         {" · "}{lead.current_employer ?? "Arbeitgeber offen"}
       </p>
-      <p className="mt-0.5 text-[11px] text-[#94A3B8]">
+      <p className="mt-0.5 text-[11px] text-brand-muted">
         {[lead.postal_code, lead.city].filter(Boolean).join(" ") || "PLZ/Ort offen"} · Gefunden {formatDate(lead.found_at)}
       </p>
       {lead.notes_text && (
-        <p className="mt-1.5 line-clamp-3 whitespace-pre-line text-[11px] text-[#94A3B8]">{lead.notes_text}</p>
+        <p className="mt-1.5 line-clamp-3 whitespace-pre-line text-[11px] text-brand-muted">{lead.notes_text}</p>
       )}
       <div className="mt-2.5 flex gap-2">
         <Button size="sm" variant="dark" disabled={busyLeadId === lead.id} onClick={() => void handleAction(lead, "approve")}>
@@ -184,7 +184,7 @@ export function SourcingLeadsTable() {
         <div className="mb-6">
           <div className="mb-2 flex items-center gap-2">
             <Badge tone="amber">Mögliche Duplikate</Badge>
-            <span className="text-xs text-[#94A3B8]">
+            <span className="text-xs text-brand-muted">
               Fuzzy-Namensabgleich hat einen bestehenden Kandidaten gefunden – bitte vor Übernahme prüfen
               (z.B. Arbeitgeberwechsel eines Bestandskandidaten).
             </span>
@@ -194,16 +194,16 @@ export function SourcingLeadsTable() {
       )}
       {renderLeadList(pendingLeads)}
       {pendingLeads.length === 0 && duplicateLeads.length === 0 && (
-        <div className="mt-6 flex flex-col items-center gap-2 rounded-lg border border-white/10 bg-[#0D1B2E] p-8 text-center">
-          <UserRoundSearch size={24} className="text-[#94A3B8]" />
-          <p className="text-sm text-[#CBD5E1]">Keine offenen Leads.</p>
-          <p className="text-xs text-[#94A3B8]">
+        <div className="mt-6 flex flex-col items-center gap-2 rounded-lg border border-white/10 bg-brand-surface p-8 text-center">
+          <UserRoundSearch size={24} className="text-brand-muted" />
+          <p className="text-sm text-brand-soft">Keine offenen Leads.</p>
+          <p className="text-xs text-brand-muted">
             Starte einen Sourcing-Lauf, um neue Kandidaten-Vorschläge aus öffentlichen
             Berufsregistern zu sammeln.
           </p>
         </div>
       )}
-      <p className="mt-3 text-xs text-[#8a9095]">
+      <p className="mt-3 text-xs text-brand-gray">
         {pendingLeads.length + duplicateLeads.length} offene Leads
       </p>
     </>

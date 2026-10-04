@@ -19,9 +19,9 @@ import type { CalendarEvent, CalendarEventType } from "@/lib/api/types";
 const WEEKDAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
 const EVENT_TYPE_COLOR: Record<CalendarEventType, string> = {
-  interview: "border-[#1F5FA8]/40 bg-[#153A66]/50 text-[#c5dcfa]",
-  quali_call: "border-[#4f8a68]/35 bg-[#244d38]/50 text-[#a9d6b8]",
-  other: "border-white/10 bg-white/8 text-[#CBD5E1]",
+  interview: "border-brand-accent/40 bg-brand-accent-strong/50 text-brand-info",
+  quali_call: "border-brand-success/35 bg-brand-success-bg/50 text-brand-success-text",
+  other: "border-white/10 bg-white/8 text-brand-soft",
 };
 
 export const EVENT_TYPE_LABEL: Record<CalendarEventType, string> = {
@@ -92,14 +92,14 @@ function AgendaList({
             key={dateKey(day)}
             className={cn(
               "rounded-lg border p-2.5",
-              isToday ? "border-[#1F5FA8]/50 bg-[#102A4C]/40" : "border-white/10 bg-[#0D1B2E]/60",
+              isToday ? "border-brand-accent/50 bg-brand-accent-soft/40" : "border-white/10 bg-brand-surface/60",
               !inMonth && "opacity-50",
             )}
           >
             <button
               type="button"
               onClick={() => onDayClick(day)}
-              className="flex w-full items-center justify-between text-xs text-[#94A3B8] hover:text-white"
+              className="flex w-full items-center justify-between text-xs text-brand-muted hover:text-white"
             >
               <span>{formatWeekdayLabel(day)} {formatDayLabel(day)}</span>
               <Plus size={13} />
@@ -111,7 +111,7 @@ function AgendaList({
                 ))}
               </div>
             ) : (
-              <p className="mt-1.5 text-[11px] text-[#5b6167]">Keine Termine</p>
+              <p className="mt-1.5 text-[11px] text-brand-gray-dark">Keine Termine</p>
             )}
           </div>
         );
@@ -161,13 +161,13 @@ export function CalendarView({
               key={dateKey(day)}
               className={cn(
                 "min-h-[220px] rounded-lg border p-2",
-                isToday ? "border-[#1F5FA8]/50 bg-[#102A4C]/40" : "border-white/10 bg-[#0D1B2E]/60",
+                isToday ? "border-brand-accent/50 bg-brand-accent-soft/40" : "border-white/10 bg-brand-surface/60",
               )}
             >
               <button
                 type="button"
                 onClick={() => onDayClick(day)}
-                className="mb-2 flex w-full items-center justify-between text-xs text-[#94A3B8] hover:text-white"
+                className="mb-2 flex w-full items-center justify-between text-xs text-brand-muted hover:text-white"
               >
                 <span>{formatWeekdayLabel(day)} {formatDayLabel(day)}</span>
                 <Plus size={12} />
@@ -190,7 +190,7 @@ export function CalendarView({
       <AgendaList days={days} eventsByDay={eventsByDay} currentDate={currentDate} onDayClick={onDayClick} onEventClick={onEventClick} />
       <div className="hidden sm:grid sm:grid-cols-7 sm:gap-2">
       {WEEKDAY_LABELS.map((label) => (
-        <div key={label} className="pb-1 text-center text-[10px] uppercase tracking-wider text-[#8a9095]">
+        <div key={label} className="pb-1 text-center text-[10px] uppercase tracking-wider text-brand-gray">
           {label}
         </div>
       ))}
@@ -207,16 +207,16 @@ export function CalendarView({
             onClick={() => onDayClick(day)}
             className={cn(
               "min-h-[92px] rounded-lg border p-1.5 text-left align-top",
-              inMonth ? "border-white/10 bg-[#0D1B2E]/60" : "border-white/5 bg-transparent opacity-50",
-              isToday && "border-[#1F5FA8]/50 bg-[#102A4C]/40",
+              inMonth ? "border-white/10 bg-brand-surface/60" : "border-white/5 bg-transparent opacity-50",
+              isToday && "border-brand-accent/50 bg-brand-accent-soft/40",
             )}
           >
-            <span className="text-[11px] text-[#8a9095]">{day.getDate()}</span>
+            <span className="text-[11px] text-brand-gray">{day.getDate()}</span>
             {visible.map((event) => (
               <EventChip key={event.id} event={event} onClick={() => onEventClick(event)} compact />
             ))}
             {overflow > 0 && (
-              <p className="mt-0.5 text-[10px] text-[#69A7EA]">+{overflow} mehr</p>
+              <p className="mt-0.5 text-[10px] text-brand-accent-light">+{overflow} mehr</p>
             )}
           </button>
         );

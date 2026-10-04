@@ -31,12 +31,12 @@ export function VacancyMatchingPanel({ vacancyId }: { vacancyId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vacancyId]);
 
-  if (loading) return <Card><CardContent className="py-8 text-center text-sm text-[#858b90]">Passende Kandidaten werden geladen…</CardContent></Card>;
+  if (loading) return <Card><CardContent className="py-8 text-center text-sm text-brand-gray">Passende Kandidaten werden geladen…</CardContent></Card>;
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs text-[#CBD5E1]"><Sparkles size={13} />Nach Rolle, Umkreis und fachlicher Überschneidung sortiert.</div>
+        <div className="flex items-center gap-2 text-xs text-brand-soft"><Sparkles size={13} />Nach Rolle, Umkreis und fachlicher Überschneidung sortiert.</div>
         <Button size="sm" variant="outline" onClick={() => loadMatches()}><RefreshCw size={12} />Aktualisieren</Button>
       </div>
       <ErrorBanner message={error} />
@@ -46,18 +46,18 @@ export function VacancyMatchingPanel({ vacancyId }: { vacancyId: string }) {
             <CardContent className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
               <div>
                 <p className="font-semibold">{match.candidate.first_name} {match.candidate.last_name}</p>
-                <p className="mt-1 text-xs text-[#94A3B8]">{match.candidate.city ?? match.candidate.postal_code ?? "Ort offen"} · {match.candidate.job_title ?? "Rolle offen"}</p>
+                <p className="mt-1 text-xs text-brand-muted">{match.candidate.city ?? match.candidate.postal_code ?? "Ort offen"} · {match.candidate.job_title ?? "Rolle offen"}</p>
                 {match.reasons.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {match.reasons.map((reason) => <span key={reason} className="rounded bg-[#12243A] px-2 py-0.5 text-[10px] text-[#94A3B8]">{reason}</span>)}
+                    {match.reasons.map((reason) => <span key={reason} className="rounded bg-brand-panel px-2 py-0.5 text-[10px] text-brand-muted">{reason}</span>)}
                   </div>
                 )}
               </div>
-              <span className="shrink-0 rounded-full bg-[#102A4C] px-3 py-1 text-xs font-semibold text-[#D8DADF]">Score {match.score}</span>
+              <span className="shrink-0 rounded-full bg-brand-accent-soft px-3 py-1 text-xs font-semibold text-brand-platinum">Score {match.score}</span>
             </CardContent>
           </Card>
         ))}
-        {matches?.length === 0 && <Card><CardContent className="py-8 text-center text-xs text-[#858b90]">Keine passenden Kandidaten im Umkreis gefunden.</CardContent></Card>}
+        {matches?.length === 0 && <Card><CardContent className="py-8 text-center text-xs text-brand-gray">Keine passenden Kandidaten im Umkreis gefunden.</CardContent></Card>}
       </div>
     </div>
   );

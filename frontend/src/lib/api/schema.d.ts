@@ -77,6 +77,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Proposals */
+        get: operations["list_proposals_api_v1_ai_proposals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai-proposals/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Proposal Summary
+         * @description Fuer die Seitenleiste: ist die Claude-Schnittstelle an, und wie viele
+         *     Vorschlaege warten (nur die fuer den Nutzer sichtbaren).
+         */
+        get: operations["proposal_summary_api_v1_ai_proposals_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai-proposals/{proposal_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Proposal */
+        post: operations["approve_proposal_api_v1_ai_proposals__proposal_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai-proposals/{proposal_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Proposal */
+        post: operations["reject_proposal_api_v1_ai_proposals__proposal_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/approval-requests": {
         parameters: {
             query?: never;
@@ -1572,13 +1644,143 @@ export interface paths {
         put?: never;
         /**
          * Mcp Endpoint
-         * @description MCP (Streamable HTTP, JSON-Modus) - lesender Zugriff fuer Claude.
+         * @description MCP (Streamable HTTP, JSON-Modus) - Zugriff fuer Claude.
          *
-         *     Nur mit API-Key (X-API-Key), nicht mit einer Browser-Sitzung; es gelten die
-         *     Rechte des Key-Besitzers. Ausgeschaltet (404), solange CC_CRM_AI_ENABLED
-         *     nicht gesetzt ist. Details: services/mcp_server.py.
+         *     Zwei Wege, beide gebunden an einen Hermes-Nutzer (es gelten genau dessen
+         *     Rechte): ein API-Key (X-API-Key) oder ein OAuth-Token, das Claude ueber die
+         *     Anmeldung bei Hermes erhalten hat (Authorization: Bearer ..., siehe
+         *     services/oauth_provider.py). Eine Browser-Sitzung gilt hier nicht. Lesend,
+         *     dazu Vorschlaege mit Freigabe-Pflicht. Ausgeschaltet (404), solange
+         *     CC_CRM_AI_ENABLED nicht gesetzt ist. Details: services/mcp_server.py.
          */
         post: operations["mcp_endpoint_api_v1_mcp_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Mail Accounts */
+        get: operations["list_my_mail_accounts_api_v1_me_mail_accounts_get"];
+        put?: never;
+        /** Create My Mail Account */
+        post: operations["create_my_mail_account_api_v1_me_mail_accounts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Connection Before Saving
+         * @description Zugangsdaten pruefen (IMAP-Login, SMTP-Login), ohne etwas zu speichern oder zu senden.
+         */
+        post: operations["test_connection_before_saving_api_v1_me_mail_accounts_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts/{account_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete My Mail Account */
+        delete: operations["delete_my_mail_account_api_v1_me_mail_accounts__account_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update My Mail Account */
+        patch: operations["update_my_mail_account_api_v1_me_mail_accounts__account_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts/{account_id}/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Default Sender */
+        post: operations["set_default_sender_api_v1_me_mail_accounts__account_id__default_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts/{account_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List My Mail Messages
+         * @description Posteingang eines persoenlichen Kontos: nur fuer den Besitzer lesbar.
+         */
+        get: operations["list_my_mail_messages_api_v1_me_mail_accounts__account_id__messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts/{account_id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync My Mail Account */
+        post: operations["sync_my_mail_account_api_v1_me_mail_accounts__account_id__sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts/{account_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test My Mail Account */
+        post: operations["test_my_mail_account_api_v1_me_mail_accounts__account_id__test_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1658,6 +1860,162 @@ export interface paths {
         head?: never;
         /** Update Note */
         patch: operations["update_note_api_v1_notes__note_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/oauth/.well-known/oauth-authorization-server": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Authorization Server Metadata */
+        get: operations["authorization_server_metadata_api_v1_oauth__well_known_oauth_authorization_server_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/.well-known/openid-configuration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Openid Configuration */
+        get: operations["openid_configuration_api_v1_oauth__well_known_openid_configuration_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Connections */
+        get: operations["list_connections_api_v1_oauth_connections_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/connections/{token_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Connection */
+        delete: operations["revoke_connection_api_v1_oauth_connections__token_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Consent */
+        post: operations["decide_consent_api_v1_oauth_consent_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/consent/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consent Info */
+        get: operations["consent_info_api_v1_oauth_consent__request_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/protected-resource": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Protected Resource Metadata
+         * @description RFC 9728 - ueber `resource_metadata` im 401 von /mcp referenziert.
+         */
+        get: operations["protected_resource_metadata_api_v1_oauth_protected_resource_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register Client */
+        post: operations["register_client_api_v1_oauth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Token */
+        post: operations["token_api_v1_oauth_token_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/offers": {
@@ -2715,6 +3073,80 @@ export interface components {
             /** Subject */
             subject?: string | null;
         };
+        /**
+         * AiProposalApprove
+         * @description Freigabe; mit `payload` wird der Vorschlag vorher bearbeitet uebernommen.
+         */
+        AiProposalApprove: {
+            /** Payload */
+            payload?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** AiProposalRead */
+        AiProposalRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Name */
+            created_by_name?: string | null;
+            /**
+             * Created By User Id
+             * Format: uuid
+             */
+            created_by_user_id: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By User Id */
+            decided_by_user_id: string | null;
+            /** Decision Note */
+            decision_note: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "note" | "task" | "mail_draft";
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Recipient Email */
+            recipient_email?: string | null;
+            /** Result Entity Id */
+            result_entity_id: string | null;
+            /** Result Entity Type */
+            result_entity_type: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected";
+            /** Target Id */
+            target_id: string | null;
+            /** Target Label */
+            target_label?: string | null;
+            /** Target Type */
+            target_type: ("candidate" | "client" | "contact") | null;
+        };
+        /** AiProposalReject */
+        AiProposalReject: {
+            /** Decision Note */
+            decision_note?: string | null;
+        };
+        /** AiProposalSummary */
+        AiProposalSummary: {
+            /** Enabled */
+            enabled: boolean;
+            /** Pending */
+            pending: number;
+        };
         /** AnonymousProfileResponse */
         AnonymousProfileResponse: {
             /** Profile Text */
@@ -2870,6 +3302,21 @@ export interface components {
         Body_preview_cv_fields_api_v1_candidates_cv_preview_post: {
             /** File */
             file: string;
+        };
+        /** Body_token_api_v1_oauth_token_post */
+        Body_token_api_v1_oauth_token_post: {
+            /** Client Id */
+            client_id: string;
+            /** Code */
+            code?: string | null;
+            /** Code Verifier */
+            code_verifier?: string | null;
+            /** Grant Type */
+            grant_type: string;
+            /** Redirect Uri */
+            redirect_uri?: string | null;
+            /** Refresh Token */
+            refresh_token?: string | null;
         };
         /** Body_upload_document_api_v1_documents_upload_post */
         Body_upload_document_api_v1_documents_upload_post: {
@@ -4161,6 +4608,32 @@ export interface components {
             recruiting_kpis: components["schemas"]["RecruitingKpis"];
             sourcing: components["schemas"]["SourcingFunnel"];
         };
+        /** ConsentDecision */
+        ConsentDecision: {
+            /** Approve */
+            approve: boolean;
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+        };
+        /** ConsentInfo */
+        ConsentInfo: {
+            /** Client Name */
+            client_name: string;
+            /** Redirect Host */
+            redirect_host: string;
+            /** Scope */
+            scope: string;
+            /** User Email */
+            user_email: string;
+        };
+        /** ConsentResult */
+        ConsentResult: {
+            /** Redirect Url */
+            redirect_url: string;
+        };
         /** ContactPersonCreate */
         ContactPersonCreate: {
             /**
@@ -5446,6 +5919,8 @@ export interface components {
             /** Last Synced At */
             last_synced_at: string | null;
             oauth_status: components["schemas"]["MailAccountOAuthStatus"] | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
             provider: components["schemas"]["MailAccountProvider"];
             /** Send Throttle Seconds */
             send_throttle_seconds: number;
@@ -5455,6 +5930,11 @@ export interface components {
             smtp_port: number;
             /** Smtp Use Ssl */
             smtp_use_ssl: boolean;
+            /**
+             * Sync Enabled
+             * @default true
+             */
+            sync_enabled: boolean;
             /** Sync Error */
             sync_error: string | null;
             /**
@@ -5527,6 +6007,51 @@ export interface components {
              * @default 0
              */
             skipped_due_to_daily_limit_count: number;
+        };
+        /**
+         * MailConnectionTestRequest
+         * @description Verbindungstest VOR dem Speichern (Passwort wird nicht gespeichert).
+         */
+        MailConnectionTestRequest: {
+            /** Imap Host */
+            imap_host: string;
+            /**
+             * Imap Port
+             * @default 993
+             */
+            imap_port: number;
+            /**
+             * Imap Use Ssl
+             * @default true
+             */
+            imap_use_ssl: boolean;
+            /** Password */
+            password: string;
+            /** Smtp Host */
+            smtp_host: string;
+            /**
+             * Smtp Port
+             * @default 587
+             */
+            smtp_port: number;
+            /**
+             * Smtp Use Ssl
+             * @default true
+             */
+            smtp_use_ssl: boolean;
+            /** Username */
+            username: string;
+        };
+        /** MailConnectionTestResult */
+        MailConnectionTestResult: {
+            /** Imap Error */
+            imap_error?: string | null;
+            /** Imap Ok */
+            imap_ok: boolean;
+            /** Smtp Error */
+            smtp_error?: string | null;
+            /** Smtp Ok */
+            smtp_ok: boolean;
         };
         /**
          * MailMatchStatus
@@ -5779,6 +6304,153 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * MyMailAccountCreate
+         * @description Eigenes IMAP/SMTP-Postfach anlegen (Einstellungen -> Mein Postfach).
+         *     Anders als MailAccountCreate ohne Admin-Felder (kein CV-Out-Standard); das
+         *     Passwort ist auch hier nur schreibend (bei Gmail/Outlook/GMX: App-Passwort).
+         */
+        MyMailAccountCreate: {
+            /**
+             * Address
+             * Format: email
+             */
+            address: string;
+            /**
+             * Daily Send Limit
+             * @default 150
+             */
+            daily_send_limit: number;
+            /** Imap Host */
+            imap_host: string;
+            /**
+             * Imap Port
+             * @default 993
+             */
+            imap_port: number;
+            /**
+             * Imap Use Ssl
+             * @default true
+             */
+            imap_use_ssl: boolean;
+            /** Label */
+            label: string;
+            /** Password */
+            password: string;
+            /**
+             * Send Throttle Seconds
+             * @default 8
+             */
+            send_throttle_seconds: number;
+            /** Smtp Host */
+            smtp_host: string;
+            /**
+             * Smtp Port
+             * @default 587
+             */
+            smtp_port: number;
+            /**
+             * Smtp Use Ssl
+             * @default true
+             */
+            smtp_use_ssl: boolean;
+            /** Username */
+            username: string;
+        };
+        /**
+         * MyMailAccountRead
+         * @description Wie MailAccountRead (ohne Passwort), dazu die Standard-Absender-Info.
+         */
+        MyMailAccountRead: {
+            /** Address */
+            address: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Daily Send Limit */
+            daily_send_limit: number;
+            /** Default For Cv Out */
+            default_for_cv_out: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Imap Host */
+            imap_host: string | null;
+            /** Imap Port */
+            imap_port: number;
+            /** Imap Use Ssl */
+            imap_use_ssl: boolean;
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Is Default Sender
+             * @default false
+             */
+            is_default_sender: boolean;
+            /** Label */
+            label: string;
+            /** Last Synced At */
+            last_synced_at: string | null;
+            oauth_status: components["schemas"]["MailAccountOAuthStatus"] | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            provider: components["schemas"]["MailAccountProvider"];
+            /** Send Throttle Seconds */
+            send_throttle_seconds: number;
+            /** Smtp Host */
+            smtp_host: string | null;
+            /** Smtp Port */
+            smtp_port: number;
+            /** Smtp Use Ssl */
+            smtp_use_ssl: boolean;
+            /**
+             * Sync Enabled
+             * @default true
+             */
+            sync_enabled: boolean;
+            /** Sync Error */
+            sync_error: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Username */
+            username: string | null;
+        };
+        /** MyMailAccountUpdate */
+        MyMailAccountUpdate: {
+            /** Daily Send Limit */
+            daily_send_limit?: number | null;
+            /** Imap Host */
+            imap_host?: string | null;
+            /** Imap Port */
+            imap_port?: number | null;
+            /** Imap Use Ssl */
+            imap_use_ssl?: boolean | null;
+            /** Is Active */
+            is_active?: boolean | null;
+            /** Label */
+            label?: string | null;
+            /** Password */
+            password?: string | null;
+            /** Send Throttle Seconds */
+            send_throttle_seconds?: number | null;
+            /** Smtp Host */
+            smtp_host?: string | null;
+            /** Smtp Port */
+            smtp_port?: number | null;
+            /** Smtp Use Ssl */
+            smtp_use_ssl?: boolean | null;
+            /** Sync Enabled */
+            sync_enabled?: boolean | null;
+            /** Username */
+            username?: string | null;
+        };
         /** NlSearchRequest */
         NlSearchRequest: {
             /** Query */
@@ -5842,6 +6514,23 @@ export interface components {
         NoteUpdate: {
             /** Body */
             body: string;
+        };
+        /** OAuthConnection */
+        OAuthConnection: {
+            /** Client Name */
+            client_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Used At */
+            last_used_at?: string | null;
         };
         /** OfferCreate */
         OfferCreate: {
@@ -7243,6 +7932,145 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KpiPointRuleRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_proposals_api_v1_ai_proposals_get: {
+        parameters: {
+            query?: {
+                status?: ("pending" | "approved" | "rejected") | null;
+                limit?: number;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProposalRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    proposal_summary_api_v1_ai_proposals_summary_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProposalSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_proposal_api_v1_ai_proposals__proposal_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiProposalApprove"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProposalRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_proposal_api_v1_ai_proposals__proposal_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiProposalReject"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProposalRead"];
                 };
             };
             /** @description Validation Error */
@@ -10523,6 +11351,7 @@ export interface operations {
             query?: never;
             header?: {
                 "X-API-Key"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -10540,6 +11369,314 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_mail_accounts_api_v1_me_mail_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyMailAccountRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_my_mail_account_api_v1_me_mail_accounts_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MyMailAccountCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyMailAccountRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_connection_before_saving_api_v1_me_mail_accounts_test_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailConnectionTestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailConnectionTestResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_my_mail_account_api_v1_me_mail_accounts__account_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_my_mail_account_api_v1_me_mail_accounts__account_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MyMailAccountUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyMailAccountRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_default_sender_api_v1_me_mail_accounts__account_id__default_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyMailAccountRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_mail_messages_api_v1_me_mail_accounts__account_id__messages_get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MailMatchStatus"][] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailMessageRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_my_mail_account_api_v1_me_mail_accounts__account_id__sync_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailSyncResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_my_mail_account_api_v1_me_mail_accounts__account_id__test_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailConnectionTestResult"];
                 };
             };
             /** @description Validation Error */
@@ -10773,6 +11910,268 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    authorization_server_metadata_api_v1_oauth__well_known_oauth_authorization_server_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    openid_configuration_api_v1_oauth__well_known_openid_configuration_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_connections_api_v1_oauth_connections_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthConnection"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_connection_api_v1_oauth_connections__token_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                token_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_consent_api_v1_oauth_consent_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    consent_info_api_v1_oauth_consent__request_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    protected_resource_metadata_api_v1_oauth_protected_resource_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    register_client_api_v1_oauth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": unknown;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    token_api_v1_oauth_token_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["Body_token_api_v1_oauth_token_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

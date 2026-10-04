@@ -11,9 +11,9 @@ import { useCurrentUser } from "@/lib/api/hooks";
 import { createSequence, getSequences, updateSequence } from "@/lib/api/queries";
 import type { OutreachSequence, SequenceChannel, SequenceStepInput } from "@/lib/api/types";
 
-const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
-const textareaClass = "min-h-20 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
+const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
+const textareaClass = "min-h-20 w-full rounded-md border border-white/10 bg-brand-surface p-3 text-sm text-brand-text outline-none focus:border-brand-accent";
+const labelClass = "mb-1 block text-xs text-brand-muted";
 
 const CHANNEL_OPTIONS: { value: SequenceChannel; label: string }[] = [
   { value: "email", label: "E-Mail (automatisch versendet)" },
@@ -73,7 +73,7 @@ export default function SequenzenPage() {
   }, [isAdmin]);
 
   if (meLoading) {
-    return <div className="h-16 animate-pulse rounded-lg bg-[#0D1B2E]" />;
+    return <div className="h-16 animate-pulse rounded-lg bg-brand-surface" />;
   }
 
   if (!isAdmin) {
@@ -81,7 +81,7 @@ export default function SequenzenPage() {
       <>
         <PageHeader eyebrow="Einstellungen" title="Outreach-Sequenzen" />
         <Card>
-          <CardContent className="flex items-center gap-3 text-sm text-[#94A3B8]">
+          <CardContent className="flex items-center gap-3 text-sm text-brand-muted">
             <ShieldOff size={18} /> Nur für Admins zugänglich.
           </CardContent>
         </Card>
@@ -123,7 +123,7 @@ export default function SequenzenPage() {
   return (
     <>
       <PageHeader eyebrow="Einstellungen" title="Outreach-Sequenzen" />
-      <p className="mb-5 max-w-3xl text-sm text-[#94A3B8]">
+      <p className="mb-5 max-w-3xl text-sm text-brand-muted">
         Mehrstufige Kontaktfolgen. E-Mail-Schritte gehen automatisch im Namen der zuständigen Person raus; alle
         anderen Kanäle (LinkedIn, Telefon, Sonstiges) erzeugen eine Aufgabe. Antwortet der Kandidat, pausiert die
         Sequenz automatisch. Der tägliche Lauf führt pro Einschreibung höchstens einen Schritt pro Tag aus.
@@ -137,9 +137,9 @@ export default function SequenzenPage() {
                 <div>
                   <p className="font-medium">
                     {sequence.name}
-                    {!sequence.is_active && <span className="ml-2 text-xs text-[#94A3B8]">(deaktiviert)</span>}
+                    {!sequence.is_active && <span className="ml-2 text-xs text-brand-muted">(deaktiviert)</span>}
                   </p>
-                  <p className="mt-1 text-xs text-[#94A3B8]">
+                  <p className="mt-1 text-xs text-brand-muted">
                     {sequence.steps.map((step) => `Tag ${step.day_offset}: ${step.channel}`).join(" · ")}
                   </p>
                 </div>
@@ -149,7 +149,7 @@ export default function SequenzenPage() {
               </CardContent>
             </Card>
           ))}
-          {sequences.length === 0 && <p className="text-sm text-[#94A3B8]">Noch keine Sequenz angelegt.</p>}
+          {sequences.length === 0 && <p className="text-sm text-brand-muted">Noch keine Sequenz angelegt.</p>}
           <Button onClick={() => setDraft(newDraft())}>Neue Sequenz</Button>
         </div>
       )}
@@ -162,7 +162,7 @@ export default function SequenzenPage() {
                 <label className={labelClass}>Name</label>
                 <Input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
               </div>
-              <label className="flex items-end gap-2 pb-2 text-sm text-[#D8DADF]">
+              <label className="flex items-end gap-2 pb-2 text-sm text-brand-platinum">
                 <input
                   type="checkbox"
                   checked={draft.is_active}
@@ -172,9 +172,9 @@ export default function SequenzenPage() {
               </label>
             </div>
 
-            <p className="text-xs text-[#94A3B8]">{PLACEHOLDER_HINT}</p>
+            <p className="text-xs text-brand-muted">{PLACEHOLDER_HINT}</p>
             {draft.steps.map((step, index) => (
-              <div key={index} className="space-y-3 rounded-lg border border-white/10 bg-[#0D1B2E]/60 p-3">
+              <div key={index} className="space-y-3 rounded-lg border border-white/10 bg-brand-surface/60 p-3">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-[8rem_1fr_auto]">
                   <div>
                     <label className={labelClass}>Tag nach Start</label>

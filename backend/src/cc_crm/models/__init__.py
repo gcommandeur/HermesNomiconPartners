@@ -1,4 +1,5 @@
 from cc_crm.models.activity import Activity
+from cc_crm.models.ai_proposal import AiProposal
 from cc_crm.models.api_key import ApiKey
 from cc_crm.models.app_setting import AppSetting
 from cc_crm.models.approval_request import ApprovalRequest
@@ -21,6 +22,7 @@ from cc_crm.models.login_challenge import LoginChallenge
 from cc_crm.models.mail import MailAccount, MailMessage
 from cc_crm.models.mailing_group import MailingGroup
 from cc_crm.models.note import Note
+from cc_crm.models.oauth import OAuthAuthorization, OAuthClient, OAuthToken
 from cc_crm.models.operational import Document, EmailDraftLog, SourcingMetric
 from cc_crm.models.outreach import OutreachSequence, OutreachSequenceStep, SequenceEnrollment
 from cc_crm.models.postal_locality import PostalLocality
@@ -45,6 +47,7 @@ from cc_crm.models.webhook import WebhookDelivery, WebhookEndpoint
 
 __all__ = [
     "Activity",
+    "AiProposal",
     "ApiKey",
     "AppSetting",
     "ApprovalRequest",
@@ -74,6 +77,9 @@ __all__ = [
     "MailMessage",
     "MailingGroup",
     "Note",
+    "OAuthAuthorization",
+    "OAuthClient",
+    "OAuthToken",
     "OutreachSequence",
     "OutreachSequenceStep",
     "Offer",

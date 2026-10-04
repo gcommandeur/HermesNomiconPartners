@@ -1,19 +1,36 @@
 @import "tailwindcss";
+@import "./brand-theme.css";
 
-:root {
-  --background: #08111f;
-  --surface: #12243a;
-  --surface-muted: #0d1b2e;
-  --surface-elevated: #172e49;
-  --surface-hover: #203a5a;
-  --foreground: #f8fafc;
-  --muted: #94a3b8;
-  --border: rgba(148, 163, 184, 0.18);
-  --platinum: #d8dadf;
-  --silver: #a7adb7;
-  --accent: #1f5fa8;
-  --accent-soft: #102a4c;
-  --sidebar: #071426;
+
+/* Tailwind-Klassen fuer die Variablen: bg-brand-panel, text-brand-muted, ...
+   NEUE Oberflaeche nutzt diese Klassen, keine festen Hex-Farben (siehe
+   docs/PROJEKT_STAND.md > Design-Regel). */
+@theme inline {
+  --color-brand-bg: var(--background);
+  --color-brand-panel: var(--surface);
+  --color-brand-surface: var(--surface-muted);
+  --color-brand-elevated: var(--surface-elevated);
+  --color-brand-hover: var(--surface-hover);
+  --color-brand-sidebar: var(--sidebar);
+  --color-brand-text: var(--foreground);
+  --color-brand-soft: var(--text-soft);
+  --color-brand-muted: var(--muted);
+  --color-brand-dim: var(--text-dim);
+  --color-brand-platinum: var(--platinum);
+  --color-brand-silver: var(--silver);
+  --color-brand-accent: var(--accent);
+  --color-brand-accent-light: var(--accent-light);
+  --color-brand-accent-strong: var(--accent-strong);
+  --color-brand-accent-soft: var(--accent-soft);
+  --color-brand-warning: var(--warning);
+  --color-brand-danger: var(--danger);
+  --color-brand-danger-soft: var(--danger-soft);
+  --color-brand-success: var(--success);
+  --color-brand-success-text: var(--success-text);
+  --color-brand-success-bg: var(--success-bg);
+  --color-brand-info: var(--info-soft);
+  --color-brand-gray: var(--text-gray);
+  --color-brand-gray-dark: var(--text-gray-dark);
 }
 
 * { border-color: var(--border); }
@@ -21,27 +38,25 @@ html { background: var(--background); color-scheme: dark; }
 body {
   min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(circle at 80% -10%, rgba(31,95,168,.2), transparent 34rem),
-    linear-gradient(135deg, #08111f 0%, #0b1e36 52%, #071426 100%);
+  background: var(--page-gradient);
   color: var(--foreground);
   font-family: Inter, "Segoe UI", Arial, sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
 }
 button,input,select,textarea { font: inherit; }
-::selection { background: #1f5fa8; color: #fff; }
-.scrollbar-subtle { scrollbar-color: #203a5a transparent; scrollbar-width: thin; }
+::selection { background: var(--accent); color: #fff; }
+.scrollbar-subtle { scrollbar-color: var(--surface-hover) transparent; scrollbar-width: thin; }
 main .bg-white { background-color: var(--surface) !important; }
 main .bg-\[\#fafaf9\], main .bg-\[\#fafaf8\], main .bg-\[\#f4f6f8\], main .bg-\[\#f2f3f2\], main .bg-\[\#eceeec\] { background-color: var(--surface-muted) !important; }
 main .border-\[\#d2d4d3\], main .border-\[\#e5e7eb\], main .border-slate-200, main .border-gray-200 { border-color: var(--border) !important; }
-main table tr:hover { background: rgba(31,95,168,.1) !important; }
+main table tr:hover { background: rgba(var(--accent-rgb), .1) !important; }
 main textarea, main input, main select {
   background-color: var(--surface-muted);
   color: var(--foreground);
   border-color: var(--border);
 }
 main textarea:focus, main input:focus, main select:focus {
-  outline: 2px solid rgba(31,95,168,.18);
+  outline: 2px solid rgba(var(--accent-rgb), .18);
   outline-offset: 0;
 }

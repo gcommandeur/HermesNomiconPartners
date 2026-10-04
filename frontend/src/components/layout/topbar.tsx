@@ -152,16 +152,16 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
     results.candidates.length > 0 || results.clients.length > 0 || results.contacts.length > 0;
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center border-b border-white/10 bg-[#0D1B2E]/90 px-4 shadow-[0_10px_35px_rgba(0,0,0,.15)] backdrop-blur-xl sm:px-5 lg:px-8">
+    <header className="sticky top-0 z-30 flex h-16 items-center border-b border-white/10 bg-brand-surface/90 px-4 shadow-[0_10px_35px_rgba(0,0,0,.15)] backdrop-blur-xl sm:px-5 lg:px-8">
       {!mobileSearchOpen && (
-        <button onClick={onMenu} className="mr-2 shrink-0 text-[#A7ADB7] lg:hidden" aria-label="Navigation öffnen"><Menu size={20} /></button>
+        <button onClick={onMenu} className="mr-2 shrink-0 text-brand-silver lg:hidden" aria-label="Navigation öffnen"><Menu size={20} /></button>
       )}
       {/* Auf Mobile (<sm) ist die Suche standardmaessig ausgeblendet (kein
        * Platz neben Hamburger/Aktionen) - stattdessen oeffnet ein Icon-Button
        * sie als Vollbreite-Overlay ueber der restlichen Kopfzeile. */}
       <button
         onClick={() => setMobileSearchOpen(true)}
-        className={cn("mr-2 shrink-0 text-[#A7ADB7] sm:hidden", mobileSearchOpen && "hidden")}
+        className={cn("mr-2 shrink-0 text-brand-silver sm:hidden", mobileSearchOpen && "hidden")}
         aria-label="Suche öffnen"
       >
         <Search size={19} />
@@ -170,13 +170,13 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
         ref={containerRef}
         className={cn(
           "relative w-full max-w-md sm:block",
-          mobileSearchOpen ? "absolute inset-x-0 top-0 z-40 flex h-16 items-center bg-[#0D1B2E] px-4 sm:static sm:z-auto sm:flex-none sm:bg-transparent sm:px-0" : "hidden sm:block",
+          mobileSearchOpen ? "absolute inset-x-0 top-0 z-40 flex h-16 items-center bg-brand-surface px-4 sm:static sm:z-auto sm:flex-none sm:bg-transparent sm:px-0" : "hidden sm:block",
         )}
       >
         {mobileSearchOpen && (
           <button
             onClick={() => { setMobileSearchOpen(false); setQuery(""); setOpen(false); }}
-            className="mr-2 shrink-0 text-[#A7ADB7] sm:hidden"
+            className="mr-2 shrink-0 text-brand-silver sm:hidden"
             aria-label="Suche schließen"
           >
             <X size={19} />
@@ -192,7 +192,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
         <input
           autoFocus={mobileSearchOpen}
           className={cn(
-            "h-9 w-full rounded-md border border-white/10 bg-[#08111F]/70 pr-3 text-sm text-white outline-none placeholder:text-[#747C89] focus:border-[#1F5FA8] focus:ring-2 focus:ring-[#1F5FA8]/20",
+            "h-9 w-full rounded-md border border-white/10 bg-brand-bg/70 pr-3 text-sm text-white outline-none placeholder:text-brand-dim focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20",
             mobileSearchOpen ? "pl-12 sm:pl-9" : "pl-9",
           )}
           placeholder="Kandidaten, Kanzleien oder Kontakte suchen"
@@ -203,24 +203,24 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
           }}
         />
         {showDropdown && (
-          <div className="absolute z-20 mt-1 max-h-96 w-full overflow-y-auto rounded-md border border-white/10 bg-[#0D1B2E] shadow-xl">
-            {loading && <p className="px-3 py-2 text-sm text-[#747C89]">Sucht…</p>}
+          <div className="absolute z-20 mt-1 max-h-96 w-full overflow-y-auto rounded-md border border-white/10 bg-brand-surface shadow-xl">
+            {loading && <p className="px-3 py-2 text-sm text-brand-dim">Sucht…</p>}
             {!loading && !hasResults && (
-              <p className="px-3 py-2 text-sm text-[#747C89]">Keine Treffer</p>
+              <p className="px-3 py-2 text-sm text-brand-dim">Keine Treffer</p>
             )}
             {!loading && results.candidates.length > 0 && (
               <div className="py-1">
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#747C89]">Kandidaten</p>
+                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-dim">Kandidaten</p>
                 {results.candidates.map((candidate) => (
                   <button
                     key={candidate.id}
                     type="button"
-                    className="block w-full px-3 py-2 text-left text-sm text-[#F8FAFC] hover:bg-[#1F5FA8]/15"
+                    className="block w-full px-3 py-2 text-left text-sm text-brand-text hover:bg-brand-accent/15"
                     onClick={() => goTo(`/kandidaten/${candidate.id}`)}
                   >
                     {candidate.first_name} {candidate.last_name}
                     {candidate.job_title && (
-                      <span className="ml-2 text-xs text-[#747C89]">{candidate.job_title}</span>
+                      <span className="ml-2 text-xs text-brand-dim">{candidate.job_title}</span>
                     )}
                   </button>
                 ))}
@@ -228,12 +228,12 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             )}
             {!loading && results.clients.length > 0 && (
               <div className="py-1">
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#747C89]">Kanzleien</p>
+                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-dim">Kanzleien</p>
                 {results.clients.map((client) => (
                   <button
                     key={client.id}
                     type="button"
-                    className="block w-full px-3 py-2 text-left text-sm text-[#F8FAFC] hover:bg-[#1F5FA8]/15"
+                    className="block w-full px-3 py-2 text-left text-sm text-brand-text hover:bg-brand-accent/15"
                     onClick={() => goTo(`/kanzleien/${client.id}`)}
                   >
                     {client.name}
@@ -243,17 +243,17 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             )}
             {!loading && results.contacts.length > 0 && (
               <div className="py-1">
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#747C89]">Kontakte</p>
+                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-dim">Kontakte</p>
                 {results.contacts.map((contact) => (
                   <button
                     key={contact.id}
                     type="button"
-                    className="block w-full px-3 py-2 text-left text-sm text-[#F8FAFC] hover:bg-[#1F5FA8]/15"
+                    className="block w-full px-3 py-2 text-left text-sm text-brand-text hover:bg-brand-accent/15"
                     onClick={() => goTo(`/kanzleien/${contact.client_company_id}`)}
                   >
                     {contact.first_name} {contact.last_name}
                     {contact.client_company_name && (
-                      <span className="ml-2 text-xs text-[#747C89]">{contact.client_company_name}</span>
+                      <span className="ml-2 text-xs text-brand-dim">{contact.client_company_name}</span>
                     )}
                   </button>
                 ))}
@@ -274,7 +274,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             <Bell size={17} />
           </Button>
           {notificationsOpen && (
-            <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-xs text-[#94A3B8] shadow-xl">
+            <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-white/10 bg-brand-surface p-3 text-xs text-brand-muted shadow-xl">
               Keine neuen Benachrichtigungen.
             </div>
           )}
@@ -290,13 +290,13 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             </span>
           </button>
           {accountOpen && (
-            <div className="absolute right-0 z-20 mt-1 w-56 rounded-md border border-white/10 bg-[#0D1B2E] p-1.5 text-xs shadow-xl">
-              <div className="px-2.5 py-2 text-[#CBD5E1]">
+            <div className="absolute right-0 z-20 mt-1 w-56 rounded-md border border-white/10 bg-brand-surface p-1.5 text-xs shadow-xl">
+              <div className="px-2.5 py-2 text-brand-soft">
                 <p className="font-medium text-white">{currentUserData?.data.display_name ?? "Angemeldet"}</p>
-                <p className="mt-0.5 text-[11px] text-[#8a9095]">{currentUserData?.data.email ?? ""}</p>
+                <p className="mt-0.5 text-[11px] text-brand-gray">{currentUserData?.data.email ?? ""}</p>
               </div>
               <button
-                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[#D8DADF] hover:bg-white/8"
+                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-brand-platinum hover:bg-white/8"
                 onClick={() => { setAccountOpen(false); void handleLogout(); }}
               >
                 <LogOut size={13} />Abmelden

@@ -4,14 +4,14 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1F5FA8]/30 disabled:pointer-events-none disabled:opacity-45",
+  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/30 disabled:pointer-events-none disabled:opacity-45",
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-b from-[#1F5FA8] to-[#153A66] text-white shadow-[0_8px_20px_rgba(31,95,168,.2)] hover:from-[#2b6db5] hover:to-[#1b477b]",
-        dark: "bg-[#071426] text-white hover:bg-[#102A4C]",
-        outline: "border border-white/15 bg-white/5 text-[#D8DADF] hover:bg-white/10",
-        ghost: "text-[#A7ADB7] hover:bg-white/8 hover:text-white",
+        default: "bg-gradient-to-b from-brand-accent to-brand-accent-strong text-white shadow-[0_8px_20px_rgba(31,95,168,.2)] hover:from-[#2b6db5] hover:to-[#1b477b]",
+        dark: "bg-brand-sidebar text-white hover:bg-brand-accent-soft",
+        outline: "border border-white/15 bg-white/5 text-brand-platinum hover:bg-white/10",
+        ghost: "text-brand-silver hover:bg-white/8 hover:text-white",
       },
       size: {
         default: "h-10 px-4",

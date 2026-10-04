@@ -42,21 +42,21 @@ function CvExtractionPanel({ suggestion, onDismiss }: {
   if (fieldEntries.length === 0) return null;
 
   return (
-    <Card className="border-[#1F5FA8]/30 bg-[#102A4C]/50">
+    <Card className="border-brand-accent/30 bg-brand-accent-soft/50">
       <CardContent>
-        <div className="flex items-center gap-2 text-sm font-semibold text-[#D8DADF]">
+        <div className="flex items-center gap-2 text-sm font-semibold text-brand-platinum">
           <Sparkles size={15} />Aus dem CV übernommen
         </div>
         {suggestion.source_is_agency_profile && (
-          <p className="mt-2 rounded bg-[#F0B429]/10 px-2 py-1.5 text-[11px] text-[#F0B429]">
+          <p className="mt-2 rounded bg-brand-warning/10 px-2 py-1.5 text-[11px] text-brand-warning">
             Dieses Dokument enthält den Commandeur-Briefkopf (anonymisiertes Bewerberprofil) — Adresse/Telefon
             wurden deshalb nicht übernommen, nur Rolle/Qualifikation.
           </p>
         )}
         <div className="mt-3 space-y-1.5">
           {fieldEntries.map(({ key, value }) => (
-            <div key={key} className="flex items-center gap-2 text-xs text-[#CBD5E1]">
-              <span className="w-40 shrink-0 text-[#94A3B8]">{CV_FIELD_LABELS[key]}</span>
+            <div key={key} className="flex items-center gap-2 text-xs text-brand-soft">
+              <span className="w-40 shrink-0 text-brand-muted">{CV_FIELD_LABELS[key]}</span>
               <span>{value}</span>
             </div>
           ))}
@@ -113,14 +113,14 @@ function DocumentPreviewModal({ document, onClose, onDownload }: {
     <Modal title={document.filename} eyebrow="Dokumentvorschau" maxWidth="max-w-3xl" onClose={onClose}>
       <div className="space-y-4">
         {kind === "none" && (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-white/10 bg-[#0D1B2E]/60 py-16 text-sm text-[#94A3B8]">
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-white/10 bg-brand-surface/60 py-16 text-sm text-brand-muted">
             <FileText size={28} />
             Keine Vorschau verfügbar für diesen Dateityp.
           </div>
         )}
         {kind !== "none" && <ErrorBanner message={error} />}
         {kind !== "none" && !error && !blobUrl && (
-          <div className="flex items-center justify-center rounded-lg border border-white/10 bg-[#0D1B2E]/60 py-16 text-sm text-[#94A3B8]">
+          <div className="flex items-center justify-center rounded-lg border border-white/10 bg-brand-surface/60 py-16 text-sm text-brand-muted">
             Lädt…
           </div>
         )}
@@ -254,8 +254,8 @@ export function DocumentPanel({ ownerType, ownerId, documentType, documents }: D
         onDrop={handleDrop}
         className={`flex items-center justify-between rounded-lg border p-3 text-xs transition-colors ${
           dragActive
-            ? "border-[#1F5FA8] bg-[#1F5FA8]/10 text-[#D8DADF]"
-            : "border-white/10 bg-[#0D1B2E]/75 text-[#94A3B8]"
+            ? "border-brand-accent bg-brand-accent/10 text-brand-platinum"
+            : "border-white/10 bg-brand-surface/75 text-brand-muted"
         }`}
       >
         <span>{dragActive ? "Datei hier ablegen…" : "Dateien werden lokal im CRM-Speicher abgelegt - oder hier ablegen (Drag & Drop)."}</span>
@@ -278,7 +278,7 @@ export function DocumentPanel({ ownerType, ownerId, documentType, documents }: D
               className="flex min-w-0 flex-1 items-center gap-3 text-left"
               title="Vorschau öffnen"
             >
-              <FileText size={16} className="shrink-0 text-[#D8DADF]" />
+              <FileText size={16} className="shrink-0 text-brand-platinum" />
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="truncate font-semibold hover:underline">{document.filename}</p>
@@ -290,14 +290,14 @@ export function DocumentPanel({ ownerType, ownerId, documentType, documents }: D
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-xs text-[#94A3B8]">
+                <p className="mt-1 text-xs text-brand-muted">
                   {document.document_type}
                   {document.size_bytes ? ` · ${Math.round(document.size_bytes / 1024)} KB` : ""}
                 </p>
               </div>
             </button>
             <div className="flex items-center gap-3">
-              <span className="text-xs text-[#8b9196]">{formatDate(document.created_at)}</span>
+              <span className="text-xs text-brand-gray">{formatDate(document.created_at)}</span>
               <Button size="sm" variant="ghost" onClick={() => setPreviewDocument(document)} title="Vorschau">
                 <Eye size={14} />
               </Button>
@@ -316,7 +316,7 @@ export function DocumentPanel({ ownerType, ownerId, documentType, documents }: D
       ))}
       {documents.length === 0 && (
         <Card>
-          <CardContent className="py-12 text-center text-sm text-[#858b90]">
+          <CardContent className="py-12 text-center text-sm text-brand-gray">
             Noch keine Dokumente hinterlegt.
           </CardContent>
         </Card>

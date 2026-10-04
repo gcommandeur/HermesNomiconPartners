@@ -24,7 +24,7 @@ export function PaginationControls({
       >
         <ChevronLeft size={14} />
       </Button>
-      <span className="text-xs text-[#8a9095]">
+      <span className="text-xs text-brand-gray">
         Seite {page + 1} von {pageCount}
       </span>
       <Button

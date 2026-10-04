@@ -8,7 +8,7 @@ import { getCustomFields, saveCustomFieldValues } from "@/lib/api/queries";
 import type { CustomFieldDefinition, CustomFieldEntity, CustomFieldValue } from "@/lib/api/types";
 
 const selectClass =
-  "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+  "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 /** Eigene Felder (vom Admin unter Einstellungen → Eigene Felder angelegt) an
  * Kandidat bzw. Kanzlei: zeigt alle aktiven Felder und speichert die Werte. Ohne
@@ -66,7 +66,7 @@ export function CustomFieldsPanel({
           {definitions.map((definition) => {
             const value = values[definition.key] ?? null;
             return (
-              <label key={definition.id} className="block text-xs text-[#94A3B8]">
+              <label key={definition.id} className="block text-xs text-brand-muted">
                 <span className="mb-1 block">{definition.label}</span>
                 {definition.field_type === "boolean" ? (
                   <select
@@ -116,7 +116,7 @@ export function CustomFieldsPanel({
           <Button size="sm" disabled={busy} onClick={() => void handleSave()}>
             Speichern
           </Button>
-          {message && <span className="text-xs text-[#94A3B8]">{message}</span>}
+          {message && <span className="text-xs text-brand-muted">{message}</span>}
         </div>
       </CardContent>
     </Card>

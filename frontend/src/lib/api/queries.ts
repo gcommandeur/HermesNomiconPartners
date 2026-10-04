@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
 import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, OutlookStatus, BackgroundJob, CustomFieldDefinition, CustomFieldEntity, CustomFieldValue, WebhookDelivery, WebhookEndpoint, WebhookEndpointWithSecret, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, OutreachSequence, SequenceEnrollment, SequenceStepInput, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
+import type { Activity, AdminUser, ClaudeConnection, ClaudeConsentInfo, AiProposal, AiProposalStatus, AiProposalSummary, MailConnectionTestResult, MyMailAccount, MyMailAccountInput, OutlookStatus, BackgroundJob, CustomFieldDefinition, CustomFieldEntity, CustomFieldValue, WebhookDelivery, WebhookEndpoint, WebhookEndpointWithSecret, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, OutreachSequence, SequenceEnrollment, SequenceStepInput, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -755,4 +755,72 @@ export async function getOutlookStatus() {
 
 export async function disconnectOutlook() {
   return apiPost<void>("/me/outlook/disconnect", {});
+}
+
+/** Mein Postfach (persönliche IMAP/SMTP-Konten). */
+export async function getMyMailAccounts() {
+  return apiGet<MyMailAccount[]>("/me/mail-accounts", []);
+}
+
+export async function createMyMailAccount(payload: MyMailAccountInput) {
+  return apiPost<MyMailAccount>("/me/mail-accounts", payload);
+}
+
+export async function updateMyMailAccount(
+  accountId: string,
+  payload: Partial<Omit<MyMailAccountInput, "address">> & { is_active?: boolean; sync_enabled?: boolean },
+) {
+  return apiPatch<MyMailAccount>(`/me/mail-accounts/${accountId}`, payload);
+}
+
+export async function deleteMyMailAccount(accountId: string) {
+  return apiDelete(`/me/mail-accounts/${accountId}`);
+}
+
+export async function setMyDefaultSender(accountId: string) {
+  return apiPost<MyMailAccount>(`/me/mail-accounts/${accountId}/default`, {});
+}
+
+export async function testMyMailAccount(accountId: string) {
+  return apiPost<MailConnectionTestResult>(`/me/mail-accounts/${accountId}/test`, {}, 45_000);
+}
+
+export async function testMailConnection(payload: Omit<MyMailAccountInput, "address" | "label">) {
+  return apiPost<MailConnectionTestResult>("/me/mail-accounts/test", payload, 45_000);
+}
+
+/** Claude-Vorschläge: Inbox für Menschen (Freigabe/Ablehnung). */
+export async function getAiProposals(status?: AiProposalStatus) {
+  return apiGet<AiProposal[]>(`/ai-proposals${status ? `?status=${status}` : ""}`, []);
+}
+
+export async function getAiProposalSummary() {
+  return apiGet<AiProposalSummary>("/ai-proposals/summary", { enabled: false, pending: 0 });
+}
+
+export async function approveAiProposal(id: string, payload?: AiProposal["payload"]) {
+  return apiPost<AiProposal>(`/ai-proposals/${id}/approve`, payload ? { payload } : {});
+}
+
+export async function rejectAiProposal(id: string, decisionNote?: string) {
+  return apiPost<AiProposal>(`/ai-proposals/${id}/reject`, { decision_note: decisionNote ?? null });
+}
+
+/** Claude als verbundener Dienst (Hermes als OAuth-Anbieter, Zustimmung und Verwaltung). */
+export async function getClaudeConsentInfo(requestId: string) {
+  const result = await apiGet<ClaudeConsentInfo | null>(`/oauth/consent/${requestId}`, null);
+  if (!result.data) throw new Error("Die Anfrage ist abgelaufen.");
+  return { ...result, data: result.data };
+}
+
+export async function decideClaudeConsent(requestId: string, approve: boolean) {
+  return apiPost<{ redirect_url: string }>("/oauth/consent", { request_id: requestId, approve });
+}
+
+export async function getClaudeConnections() {
+  return apiGet<ClaudeConnection[]>("/oauth/connections", []);
+}
+
+export async function revokeClaudeConnection(connectionId: string) {
+  return apiDelete(`/oauth/connections/${connectionId}`);
 }

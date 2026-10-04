@@ -156,7 +156,7 @@ export function CvOutCampaignModal({
       <div className="space-y-4">
         <div className="flex items-end gap-2">
           <div className="flex-1">
-            <label className="mb-1 block text-xs text-[#94A3B8]">Radius (km)</label>
+            <label className="mb-1 block text-xs text-brand-muted">Radius (km)</label>
             <Input
               type="number"
               min={1}
@@ -175,7 +175,7 @@ export function CvOutCampaignModal({
 
         {targets !== null && (
           <>
-            <p className="flex items-center gap-1.5 text-xs text-[#94A3B8]">
+            <p className="flex items-center gap-1.5 text-xs text-brand-muted">
               <MapPinned size={13} />
               {targets.length} Kanzlei(en) im Umkreis von {radiusKm} km mit mailingfähigem Kontakt · {selectedCount} Kontakt(e) ausgewählt
             </p>
@@ -189,23 +189,23 @@ export function CvOutCampaignModal({
                         <div className="flex items-start gap-2">
                           <input
                             type="checkbox"
-                            className="mt-1 size-4 shrink-0 accent-[#1F5FA8]"
+                            className="mt-1 size-4 shrink-0 accent-brand-accent"
                             checked={allSelected}
                             onChange={() => toggleClient(client)}
                             aria-label={`Alle Kontakte von ${client.name} auswählen`}
                           />
                           <div>
                             <p className="font-semibold">{client.name}</p>
-                            <p className="mt-0.5 text-xs text-[#94A3B8]">{client.location}</p>
+                            <p className="mt-0.5 text-xs text-brand-muted">{client.location}</p>
                           </div>
                         </div>
-                        <span className="shrink-0 rounded-full bg-[#102A4C] px-2.5 py-1 text-[10px] text-[#D8DADF]">
+                        <span className="shrink-0 rounded-full bg-brand-accent-soft px-2.5 py-1 text-[10px] text-brand-platinum">
                           {client.distance_km} km
                         </span>
                       </div>
                       <div className="ml-6 space-y-1 border-t border-white/10 pt-2">
                         {client.contacts.map((contact) => (
-                          <label key={contact.id} className="flex items-center gap-2 text-xs text-[#CBD5E1]">
+                          <label key={contact.id} className="flex items-center gap-2 text-xs text-brand-soft">
                             <input
                               type="checkbox"
                               checked={selectedContactIds.has(contact.id)}
@@ -214,7 +214,7 @@ export function CvOutCampaignModal({
                             {contact.first_name} {contact.last_name}
                             {contact.role_title ? ` · ${contact.role_title}` : ""}
                             {contact.is_primary ? " · Hauptkontakt" : ""}
-                            <span className="text-[#8b9196]">({contact.email})</span>
+                            <span className="text-brand-gray">({contact.email})</span>
                           </label>
                         ))}
                       </div>
@@ -223,7 +223,7 @@ export function CvOutCampaignModal({
                 );
               })}
               {targets.length === 0 && (
-                <Card><CardContent className="py-8 text-center text-sm text-[#858b90]">
+                <Card><CardContent className="py-8 text-center text-sm text-brand-gray">
                   Keine passenden Kanzleien im Umkreis gefunden.
                 </CardContent></Card>
               )}

@@ -40,8 +40,8 @@ function LiveRankingCard() {
     <Card>
       <CardHeader>
         <div>
-          <div className="flex items-center gap-2"><Trophy size={17} className="text-[#F0B429]" /><h2 className="font-semibold">Live-Ranking</h2></div>
-          <p className="mt-1 text-xs text-[#94A3B8]">
+          <div className="flex items-center gap-2"><Trophy size={17} className="text-brand-warning" /><h2 className="font-semibold">Live-Ranking</h2></div>
+          <p className="mt-1 text-xs text-brand-muted">
             {ranking ? metricLabel(ranking.metric) : "Wird geladen…"} · {(period ?? ranking?.period) === "day" ? "heute" : "diese Woche"}
           </p>
         </div>
@@ -54,11 +54,11 @@ function LiveRankingCard() {
         {isLoading && !ranking ? (
           <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="h-10 animate-pulse rounded-lg bg-[#0D1B2E]" />
+              <div key={index} className="h-10 animate-pulse rounded-lg bg-brand-surface" />
             ))}
           </div>
         ) : entries.length === 0 ? (
-          <p className="py-6 text-center text-xs text-[#94A3B8]">Noch keine Daten für diesen Zeitraum.</p>
+          <p className="py-6 text-center text-xs text-brand-muted">Noch keine Daten für diesen Zeitraum.</p>
         ) : (
           entries.map((entry, index) => {
             const isSelf = entry.user_id === currentUserId;
@@ -67,14 +67,14 @@ function LiveRankingCard() {
                 key={entry.user_id}
                 className={cn(
                   "flex items-center gap-3 rounded-lg border p-2.5 text-xs",
-                  isSelf ? "border-[#1F5FA8]/40 bg-[#153A66]/60" : "border-white/10 bg-[#0D1B2E]/75",
+                  isSelf ? "border-brand-accent/40 bg-brand-accent-strong/60" : "border-white/10 bg-brand-surface/75",
                 )}
               >
-                <span className="w-6 shrink-0 text-center font-semibold text-[#94A3B8]">{index + 1}</span>
-                <span className={cn("min-w-0 flex-1 truncate", isSelf ? "font-semibold text-white" : "text-[#D8DADF]")}>
+                <span className="w-6 shrink-0 text-center font-semibold text-brand-muted">{index + 1}</span>
+                <span className={cn("min-w-0 flex-1 truncate", isSelf ? "font-semibold text-white" : "text-brand-platinum")}>
                   {entry.display_name}{isSelf && " (du)"}
                 </span>
-                <span className="shrink-0 font-semibold text-[#69A7EA]">{entry.value}</span>
+                <span className="shrink-0 font-semibold text-brand-accent-light">{entry.value}</span>
               </div>
             );
           })
@@ -191,11 +191,11 @@ export function DashboardCockpit({
             className={cn(
               "flex max-w-[240px] shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-[11px] lg:w-full lg:max-w-none lg:shrink lg:rounded-xl lg:text-xs",
               index === 0
-                ? "border-[#1F5FA8]/40 bg-[#153A66]/60 text-white"
-                : "border-[#D8DADF]/20 bg-[#102A4C]/55 text-[#CBD5E1]",
+                ? "border-brand-accent/40 bg-brand-accent-strong/60 text-white"
+                : "border-brand-platinum/20 bg-brand-accent-soft/55 text-brand-soft",
             )}
           >
-            <AlertTriangle size={14} className="shrink-0 text-[#D8DADF]" />
+            <AlertTriangle size={14} className="shrink-0 text-brand-platinum" />
             <span className="overflow-hidden text-ellipsis whitespace-nowrap lg:overflow-visible lg:whitespace-normal">{warning}</span>
           </div>
         ))}
@@ -206,31 +206,31 @@ export function DashboardCockpit({
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <div><div className="flex items-center gap-2"><TimerReset size={17} className="text-[#D8DADF]" /><h2 className="font-semibold">Fällig und überfällig</h2></div><p className="mt-1 text-xs text-[#94A3B8]">Konkrete nächste Schritte mit Prozessbezug</p></div>
+            <div><div className="flex items-center gap-2"><TimerReset size={17} className="text-brand-platinum" /><h2 className="font-semibold">Fällig und überfällig</h2></div><p className="mt-1 text-xs text-brand-muted">Konkrete nächste Schritte mit Prozessbezug</p></div>
             <Badge tone="amber">{cockpit.important.length} offen</Badge>
           </CardHeader>
           <CardContent className="space-y-2">
-            {cockpit.important.map((item, index) => <div key={`${item.title}-${index}`} className="flex items-center gap-3 rounded-lg border bg-[#0D1B2E]/75 p-3"><CalendarClock size={15} className="text-[#D8DADF]" /><div className="min-w-0 flex-1"><p className="text-xs font-semibold">{item.title}</p><p className="mt-1 truncate text-xs text-[#94A3B8]">{item.detail}</p></div><span className="text-[10px] text-[#A7ADB7]">{item.due_at ? formatDate(item.due_at) : "Offen"}</span></div>)}
+            {cockpit.important.map((item, index) => <div key={`${item.title}-${index}`} className="flex items-center gap-3 rounded-lg border bg-brand-surface/75 p-3"><CalendarClock size={15} className="text-brand-platinum" /><div className="min-w-0 flex-1"><p className="text-xs font-semibold">{item.title}</p><p className="mt-1 truncate text-xs text-brand-muted">{item.detail}</p></div><span className="text-[10px] text-brand-silver">{item.due_at ? formatDate(item.due_at) : "Offen"}</span></div>)}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <div><div className="flex items-center gap-2"><Flame size={17} className="text-[#69A7EA]" /><h2 className="font-semibold">Heiße Prozesse</h2></div><p className="mt-1 text-xs text-[#94A3B8]">Interview, Offer und Placement im Fokus</p></div>
+            <div><div className="flex items-center gap-2"><Flame size={17} className="text-brand-accent-light" /><h2 className="font-semibold">Heiße Prozesse</h2></div><p className="mt-1 text-xs text-brand-muted">Interview, Offer und Placement im Fokus</p></div>
             <Badge tone="blue">{cockpit.hot_processes.length} aktiv</Badge>
           </CardHeader>
           <CardContent className="space-y-2">
-            {cockpit.hot_processes.map((item, index) => <div key={`${item.title}-${index}`} className="flex items-center gap-3 rounded-lg border bg-[#0D1B2E]/75 p-3"><span className="size-2 rounded-full bg-[#1F5FA8]" /><div className="min-w-0 flex-1"><p className="text-xs font-semibold">{item.title}</p><p className="mt-1 truncate text-xs text-[#94A3B8]">{item.detail}</p></div><ArrowRight size={14} className="text-[#A7ADB7]" /></div>)}
+            {cockpit.hot_processes.map((item, index) => <div key={`${item.title}-${index}`} className="flex items-center gap-3 rounded-lg border bg-brand-surface/75 p-3"><span className="size-2 rounded-full bg-brand-accent" /><div className="min-w-0 flex-1"><p className="text-xs font-semibold">{item.title}</p><p className="mt-1 truncate text-xs text-brand-muted">{item.detail}</p></div><ArrowRight size={14} className="text-brand-silver" /></div>)}
           </CardContent>
         </Card>
       </section>
 
-      <div className="mb-3 mt-7 flex items-center gap-2"><Gauge size={16} className="text-[#69A7EA]" /><h2 className="text-sm font-semibold">Kurzüberblick</h2></div>
+      <div className="mb-3 mt-7 flex items-center gap-2"><Gauge size={16} className="text-brand-accent-light" /><h2 className="text-sm font-semibold">Kurzüberblick</h2></div>
       <section className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {quickMetrics.map(({ label, value, Icon, href }) => <Link key={label} href={href} className="block rounded-xl transition hover:ring-1 hover:ring-[#1F5FA8]/60"><Card><CardContent className="p-4"><Icon size={16} className="text-[#D8DADF]" /><p className="mt-3 text-[11px] text-[#94A3B8]">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></CardContent></Card></Link>)}
+        {quickMetrics.map(({ label, value, Icon, href }) => <Link key={label} href={href} className="block rounded-xl transition hover:ring-1 hover:ring-brand-accent/60"><Card><CardContent className="p-4"><Icon size={16} className="text-brand-platinum" /><p className="mt-3 text-[11px] text-brand-muted">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></CardContent></Card></Link>)}
       </section>
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>
-          <CardHeader><div><h2 className="font-semibold">KPI-Schnappschuss</h2><p className="mt-1 text-xs text-[#94A3B8]">Detailanalyse liegt in Analytics.</p></div></CardHeader>
+          <CardHeader><div><h2 className="font-semibold">KPI-Schnappschuss</h2><p className="mt-1 text-xs text-brand-muted">Detailanalyse liegt in Analytics.</p></div></CardHeader>
           <CardContent><WeeklyChartLoader data={chartData} /></CardContent>
         </Card>
         <LiveRankingCard />

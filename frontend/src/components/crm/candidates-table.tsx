@@ -70,11 +70,11 @@ function RollenFilter({ selected, onChange }: { selected: Rolle[]; onChange: (va
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-11 z-40 w-64 rounded-lg border border-white/10 bg-[#0D1B2E] p-1.5 shadow-2xl">
+          <div className="absolute right-0 top-11 z-40 w-64 rounded-lg border border-white/10 bg-brand-surface p-1.5 shadow-2xl">
             {selected.length > 0 && (
               <button
                 type="button"
-                className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs text-[#94A3B8] hover:bg-white/8"
+                className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs text-brand-muted hover:bg-white/8"
                 onClick={() => onChange([])}
               >
                 Auswahl zurücksetzen <X size={12} />
@@ -83,13 +83,13 @@ function RollenFilter({ selected, onChange }: { selected: Rolle[]; onChange: (va
             {ROLLE_OPTIONS.map((rolle) => (
               <label
                 key={rolle}
-                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-xs text-[#D8DADF] hover:bg-white/8"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-xs text-brand-platinum hover:bg-white/8"
               >
                 <input
                   type="checkbox"
                   checked={selected.includes(rolle)}
                   onChange={() => toggle(rolle)}
-                  className="accent-[#1F5FA8]"
+                  className="accent-brand-accent"
                 />
                 {rolleLabel(rolle)}
               </label>
@@ -133,11 +133,11 @@ function AbschluesseFilter({
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-11 z-40 w-64 rounded-lg border border-white/10 bg-[#0D1B2E] p-1.5 shadow-2xl">
+          <div className="absolute right-0 top-11 z-40 w-64 rounded-lg border border-white/10 bg-brand-surface p-1.5 shadow-2xl">
             {selected.length > 0 && (
               <button
                 type="button"
-                className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs text-[#94A3B8] hover:bg-white/8"
+                className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs text-brand-muted hover:bg-white/8"
                 onClick={() => onChange([])}
               >
                 Auswahl zurücksetzen <X size={12} />
@@ -146,13 +146,13 @@ function AbschluesseFilter({
             {ABSCHLUSSART_OPTIONS.map((abschlussart) => (
               <label
                 key={abschlussart}
-                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-xs text-[#D8DADF] hover:bg-white/8"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-xs text-brand-platinum hover:bg-white/8"
               >
                 <input
                   type="checkbox"
                   checked={selected.includes(abschlussart)}
                   onChange={() => toggle(abschlussart)}
-                  className="accent-[#1F5FA8]"
+                  className="accent-brand-accent"
                 />
                 {abschlussartLabel(abschlussart)}
               </label>
@@ -515,12 +515,12 @@ export function CandidatesTable() {
             value={plzOrt}
             onChange={(e) => setPlzOrt(e.target.value)}
             placeholder="PLZ/Ort"
-            className="h-10 w-32 rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]"
+            className="h-10 w-32 rounded-md border border-white/10 bg-brand-surface px-3 text-xs text-brand-text outline-none focus:border-brand-accent"
           />
           <select
             value={radiusKm}
             onChange={(e) => setRadiusKm(e.target.value)}
-            className="h-10 rounded-md border border-white/10 bg-[#0D1B2E] px-2 text-xs text-[#D8DADF] outline-none focus:border-[#1F5FA8]"
+            className="h-10 rounded-md border border-white/10 bg-brand-surface px-2 text-xs text-brand-platinum outline-none focus:border-brand-accent"
           >
             <option value="">Umkreis</option>
             <option value="25">25 km</option>
@@ -566,10 +566,10 @@ export function CandidatesTable() {
       )}
       <ErrorBanner message={aiError} className="mb-3" />
       {aiResults && (
-        <div className="mb-3 flex items-center justify-between rounded-lg border border-[#1F5FA8]/30 bg-[#1F5FA8]/10 p-3 text-xs text-[#CBD5E1]">
+        <div className="mb-3 flex items-center justify-between rounded-lg border border-brand-accent/30 bg-brand-accent/10 p-3 text-xs text-brand-soft">
           <span>KI-Suche aktiv: {aiResults.length} Treffer für &quot;{search}&quot;</span>
           <button
-            className="text-[#94A3B8] underline hover:text-white"
+            className="text-brand-muted underline hover:text-white"
             onClick={() => { setAiResults(null); setAiHint(null); }}
           >
             Zurück zur normalen Filterung
@@ -577,7 +577,7 @@ export function CandidatesTable() {
         </div>
       )}
       {aiHint && (
-        <div className="mb-3 rounded-lg border border-[#F0B429]/25 bg-[#F0B429]/5 p-3 text-xs text-[#F0B429]">{aiHint}</div>
+        <div className="mb-3 rounded-lg border border-brand-warning/25 bg-brand-warning/5 p-3 text-xs text-brand-warning">{aiHint}</div>
       )}
       {/* Mobile (<lg): Karten statt der 10-spaltigen Desktop-Tabelle - die
        * Tabelle bleibt unten fuer den Desktop unveraendert bestehen (siehe
@@ -592,20 +592,20 @@ export function CandidatesTable() {
             key={candidate.id}
             type="button"
             onClick={() => setQuickViewCandidateId(candidate.id)}
-            className="block w-full rounded-lg border border-white/10 bg-[#12243A] p-3 text-left active:bg-[#203A5A]/35"
+            className="block w-full rounded-lg border border-white/10 bg-brand-panel p-3 text-left active:bg-brand-hover/35"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[#D8DADF]">
+                <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-brand-platinum">
                   {candidate.candidate_number && (
-                    <span className="text-[#94A3B8]">{candidate.candidate_number}</span>
+                    <span className="text-brand-muted">{candidate.candidate_number}</span>
                   )}
                   {candidate.first_name} {candidate.last_name}
                   {candidate.has_ghosting_history && (
-                    <Ghost size={12} className="shrink-0 text-[#e4aeb4]" aria-label="Ghosting-Historie" />
+                    <Ghost size={12} className="shrink-0 text-brand-danger-soft" aria-label="Ghosting-Historie" />
                   )}
                 </p>
-                <p className="mt-0.5 truncate text-xs text-[#94A3B8]">
+                <p className="mt-0.5 truncate text-xs text-brand-muted">
                   {candidate.job_title ?? "—"} · {candidate.city ?? candidate.postal_code ?? "Region offen"}
                 </p>
               </div>
@@ -616,17 +616,17 @@ export function CandidatesTable() {
                 {candidate.rollen.map((rolle) => <Badge key={rolle} tone="blue">{rolleLabel(rolle)}</Badge>)}
                 {candidate.rollen_unbestaetigt && (
                   <span title="Titel unbestätigt - kein erkennbarer Beleg im CV">
-                    <ShieldAlert size={13} className="text-[#F0B429]" />
+                    <ShieldAlert size={13} className="text-brand-warning" />
                   </span>
                 )}
               </div>
             )}
-            <div className="mt-2 flex items-center justify-between text-[11px] text-[#8a9095]">
+            <div className="mt-2 flex items-center justify-between text-[11px] text-brand-gray">
               <span>Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</span>
               {candidate.salary_expectation && <span>{candidate.salary_expectation}</span>}
             </div>
             {candidate.search_match_fields && candidate.search_match_fields.length > 0 && (
-              <p className="mt-1.5 text-[11px] text-[#F0B429]">
+              <p className="mt-1.5 text-[11px] text-brand-warning">
                 Treffer in: {candidate.search_match_fields.map(searchFieldLabel).join(", ")}
                 {candidate.search_matched_values && candidate.search_matched_values.length > 0 && (
                   <> ({candidate.search_matched_values.join(", ")})</>
@@ -636,7 +636,7 @@ export function CandidatesTable() {
           </button>
         ))}
         {displayedCandidates.length === 0 && (
-          <p className="py-8 text-center text-xs text-[#94A3B8]">Keine Kandidaten gefunden.</p>
+          <p className="py-8 text-center text-xs text-brand-muted">Keine Kandidaten gefunden.</p>
         )}
       </div>
       <div className="hidden lg:block">
@@ -658,14 +658,14 @@ export function CandidatesTable() {
         onSort={handleSort}
       >
         {displayedCandidates.map((candidate) => (
-          <tr key={candidate.id} className="hover:bg-[#203A5A]/35">
-            <td className="px-4 py-3.5 text-xs text-[#94A3B8]">{candidate.candidate_number ?? "—"}</td>
-            <td className="px-4 py-3.5"><button type="button" onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-[#D8DADF] hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</button>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-[#e4aeb4]" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[11px] text-[#94A3B8]">Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</p>
+          <tr key={candidate.id} className="hover:bg-brand-hover/35">
+            <td className="px-4 py-3.5 text-xs text-brand-muted">{candidate.candidate_number ?? "—"}</td>
+            <td className="px-4 py-3.5"><button type="button" onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-brand-platinum hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</button>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-brand-danger-soft" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[11px] text-brand-muted">Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</p>
               {/* Nachvollziehbarkeit der Freitextsuche (Punkt 5) - nur
                * gesetzt, wenn `search` aktiv ist (siehe Backend
                * repositories/candidates.py::compute_search_match_fields). */}
               {candidate.search_match_fields && candidate.search_match_fields.length > 0 && (
-                <p className="mt-1 text-[11px] text-[#F0B429]">
+                <p className="mt-1 text-[11px] text-brand-warning">
                   Treffer in: {candidate.search_match_fields.map(searchFieldLabel).join(", ")}
                   {candidate.search_matched_values && candidate.search_matched_values.length > 0 && (
                     <> ({candidate.search_matched_values.join(", ")})</>
@@ -673,7 +673,7 @@ export function CandidatesTable() {
                 </p>
               )}
             </td>
-            <td className="px-4 py-3.5"><p>{candidate.job_title ?? "—"}</p><p className="mt-1 text-[11px] text-[#94A3B8]">{candidate.qualification ?? "Qualifikation offen"}</p></td>
+            <td className="px-4 py-3.5"><p>{candidate.job_title ?? "—"}</p><p className="mt-1 text-[11px] text-brand-muted">{candidate.qualification ?? "Qualifikation offen"}</p></td>
             <td className="px-4 py-3.5">
               {candidate.rollen && candidate.rollen.length > 0 ? (
                 <div className="flex flex-wrap items-center gap-1">
@@ -684,26 +684,26 @@ export function CandidatesTable() {
                    * fuer die Bestaetigen-/Korrigieren-Aktionen. */}
                   {candidate.rollen_unbestaetigt && (
                     <span title="Titel unbestätigt - kein erkennbarer Beleg im CV">
-                      <ShieldAlert size={13} className="text-[#F0B429]" />
+                      <ShieldAlert size={13} className="text-brand-warning" />
                     </span>
                   )}
                 </div>
               ) : (
-                <span className="text-[#94A3B8]">—</span>
+                <span className="text-brand-muted">—</span>
               )}
             </td>
-            <td className="px-4 py-3.5 text-[#CBD5E1]">{candidate.city ?? candidate.postal_code ?? "—"}</td>
+            <td className="px-4 py-3.5 text-brand-soft">{candidate.city ?? candidate.postal_code ?? "—"}</td>
             <td className="px-4 py-3.5">{candidate.salary_expectation ?? "—"}</td>
-            <td className="px-4 py-3.5"><p>{candidate.notice_period ?? "—"}</p><p className="mt-1 text-[11px] text-[#94A3B8]">{candidate.available_from ? formatDate(candidate.available_from) : "nach Absprache"}</p></td>
-            <td className="px-4 py-3.5"><div className="flex gap-1.5"><span className={`size-2 rounded-full ${candidate.cv_available ? "bg-[#A7ADB7]" : "bg-[#334155]"}`} title="CV" /><span className={`size-2 rounded-full ${candidate.short_profile ? "bg-[#1F5FA8]" : "bg-[#334155]"}`} title="Kurzprofil" /></div></td>
+            <td className="px-4 py-3.5"><p>{candidate.notice_period ?? "—"}</p><p className="mt-1 text-[11px] text-brand-muted">{candidate.available_from ? formatDate(candidate.available_from) : "nach Absprache"}</p></td>
+            <td className="px-4 py-3.5"><div className="flex gap-1.5"><span className={`size-2 rounded-full ${candidate.cv_available ? "bg-brand-silver" : "bg-[#334155]"}`} title="CV" /><span className={`size-2 rounded-full ${candidate.short_profile ? "bg-brand-accent" : "bg-[#334155]"}`} title="Kurzprofil" /></div></td>
             <td className="px-4 py-3.5"><StatusPill status={candidate.status} /></td>
-            <td className="px-4 py-3.5 text-[#CBD5E1]">{candidate.next_step ?? "Kontakt aufnehmen"}</td>
+            <td className="px-4 py-3.5 text-brand-soft">{candidate.next_step ?? "Kontakt aufnehmen"}</td>
           </tr>
         ))}
       </DataTable>
       </div>
       <PaginationControls page={displayedPage} pageCount={displayedPageCount} onChange={displayedSetPage} />
-      <p className="mt-3 text-xs text-[#8a9095]">{displayedCandidates.length} von {displayedTotal} Kandidaten</p>
+      <p className="mt-3 text-xs text-brand-gray">{displayedCandidates.length} von {displayedTotal} Kandidaten</p>
 
       <CandidateQuickViewDrawer
         candidate={quickViewCandidate}

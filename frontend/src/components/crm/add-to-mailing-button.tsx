@@ -74,12 +74,12 @@ export function AddToMailingButton({ recipient }: { recipient: MailingRecipient 
         <Modal title="Für Mailing nutzen" eyebrow={recipient.name} onClose={() => setOpen(false)}>
           <div className="space-y-4">
             {done && (
-              <div className="rounded-lg border border-[#4f8a68]/35 bg-[#244d38]/45 p-3 text-xs text-[#a9d6b8]">{done}</div>
+              <div className="rounded-lg border border-brand-success/35 bg-brand-success-bg/45 p-3 text-xs text-brand-success-text">{done}</div>
             )}
             <ErrorBanner message={error} />
             {groups.length > 0 && (
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#92979c]">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-gray">
                   Zu bestehender Gruppe hinzufügen
                 </p>
                 <div className="max-h-52 space-y-1.5 overflow-y-auto">
@@ -89,17 +89,17 @@ export function AddToMailingButton({ recipient }: { recipient: MailingRecipient 
                       type="button"
                       disabled={busy}
                       onClick={() => addToExisting(group)}
-                      className="flex w-full items-center justify-between rounded-md border border-white/10 bg-[#0D1B2E] px-3 py-2 text-left text-xs hover:border-[#1F5FA8]/50 disabled:opacity-50"
+                      className="flex w-full items-center justify-between rounded-md border border-white/10 bg-brand-surface px-3 py-2 text-left text-xs hover:border-brand-accent/50 disabled:opacity-50"
                     >
                       <span>{group.name}</span>
-                      <span className="text-[#8b9196]">{group.recipients.length} Empfänger</span>
+                      <span className="text-brand-gray">{group.recipients.length} Empfänger</span>
                     </button>
                   ))}
                 </div>
               </div>
             )}
             <div className="border-t border-white/10 pt-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#92979c]">Neue Gruppe anlegen</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-gray">Neue Gruppe anlegen</p>
               <div className="flex gap-2">
                 <Input placeholder="Name der Gruppe" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} />
                 <Button size="sm" disabled={busy || !newGroupName.trim()} onClick={createNew}>Anlegen</Button>

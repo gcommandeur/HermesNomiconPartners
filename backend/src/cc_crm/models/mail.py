@@ -26,6 +26,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    true,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -135,6 +136,20 @@ class MailAccount(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     graph_calendar_delta_link: Mapped[str | None] = mapped_column(Text)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+
+    # "Mein Postfach" (persoenliches Konto): Besitzer. NULL = gemeinsames
+    # Firmenpostfach (nur Admins verwalten, Standard-Absender fuer alle). Ein
+    # persoenliches Konto darf NUR sein Besitzer zum Senden nutzen und sein
+    # Posteingang ist nur fuer ihn lesbar - weder andere Nutzer noch Admins.
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL", use_alter=True), index=True
+    )
+    # Ob der Posteingang abgerufen und mit Kandidaten/Kontakten abgeglichen wird.
+    # Bestand = true; persoenliche Konten starten mit false (nur Versand), weil
+    # sonst der gesamte private Posteingang im CRM landen wuerde.
+    sync_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, server_default=true()
+    )
 
     # Standard-Absender fuer den CV-OUT-Versand an Kanzleien. Bewusst ein
     # umschaltbares DB-Flag statt einer fest verdrahteten Adresse, damit die

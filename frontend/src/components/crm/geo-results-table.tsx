@@ -195,8 +195,8 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
     }
   }
 
-  const selectClass = "h-9 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-2.5 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
-  const labelClass = "mb-1 block text-[10px] uppercase tracking-wider text-[#94A3B8]";
+  const selectClass = "h-9 w-full rounded-md border border-white/10 bg-brand-surface px-2.5 text-xs text-brand-text outline-none focus:border-brand-accent";
+  const labelClass = "mb-1 block text-[10px] uppercase tracking-wider text-brand-muted";
 
   const allVisibleSelected = clientPagination.pageItems.length > 0 && clientPagination.pageItems.every((item) => selectedIds.has(item.id));
 
@@ -212,7 +212,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
        * eine separat aktivierbare Zusatzoption ("Umkreissuche aktivieren"). */}
       <Card className="mb-3">
         <CardContent>
-          <div className="mb-3 flex items-center gap-2"><MapPin size={15} className="text-[#D8DADF]" /><h2 className="text-sm font-semibold">Ort / PLZ</h2></div>
+          <div className="mb-3 flex items-center gap-2"><MapPin size={15} className="text-brand-platinum" /><h2 className="text-sm font-semibold">Ort / PLZ</h2></div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="sm:col-span-2">
               <label className={labelClass}>Ort oder PLZ suchen</label>
@@ -223,7 +223,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
               />
             </div>
             <div className="flex items-end pb-0.5">
-              <label className="flex items-center gap-2 text-xs text-[#CBD5E1]">
+              <label className="flex items-center gap-2 text-xs text-brand-soft">
                 <input type="checkbox" checked={radiusEnabled} onChange={(e) => setRadiusEnabled(e.target.checked)} />
                 Umkreissuche aktivieren
               </label>
@@ -235,7 +235,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
               </div>
             )}
             {radiusEnabled && !resolvedCenter && (
-              <div className="flex items-end pb-0.5 text-xs text-[#8a9095]">
+              <div className="flex items-end pb-0.5 text-xs text-brand-gray">
                 {geocoding
                   ? "Ort wird aufgelöst…"
                   : placeQuery.trim()
@@ -248,10 +248,10 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
       </Card>
 
       {selectedIds.size > 0 && (
-        <div className="mb-3 flex items-center justify-between rounded-lg border border-[#1F5FA8]/30 bg-[#1F5FA8]/10 p-3 text-xs text-[#CBD5E1]">
+        <div className="mb-3 flex items-center justify-between rounded-lg border border-brand-accent/30 bg-brand-accent/10 p-3 text-xs text-brand-soft">
           <span>{selectedIds.size} ausgewählt</span>
           <div className="flex items-center gap-2">
-            <button className="text-[#94A3B8] underline hover:text-white" onClick={() => setSelectedIds(new Set())}>Auswahl aufheben</button>
+            <button className="text-brand-muted underline hover:text-white" onClick={() => setSelectedIds(new Set())}>Auswahl aufheben</button>
             <Button size="sm" onClick={() => { setModalOpen(true); setDone(null); setError(null); }}>
               <MailPlus size={14} />Auswahl ins Mailing übernehmen
             </Button>
@@ -261,7 +261,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
 
       <Card className="mb-3">
         <CardContent>
-          <div className="mb-3 flex items-center gap-2"><SlidersHorizontal size={15} className="text-[#D8DADF]" /><h2 className="text-sm font-semibold">Kanzleien-Filter</h2></div>
+          <div className="mb-3 flex items-center gap-2"><SlidersHorizontal size={15} className="text-brand-platinum" /><h2 className="text-sm font-semibold">Kanzleien-Filter</h2></div>
           <div className="space-y-3">
             <FilterBar placeholder="Name oder Tag suchen" value={clientSearch} onChange={setClientSearch} />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -280,7 +280,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
                 </select>
               </div>
               <div className="flex items-end pb-0.5">
-                <label className="flex items-center gap-2 text-xs text-[#CBD5E1]">
+                <label className="flex items-center gap-2 text-xs text-brand-soft">
                   <input type="checkbox" checked={activeVacanciesOnly} onChange={(e) => setActiveVacanciesOnly(e.target.checked)} />
                   Nur mit aktiven Vakanzen
                 </label>
@@ -290,7 +290,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
         </CardContent>
       </Card>
 
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Kanzleien ({clientResults.length})</h3>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-muted">Kanzleien ({clientResults.length})</h3>
       {/* Mobile (<lg): Karten statt der 7-spaltigen Tabelle, siehe
        * candidates-table.tsx fuer denselben Fix + Begruendung (Nutzer-
        * Feedback "mobile Version nicht passend") - Checkbox-Auswahl fuer
@@ -299,7 +299,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
         {clientPagination.pageItems.map((item) => (
           <label
             key={item.id}
-            className="flex items-start gap-3 rounded-lg border border-white/10 bg-[#12243A] p-3"
+            className="flex items-start gap-3 rounded-lg border border-white/10 bg-brand-panel p-3"
           >
             <input
               type="checkbox"
@@ -310,29 +310,29 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
-                <p className="min-w-0 truncate text-sm font-semibold text-[#D8DADF]">{item.name}</p>
+                <p className="min-w-0 truncate text-sm font-semibold text-brand-platinum">{item.name}</p>
                 <StatusPill status={item.status} />
               </div>
-              <p className="mt-0.5 truncate text-xs text-[#94A3B8]">
+              <p className="mt-0.5 truncate text-xs text-brand-muted">
                 {item.location}{item.postal_code ? ` · ${item.postal_code}` : ""}
               </p>
               {item.tags.length > 0 && (
                 <div className="mt-1.5 flex flex-wrap gap-1">
-                  {item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-[#102A4C]/70 px-2 py-1 text-[10px] text-[#CBD5E1]">{tag}</span>)}
+                  {item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[10px] text-brand-soft">{tag}</span>)}
                 </div>
               )}
-              <p className="mt-1.5 text-[11px] text-[#8a9095]">{item.mailing_ready ? "übertragbar" : "gesperrt"}</p>
+              <p className="mt-1.5 text-[11px] text-brand-gray">{item.mailing_ready ? "übertragbar" : "gesperrt"}</p>
             </div>
           </label>
         ))}
         {clientResults.length === 0 && (
-          <p className="py-8 text-center text-xs text-[#8a9095]">Keine Ergebnisse.</p>
+          <p className="py-8 text-center text-xs text-brand-gray">Keine Ergebnisse.</p>
         )}
       </div>
       <div className="hidden lg:block">
         <DataTable headers={["", "Name", "Standort", "PLZ", "Status", "Tags", "Mailing"]}>
           {clientPagination.pageItems.map((item) => (
-            <tr key={item.id} className="hover:bg-[#203A5A]/35">
+            <tr key={item.id} className="hover:bg-brand-hover/35">
               <td className="w-8 px-4 py-3.5">
                 <input
                   type="checkbox"
@@ -341,22 +341,22 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
                   aria-label={`${item.name} auswählen`}
                 />
               </td>
-              <td className="px-4 py-3.5 font-semibold text-[#D8DADF]">{item.name}</td>
+              <td className="px-4 py-3.5 font-semibold text-brand-platinum">{item.name}</td>
               <td className="px-4 py-3.5">{item.location}</td>
               <td className="px-4 py-3.5">{item.postal_code ?? "—"}</td>
               <td className="px-4 py-3.5"><StatusPill status={item.status} /></td>
-              <td className="px-4 py-3.5"><div className="flex flex-wrap gap-1">{item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-[#102A4C]/70 px-2 py-1 text-[10px] text-[#CBD5E1]">{tag}</span>)}</div></td>
+              <td className="px-4 py-3.5"><div className="flex flex-wrap gap-1">{item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[10px] text-brand-soft">{tag}</span>)}</div></td>
               <td className="px-4 py-3.5">{item.mailing_ready ? "übertragbar" : "gesperrt"}</td>
             </tr>
           ))}
           {clientResults.length === 0 && (
-            <tr><td colSpan={7} className="px-4 py-8 text-center text-xs text-[#8a9095]">Keine Ergebnisse.</td></tr>
+            <tr><td colSpan={7} className="px-4 py-8 text-center text-xs text-brand-gray">Keine Ergebnisse.</td></tr>
           )}
         </DataTable>
       </div>
       <PaginationControls page={clientPagination.page} pageCount={clientPagination.pageCount} onChange={clientPagination.setPage} />
       {clientPagination.pageItems.length > 0 && (
-        <label className="mt-2 flex items-center gap-1.5 text-xs text-[#8a9095]">
+        <label className="mt-2 flex items-center gap-1.5 text-xs text-brand-gray">
           <input type="checkbox" checked={allVisibleSelected} onChange={() => toggleAllVisible(clientPagination.pageItems)} />
           Alle auf dieser Seite auswählen
         </label>
@@ -365,13 +365,13 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
       {modalOpen && (
         <Modal title="Auswahl ins Mailing übernehmen" eyebrow={`${selectedIds.size} Empfänger:innen`} onClose={() => setModalOpen(false)}>
           <div className="space-y-4">
-            {done && <div className="rounded-lg border border-[#4f8a68]/35 bg-[#244d38]/45 p-3 text-xs text-[#a9d6b8]">{done}</div>}
+            {done && <div className="rounded-lg border border-brand-success/35 bg-brand-success-bg/45 p-3 text-xs text-brand-success-text">{done}</div>}
             <ErrorBanner message={error} />
             <div>
-              <label className="mb-1 block text-xs text-[#94A3B8]">Name der neuen Gruppe</label>
+              <label className="mb-1 block text-xs text-brand-muted">Name der neuen Gruppe</label>
               <Input placeholder="z.B. Umkreis Stuttgart Juli" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
             </div>
-            <p className="text-xs text-[#8b9196]">
+            <p className="text-xs text-brand-gray">
               {selectedItems.filter((item) => item.email).length} von {selectedItems.length} ausgewählten Einträgen haben eine E-Mail-Adresse.
             </p>
             <div className="flex justify-end">

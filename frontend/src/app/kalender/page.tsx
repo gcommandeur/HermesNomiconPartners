@@ -27,7 +27,7 @@ import type { CalendarEvent } from "@/lib/api/types";
 type ViewMode = "month" | "week";
 type OwnerFilter = "me" | "all" | string;
 
-const selectClass = "h-9 rounded-md border border-white/10 bg-[#0D1B2E] px-2 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const selectClass = "h-9 rounded-md border border-white/10 bg-brand-surface px-2 text-xs text-brand-text outline-none focus:border-brand-accent";
 
 export default function CalendarPage() {
   const { data: userData, isLoading: userLoading, error: userError } = useCurrentUser();
@@ -110,7 +110,7 @@ export default function CalendarPage() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+          <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
         ))}
       </div>
     );
@@ -137,7 +137,7 @@ export default function CalendarPage() {
           <Button size="sm" variant="outline" onClick={() => navigate(1)} aria-label="Weiter">
             <ChevronRight size={14} />
           </Button>
-          <span className="ml-2 text-sm font-semibold text-[#F8FAFC]">{formatMonthLabel(currentDate)}</span>
+          <span className="ml-2 text-sm font-semibold text-brand-text">{formatMonthLabel(currentDate)}</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -156,15 +156,15 @@ export default function CalendarPage() {
               ))}
             </select>
           )}
-          <div className="flex rounded-lg border border-white/10 bg-[#0D1B2E] p-1 text-xs">
+          <div className="flex rounded-lg border border-white/10 bg-brand-surface p-1 text-xs">
             <button
-              className={`rounded-md px-3 py-1.5 ${view === "month" ? "bg-[#153A66] text-white" : "text-[#94A3B8]"}`}
+              className={`rounded-md px-3 py-1.5 ${view === "month" ? "bg-brand-accent-strong text-white" : "text-brand-muted"}`}
               onClick={() => setView("month")}
             >
               Monat
             </button>
             <button
-              className={`rounded-md px-3 py-1.5 ${view === "week" ? "bg-[#153A66] text-white" : "text-[#94A3B8]"}`}
+              className={`rounded-md px-3 py-1.5 ${view === "week" ? "bg-brand-accent-strong text-white" : "text-brand-muted"}`}
               onClick={() => setView("week")}
             >
               Woche
@@ -173,12 +173,12 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      <div className="mb-4 flex gap-3 text-[11px] text-[#94A3B8]">
+      <div className="mb-4 flex gap-3 text-[11px] text-brand-muted">
         {(Object.entries(EVENT_TYPE_LABEL) as [keyof typeof EVENT_TYPE_LABEL, string][]).map(([key, label]) => (
           <span key={key} className="flex items-center gap-1.5">
             <span
               className={`size-2 rounded-full ${
-                key === "interview" ? "bg-[#1F5FA8]" : key === "quali_call" ? "bg-[#4f8a68]" : "bg-[#8a9095]"
+                key === "interview" ? "bg-brand-accent" : key === "quali_call" ? "bg-brand-success" : "bg-brand-gray"
               }`}
             />
             {label}
@@ -189,7 +189,7 @@ export default function CalendarPage() {
       {eventsLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="h-20 animate-pulse rounded-lg bg-[#0D1B2E]" />
+            <div key={index} className="h-20 animate-pulse rounded-lg bg-brand-surface" />
           ))}
         </div>
       ) : (

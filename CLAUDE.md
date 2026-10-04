@@ -55,7 +55,7 @@ Hermes ist ein Recruiting-CRM fuer Steuer-/Rechts-Kanzleien: Kandidaten, Kanzlei
 - Wichtige Fachbereiche: `candidates`, `clients` (Kanzleien), `submissions` + `recruiting` (Prozesse mit Stufen qualification_call -> cv_in -> cv_out -> interview -> offer -> placement, dazu Feedback/Interview/Offer/Placement/Fee), `approvals` + `invoices` (Freigabe-Inbox, Rechnungsstatus), `notes`, `sourcing` (Verzeichnis-/Team-Seiten-Suche mit Umkreis), `geo` (PLZ-Koordinaten, Umkreissuche), `mail_*`, `kpi_scoring`, `operational` (Cockpit/Uebersicht).
 - Auth: Login mit Passwort + E-Mail-2FA-Code; `api/dependencies.py` hat `CurrentUser`, `AdminUser` und die Zugriffsgrenzen (siehe unten).
 - Tests: `backend/tests/` (pytest, SQLite im Speicher, Fixture `client` = angemeldeter Nicht-Admin). Pruefen mit `ruff check src tests`, `mypy src`, `pytest`.
-- Migrationen: `backend/alembic/versions/`, aktueller Head `a3e5c7b9d1f2` (api_keys.scope). Neue Migration immer auf einer KOPIE der lokalen DB per upgrade -> downgrade -> upgrade pruefen.
+- Migrationen: `backend/alembic/versions/`, aktueller Head `c1f5a9b3d7e8` (oauth_*). Neue Migration immer auf einer KOPIE der lokalen DB per upgrade -> downgrade -> upgrade pruefen.
 
 **Frontend** (`frontend/`, Next.js 15 App Router, TypeScript, Tailwind, pnpm):
 - Seiten in `frontend/src/app/*` (z.B. `kandidaten`, `kanzleien`, `prozesse`, `sourcing`, `freigaben`, `geschaeftsfuehrung`, `einstellungen/*`), Komponenten in `src/components/crm/*`, API-Zugriff in `src/lib/api/` (`queries.ts`, `hooks.ts` mit SWR, `types.ts`). Browser-Aufrufe laufen ueber `/api/proxy/...`, das den Login-Cookie serverseitig anhaengt.
@@ -83,8 +83,8 @@ Hermes ist ein Recruiting-CRM fuer Steuer-/Rechts-Kanzleien: Kandidaten, Kanzlei
 ## Cloud-/Handy-Workflow
 
 Der Nutzer arbeitet auch rein vom Handy ueber Claude-Code-Cloud-Sitzungen. Dafuer gilt:
-- Cloud- und Laptop-Sitzungen arbeiten beide auf dem Branch `entwicklung`, **nie direkt auf `main`** (`main` deployt automatisch nach DigitalOcean; Pushes darauf sind in `.claude/settings.json` gesperrt). Ablauf: `git fetch`, `git pull --rebase origin entwicklung`, `docs/PROJEKT_STAND.md` lesen, umsetzen, Pruefbefehle ausfuehren (`pytest`, `ruff check`, `mypy`, `pnpm lint/typecheck/build`), Protokoll in `docs/PROJEKT_STAND.md` ergaenzen, auf `entwicklung` pushen, CI-Ergebnis abwarten. Den Merge nach `main` (Pull Request `entwicklung` -> `main`) macht eine Sitzung nur auf ausdrueckliche Anweisung des Nutzers.
-- `.claude/settings.json` erlaubt die Pruefbefehle und das Pushen von `claude/*`-Branches ohne Rueckfrage; Force-Push, `reset --hard` und `branch -D` sind gesperrt. Der Start-Hook `.claude/hooks/cloud-setup.sh` installiert die Abhaengigkeiten (nur in der Cloud).
+- Es gibt nur zwei Branches (`entwicklung`, `main`, keine weiteren anlegen). Cloud- und Laptop-Sitzungen arbeiten beide auf `entwicklung`, **nie direkt auf `main`** (`main` deployt automatisch nach DigitalOcean; Pushes darauf sind in `.claude/settings.json` gesperrt). Ablauf: `git fetch`, `git pull --rebase origin entwicklung`, `docs/PROJEKT_STAND.md` lesen, umsetzen, Pruefbefehle ausfuehren (`pytest`, `ruff check`, `mypy`, `pnpm lint/typecheck/build`), Protokoll in `docs/PROJEKT_STAND.md` ergaenzen, auf `entwicklung` pushen, CI-Ergebnis abwarten. Den Merge nach `main` (Pull Request `entwicklung` -> `main`) macht eine Sitzung nur auf ausdrueckliche Anweisung des Nutzers.
+- `.claude/settings.json` erlaubt die Pruefbefehle und das Pushen von `entwicklung` ohne Rueckfrage; Force-Push, `reset --hard` und `branch -D` sind gesperrt. Der Start-Hook `.claude/hooks/cloud-setup.sh` installiert die Abhaengigkeiten (nur in der Cloud).
 - Parallel arbeiten Cloud und Laptop an derselben Stelle: vorher `git fetch` und `origin/main` mergen; bei Migrationen vor dem Commit `alembic heads` pruefen (es darf nur EINEN Head geben).
 - Nur am Laptop moeglich: Produktions-Skripte, DigitalOcean-Konsole, Klicktests mit echtem Login.
 

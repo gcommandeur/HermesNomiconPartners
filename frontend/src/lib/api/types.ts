@@ -1301,3 +1301,72 @@ export interface CustomFieldDefinition {
   sort_order: number;
   is_active: boolean;
 }
+
+/** "Mein Postfach": persönliches IMAP/SMTP-Konto des angemeldeten Nutzers. */
+export interface MyMailAccount extends MailAccount {
+  sync_enabled: boolean;
+  is_default_sender: boolean;
+}
+
+export interface MyMailAccountInput {
+  address: string;
+  label: string;
+  imap_host: string;
+  imap_port: number;
+  imap_use_ssl: boolean;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_use_ssl: boolean;
+  username: string;
+  password: string;
+}
+
+export interface MailConnectionTestResult {
+  imap_ok: boolean;
+  imap_error: string | null;
+  smtp_ok: boolean;
+  smtp_error: string | null;
+}
+
+/** Claude-Vorschläge (Arbeitsplan 2, Q3): Claude bereitet vor, ein Mensch gibt frei. */
+export type AiProposalKind = "note" | "task" | "mail_draft";
+export type AiProposalStatus = "pending" | "approved" | "rejected";
+
+export interface AiProposal {
+  id: string;
+  kind: AiProposalKind;
+  status: AiProposalStatus;
+  target_type: "candidate" | "client" | "contact" | null;
+  target_id: string | null;
+  target_label: string | null;
+  /** Empfänger eines Mail-Entwurfs - stammt aus dem Datensatz, nie von Claude. */
+  recipient_email: string | null;
+  payload: { text?: string; title?: string; description?: string; due_at?: string; subject?: string; body?: string };
+  created_by_user_id: string;
+  created_by_name: string | null;
+  decided_by_user_id: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  result_entity_type: string | null;
+  result_entity_id: string | null;
+  created_at: string;
+}
+
+export interface AiProposalSummary {
+  enabled: boolean;
+  pending: number;
+}
+
+export interface ClaudeConsentInfo {
+  client_name: string;
+  redirect_host: string;
+  scope: string;
+  user_email: string;
+}
+
+export interface ClaudeConnection {
+  id: string;
+  client_name: string;
+  created_at: string;
+  last_used_at: string | null;
+}

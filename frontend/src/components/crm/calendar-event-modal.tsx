@@ -14,9 +14,9 @@ import { getSubmissions } from "@/lib/api/queries";
 import { formatDate } from "@/lib/utils";
 import type { AdminUser, CalendarEvent, CalendarEventType } from "@/lib/api/types";
 
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
-const textareaClass = "min-h-20 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
-const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const labelClass = "mb-1 block text-xs text-brand-muted";
+const textareaClass = "min-h-20 w-full rounded-md border border-white/10 bg-brand-surface p-3 text-sm text-brand-text outline-none focus:border-brand-accent";
+const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 const EVENT_TYPE_OPTIONS: { value: CalendarEventType; label: string }[] = [
   { value: "interview", label: "Interview" },
@@ -256,7 +256,7 @@ export function CalendarEventModal({
     >
       <form className="space-y-4" onSubmit={handleSubmit}>
         {event?.source_interview_id && (
-          <div className="flex items-center gap-2 rounded-lg border border-[#1F5FA8]/30 bg-[#1F5FA8]/10 p-2.5 text-xs text-[#c5dcfa]">
+          <div className="flex items-center gap-2 rounded-lg border border-brand-accent/30 bg-brand-accent/10 p-2.5 text-xs text-brand-info">
             <Link2 size={13} className="shrink-0" />
             <span>Automatisch aus Interview verknüpft.</span>
             {event.candidate_id && (
@@ -395,7 +395,7 @@ export function CalendarEventModal({
         </div>
 
         <div className="space-y-3 rounded-lg border border-white/10 p-3">
-          <p className="text-xs font-semibold text-[#F8FAFC]">Einladung per Outlook (optional)</p>
+          <p className="text-xs font-semibold text-brand-text">Einladung per Outlook (optional)</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelClass}>E-Mail des Eingeladenen</label>
@@ -417,7 +417,7 @@ export function CalendarEventModal({
           </div>
           {form.attendee_email.trim() && (
             <>
-              <label className="flex items-center gap-2 text-sm text-[#F8FAFC]">
+              <label className="flex items-center gap-2 text-sm text-brand-text">
                 <input
                   type="checkbox"
                   checked={form.online_meeting}
@@ -433,18 +433,18 @@ export function CalendarEventModal({
                   onChange={(e) => set("invite_message", e.target.value)}
                 />
               </div>
-              <p className="text-xs text-[#94A3B8]">
+              <p className="text-xs text-brand-muted">
                 Beim Speichern geht die Einladung sofort aus deinem Outlook raus (Voraussetzung: Microsoft-Anmeldung).
               </p>
             </>
           )}
           {event?.attendee_email && (
-            <p className="text-xs text-[#94A3B8]">
+            <p className="text-xs text-brand-muted">
               Antwort: {RESPONSE_LABELS[event.attendee_response ?? "none"] ?? event.attendee_response}
               {event.online_meeting_url && (
                 <>
                   {" · "}
-                  <a href={event.online_meeting_url} target="_blank" rel="noreferrer" className="text-[#7FB2E5] underline">
+                  <a href={event.online_meeting_url} target="_blank" rel="noreferrer" className="text-brand-accent-light underline">
                     Teams-Link öffnen
                   </a>
                 </>

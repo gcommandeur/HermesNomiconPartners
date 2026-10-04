@@ -52,6 +52,14 @@ from cc_crm.services.storage import delete_document_bytes, save_document_bytes
 
 TEMPLATE_PATH = Path(__file__).resolve().parents[3] / "templates" / "anonymes_profil_master.docx"
 
+
+def _template_path() -> Path:
+    """Briefkopf-Vorlage: CC_CRM_PROFILE_TEMPLATE_PATH (Firmenschicht) oder die mitgelieferte."""
+    from cc_crm.core.config import get_settings
+
+    configured = get_settings().profile_template_path
+    return Path(configured) if configured else TEMPLATE_PATH
+
 # Eigener document_type (siehe models/operational.py::Document), damit das
 # automatisch abgelegte anonyme Profil eindeutig von einem hochgeladenen CV
 # ("cv") oder sonstigen Dokumenten unterscheidbar bleibt.
@@ -451,7 +459,7 @@ def generate_profile_docx(candidate: Candidate) -> bytes:
         )
     parsed = _parse_short_profile(candidate.short_profile)
 
-    doc = Document(str(TEMPLATE_PATH))
+    doc = Document(str(_template_path()))
 
     number = candidate.candidate_number or parsed.get("candidate_number") or str(candidate.id)
     label = _header_label(candidate)

@@ -35,7 +35,7 @@ export function ApprovalPendingNotice({ entityType, entityId }: { entityType: En
       {pending.map((request) => (
         <p
           key={request.id}
-          className="flex items-start gap-2 rounded-md border border-[#F0B429]/30 bg-[#F0B429]/10 px-3 py-2 text-xs text-[#F0B429]"
+          className="flex items-start gap-2 rounded-md border border-brand-warning/30 bg-brand-warning/10 px-3 py-2 text-xs text-brand-warning"
         >
           <Hourglass size={13} className="mt-0.5 shrink-0" />
           {describe(request)}

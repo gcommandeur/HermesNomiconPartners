@@ -14,7 +14,7 @@ import { formatDateTime } from "@/lib/utils";
 import type { Candidate } from "@/lib/api/types";
 
 const selectClass =
-  "h-9 w-full rounded-md border border-white/10 bg-[#071426] px-2 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+  "h-9 w-full rounded-md border border-white/10 bg-brand-sidebar px-2 text-xs text-brand-text outline-none focus:border-brand-accent";
 
 /** Loeschanfragen-Nachverfolgung (Art. 17 DSGVO, Punkt 3 des Auftrags "5
  * Hoch-Punkte umsetzen") - bewusst NUR eine Nachverfolgung UM die
@@ -104,7 +104,7 @@ export default function DeletionRequestsPage() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+          <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
         ))}
       </div>
     );
@@ -116,8 +116,8 @@ export default function DeletionRequestsPage() {
         <PageHeader eyebrow="Hermes" title="Löschanfragen" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <ShieldOff size={28} className="text-[#94A3B8]" />
-            <p className="text-sm font-semibold text-[#F8FAFC]">Nur für Admins zugänglich</p>
+            <ShieldOff size={28} className="text-brand-muted" />
+            <p className="text-sm font-semibold text-brand-text">Nur für Admins zugänglich</p>
           </CardContent>
         </Card>
       </>
@@ -174,12 +174,12 @@ export default function DeletionRequestsPage() {
         {isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="h-16 animate-pulse rounded-lg bg-[#0D1B2E]" />
+              <div key={index} className="h-16 animate-pulse rounded-lg bg-brand-surface" />
             ))}
           </div>
         ) : requests.length === 0 ? (
           <Card>
-            <CardContent className="py-12 text-center text-xs text-[#94A3B8]">
+            <CardContent className="py-12 text-center text-xs text-brand-muted">
               Keine offenen Löschanfragen.
             </CardContent>
           </Card>
@@ -192,21 +192,21 @@ export default function DeletionRequestsPage() {
                 <Card key={request.id}>
                   <CardContent className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-[#F8FAFC]">
+                      <p className="font-semibold text-brand-text">
                         {candidateName}
                         {request.candidate_number ? ` (Nr. ${request.candidate_number})` : ""}
                       </p>
-                      <p className="mt-1 text-xs text-[#94A3B8]">
+                      <p className="mt-1 text-xs text-brand-muted">
                         Angefragt am {formatDateTime(request.requested_at)} via {request.requested_via}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right text-xs">
-                        <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">Deadline</p>
-                        <p className={overdue ? "font-semibold text-red-400" : "text-[#F8FAFC]"}>
+                        <p className="text-[10px] uppercase tracking-wider text-brand-muted">Deadline</p>
+                        <p className={overdue ? "font-semibold text-red-400" : "text-brand-text"}>
                           {formatDateTime(request.deadline)}
                         </p>
-                        <p className={overdue ? "font-semibold text-red-400" : "text-[#94A3B8]"}>
+                        <p className={overdue ? "font-semibold text-red-400" : "text-brand-muted"}>
                           {remainingText}
                         </p>
                       </div>

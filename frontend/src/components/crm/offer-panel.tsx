@@ -7,9 +7,9 @@ import { ErrorBanner } from "@/components/crm/error-banner";
 import { createOffer, deleteOffer, getOffers, updateOffer } from "@/lib/api/queries";
 import type { Offer, OfferStatus } from "@/lib/api/types";
 
-const labelClass = "mb-1 block text-xs text-[#94A3B8]";
-const textareaClass = "min-h-16 w-full rounded-md border border-white/10 bg-[#0D1B2E] p-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
-const selectClass = "h-10 w-full rounded-md border border-white/10 bg-[#0D1B2E] px-3 text-sm text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const labelClass = "mb-1 block text-xs text-brand-muted";
+const textareaClass = "min-h-16 w-full rounded-md border border-white/10 bg-brand-surface p-3 text-sm text-brand-text outline-none focus:border-brand-accent";
+const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 const STATUS_OPTIONS: { value: OfferStatus; label: string }[] = [
   { value: "draft", label: "Entwurf" },
@@ -124,7 +124,7 @@ export function OfferPanel({ submissionId }: { submissionId: string }) {
     return (
       <div className="space-y-2">
         {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+          <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
         ))}
       </div>
     );
@@ -132,7 +132,7 @@ export function OfferPanel({ submissionId }: { submissionId: string }) {
 
   return (
     <div>
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Angebot</p>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-muted">Angebot</p>
       <ErrorBanner message={message} className="mb-3" />
       <form className="space-y-3" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

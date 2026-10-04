@@ -116,10 +116,10 @@ export function DashboardTodo({ items }: { items: CockpitItem[] }) {
       <CardHeader>
         <div>
           <div className="flex items-center gap-2">
-            <ListTodo size={17} className="text-[#69A7EA]" />
+            <ListTodo size={17} className="text-brand-accent-light" />
             <h2 className="font-semibold">To-Do</h2>
           </div>
-          <p className="mt-1 text-xs text-[#94A3B8]">Offene Aufgaben aus Postfach-Antworten und Nachfass-Terminen</p>
+          <p className="mt-1 text-xs text-brand-muted">Offene Aufgaben aus Postfach-Antworten und Nachfass-Terminen</p>
         </div>
         <Badge tone="amber">{rows.length} offen</Badge>
       </CardHeader>
@@ -130,18 +130,18 @@ export function DashboardTodo({ items }: { items: CockpitItem[] }) {
           const isScheduling = schedulingId === taskId;
           const rowError = errorById[taskId];
           return (
-            <div key={taskId} className="rounded-lg border bg-[#0D1B2E]/75 p-3">
+            <div key={taskId} className="rounded-lg border bg-brand-surface/75 p-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   {row.candidate_id ? (
-                    <Link href={`/kandidaten/${row.candidate_id}`} className="text-xs font-semibold text-[#69A7EA] hover:underline">
+                    <Link href={`/kandidaten/${row.candidate_id}`} className="text-xs font-semibold text-brand-accent-light hover:underline">
                       {row.title}
                     </Link>
                   ) : (
                     <p className="text-xs font-semibold">{row.title}</p>
                   )}
-                  <p className="mt-1 truncate text-xs text-[#94A3B8]">{row.detail}</p>
-                  <p className="mt-1 text-[10px] text-[#A7ADB7]">{row.due_at ? formatDate(row.due_at) : "Kein Fälligkeitsdatum"}</p>
+                  <p className="mt-1 truncate text-xs text-brand-muted">{row.detail}</p>
+                  <p className="mt-1 text-[10px] text-brand-silver">{row.due_at ? formatDate(row.due_at) : "Kein Fälligkeitsdatum"}</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">

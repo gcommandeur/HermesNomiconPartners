@@ -60,7 +60,7 @@ export default function HintergrundjobsPage() {
   }
 
   if (meLoading) {
-    return <div className="h-16 animate-pulse rounded-lg bg-[#0D1B2E]" />;
+    return <div className="h-16 animate-pulse rounded-lg bg-brand-surface" />;
   }
 
   if (!isAdmin) {
@@ -68,7 +68,7 @@ export default function HintergrundjobsPage() {
       <>
         <PageHeader eyebrow="Einstellungen" title="Hintergrundjobs" />
         <Card>
-          <CardContent className="flex items-center gap-3 text-sm text-[#94A3B8]">
+          <CardContent className="flex items-center gap-3 text-sm text-brand-muted">
             <ShieldOff size={18} /> Nur für Admins zugänglich.
           </CardContent>
         </Card>
@@ -79,7 +79,7 @@ export default function HintergrundjobsPage() {
   return (
     <>
       <PageHeader eyebrow="Einstellungen" title="Hintergrundjobs" />
-      <p className="mb-5 max-w-3xl text-sm text-[#94A3B8]">
+      <p className="mb-5 max-w-3xl text-sm text-brand-muted">
         Aufgaben, die im Hintergrund laufen (Sourcing-Läufe, CV-Scans, Sicherheitswarnungen, Webhooks). Fehler werden
         automatisch mehrfach wiederholt; danach erscheint der Job hier als fehlgeschlagen und kann neu gestartet werden.
       </p>
@@ -97,13 +97,13 @@ export default function HintergrundjobsPage() {
       </div>
       {message && <p className="mb-3 text-sm text-red-300">{message}</p>}
       <div className="space-y-3">
-        {jobs.length === 0 && <p className="text-sm text-[#94A3B8]">Keine Jobs in dieser Ansicht.</p>}
+        {jobs.length === 0 && <p className="text-sm text-brand-muted">Keine Jobs in dieser Ansicht.</p>}
         {jobs.map((job) => (
           <Card key={job.id}>
             <CardContent className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-medium">{KIND_LABELS[job.kind] ?? job.kind}</p>
-                <p className="text-xs text-[#94A3B8]">
+                <p className="text-xs text-brand-muted">
                   {STATUS_LABELS[job.status]} · Versuch {job.attempts}/{job.max_attempts} · angelegt{" "}
                   {new Date(job.created_at).toLocaleString("de-DE")}
                 </p>

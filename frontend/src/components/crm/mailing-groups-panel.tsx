@@ -20,7 +20,7 @@ function renderTemplate(text: string, values: Record<string, string>): string {
   return text.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
 }
 
-const selectClass = "h-9 rounded-md border border-white/10 bg-[#071426] px-2 text-xs text-[#F8FAFC] outline-none focus:border-[#1F5FA8]";
+const selectClass = "h-9 rounded-md border border-white/10 bg-brand-sidebar px-2 text-xs text-brand-text outline-none focus:border-brand-accent";
 
 export function MailingGroupsPanel({
   initialPreviewGroupId = null,
@@ -205,7 +205,7 @@ export function MailingGroupsPanel({
     return (
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="h-16 animate-pulse rounded-lg bg-[#0D1B2E]" />
+          <div key={index} className="h-16 animate-pulse rounded-lg bg-brand-surface" />
         ))}
       </div>
     );
@@ -213,7 +213,7 @@ export function MailingGroupsPanel({
 
   return (
     <div className="space-y-5">
-      {message && <div className="rounded-lg border border-[#4f8a68]/35 bg-[#244d38]/45 p-3 text-xs text-[#a9d6b8]">{message}</div>}
+      {message && <div className="rounded-lg border border-brand-success/35 bg-brand-success-bg/45 p-3 text-xs text-brand-success-text">{message}</div>}
       <ErrorBanner message={error} />
 
       <div className="flex items-center justify-between">
@@ -229,7 +229,7 @@ export function MailingGroupsPanel({
       </div>
 
       {groups.length === 0 && (
-        <Card><CardContent className="py-12 text-center text-sm text-[#858b90]">
+        <Card><CardContent className="py-12 text-center text-sm text-brand-gray">
           Noch keine Mailing-Gruppen gespeichert — auf Kandidaten-/Kanzlei-/Kontaktprofilen oder im Geo Mapping über &quot;Für Mailing nutzen&quot; anlegen.
         </CardContent></Card>
       )}
@@ -268,7 +268,7 @@ export function MailingGroupsPanel({
                   ) : (
                     <p className="font-semibold">{group.name}</p>
                   )}
-                  <p className="mt-1 text-xs text-[#94A3B8]">{group.recipients.length} Empfänger:innen</p>
+                  <p className="mt-1 text-xs text-brand-muted">{group.recipients.length} Empfänger:innen</p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -322,17 +322,17 @@ export function MailingGroupsPanel({
             </select>
             {selectedTemplate ? (
               <>
-                <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">
+                <p className="text-[10px] uppercase tracking-wider text-brand-muted">
                   Betreff (Beispiel für {exampleRecipient?.name ?? "erste:n Empfänger:in"})
                 </p>
-                <p className="text-sm text-[#D8DADF]">{renderedSubject}</p>
-                <p className="mt-3 text-[10px] uppercase tracking-wider text-[#94A3B8]">Entwurf</p>
-                <pre className="whitespace-pre-wrap rounded-md bg-[#071426] p-3 text-xs leading-6 text-[#CBD5E1]">{renderedBody}</pre>
-                <p className="text-xs text-[#8b9196]">
+                <p className="text-sm text-brand-platinum">{renderedSubject}</p>
+                <p className="mt-3 text-[10px] uppercase tracking-wider text-brand-muted">Entwurf</p>
+                <pre className="whitespace-pre-wrap rounded-md bg-brand-sidebar p-3 text-xs leading-6 text-brand-soft">{renderedBody}</pre>
+                <p className="text-xs text-brand-gray">
                   Betreff/Text wurden mit den Daten von {exampleRecipient?.name ?? "der ersten Person"} befüllt — beim Versand geht genau dieser Text unverändert an alle {previewGroup.recipients.length} Empfänger:innen (keine Personalisierung pro Person). Vor dem Senden oben bei Bedarf noch anpassen bzw. hier kopieren.
                 </p>
                 {bulkSendMessage && (
-                  <div className="rounded-lg border border-[#4f8a68]/35 bg-[#244d38]/45 p-3 text-xs text-[#a9d6b8]">
+                  <div className="rounded-lg border border-brand-success/35 bg-brand-success-bg/45 p-3 text-xs text-brand-success-text">
                     {bulkSendMessage}
                   </div>
                 )}
@@ -347,7 +347,7 @@ export function MailingGroupsPanel({
                 </div>
               </>
             ) : (
-              <p className="text-sm text-[#858b90]">Vorlage auswählen, um eine Vorschau zu sehen.</p>
+              <p className="text-sm text-brand-gray">Vorlage auswählen, um eine Vorschau zu sehen.</p>
             )}
           </div>
         </Modal>
@@ -356,15 +356,15 @@ export function MailingGroupsPanel({
       {mergeOpen && (
         <Modal title="Gruppen zusammenführen" eyebrow={`${selectedIds.size} ausgewählt`} onClose={() => setMergeOpen(false)}>
           <div className="space-y-4">
-            <p className="text-xs text-[#94A3B8]">
+            <p className="text-xs text-brand-muted">
               Die Vereinigungsmenge der Empfänger:innen (nach E-Mail-Adresse dedupliziert) wird als neue Gruppe gespeichert oder ersetzt eine bestehende Gruppe.
             </p>
             <div>
-              <label className="mb-1 block text-xs text-[#94A3B8]">Name der Zielgruppe</label>
+              <label className="mb-1 block text-xs text-brand-muted">Name der Zielgruppe</label>
               <Input placeholder="z.B. Q3-Kampagne Süddeutschland" value={mergeName} onChange={(e) => setMergeName(e.target.value)} />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-[#94A3B8]">Bestehende Gruppe überschreiben (optional)</label>
+              <label className="mb-1 block text-xs text-brand-muted">Bestehende Gruppe überschreiben (optional)</label>
               <select className={`${selectClass} w-full`} value={overwriteId} onChange={(e) => setOverwriteId(e.target.value)}>
                 <option value="">Neue Gruppe anlegen</option>
                 {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}

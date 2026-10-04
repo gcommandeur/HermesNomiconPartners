@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Building2, KanbanSquare, LayoutDashboard, MoreHorizontal, Users } from "lucide-react";
+import { useAiProposalSummary, useCurrentUser, usePendingApprovalCount } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
 
 /** Mobile-only Bottom-Tab-Bar (analog zum bestehenden lg:hidden-Muster von
@@ -19,10 +20,13 @@ const items: { href: string; label: string; icon: typeof LayoutDashboard }[] = [
 
 export function BottomNav({ onMenu }: { onMenu: () => void }) {
   const pathname = usePathname();
+  const { data: meData } = useCurrentUser();
+  const pendingApprovals =
+    usePendingApprovalCount(meData?.data.is_admin ?? false) + useAiProposalSummary().pending;
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-white/10 bg-[#071426] pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-white/10 bg-brand-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden"
       aria-label="Hauptnavigation"
     >
       {items.map((item) => {
@@ -34,7 +38,7 @@ export function BottomNav({ onMenu }: { onMenu: () => void }) {
             href={item.href}
             className={cn(
               "flex flex-1 flex-col items-center gap-1 py-2 text-[9px]",
-              active ? "text-[#69A7EA]" : "text-[#5F6B7A]",
+              active ? "text-brand-accent-light" : "text-brand-dim",
             )}
           >
             <Icon size={20} strokeWidth={active ? 2 : 1.7} />
@@ -45,10 +49,17 @@ export function BottomNav({ onMenu }: { onMenu: () => void }) {
       <button
         type="button"
         onClick={onMenu}
-        className="flex flex-1 flex-col items-center gap-1 py-2 text-[9px] text-[#5F6B7A]"
+        className="flex flex-1 flex-col items-center gap-1 py-2 text-[9px] text-brand-dim"
       >
-        <MoreHorizontal size={20} strokeWidth={1.7} />
-        Mehr
+        <span className="relative">
+          <MoreHorizontal size={20} strokeWidth={1.7} />
+          {pendingApprovals > 0 && (
+            <span className="absolute -right-1 -top-0.5 size-2 rounded-full bg-brand-danger" aria-label={`${pendingApprovals} offene Freigaben`} />
+          )}
+        </span>
+        {/* Eigenes span: globals.css setzt `font: inherit` auf Buttons ausserhalb der
+            Tailwind-Layer, die Groesse am Button selbst wuerde ueberschrieben. */}
+        <span className="text-[9px]">Mehr</span>
       </button>
     </nav>
   );

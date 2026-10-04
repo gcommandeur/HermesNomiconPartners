@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     )
 
     environment: str = "local"
+    # Firmenschicht (siehe docs/PROJEKT_STAND.md > Zweite Firma): alles
+    # Firmenspezifische liegt in Konfiguration, nicht im Code - dann lassen sich
+    # Aenderungen aus Hermes ohne Konflikte in eine Kopie fuer eine andere Firma
+    # uebernehmen. Standard = Commandeur Consulting (nichts aendert sich).
+    company_name: str = "Commandeur Consulting"
+    # Word-Vorlage mit dem Briefkopf des anonymen Profils (docx). Leer = die
+    # mitgelieferte backend/templates/anonymes_profil_master.docx.
+    profile_template_path: str | None = None
     api_prefix: str = "/api/v1"
     # Betrieb: Logs als JSON (eine Zeile pro Request), Sentry nur mit DSN.
     log_level: str = "INFO"

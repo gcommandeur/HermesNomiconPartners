@@ -18,7 +18,7 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
 ];
 
 const selectClass =
-  "h-9 rounded-md border border-white/15 bg-[#0D1B2E] px-2 text-sm text-[#D8DADF] focus:outline-none focus:ring-2 focus:ring-[#1F5FA8]/30 disabled:opacity-50";
+  "h-9 rounded-md border border-white/15 bg-brand-surface px-2 text-sm text-brand-platinum focus:outline-none focus:ring-2 focus:ring-brand-accent/30 disabled:opacity-50";
 
 export default function NutzerverwaltungPage() {
   const { data: meData, isLoading: meLoading } = useCurrentUser();
@@ -51,7 +51,7 @@ export default function NutzerverwaltungPage() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+          <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
         ))}
       </div>
     );
@@ -63,9 +63,9 @@ export default function NutzerverwaltungPage() {
         <PageHeader eyebrow="Hermes" title="Nutzerverwaltung" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <ShieldOff size={28} className="text-[#94A3B8]" />
-            <p className="text-sm font-semibold text-[#F8FAFC]">Nur für Admins zugänglich</p>
-            <p className="max-w-sm text-xs text-[#94A3B8]">
+            <ShieldOff size={28} className="text-brand-muted" />
+            <p className="text-sm font-semibold text-brand-text">Nur für Admins zugänglich</p>
+            <p className="max-w-sm text-xs text-brand-muted">
               Dieser Bereich ist der Nutzerverwaltung vorbehalten. Wende dich an einen Admin, falls
               du Zugriff benötigst.
             </p>
@@ -86,7 +86,7 @@ export default function NutzerverwaltungPage() {
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-14 animate-pulse rounded-lg bg-[#0D1B2E]" />
+            <div key={index} className="h-14 animate-pulse rounded-lg bg-brand-surface" />
           ))}
         </div>
       ) : (
@@ -103,9 +103,9 @@ export default function NutzerverwaltungPage() {
             const managerStale =
               user.manager_id !== null && !managerOptions.some((option) => option.id === user.manager_id);
             return (
-              <tr key={user.id} className="hover:bg-[#203A5A]/25">
-                <td className="px-4 py-3.5 font-medium text-[#F8FAFC]">{user.display_name ?? "—"}</td>
-                <td className="px-4 py-3.5 text-[#CBD5E1]">{user.email}</td>
+              <tr key={user.id} className="hover:bg-brand-hover/25">
+                <td className="px-4 py-3.5 font-medium text-brand-text">{user.display_name ?? "—"}</td>
+                <td className="px-4 py-3.5 text-brand-soft">{user.email}</td>
                 <td className="px-4 py-3.5">
                   <select
                     className={selectClass}
@@ -123,7 +123,7 @@ export default function NutzerverwaltungPage() {
                 </td>
                 <td className="px-4 py-3.5">
                   {user.role === "admin" ? (
-                    <span className="text-xs text-[#94A3B8]" title="Admins sehen alle Prozesse">—</span>
+                    <span className="text-xs text-brand-muted" title="Admins sehen alle Prozesse">—</span>
                   ) : (
                     <>
                       <select
@@ -142,7 +142,7 @@ export default function NutzerverwaltungPage() {
                         ))}
                       </select>
                       {managerStale && (
-                        <p className="mt-1 text-[11px] text-[#F0B429]">Zugeordneter Teamleiter nicht in der Liste.</p>
+                        <p className="mt-1 text-[11px] text-brand-warning">Zugeordneter Teamleiter nicht in der Liste.</p>
                       )}
                     </>
                   )}
