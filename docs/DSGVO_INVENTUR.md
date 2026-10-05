@@ -1,7 +1,8 @@
 # DSGVO-Inventur: Personenbezug eines Kandidaten und die Anonymisierung
 
-Stand 2026-10-04 (Review-Nachbesserung Punkt 9). **Reine Bestandsaufnahme, nichts implementiert,
-keine Rechtsberatung** - der Nutzer entscheidet danach, ob und wie. Grundlage: die SQLAlchemy-Modelle
+Stand 2026-10-05. Der Abschnitt 1 beschreibt `anonymize` nach der Erweiterung vom 2026-10-05 (zweite
+Stufe, Einwilligungsnachweis); Abschnitt 7 ist eine **reine Bestandsaufnahme mit Vorschlaegen, nichts
+implementiert, keine Rechtsberatung** - der Nutzer entscheidet danach, ob und wie. Grundlage: die SQLAlchemy-Modelle
 (51 Tabellen, per Skript ausgelesen), der Code von `CandidateService.anonymize`
 (`backend/src/cc_crm/services/candidates.py`) und die Job-Warteschlange. Nicht gegen
 Produktionsdaten geprueft (kein Zugriff): "kann enthalten" heisst, dass das Feld seiner Art nach
@@ -13,6 +14,18 @@ Admin-Aktion, der Kandidatendatensatz bleibt (Prozesse, Placements, Statistik). 
 
 - **Dokumente:** alle Dokumente mit `owner_type="candidate"` (CV, anonymes Profil "Nr. XXXX.docx")
   werden aus dem Speicher geloescht und die Zeilen entfernt.
+- **Zweite Stufe (seit 2026-10-05):** zusaetzlich geleert werden `cv_extraction_raw` (NULL),
+  `berufliche_stationen` (leere Liste), `current_employer_internal`, `examensnoten`,
+  `salary_expectation`, `notice_period` (NULL).
+- **Einwilligungsnachweis (seit 2026-10-05):** `consent_received` faellt auf `false` (an einen
+  anonymisierten Datensatz darf nichts mehr gehen), der NACHWEIS bleibt ohne Personenbezug:
+  `consent_recorded_at` (wann das Flag in Hermes auf `true` ging, einmal gestempelt),
+  `consent_source` (derzeit `hermes_manuell`), `anonymized_at`, die pseudonyme Kennung
+  `candidate_number`, und der Audit-Eintrag `anonymized` traegt `consent_was_given`,
+  `consent_recorded_at`, `consent_source`. **Altbestand:** wo das Flag ohne Datum gesetzt war, bleibt
+  das Datum NULL (nicht geraten). Offen/zu klaeren: ob "Datum + Quelle" als Nachweis reicht oder der
+  Umfang der Einwilligung (z. B. Weitergabe an Kanzleien) zusaetzlich erfasst werden soll - dafuer gibt
+  es heute kein Feld.
 - **Kandidatenfelder:** `first_name`, `last_name` -> "Anonymisiert"; `anrede`, `consent_received`,
   `cv_available`, `no_gos`, `custom_fields` geleert; auf `NULL` gesetzt: `email`, `phone`,
   `linkedin_url`, `referred_by`, `summary`, `short_profile`, `freitext_notizen`, `wechselgrund`,
@@ -35,11 +48,12 @@ Alles andere in diesem Dokument wird **nicht** angefasst.
 | `custom_fields` | Freitext/Zusatzfelder | **ja** | |
 | `no_gos` | Praeferenzen | **ja** | |
 | `consent_received`, `cv_available` | Einwilligung/Status | **ja** (auf false) | der Einwilligungsnachweis geht damit verloren |
-| **`cv_extraction_raw`** | **komplettes KI-Rohergebnis aus dem CV** (Name, Arbeitgeber, Stationen, Ausbildung ...) | **NEIN** | **groesste Luecke**: wird beim CV-Auslesen gespeichert und bleibt nach der Anonymisierung vollstaendig stehen |
-| `berufliche_stationen` (JSON) | Arbeitgeber, Zeitraeume, Taetigkeiten | **nein** | stark identifizierend |
-| `current_employer_internal` | aktueller Arbeitgeber | **nein** | identifizierend |
-| `examensnoten`, `ausbildung_titel`, `abschluesse`, `rechtsgebiete` | Qualifikation | **nein** | in Kombination identifizierend |
-| `salary_expectation`, `notice_period` | Gehalt, Kuendigungsfrist | **nein** | |
+| **`cv_extraction_raw`** | **komplettes KI-Rohergebnis aus dem CV** (Name, Arbeitgeber, Stationen, Ausbildung ...) | **ja (seit 2026-10-05)** | war die groesste Luecke |
+| `berufliche_stationen` (JSON) | Arbeitgeber, Zeitraeume, Taetigkeiten | **ja (seit 2026-10-05)** | leere Liste |
+| `current_employer_internal` | aktueller Arbeitgeber | **ja (seit 2026-10-05)** | |
+| `examensnoten` | Qualifikation | **ja (seit 2026-10-05)** | |
+| `ausbildung_titel`, `abschluesse`, `rechtsgebiete` | Qualifikation | **nein** | strukturiert, fuer Statistik behalten; in Kombination identifizierend |
+| `salary_expectation`, `notice_period` | Gehalt, Kuendigungsfrist | **ja (seit 2026-10-05)** | |
 | `aktuelles_umfeld_kanzleityp`, `aktuelles_umfeld_kanzleigroesse`, `passender_kanzleityp`, `remote_teilzeit_wuensche` | Praeferenzen/Umfeld | **nein** | geringer bis mittlerer Bezug |
 | `city`, `postal_code` | Wohnort | **nein** | Quasi-Identifikator (bewusst fuer Statistik/Umkreissuche behalten) |
 | `job_title`, `qualification`, `fachliche_schwerpunkte`, `edv_kenntnisse`, `rollen`, `rollen_unbestaetigt` | Beruf/Kenntnisse | **nein** | strukturiert, fuer Statistik behalten |
@@ -69,7 +83,7 @@ Alles andere in diesem Dokument wird **nicht** angefasst.
 | `ai_proposals` (`payload` JSON: Notiz-/Mail-Entwurfstext, Empfaenger) | `target_type="candidate"` | **nein** | Claude-Vorschlaege inkl. Entwurfstexte und Entscheidungsnotiz |
 | `mailing_groups` (`recipients` JSON) | enthaelt gespeicherte Empfaengerlisten | **nein** | kann Name/E-Mail des Kandidaten enthalten; kein Fremdschluessel, nicht auffindbar ueber `candidate_id` |
 | `cv_extraction_jobs` (`result` JSON) | nur `owner_user_id` | **nein** | KI-Ergebnis eines CV-Scans (Name, Stationen ...), **ohne Kandidatenbezug** - nicht gezielt loeschbar; Aufbewahrungsdauer unklar |
-| `background_jobs` (`payload`, **`payload_blob`**) | `cv.scan`-Jobs | **nein** | `payload_blob` = die CV-Datei; wird nur bei **erfolgreichem** Abschluss geleert - bei einem endgueltig **fehlgeschlagenen** Job bleibt der Lebenslauf dauerhaft in der Tabelle; `payload.filename` kann den Namen enthalten |
+| `background_jobs` (`payload`, **`payload_blob`**) | `cv.scan`-Jobs | **ja (seit 2026-10-05)** | Bytes und `payload.filename` werden beim endgueltigen Fehlschlag und beim Worker-Absturz im letzten Versuch geloescht; `scripts/purge_job_blobs.py` (Probelauf als Standard) raeumt Altbestand und verwaiste Jobs nach 3 Tagen auf - **noch nicht gegen Produktion ausgefuehrt** |
 | `deletion_requests` (`requested_via`) | `candidate_id` | nicht relevant | der Loeschantrag selbst, als Nachweis sinnvoll zu behalten |
 | `webhook_deliveries` (`payload`), `event_outbox` | nur IDs | **unkritisch** | Nutzlast enthaelt bewusst nur `entity_type`, `entity_id`, `audit_log_id` (Entscheidung E4) |
 
@@ -84,18 +98,19 @@ Alles andere in diesem Dokument wird **nicht** angefasst.
 ## 5. Zusammenfassung und offene Entscheidungen
 
 **Behandelt:** Identitaets- und Kontaktfelder, Freitexte der Kandidatentabelle, Zusatzfelder, Dokumente
-im Speicher, Audit-Werte des Kandidaten.
+im Speicher, Audit-Werte des Kandidaten, seit 2026-10-05 auch `cv_extraction_raw`, Stationen,
+aktueller Arbeitgeber, Examensnoten, Gehalt/Kuendigungsfrist und die Bytes fehlgeschlagener Scan-Jobs.
 
 **Nicht behandelt, nach Gewicht (Vorschlag der Reihenfolge, wenn der Nutzer umsetzen will):**
-1. `cv_extraction_raw` (komplettes CV-Ergebnis) und das **liegen gebliebene `payload_blob`** fehlgeschlagener Scan-Jobs.
-2. `berufliche_stationen`, `current_employer_internal`, `examensnoten`, `salary_expectation`, `notice_period` (strukturierte, stark identifizierende Felder).
+1. ~~`cv_extraction_raw` und `payload_blob`~~ - erledigt 2026-10-05.
+2. ~~`berufliche_stationen`, `current_employer_internal`, `examensnoten`, `salary_expectation`, `notice_period`~~ - erledigt 2026-10-05.
 3. Texte an Prozessen und Verlauf: `notes`, `activities`, `tasks`, `submission_feedback`, `interviews`, `candidate_submissions` (Texte), `candidate_pitch_logs`, `ai_proposals`.
 4. Kommunikation: `mail_messages`, `email_draft_logs`, `calendar_events` (Teilnehmer), `mailing_groups`.
 5. Audit-Eintraege anderer Objekttypen mit alten/neuen Textwerten; `sourcing_leads`; `cv_extraction_jobs`.
 
 **Fragen, die der Nutzer klaeren muss (rechtlich/fachlich, nicht technisch):**
 - Loeschen oder schwaerzen? Was bleibt fuer Statistik (Ort, Beruf, Status) erlaubt, ohne dass die Person bestimmbar bleibt?
-- Aufbewahrungspflichten fuer Honorar/Rechnung (`placements`, `fees`) und den Einwilligungsnachweis (`consent_received` wird derzeit mit geloescht).
+- Aufbewahrungspflichten fuer Honorar/Rechnung (`placements`, `fees`). Der Einwilligungsnachweis bleibt seit 2026-10-05 als Datum + Quelle + Pseudonym stehen (Abschnitt 1); ob das rechtlich reicht, ist zu klaeren.
 - Umgang mit Sicherungen und mit Kopien in Outlook/Fremdpostfaechern.
 - `candidate_number` als Pseudonym behalten (verbindet mit bereits versendeten anonymen Profilen) oder nicht.
 
@@ -104,3 +119,57 @@ im Speicher, Audit-Werte des Kandidaten.
 - Inhalt echter Daten (kein Produktionszugriff): was in `short_profile`, `notes`, `activities`, `cv_extraction_raw` tatsaechlich steht.
 - Ob der Speicher (Bucket) weitere abgeleitete Dateien (Vorschaubilder o. ae.) ablegt - im Code wurde keine gefunden.
 - Ob die Tabellen `mailing_groups.recipients` und `cv_extraction_jobs.result` in der Praxis Personenbezug enthalten; sie haben keinen Kandidatenbezug und lassen sich nur durch Durchsuchen des Inhalts finden.
+
+## 7. Freitext zu Kandidaten in Verlauf und Kommunikation (Vorschlaege, noch NICHTS geaendert)
+
+Auftrag vom 2026-10-05: fuer jede Tabelle mit Kandidatenbezug die Textfelder auflisten, die bei der
+Anonymisierung heute **stehen bleiben**, mit Risiko und Vorschlag. **Die Entscheidung trifft der Nutzer;
+hier ist nichts geloescht oder veraendert.** Grundlage: die Modelle (Spalten per Skript ausgelesen), nicht
+gegen Produktionsdaten geprueft - "Risiko" beschreibt, was in dem Feld stehen *kann*.
+
+Bedeutung der Vorschlaege: **loeschen** = Feld/Zeile entfernen (Text weg, Zeile bleibt fuer Zaehlungen
+oder faellt ganz weg); **schwaerzen** = Text durch "[entfernt]" ersetzen, Zeile und strukturierte Daten
+bleiben; **behalten** = bleibt, mit Begruendung. Ein Teil der Daten ist zugleich Geschaeftsdaten der
+Kanzlei-Beziehung (Rueckmeldung einer Kanzlei ueber einen Prozess); dort ist die Abwaegung
+Betroffenenrecht gegen berechtigtes Interesse eine rechtliche Frage.
+
+| Tabelle | Feld | Risiko | Vorschlag |
+|---|---|---|---|
+| `notes` | `body` | **hoch**: freie Notizen/Kommentare zur Person (Gespraechsinhalte, Gruende, Familiaeres); fuer alle sichtbar | **loeschen** (Zeilen mit `candidate_id`); Notizen, die nur ueber `candidate_submission_id` haengen, mitnehmen |
+| `activities` | `subject`, `details` | **hoch**: Anruf-/Mail-Verlauf, oft mit Namen und Inhalten | **schwaerzen** (`subject`, `details`); `activity_type` und Zeitpunkt behalten (Aktivitaetsstatistik, Cockpit) |
+| `activities` | `activity_type` | niedrig (Enum-artig: call, mail ...) | **behalten** (Statistik) |
+| `tasks` | `title`, `description` | **mittel**: oft "Erika anrufen", Rueckrufgrund | **schwaerzen**; `status`, `priority`, Faelligkeit behalten (Auswertung) |
+| `tasks` | `resolution_outcome` | niedrig bis mittel (kurzer Freitext) | **schwaerzen** |
+| `submission_feedback` | `feedback_text`, `next_step`, `created_by` | **hoch**: Bewertung der Person durch die Kanzlei im Wortlaut; zugleich Geschaeftsvorgang mit Kanzlei | **schwaerzen** `feedback_text`/`next_step`; `feedback_type`, `stage` und Zeit behalten (Prozess-Statistik). `created_by` ist ein Mitarbeiter, kein Kandidatenbezug: **behalten** |
+| `interviews` | `participants` (JSON) | **hoch**: Teilnehmernamen (auch der Kandidat) | **schwaerzen** (Liste leeren oder Namen ersetzen) |
+| `interviews` | `notes`, `location_or_link` | **mittel bis hoch**: Gespraechsnotizen; Link/Ort kann Namen oder Raumbezug enthalten | `notes`: **schwaerzen**; `location_or_link`: **schwaerzen**; `interview_type`, `status`, Termin **behalten** |
+| `candidate_submissions` | `summary`, `feedback_summary`, `next_step` | **hoch**: Zusammenfassung/Stand zur Person im Prozess | **schwaerzen** |
+| `candidate_submissions` | `sent_profile_text` | **hoch**: der an die Kanzlei gesendete (anonymisierte) Profiltext, nicht auf Anonymitaet geprueft; entspricht inhaltlich `short_profile`, das schon geleert wird | **schwaerzen** (gleiche Behandlung wie `short_profile`) |
+| `candidate_submissions` | `salary_at_submission`, `refund_terms` | **mittel**: Gehalt der Person bzw. vertragliche Rueckerstattungsbedingungen | `salary_at_submission`: **schwaerzen** (wie `salary_expectation`); `refund_terms`: **behalten** (Vertragsbedingung der Kanzlei, kein Personenbezug, Honorar-Aufbewahrung) |
+| `candidate_submissions` | `owner` (String), `status`, `cancellation_reason`, `closing_status` | niedrig (Mitarbeiter bzw. Enum-Werte) | **behalten** (Statistik, Abrechnung) |
+| `ai_proposals` | `payload` (JSON) | **hoch**: Entwurfstext einer Notiz/Mail, Empfaenger | **loeschen** der `payload`-Inhalte fuer `target_type="candidate"` (Zeile mit Status/Zeit darf bleiben) |
+| `ai_proposals` | `decision_note` | **niedrig bis mittel** (Freitext des Entscheiders) | **schwaerzen** |
+| `mail_messages` | `from_name`, `from_address` | **hoch**: Name und E-Mail der Person (bei eingehenden Mails); bei ausgehenden der Mitarbeiter | **schwaerzen** fuer `matched_candidate_id`-Zeilen; ausgehende Mails: Empfaenger steht im Text, siehe `body_text` |
+| `mail_messages` | `subject`, `body_text`, `parse_error` | **hoch**: voller Mailtext inkl. Signatur mit Telefon/Adresse; `parse_error` kann Auszuege des Rohtexts enthalten | **loeschen** (Zeilen mit `matched_candidate_id`); Mails sind zusaetzlich im IMAP-Postfach/Outlook des Mitarbeiters, nicht in Hermes loeschbar |
+| `mail_messages` | `message_id`, `imap_uid`, `is_linkedin`, `match_status`, `direction` | niedrig (technische Kennungen) | **behalten** oder mit der Zeile loeschen |
+| `email_draft_logs` | `recipient`, `subject`, `body` | **hoch**: Empfaenger-Adresse und Text eines gesendeten/gespeicherten Entwurfs | **loeschen** (Zeilen mit `candidate_id`); `template_key`, `provider` unkritisch |
+| `calendar_events` | `attendee_email`, `attendee_name` | **hoch**: Kontaktdaten der Person | **loeschen** (auf NULL) |
+| `calendar_events` | `invite_message`, `notes`, `title`, `location`, `online_meeting_url` | **mittel bis hoch**: Einladungstext, Notizen, Titel mit Namen ("Interview Erika M."), Meeting-Link | **schwaerzen**; Beginn/Ende/`event_type` **behalten** (Kapazitaet, Statistik). Der Termin liegt zusaetzlich im Outlook des Mitarbeiters (`external_graph_event_id`) - dort nicht von Hermes loeschbar |
+
+**Wie die Zeilen gefunden werden:** `notes`, `activities`, `tasks`, `email_draft_logs`, `calendar_events` ueber
+`candidate_id` (und ueber `candidate_submission_id` der Prozesse des Kandidaten); `submission_feedback` und
+`interviews` NUR ueber `submission_id` -> `candidate_submissions.candidate_id`; `mail_messages` ueber
+`matched_candidate_id` (nicht zugeordnete Mails ohne Kandidatenbezug sind per Schluessel nicht auffindbar);
+`ai_proposals` ueber `target_type="candidate"` und die Ziel-ID im `payload`.
+
+**Zu entscheiden (Nutzer):**
+1. Pauschal *schwaerzen statt loeschen* fuer alles mit Prozessbezug (erhaelt Zaehlungen, Cockpit, Honorar-
+   Nachweise), *loeschen* fuer reine Kommunikation (`mail_messages`, `email_draft_logs`, Notizen,
+   `ai_proposals`)? Das ist der Standardvorschlag.
+2. Soll die Rueckmeldung einer Kanzlei (`submission_feedback`) wegen deren berechtigtem Interesse bleiben?
+3. Sollen Mails ohne Zuordnung (kein `matched_candidate_id`), die den Namen im Text tragen, per Volltext
+   gesucht werden? (Aufwand und Fehlerquote hoch; Vorschlag: nein, sondern Aufbewahrungsfrist fuer das
+   Postfach.)
+4. Reicht "Datum + Quelle + Pseudonym" als Einwilligungsnachweis, oder soll der Umfang erfasst werden?
+5. Reihenfolge/Umfang einer Umsetzung (eigener Auftrag; die Anonymisierung ist eine Admin-Aktion und nicht
+   rueckgaengig zu machen - vor einer Erweiterung auf einer Kopie der Produktionsdaten im Probelauf pruefen).
