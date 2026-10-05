@@ -622,7 +622,7 @@ export function CandidatesTable() {
               </div>
             )}
             <div className="mt-2 flex items-center justify-between text-[10.45px] text-brand-gray">
-              <span>Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</span>
+              <span>Kontakt {formatDate(candidate.last_contact_at ?? candidate.updated_at)}</span>
               {candidate.salary_expectation && <span>{candidate.salary_expectation}</span>}
             </div>
             {candidate.search_match_fields && candidate.search_match_fields.length > 0 && (
@@ -660,7 +660,7 @@ export function CandidatesTable() {
         {displayedCandidates.map((candidate) => (
           <tr key={candidate.id} className="hover:bg-brand-hover/35">
             <td className="px-4 py-3.5 text-xs text-brand-muted">{candidate.candidate_number ?? "—"}</td>
-            <td className="px-4 py-3.5"><button type="button" onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-brand-platinum hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</button>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-brand-danger-soft" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[10.45px] text-brand-muted">Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</p>
+            <td className="px-4 py-3.5"><button type="button" onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-brand-platinum hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</button>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-brand-danger-soft" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[10.45px] text-brand-muted">Kontakt {formatDate(candidate.last_contact_at ?? candidate.updated_at)}</p>
               {/* Nachvollziehbarkeit der Freitextsuche (Punkt 5) - nur
                * gesetzt, wenn `search` aktiv ist (siehe Backend
                * repositories/candidates.py::compute_search_match_fields). */}

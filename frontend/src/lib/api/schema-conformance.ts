@@ -40,16 +40,13 @@ type ExpectExactly<Actual, Expected> = [Actual] extends [Expected]
   : { neueAbweichung: Exclude<Actual, Expected> };
 
 /**
- * Bekannte Abweichungen:
- *  - `last_contact`, `size`, `contact_name`, `active_mandates`: nur im Frontend
- *    deklariert, vom Backend nie gesendet (Altlast aus der Demo-Phase); die Oberflaeche
- *    zeigt dafuer nichts bzw. einen Platzhalter ("—", 0). Entfernen heisst Spalten der
- *    Kanzlei-Tabelle streichen - Entscheidung des Nutzers.
+ * Bekannte Abweichungen: keine. (Die frueheren Demo-Felder `last_contact`, `size`,
+ * `contact_name`, `active_mandates` sind am 2026-10-05 aus Typ und Oberflaeche entfernt.)
  * Geldbetraege und Prozentsaetze (`Decimal` im Backend) sind hier als `string` deklariert,
  * wie sie ankommen ("12000.00"); vor dem Rechnen oder Formatieren Number() verwenden.
  */
-type KnownCandidate = "last_contact";
-type KnownClientCompany = "size" | "contact_name" | "active_mandates" | "last_contact";
+type KnownCandidate = never;
+type KnownClientCompany = never;
 
 type CandidateCheck = ExpectExactly<
   Mismatch<Candidate, Schemas["CandidateRead"]>,

@@ -237,7 +237,6 @@ export interface Candidate extends Entity {
   consent_received?: boolean;
   summary: string | null;
   status: CandidateStatus;
-  last_contact?: string;
   anrede?: Anrede | null;
   referred_by?: string | null;
   has_ghosting_history?: boolean;
@@ -313,10 +312,6 @@ export interface ClientCompany extends Entity {
   special_terms?: string | null;
   commercial_notes?: string | null;
   notes: string | null;
-  size?: string;
-  contact_name?: string;
-  active_mandates?: number;
-  last_contact?: string;
   /** Zustaendiger Mitarbeiter (Komfort-Filter "Meine Kanzleien", KEINE
    * Sichtbarkeitsgrenze - siehe Backend models/client_company.py::owner_user_id). */
   owner_user_id?: string | null;

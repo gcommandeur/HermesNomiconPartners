@@ -66,7 +66,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       <Tabs defaultValue="Übersicht">
         <TabsList className="mb-5"><TabsTrigger value="Übersicht">Übersicht</TabsTrigger><TabsTrigger value="Kontakte">Kontakte</TabsTrigger><TabsTrigger value="Kandidaten">Vorgestellte Kandidaten</TabsTrigger><TabsTrigger value="Konditionen">Konditionen / AGB</TabsTrigger><TabsTrigger value="Dokumente">Dokumente</TabsTrigger></TabsList>
         <TabsContent value="Übersicht">
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-4">{[["Hauptkontakt", primaryContact ? contactName(primaryContact) : (client.contact_name ?? "Offen")], ["Aktive Prozesse", clientSubmissions.length], ["Aktive Mandate", client.active_mandates ?? 0], ["Erwartete Fees", formatCurrency(expectedFees)]].map(([label, value]) => <Card key={String(label)}><CardContent><p className="text-xs text-brand-dim">{label}</p><p className="mt-3 text-xl font-semibold">{value}</p></CardContent></Card>)}</section>
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-3">{[["Hauptkontakt", primaryContact ? contactName(primaryContact) : "Offen"], ["Aktive Prozesse", clientSubmissions.length], ["Erwartete Fees", formatCurrency(expectedFees)]].map(([label, value]) => <Card key={String(label)}><CardContent><p className="text-xs text-brand-dim">{label}</p><p className="mt-3 text-xl font-semibold">{value}</p></CardContent></Card>)}</section>
           {groupLocations.length > 0 && (
             <Card className="mt-4">
               <CardContent>
