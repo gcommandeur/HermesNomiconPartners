@@ -25,6 +25,7 @@ def _admin_read(user: User, labels: dict[uuid.UUID, str]) -> UserAdminRead:
         role=user.role,
         manager_id=user.manager_id,
         manager_name=labels.get(user.manager_id) if user.manager_id else None,
+        ms_bound=user.ms_oid is not None,
     )
 
 
@@ -74,6 +75,17 @@ def update_user(
 ) -> UserAdminRead:
     service = UserService(session)
     user = service.update_admin_fields(user_id, payload, admin)
+    labels = {item.id: item.display_name or item.email for item in service.list_all()}
+    return _admin_read(user, labels)
+
+
+@router.post("/{user_id}/reset-microsoft-binding", response_model=UserAdminRead)
+def reset_microsoft_binding(
+    user_id: uuid.UUID, session: DatabaseSession, admin: AdminUser
+) -> UserAdminRead:
+    """Nur Admin: loest die gebundene Microsoft-Kennung (Audit-Eintrag)."""
+    service = UserService(session)
+    user = service.reset_microsoft_binding(user_id, admin)
     labels = {item.id: item.display_name or item.email for item in service.list_all()}
     return _admin_read(user, labels)
 

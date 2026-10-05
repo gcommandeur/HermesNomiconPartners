@@ -26,6 +26,7 @@ from cc_crm.models.oauth import OAuthAuthorization, OAuthClient, OAuthToken
 from cc_crm.models.operational import Document, EmailDraftLog, SourcingMetric
 from cc_crm.models.outreach import OutreachSequence, OutreachSequenceStep, SequenceEnrollment
 from cc_crm.models.postal_locality import PostalLocality
+from cc_crm.models.presentation_record import PresentationRecord, PresentationRemovalRequest
 from cc_crm.models.rate_limit_attempt import RateLimitAttempt
 from cc_crm.models.recruiting import (
     AuditLog,
@@ -76,6 +77,8 @@ __all__ = [
     "MailAccount",
     "MailMessage",
     "MailingGroup",
+    "PresentationRecord",
+    "PresentationRemovalRequest",
     "Note",
     "OAuthAuthorization",
     "OAuthClient",

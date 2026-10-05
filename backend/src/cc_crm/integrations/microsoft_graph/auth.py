@@ -68,6 +68,34 @@ def _require_settings(settings: Settings | None = None) -> Settings:
     return settings
 
 
+# Multi-Tenant-Werte: damit koennte sich JEDES Microsoft-Konto weltweit anmelden (auch
+# private Konten mit frei waehlbarer, unbestaetigter Adresse) - fuer den Login nie erlaubt.
+MULTI_TENANT_VALUES = frozenset({"common", "organizations", "consumers"})
+
+
+def login_tenant_problem(settings: Settings | None = None) -> str | None:
+    """Text, warum der Microsoft-Login deaktiviert bleibt (Mandant ist leer oder ein
+    Multi-Tenant-Wert), sonst None."""
+    settings = settings or get_settings()
+    tenant = (settings.ms_graph_tenant_id or "").strip().lower()
+    if not tenant:
+        return "CC_CRM_MS_GRAPH_TENANT_ID fehlt."
+    if tenant in MULTI_TENANT_VALUES:
+        return (
+            f"CC_CRM_MS_GRAPH_TENANT_ID={tenant!r} ist ein Multi-Tenant-Wert - der Login "
+            "braucht die Verzeichnis-ID (GUID) des eigenen Firmen-Tenants."
+        )
+    return None
+
+
+def require_single_tenant_for_login(settings: Settings | None = None) -> None:
+    problem = login_tenant_problem(settings)
+    if problem is not None:
+        raise GraphNotConfiguredError(
+            f"Microsoft-Anmeldung ist nicht konfiguriert - {problem}"
+        )
+
+
 def build_authorization_url(
     *, redirect_uri: str, state: str, settings: Settings | None = None
 ) -> str:
@@ -230,6 +258,8 @@ def fetch_own_profile(access_token: str) -> dict[str, str]:
     try:
         response = httpx.get(
             f"{_GRAPH_ROOT}/me",
+            # userType und id sind keine Standardfelder von /me - ohne $select fehlen sie.
+            params={"$select": "id,mail,userPrincipalName,displayName,userType"},
             headers={"Authorization": f"Bearer {access_token}"},
             timeout=20,
         )

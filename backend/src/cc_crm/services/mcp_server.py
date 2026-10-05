@@ -11,7 +11,8 @@ dem Nutzer der Anfrage - es gelten also GENAU dessen Rechte
 Datenschutz: nur lesend, nur ueber API-Key eines Nutzers, ausgeschaltet solange
 `CC_CRM_AI_ENABLED` nicht gesetzt ist (siehe api/v1/mcp.py). Kandidaten werden
 OHNE Kontaktdaten (E-Mail, Telefon, LinkedIn) und ohne Gehaltsangaben
-ausgegeben. Jeder Aufruf steht im Audit-Log (Aktion `mcp_tool_call`, nur Name
+ausgegeben; der Profiltext `short_profile` nur mit `CC_CRM_AI_INCLUDE_PROFILE`
+(Standard aus). Jeder Aufruf steht im Audit-Log (Aktion `mcp_tool_call`, nur Name
 des Werkzeugs, keine Argumente/Ergebnisse) und zaehlt auf das Tageslimit.
 """
 
@@ -119,7 +120,11 @@ def _search_candidates(session: Session, user: User, arguments: dict[str, Any]) 
 
 def _get_candidate(session: Session, user: User, arguments: dict[str, Any]) -> Any:
     candidate = CandidateService(session).get(_uuid(arguments, "candidate_id"))
-    return {**_candidate_brief(candidate), "short_profile": candidate.short_profile}
+    detail = _candidate_brief(candidate)
+    # Nur mit ausdruecklichem Schalter (CC_CRM_AI_INCLUDE_PROFILE, Standard aus).
+    if get_settings().ai_include_profile:
+        detail["short_profile"] = candidate.short_profile
+    return detail
 
 
 def _search_clients(session: Session, user: User, arguments: dict[str, Any]) -> Any:
@@ -169,7 +174,9 @@ def _my_processes(session: Session, user: User, arguments: dict[str, Any]) -> An
             {
                 "id": str(item.id),
                 "candidate_id": str(item.candidate_id),
-                "client_company_id": str(item.client_company_id),
+                "client_company_id": (
+                    str(item.client_company_id) if item.client_company_id else None
+                ),
                 "status": str(item.status),
                 "created_at": item.created_at.isoformat(),
             }

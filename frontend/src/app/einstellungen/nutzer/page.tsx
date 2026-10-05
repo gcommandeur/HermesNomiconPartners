@@ -7,7 +7,7 @@ import { ErrorState } from "@/components/crm/error-state";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { DataTable } from "@/components/crm/data-table";
 import { Card, CardContent } from "@/components/ui/card";
-import { apiPatch } from "@/lib/api/client";
+import { apiPatch, apiPost } from "@/lib/api/client";
 import { useAdminUsersCache, useCurrentUser, invalidateAdminUsersCache } from "@/lib/api/hooks";
 import type { AdminUser, UserRole } from "@/lib/api/types";
 
@@ -36,6 +36,22 @@ export default function NutzerverwaltungPage() {
       await Promise.all([retry(), invalidateAdminUsersCache()]);
     } catch (exception) {
       setRowError(exception instanceof Error ? exception.message : "Änderung fehlgeschlagen.");
+    } finally {
+      setBusyUserId(null);
+    }
+  }
+
+  // Loest die gebundene Microsoft-Kennung (z. B. nach einem Kontowechsel); der naechste
+  // Microsoft-Login bindet neu. Audit-Eintrag im Backend.
+  async function resetMicrosoft(user: AdminUser) {
+    if (!window.confirm(`Microsoft-Verknüpfung von ${user.display_name ?? user.email} zurücksetzen?`)) return;
+    setBusyUserId(user.id);
+    setRowError(null);
+    try {
+      await apiPost(`/users/${user.id}/reset-microsoft-binding`, {});
+      await Promise.all([retry(), invalidateAdminUsersCache()]);
+    } catch (exception) {
+      setRowError(exception instanceof Error ? exception.message : "Zurücksetzen fehlgeschlagen.");
     } finally {
       setBusyUserId(null);
     }
@@ -90,7 +106,7 @@ export default function NutzerverwaltungPage() {
           ))}
         </div>
       ) : (
-        <DataTable headers={["Name", "E-Mail", "Rolle", "Teamleiter", "Aktiv"]}>
+        <DataTable headers={["Name", "E-Mail", "Rolle", "Teamleiter", "Microsoft", "Aktiv"]}>
           {users.map((user) => {
             // Zur Auswahl: aktive Teamleiter (ohne den Nutzer selbst) - plus ein
             // bereits zugeordneter Teamleiter, auch wenn er inzwischen keiner
@@ -145,6 +161,24 @@ export default function NutzerverwaltungPage() {
                         <p className="mt-1 text-[10.45px] text-brand-warning">Zugeordneter Teamleiter nicht in der Liste.</p>
                       )}
                     </>
+                  )}
+                </td>
+                <td className="px-4 py-3.5">
+                  {user.ms_bound ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-brand-success-text">verknüpft</span>
+                      <button
+                        type="button"
+                        className="rounded-md border border-white/15 px-2 py-1 text-xs text-brand-platinum hover:bg-white/10 disabled:opacity-50"
+                        disabled={busyUserId === user.id}
+                        onClick={() => void resetMicrosoft(user)}
+                        title="Gebundene Microsoft-Kennung lösen (z. B. bei Kontowechsel)"
+                      >
+                        Zurücksetzen
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-brand-dim">—</span>
                   )}
                 </td>
                 <td className="px-4 py-3.5">

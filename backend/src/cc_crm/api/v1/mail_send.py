@@ -148,11 +148,15 @@ def send_bulk_mail(
     if group is None:
         raise EntityNotFoundError(f"Mailing-Gruppe {payload.mailing_group_id} nicht gefunden")
 
+    # Gehoert die Gruppe zu einem Kandidaten (CV-Out-Kampagne), gilt der Versand an Kanzlei-
+    # Kontakte als Vorstellung dieses Kandidaten (Vorstellungs-Archiv, services/
+    # presentation_archive.py) und braucht dessen Einwilligung wie jeder Versand mit candidate_id.
+    context = {"candidate_id": group.context_candidate_id} if group.context_candidate_id else {}
     recipients = [
         BulkRecipient(
             to_address=item["email"],
             to_name=item.get("name"),
-            **{_KIND_TO_CONTEXT_FIELD[item["kind"]]: uuid.UUID(item["id"])},
+            **{**context, _KIND_TO_CONTEXT_FIELD[item["kind"]]: uuid.UUID(item["id"])},
         )
         for item in group.recipients
         if item.get("email")

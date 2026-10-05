@@ -41,6 +41,7 @@ from cc_crm.services.synonyms import normalize_terms
 
 logger = logging.getLogger("cc_crm.cv_extraction")
 
+# Standardwert; wirksam ist CC_CRM_AGENCY_LETTERHEAD_MARKER (core/config.py).
 AGENCY_LETTERHEAD_MARKER = "Commandeur Consulting GmbH"
 
 # Werden diese Felder trotz Text-Extraktion nicht gefunden, gilt das als
@@ -533,7 +534,8 @@ def classify_cv_source(filename: str | None, content: bytes | None, cv_text: str
 
 
 def is_agency_letterhead(cv_text: str) -> bool:
-    return AGENCY_LETTERHEAD_MARKER.casefold() in cv_text.casefold()
+    marker = get_settings().agency_letterhead_marker.strip()
+    return bool(marker) and marker.casefold() in cv_text.casefold()
 
 
 def _parse_json_response(raw: str) -> dict[str, Any]:

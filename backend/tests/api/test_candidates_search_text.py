@@ -112,10 +112,7 @@ def test_sql_normalization_matches_the_python_normalization(
     Ersetzungen wie _normalize_search_term - hier fuer jede Zeile nachgerechnet."""
     with seeded() as session:
         rows = session.execute(
-            text(
-                "SELECT search_text, first_name, last_name FROM candidates "
-                "WHERE last_name = :n"
-            ),
+            text("SELECT search_text, first_name, last_name FROM candidates WHERE last_name = :n"),
             {"n": "Müller-Lüdenscheid"},
         ).all()
         (row,) = rows
@@ -144,7 +141,7 @@ def test_search_endpoint_works_with_the_fast_path(
 def test_phrase_does_not_match_across_field_boundaries(
     seeded: sessionmaker[Session],
 ) -> None:
-    """"ms office" darf nicht durch das Ende eines Feldes plus den Anfang des
+    """ "ms office" darf nicht durch das Ende eines Feldes plus den Anfang des
     naechsten entstehen (Trenner chr(31) im search_text)."""
     with seeded() as session:
         session.add(Candidate(first_name="Ms", last_name="Office"))
@@ -152,3 +149,42 @@ def test_phrase_does_not_match_across_field_boundaries(
         names = _ids(session, "ms office", fast=True)
         assert "Office" not in names
         assert names == _ids(session, "ms office", fast=False)
+
+
+# --- Index (Review 2026-10-04, Punkt 6): die schnelle Suche ist nur dann schnell, wenn der
+# Trigram-Index existiert UND der Ausdruck des Repositories ihn nutzen kann. Beides sonst
+# ungetestet: die Gleichheits-Tests oben waeren auch ohne Index gruen. ---
+
+
+def test_the_trigram_index_on_search_text_exists(seeded: sessionmaker[Session]) -> None:
+    with seeded() as session:
+        definition = session.scalar(
+            text(
+                "SELECT indexdef FROM pg_indexes WHERE indexname = 'ix_trgm_candidates_search_text'"
+            )
+        )
+    assert definition is not None, "Index ix_trgm_candidates_search_text fehlt"
+    assert "gin" in definition.lower() and "gin_trgm_ops" in definition
+    assert "search_text" in definition
+
+
+def test_the_fast_search_expression_can_use_the_trigram_index(
+    seeded: sessionmaker[Session],
+) -> None:
+    """Planer-Beleg: mit abgeschaltetem Seq-Scan muss der LIKE-Ausdruck des Repositories den
+    Trigram-Index waehlen (er passt also zur Index-Definition)."""
+    with seeded() as session:
+        session.execute(text("SET LOCAL enable_seqscan = off"))
+        statement = select(Candidate.id).where(
+            _search_term_filter("steuerberater", use_search_text=True)
+        )
+        # Mit Bind-Parametern des Treibers (wie jede normale Abfrage) - ein ausgeschriebenes
+        # LIKE '%...%' wuerde psycopg als Platzhalter missverstehen.
+        compiled = statement.compile(dialect=session.get_bind().dialect)
+        plan = "\n".join(
+            str(row[0])
+            for row in session.connection().exec_driver_sql(
+                "EXPLAIN " + compiled.string, compiled.params
+            )
+        )
+    assert "ix_trgm_candidates_search_text" in plan, plan

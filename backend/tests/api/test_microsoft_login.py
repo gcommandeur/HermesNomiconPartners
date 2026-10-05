@@ -48,7 +48,7 @@ def _settings(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
 @pytest.fixture
 def microsoft(monkeypatch: pytest.MonkeyPatch) -> dict[str, dict[str, str]]:
     """Fake-Microsoft: `profile` ist die Antwort von GET /me."""
-    state: dict[str, dict[str, str]] = {"profile": {"mail": "sso@example.com"}}
+    state: dict[str, dict[str, str]] = {"profile": {"id": "oid-sso-1", "mail": "sso@example.com"}}
     monkeypatch.setattr(
         "cc_crm.services.microsoft_login.exchange_code_for_login",
         lambda *, code, redirect_uri: "fake-access-token",
@@ -152,7 +152,7 @@ def test_login_matches_case_insensitively_and_falls_back_to_upn(
     microsoft: dict[str, dict[str, str]],
 ) -> None:
     _add_user(session_factory)
-    microsoft["profile"] = {"mail": None, "userPrincipalName": "SSO@Example.com"}  # type: ignore[dict-item]
+    microsoft["profile"] = {"id": "oid-sso-1", "mail": None, "userPrincipalName": "SSO@Example.com"}  # type: ignore[dict-item]
     _anonymous(client)
     state = _start(client)
     response = client.get(CALLBACK, params={"code": "abc", "state": state}, follow_redirects=False)
@@ -164,7 +164,7 @@ def test_unknown_email_gets_a_clear_error_and_no_account_or_session(
     session_factory: sessionmaker[Session],
     microsoft: dict[str, dict[str, str]],
 ) -> None:
-    microsoft["profile"] = {"mail": "fremd@example.com"}
+    microsoft["profile"] = {"id": "oid-fremd", "mail": "fremd@example.com"}
     users_before = _count(session_factory, User)
     _anonymous(client)
     state = _start(client)

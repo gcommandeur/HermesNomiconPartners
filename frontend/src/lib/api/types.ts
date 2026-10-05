@@ -64,6 +64,22 @@ export type ClosingStatus = "hot" | "warm" | "risk" | "stop";
 
 /** Freigabe eines Prozesses an einen Kollegen (Backend schemas/submission.py::
  * SubmissionShareRead) - gewaehrt vollen Zugriff auf genau diesen Prozess. */
+/** Prozess ohne Verantwortlichen (Admin-Liste, siehe UnownedSubmissionRead). */
+export interface UnownedSubmission {
+  id: string;
+  candidate_id: string;
+  candidate_name: string;
+  client_company_id: string | null;
+  client_name: string | null;
+  status: string;
+  created_at: string;
+}
+
+export interface UnownedSubmissionList {
+  total: number;
+  items: UnownedSubmission[];
+}
+
 export interface SubmissionShare {
   id: string;
   submission_id: string;
@@ -175,6 +191,8 @@ export interface AdminUser {
   /** Zugeordneter Teamleiter (wirkt nur, wenn dieser role="team_lead" hat). */
   manager_id: string | null;
   manager_name: string | null;
+  /** Ob schon eine Microsoft-Kennung gebunden ist (die Kennung selbst wird nicht ausgeliefert). */
+  ms_bound: boolean;
 }
 
 /** Minimale Nutzerliste (GET /users/assignable) fuer Owner-Dropdowns beim
@@ -219,7 +237,6 @@ export interface Candidate extends Entity {
   consent_received?: boolean;
   summary: string | null;
   status: CandidateStatus;
-  last_contact?: string;
   anrede?: Anrede | null;
   referred_by?: string | null;
   has_ghosting_history?: boolean;
@@ -284,7 +301,8 @@ export interface ClientCompany extends Entity {
   last_contact_at?: string | null;
   next_follow_up_at?: string | null;
   terms_status?: string;
-  fee_percentage?: number;
+  /** Als Text ("27.00"): Decimal im Backend, vor dem Rechnen mit Number() umwandeln. */
+  fee_percentage?: string;
   honorar_stufe?: HonorarStufe;
   nachlass_begruendung?: string | null;
   agb_version?: string | null;
@@ -294,10 +312,6 @@ export interface ClientCompany extends Entity {
   special_terms?: string | null;
   commercial_notes?: string | null;
   notes: string | null;
-  size?: string;
-  contact_name?: string;
-  active_mandates?: number;
-  last_contact?: string;
   /** Zustaendiger Mitarbeiter (Komfort-Filter "Meine Kanzleien", KEINE
    * Sichtbarkeitsgrenze - siehe Backend models/client_company.py::owner_user_id). */
   owner_user_id?: string | null;
@@ -425,6 +439,8 @@ export interface MailingGroup extends Entity {
   name: string;
   recipients: MailingRecipient[];
   template_key?: string | null;
+  /** Vorgestellter Kandidat einer CV-Out-Kampagne (Vorstellungs-Archiv im Backend). */
+  context_candidate_id?: string | null;
 }
 
 // "CV Out"-Kampagne (Radius-Umkreissuche ab Kandidat, siehe
@@ -467,8 +483,9 @@ export interface CandidateSubmission extends Entity {
   summary: string | null;
   sent_profile_text?: string | null;
   salary_at_submission?: string | null;
-  fee_percentage?: number | null;
-  expected_fee?: number | null;
+  /** Geldbetraege/Saetze kommen als Text (Decimal im Backend) - vor dem Rechnen Number(). */
+  fee_percentage?: string | null;
+  expected_fee?: string | null;
   refund_terms?: string | null;
   feedback_summary?: string | null;
   next_step?: string | null;
@@ -646,8 +663,9 @@ export type OfferStatus = "draft" | "received" | "accepted" | "declined" | "with
 
 export interface Offer extends Entity {
   submission_id: string;
-  offered_salary: number;
-  variable_compensation: number | null;
+  /** Als Text (Decimal im Backend) - vor dem Rechnen Number(). */
+  offered_salary: string;
+  variable_compensation: string | null;
   start_date: string | null;
   offer_status: OfferStatus;
   notes: string | null;
@@ -688,16 +706,17 @@ export type PlacementStatus = "planned" | "started" | "completed" | "cancelled";
 export interface Placement extends Entity {
   submission_id: string;
   start_date: string;
-  final_salary: number;
-  fee_percentage: number;
+  /** Geldbetraege/Saetze kommen als Text (Decimal im Backend) - vor dem Rechnen Number(). */
+  final_salary: string;
+  fee_percentage: string;
   /** Additiver Rabatt in % auf die berechnete Fee, nur im "Berechnet"-Modus
    * wirksam (siehe fee_fix). 0 = kein Rabatt. */
-  rabatt_percentage: number;
+  rabatt_percentage: string;
   /** Wenn gesetzt: dieser Betrag ist die Fee 1:1, fee_percentage/
    * rabatt_percentage werden ignoriert (aber weiterhin gespeichert/angezeigt,
    * falls spaeter zurueck auf "Berechnet" gewechselt wird). */
-  fee_fix: number | null;
-  calculated_fee: number;
+  fee_fix: string | null;
+  calculated_fee: string;
   guarantee_period_months: number;
   status: PlacementStatus;
   warranty_end_date: string;
@@ -1369,4 +1388,65 @@ export interface ClaudeConnection {
   client_name: string;
   created_at: string;
   last_used_at: string | null;
+}
+
+/** Vorstellungs-Archiv (nur Admins, Backend api/v1/presentation_archive.py). */
+export interface PresentationRecordItem {
+  id: string;
+  sent_at: string;
+  client_id: string | null;
+  client_name: string | null;
+  candidate_id: string | null;
+  candidate_number: string | null;
+  candidate_name: string | null;
+  submission_id: string | null;
+  sent_by_email: string | null;
+  recipient_emails: string[];
+  mail_subject: string;
+  file_count: number;
+  retention_until: string | null;
+  removal_requested: boolean;
+}
+
+export interface PresentationRecordFile {
+  index: number;
+  filename: string;
+  sha256: string;
+  size: number;
+  content_type: string;
+}
+
+export interface PresentationRecordDetail extends PresentationRecordItem {
+  mail_body_text: string;
+  mail_message_id: string | null;
+  profile_text_snapshot: string | null;
+  files: PresentationRecordFile[];
+  retention_set_by: string | null;
+  retention_set_at: string | null;
+}
+
+export interface PresentationVerifyResult {
+  all_ok: boolean;
+  files: {
+    index: number;
+    filename: string;
+    expected_sha256: string;
+    actual_sha256: string | null;
+    ok: boolean;
+    missing: boolean;
+  }[];
+}
+
+export interface PresentationRemovalRequest {
+  id: string;
+  record_id: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  requested_by: string;
+  created_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  client_name: string | null;
+  candidate_number: string | null;
 }

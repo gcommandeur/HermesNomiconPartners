@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  Archive,
   Boxes,
   ClipboardList,
   KeyRound,
@@ -52,6 +53,7 @@ const GROUPS: { title: string; icon: typeof Users; tiles: Tile[] }[] = [
       { href: "/claude-vorschlaege", label: "Claude-Vorschläge", description: "Vorschläge der Claude-Schnittstelle prüfen und freigeben.", icon: Sparkles },
       { href: "/einstellungen/audit-log", label: "Audit-Log", description: "Wer hat wann was geändert.", icon: ClipboardList },
       { href: "/einstellungen/loeschanfragen", label: "Löschanfragen", description: "Datenschutz: Löschungen prüfen und ausführen.", icon: Trash2 },
+      { href: "/einstellungen/vorstellungs-archiv", label: "Vorstellungs-Archiv", description: "Nachweis für Honorar-Streitfälle: was an die Kanzlei ging.", icon: Archive },
     ],
   },
 ];
