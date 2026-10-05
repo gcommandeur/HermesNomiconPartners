@@ -39,7 +39,7 @@ def _settings(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
 @pytest.fixture
 def microsoft(monkeypatch: pytest.MonkeyPatch) -> dict[str, dict[str, str]]:
     state: dict[str, dict[str, str]] = {
-        "profile": {"mail": "sso@example.com", "displayName": "SSO Nutzerin"}
+        "profile": {"id": "oid-sso-1", "mail": "sso@example.com", "displayName": "SSO Nutzerin"}
     }
     monkeypatch.setattr(
         "cc_crm.services.microsoft_login.exchange_code_for_login_tokens",

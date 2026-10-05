@@ -325,7 +325,7 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
         </div>
         {placement && (
           <p className="text-xs text-brand-dim">
-            Gespeicherte Fee: {placement.calculated_fee.toLocaleString("de-DE")} € · Gewährleistung bis{" "}
+            Gespeicherte Fee: {Number(placement.calculated_fee).toLocaleString("de-DE")} € · Gewährleistung bis{" "}
             {placement.warranty_end_date}
           </p>
         )}

@@ -60,6 +60,13 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     default_send_account_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("mail_accounts.id", ondelete="SET NULL")
     )
+    # Unveraenderliche Microsoft-Kennung (Entra-Objekt-ID, Graph `/me` -> id).
+    # E-Mail/UPN sind veraenderbar (Umbenennung, neu vergebene Adresse eines
+    # Ausgeschiedenen) - die Kennung nicht. Wird beim ersten erfolgreichen
+    # Microsoft-Login gebunden (Trust-on-first-use, Zuordnung dabei ueber die
+    # E-Mail), danach MUSS sie bei jedem Login uebereinstimmen. Nur ein Admin
+    # kann sie zuruecksetzen (z. B. bei Kontowechsel).
+    ms_oid: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)
 
     @property
     def is_admin(self) -> bool:

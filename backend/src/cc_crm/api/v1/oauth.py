@@ -10,12 +10,13 @@ from datetime import datetime
 from typing import Annotated, Any
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Body, Form, HTTPException, status
+from fastapi import APIRouter, Body, Form, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
 from cc_crm.api.dependencies import CurrentUser, DatabaseSession
 from cc_crm.core.config import get_settings
+from cc_crm.core.rate_limit import client_ip, oauth_register_rate_limiter
 from cc_crm.services.oauth_provider import (
     SCOPE,
     OAuthError,
@@ -95,8 +96,22 @@ def authorization_server_metadata() -> dict[str, Any]:
 
 
 @public_router.post("/register", status_code=status.HTTP_201_CREATED)
-def register_client(session: DatabaseSession, metadata: Annotated[Any, Body()]) -> JSONResponse:
+def register_client(
+    request: Request, session: DatabaseSession, metadata: Annotated[Any, Body()]
+) -> JSONResponse:
     _require_enabled()
+    # Oeffentlich und schreibend: Rate-Limit pro Client-IP (Hinter Cloudflare die echte IP, siehe
+    # core/rate_limit.py::client_ip - dieselbe Hilfsfunktion wie beim Login).
+    ip = client_ip(
+        request.headers.get("cf-connecting-ip"),
+        request.headers.get("x-forwarded-for"),
+        request.client.host if request.client else None,
+    )
+    if oauth_register_rate_limiter.is_blocked(ip):
+        return _error_response(
+            OAuthError("too_many_requests", "Zu viele Registrierungen - bitte spaeter erneut", 429)
+        )
+    oauth_register_rate_limiter.record_failure(ip)  # zaehlt jede Anfrage
     if not isinstance(metadata, dict):
         return _error_response(OAuthError("invalid_client_metadata", "JSON-Objekt erwartet"))
     try:

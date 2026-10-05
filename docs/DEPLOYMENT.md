@@ -401,6 +401,8 @@ Standardmäßig AUS (`CC_CRM_AI_ENABLED` nicht gesetzt: alle Claude-Adressen ant
 geklärt ist (Kandidatendaten verlassen sonst nicht Hermes, mit Schalter an gehen die Treffer von Claude-Abfragen
 an Anthropic; Kontaktdaten und Gehälter werden nie ausgegeben).
 
+**Profiltext (`short_profile`):** wird in der Ausgabe eines einzelnen Kandidaten standardmäßig NICHT mitgegeben (der Text ist nicht technisch auf Anonymität geprüft). Nur mit `CC_CRM_AI_INCLUDE_PROFILE=true` am Backend (Standard aus) geht er zusätzlich an Claude; die Suchtreffer enthalten ihn nie.
+
 **Einrichtung (einmal, Owner des Claude-Team-Kontos):** in Claude unter Einstellungen → Connectors einen eigenen
 Connector hinzufügen mit der Adresse `https://hermescrm-v9sle.ondigitalocean.app/api/v1/mcp`. Mehr ist nicht
 einzutragen: Claude findet die Anmeldung selbst (Registrierung per Dynamic Client Registration, PKCE).

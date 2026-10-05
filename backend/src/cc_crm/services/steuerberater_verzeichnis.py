@@ -31,12 +31,13 @@ from dataclasses import dataclass, field
 
 import httpx
 
+from cc_crm.core.http_identity import sourcing_user_agent
+
 BASE_URL = "https://steuerberaterverzeichnis.berufs-org.de"
 SEARCH_URL = f"{BASE_URL}/?lang=de"
 
 # Hoeflicher, identifizierbarer User-Agent fuer die Behoerdenseite (kein
 # Verstecken hinter einem Browser-UA).
-USER_AGENT = "HermesCRM-Sourcing/1.0 (Commandeur Consulting; Recruiting-Research)"
 
 REQUEST_TIMEOUT_SECONDS = 30.0
 
@@ -92,7 +93,7 @@ def fetch_search_html(plz_or_ort: str) -> str:
     response = httpx.post(
         SEARCH_URL,
         data=data,
-        headers={"User-Agent": USER_AGENT},
+        headers={"User-Agent": sourcing_user_agent()},
         timeout=REQUEST_TIMEOUT_SECONDS,
         follow_redirects=True,
     )

@@ -167,7 +167,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
                     type="button"
                     onClick={() => toggleGroup(group.id)}
                     aria-expanded={open}
-                    className="mb-[3.8px] flex h-[27px] w-full items-center justify-between px-[11.4px] text-[12.35px] font-normal text-brand-dim hover:text-brand-silver"
+                    className="mb-[3.8px] flex h-[27px] w-full items-center justify-between px-[11.4px] text-[12.35px]! font-normal! text-brand-dim hover:text-brand-silver"
                   >
                     {group.label}
                     <ChevronDown size={11} className={cn("transition-transform", !open && "-rotate-90")} />

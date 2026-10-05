@@ -41,6 +41,10 @@ LOCK_BY_KIND: dict[str, timedelta] = {
 }
 BACKOFF_BASE = timedelta(seconds=30)
 MAX_ERROR_LENGTH = 2000
+# Nach so vielen Tagen werden Datei-Inhalte (Lebenslaeufe) endgueltig fehlgeschlagener oder
+# verwaister Jobs vom Aufraeumschritt `purge_stale_job_blobs` geloescht.
+STALE_BLOB_DAYS = 3
+REMOVED = "[entfernt]"
 
 JobHandler = Callable[[BackgroundJob], None]
 _HANDLERS: dict[str, JobHandler] = {}
@@ -111,6 +115,7 @@ def claim_next(session: Session) -> BackgroundJob | None:
         job.last_error = "Worker abgestuerzt oder Zeitlimit ueberschritten."
         job.finished_at = now
         job.locked_until = None
+        _drop_personal_data(job)
         session.commit()
         return claim_next(session)
     job.status = RUNNING
@@ -118,6 +123,15 @@ def claim_next(session: Session) -> BackgroundJob | None:
     job.locked_until = now + LOCK_BY_KIND.get(job.kind, DEFAULT_LOCK)
     session.commit()
     return job
+
+
+def _drop_personal_data(job: BackgroundJob) -> None:
+    """Loescht die mitgegebenen Bytes (z. B. den Lebenslauf) und einen darin steckenden
+    Dateinamen, der den Namen der Person enthalten kann. Fuer Jobs, die nicht mehr laufen
+    werden (fertig oder endgueltig fehlgeschlagen)."""
+    job.payload_blob = None
+    if "filename" in job.payload:
+        job.payload = {**job.payload, "filename": REMOVED}
 
 
 def _finish(session: Session, job_id: uuid.UUID, error: str | None) -> None:
@@ -135,6 +149,8 @@ def _finish(session: Session, job_id: uuid.UUID, error: str | None) -> None:
         if job.attempts >= job.max_attempts:
             job.status = FAILED
             job.finished_at = _now()
+            # Endgueltig fehlgeschlagen: der Lebenslauf darf nicht liegen bleiben (DSGVO).
+            _drop_personal_data(job)
         else:
             job.status = QUEUED
             job.run_after = _now() + BACKOFF_BASE * (4 ** (job.attempts - 1))
@@ -201,6 +217,11 @@ def retry_job(session: Session, job_id: uuid.UUID) -> BackgroundJob:
         raise EntityNotFoundError("Job nicht gefunden")
     if job.status != FAILED:
         raise BusinessRuleError("Nur fehlgeschlagene Jobs koennen neu gestartet werden.")
+    if job.kind == "cv.scan" and not job.payload_blob:
+        raise BusinessRuleError(
+            "Der Lebenslauf dieses Jobs wurde aus Datenschutzgruenden geloescht. "
+            "Bitte den Lebenslauf erneut hochladen."
+        )
     job.status = QUEUED
     job.attempts = 0
     job.run_after = _now()
@@ -208,3 +229,42 @@ def retry_job(session: Session, job_id: uuid.UUID) -> BackgroundJob:
     job.last_error = None
     session.commit()
     return job
+
+
+def purge_stale_job_blobs(
+    session: Session, *, older_than_days: int = STALE_BLOB_DAYS, dry_run: bool = False
+) -> int:
+    """Aufraeumschritt (DSGVO): loescht die Bytes (Lebenslaeufe) und Dateinamen von Jobs, die
+    nicht mehr laufen werden und seit mehr als `older_than_days` Tagen liegen:
+
+    - fehlgeschlagene Jobs (Altbestand von vor der Sofort-Loeschung),
+    - verwaiste Jobs: "running" mit abgelaufener Sperre oder "queued" ohne dass je ein Worker
+      sie abgeholt hat. Diese werden zusaetzlich auf "failed" gesetzt, damit sie nicht
+      spaeter mit leeren Bytes laufen,
+    - erledigte Jobs, in denen aus irgendeinem Grund noch Bytes stehen.
+
+    Gibt die Zahl der bereinigten Jobs zurueck (bei `dry_run` nur gezaehlt,
+    nichts geaendert). Wird NICHT automatisch gestartet; Aufruf ueber
+    scripts/purge_job_blobs.py (standardmaessig Probelauf)."""
+    now = _now()
+    cutoff = now - timedelta(days=older_than_days)
+    stale = or_(
+        (BackgroundJob.status == FAILED) & (BackgroundJob.updated_at < cutoff),
+        (BackgroundJob.status == DONE) & (BackgroundJob.updated_at < cutoff),
+        (BackgroundJob.status == RUNNING) & (BackgroundJob.locked_until < cutoff),
+        (BackgroundJob.status == QUEUED) & (BackgroundJob.run_after < cutoff),
+    )
+    jobs = session.scalars(
+        select(BackgroundJob).where(BackgroundJob.payload_blob.is_not(None)).where(stale)
+    ).all()
+    if dry_run:
+        return len(jobs)
+    for job in jobs:
+        if job.status in (RUNNING, QUEUED):
+            job.status = FAILED
+            job.last_error = "Job verwaist: Lebenslauf aus Datenschutzgruenden geloescht."
+            job.finished_at = now
+            job.locked_until = None
+        _drop_personal_data(job)
+    session.commit()
+    return len(jobs)

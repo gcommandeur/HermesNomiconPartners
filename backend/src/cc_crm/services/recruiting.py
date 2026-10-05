@@ -331,7 +331,8 @@ class RecruitingProcessService:
         submission = self.submissions.submissions.find_open_unassigned(candidate_id)
         if submission is None:
             submission = self.submissions.create(
-                CandidateSubmissionCreate(candidate_id=candidate_id, owner_user_id=owner_user_id)
+                CandidateSubmissionCreate(candidate_id=candidate_id, owner_user_id=owner_user_id),
+                created_by_user_id=owner_user_id,
             )
         current_index = QUICK_LOG_STAGE_ORDER.index(submission.status)
         target_index = QUICK_LOG_STAGE_ORDER.index(payload.stage)

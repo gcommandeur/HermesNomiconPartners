@@ -271,7 +271,7 @@ export default async function CandidateDetailPage({
         </TabsContent>
         <TabsContent value="CV-Outs">
           <div className="space-y-3">
-            {submissions.map((item) => <Card key={item.id}><CardContent className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><p className="font-semibold">{clientName(item.client_company_id)}</p><p className="mt-1 text-xs text-brand-dim">Vorgestellt {formatDate(item.submitted_at)} · {item.next_step ?? "Nächster Schritt offen"}</p></div><div className="flex items-center gap-3"><StatusPill status={item.status} /><span className="text-xs text-brand-platinum">{item.expected_fee ? `${item.expected_fee.toLocaleString("de-DE")} €` : ""}</span></div></CardContent></Card>)}
+            {submissions.map((item) => <Card key={item.id}><CardContent className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><p className="font-semibold">{clientName(item.client_company_id)}</p><p className="mt-1 text-xs text-brand-dim">Vorgestellt {formatDate(item.submitted_at)} · {item.next_step ?? "Nächster Schritt offen"}</p></div><div className="flex items-center gap-3"><StatusPill status={item.status} /><span className="text-xs text-brand-platinum">{item.expected_fee ? `${Number(item.expected_fee).toLocaleString("de-DE")} €` : ""}</span></div></CardContent></Card>)}
             {submissions.length === 0 && <Card><CardContent className="py-12 text-center text-sm text-brand-gray">Noch keine CV-Outs.</CardContent></Card>}
           </div>
         </TabsContent>

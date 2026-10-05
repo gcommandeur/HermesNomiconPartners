@@ -1,6 +1,7 @@
+import uuid
 from typing import Any
 
-from sqlalchemy import JSON, String
+from sqlalchemy import JSON, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cc_crm.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -27,3 +28,7 @@ class MailingGroup(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Vorlagen-Zuordnung (Punkt 7) - referenziert EmailTemplate.key aus dem
     # bestehenden EmailWorkflowService.TEMPLATES, kein eigenes Vorlagenmodell.
     template_key: Mapped[str | None] = mapped_column(String(80))
+    # Kandidat, um den es bei diesem Versand geht (CV-Out-Kampagne). Ohne ihn weiss der
+    # Massenversand nicht, WELCHER Kandidat vorgestellt wird; mit ihm gilt der Versand an
+    # Kanzlei-Kontakte als Vorstellung und landet im Vorstellungs-Archiv.
+    context_candidate_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))

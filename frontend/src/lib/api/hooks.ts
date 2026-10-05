@@ -22,10 +22,12 @@ import {
   getMailingGroups,
   getReactivationCandidates,
   getTeamKpis,
+  getUnownedSubmissions,
   type CalendarEventQuery,
 } from "./queries";
 import type {
   AdminUser,
+  UnownedSubmissionList,
   AppSettings,
   AuditLogEntry,
   Candidate,
@@ -184,6 +186,19 @@ export function useMailAccountsCache(enabled: boolean) {
 
 export function invalidateMailAccountsCache() {
   return mutate("/mail-accounts");
+}
+
+/** Nur Admin: Prozesse ohne Verantwortlichen. */
+export function useUnownedSubmissionsCache(enabled: boolean) {
+  return useSWR<DataResult<UnownedSubmissionList>>(
+    enabled ? "/submissions/without-owner" : null,
+    getUnownedSubmissions,
+    swrConfig,
+  );
+}
+
+export function invalidateUnownedSubmissionsCache() {
+  return mutate("/submissions/without-owner");
 }
 
 export function invalidateAdminUsersCache() {

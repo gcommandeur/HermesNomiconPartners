@@ -78,10 +78,7 @@ export function ClientsTable() {
   // Suchtreffer statt (wie vorher via fetchAllPages) immer den kompletten
   // Kanzlei-Bestand. Sortierung laeuft ueber ORDER BY im Backend (siehe
   // repositories/clients.py::_order_by_clauses) und damit ueber den
-  // GESAMTEN Bestand, nicht mehr nur die aktuell geladene Seite. Fuer
-  // "active_mandates" gibt es kein Backend-Feld (siehe Kommentar in
-  // SORT_ACCESSORS unten) - der Server ignoriert diesen sortBy-Wert und
-  // faellt auf die Default-Sortierung nach Name zurueck.
+  // GESAMTEN Bestand, nicht mehr nur die aktuell geladene Seite.
   const {
     search,
     setSearch,
@@ -111,7 +108,6 @@ export function ClientsTable() {
     Status: client.status,
     Region: client.region ?? client.city ?? client.postal_code,
     Fokus: client.focus,
-    Ansprechpartner: client.contact_name,
     AGB: termsStatusLabel(client.terms_status),
     Honorar: client.fee_percentage ?? 27,
   })), [sorted]);
@@ -163,7 +159,7 @@ export function ClientsTable() {
                   {client.focus ? ` · ${client.focus}` : ""}
                 </p>
                 <div className="mt-2 flex items-center justify-between text-[10.45px] text-brand-gray">
-                  <span>Kontakt {formatDate(client.last_contact_at ?? client.last_contact ?? client.updated_at)}</span>
+                  <span>Kontakt {formatDate(client.last_contact_at ?? client.updated_at)}</span>
                   <span>{client.fee_percentage ?? 27} % Honorar</span>
                 </div>
               </Link>
@@ -222,8 +218,6 @@ export function ClientsTable() {
           { label: "Region", key: "region" },
           { label: "Größe", key: "company_size" },
           { label: "Fokus", key: "focus" },
-          "Hauptkontakt",
-          { label: "Mandate", key: "active_mandates" },
           { label: "Letzter Kontakt", key: "last_contact_at" },
           "AGB",
           { label: "Honorar", key: "fee_percentage" },
@@ -239,11 +233,9 @@ export function ClientsTable() {
               <tr key={client.id} className="hover:bg-brand-hover/35">
                 <td className="px-4 py-3.5"><Link href={`/kanzleien/${client.id}`} className="font-semibold text-brand-platinum hover:text-white hover:underline">{client.name}</Link><div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusPill status={client.status} />{client.approval_pending && <Badge tone="amber">Freigabe ausstehend</Badge>}</div></td>
                 <td className="px-4 py-3.5">{client.region ?? client.city ?? client.postal_code ?? "—"}</td>
-                <td className="px-4 py-3.5 text-brand-soft">{client.company_size ?? client.size ?? "—"}</td>
+                <td className="px-4 py-3.5 text-brand-soft">{client.company_size ?? "—"}</td>
                 <td className="px-4 py-3.5">{client.focus ?? "—"}</td>
-                <td className="px-4 py-3.5">{client.contact_name ?? "—"}</td>
-                <td className="px-4 py-3.5 text-center">{client.active_mandates ?? 0}</td>
-                <td className="px-4 py-3.5 text-brand-soft">{formatDate(client.last_contact_at ?? client.last_contact ?? client.updated_at)}</td>
+                <td className="px-4 py-3.5 text-brand-soft">{formatDate(client.last_contact_at ?? client.updated_at)}</td>
                 <td className="px-4 py-3.5"><StatusPill status={client.terms_status === "accepted" || client.terms_status === "Unterzeichnet" ? "active" : "draft"} /></td>
                 <td className="px-4 py-3.5 font-medium">{client.fee_percentage ?? 27} %</td>
               </tr>
@@ -253,9 +245,8 @@ export function ClientsTable() {
           const { groupKey, locations } = row;
           const isExpanded = expandedGroup === groupKey;
           const postalCodes = [...new Set(locations.map((loc) => loc.postal_code).filter(Boolean))];
-          const totalMandates = locations.reduce((sum, loc) => sum + (loc.active_mandates ?? 0), 0);
           const mostRecentContact = locations
-            .map((loc) => loc.last_contact_at ?? loc.last_contact ?? loc.updated_at)
+            .map((loc) => loc.last_contact_at ?? loc.updated_at)
             .filter(Boolean)
             .sort()
             .at(-1);
@@ -284,8 +275,6 @@ export function ClientsTable() {
                 </td>
                 <td className="px-4 py-3.5 text-brand-soft">—</td>
                 <td className="px-4 py-3.5">{locations[0]?.focus ?? "—"}</td>
-                <td className="px-4 py-3.5">—</td>
-                <td className="px-4 py-3.5 text-center">{totalMandates}</td>
                 <td className="px-4 py-3.5 text-brand-soft">{mostRecentContact ? formatDate(mostRecentContact) : "—"}</td>
                 <td className="px-4 py-3.5">—</td>
                 <td className="px-4 py-3.5 font-medium">—</td>
@@ -295,11 +284,9 @@ export function ClientsTable() {
                   <tr key={client.id} className="bg-brand-surface/40 hover:bg-brand-hover/35">
                     <td className="px-4 py-3.5 pl-9"><Link href={`/kanzleien/${client.id}`} className="font-semibold text-brand-platinum hover:text-white hover:underline">{client.name}</Link><div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusPill status={client.status} />{client.approval_pending && <Badge tone="amber">Freigabe ausstehend</Badge>}</div></td>
                     <td className="px-4 py-3.5">{client.region ?? client.city ?? client.postal_code ?? "—"}</td>
-                    <td className="px-4 py-3.5 text-brand-soft">{client.company_size ?? client.size ?? "—"}</td>
+                    <td className="px-4 py-3.5 text-brand-soft">{client.company_size ?? "—"}</td>
                     <td className="px-4 py-3.5">{client.focus ?? "—"}</td>
-                    <td className="px-4 py-3.5">{client.contact_name ?? "—"}</td>
-                    <td className="px-4 py-3.5 text-center">{client.active_mandates ?? 0}</td>
-                    <td className="px-4 py-3.5 text-brand-soft">{formatDate(client.last_contact_at ?? client.last_contact ?? client.updated_at)}</td>
+                    <td className="px-4 py-3.5 text-brand-soft">{formatDate(client.last_contact_at ?? client.updated_at)}</td>
                     <td className="px-4 py-3.5"><StatusPill status={client.terms_status === "accepted" || client.terms_status === "Unterzeichnet" ? "active" : "draft"} /></td>
                     <td className="px-4 py-3.5 font-medium">{client.fee_percentage ?? 27} %</td>
                   </tr>

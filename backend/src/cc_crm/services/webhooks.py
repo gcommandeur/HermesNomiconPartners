@@ -29,7 +29,7 @@ import time
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import SplitResult, urlsplit, urlunsplit
 
 import httpx
 from sqlalchemy import delete, select
@@ -73,13 +73,17 @@ def _resolve_host(host: str) -> list[str]:
     return sorted({str(info[4][0]) for info in infos})
 
 
-def validate_webhook_url(url: str) -> None:
+def _resolve_validated(url: str) -> tuple[SplitResult, str]:
+    """Prueft die Adresse (https, kein Privat-/Internnetz) und liefert (zerlegte URL, geprueft
+    IP). Alle aufgeloesten Adressen muessen oeffentlich sein; die zurueckgegebene IP ist die, mit
+    der verbunden wird (siehe _http_post)."""
     parts = urlsplit(url.strip())
     if parts.scheme != "https":
         raise BusinessRuleError("Webhook-Adressen muessen mit https:// beginnen.")
     if not parts.hostname or parts.username or parts.password:
         raise BusinessRuleError("Ungueltige Webhook-Adresse.")
-    for address in _resolve_host(parts.hostname):
+    addresses = _resolve_host(parts.hostname)
+    for address in addresses:
         ip = ipaddress.ip_address(address.split("%")[0])
         if (
             ip.is_private
@@ -92,6 +96,13 @@ def validate_webhook_url(url: str) -> None:
             raise BusinessRuleError(
                 "Webhook-Adressen im privaten oder internen Netz sind nicht erlaubt."
             )
+    if not addresses:
+        raise BusinessRuleError(f"Adresse '{parts.hostname}' laesst sich nicht aufloesen.")
+    return parts, addresses[0].split("%")[0]
+
+
+def validate_webhook_url(url: str) -> None:
+    _resolve_validated(url)
 
 
 # --- Geheimnis und Signatur ---------------------------------------------
@@ -314,13 +325,27 @@ def dispatch_outbox(session_factory: sessionmaker[Session]) -> int:
 
 
 def _http_post(url: str, headers: dict[str, str], body: str) -> int:
-    response = httpx.post(
-        url,
-        content=body.encode(),
-        headers=headers,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-        follow_redirects=False,
-    )
+    """Sendet an die Adresse, aber verbindet sich mit der soeben GEPRUEFTEN IP (nicht mit dem
+    Namen): so loest httpx den Namen nicht noch einmal auf, und ein Angreifer mit eigenem DNS
+    kann zwischen Pruefung und Versand nicht auf eine interne Adresse umschalten
+    (DNS-Rebinding). Zertifikat und Host-Header gelten weiter fuer den urspruenglichen Namen
+    (SNI per `sni_hostname`); Umleitungen werden nicht gefolgt, Proxy-Umgebungsvariablen
+    ignoriert."""
+    parts, ip = _resolve_validated(url)
+    host = parts.hostname or ""
+    port = parts.port or 443
+    ip_host = f"[{ip}]" if ":" in ip else ip
+    target = urlunsplit(("https", f"{ip_host}:{port}", parts.path or "/", parts.query, ""))
+    host_header = host if port == 443 else f"{host}:{port}"
+    with httpx.Client(
+        timeout=REQUEST_TIMEOUT_SECONDS, follow_redirects=False, trust_env=False
+    ) as http:
+        response = http.post(
+            target,
+            content=body.encode(),
+            headers={**headers, "Host": host_header},
+            extensions={"sni_hostname": host},
+        )
     return response.status_code
 
 

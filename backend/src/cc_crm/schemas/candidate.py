@@ -132,6 +132,10 @@ class CandidateRead(CandidateBase, EntityRead):
     # System-gesetzt (siehe CandidateService.update()), nicht ueber
     # Create/Update durch den Nutzer steuerbar - deshalb nur im Read-Schema.
     cv_in_recorded_at: datetime | None = None
+    # System-gesetzt: Einwilligungsnachweis ohne Personenbezug und Anonymisierungszeitpunkt.
+    consent_recorded_at: datetime | None = None
+    consent_source: str | None = None
+    anonymized_at: datetime | None = None
     # Titelschutz-Korrektur Schritt 2: system-gesetzt (Audit-Skript,
     # CandidateService.confirm_rollen, oder automatisch beim Korrigieren von
     # rollen ueber update()) - NICHT direkt ueber Create/Update durch den

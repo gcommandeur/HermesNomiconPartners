@@ -1,3 +1,4 @@
+import uuid
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -16,6 +17,7 @@ class MailingGroupCreate(BaseModel):
     name: str = Field(min_length=1, max_length=160)
     recipients: list[MailingRecipient] = Field(default_factory=list)
     template_key: str | None = None
+    context_candidate_id: uuid.UUID | None = None
 
 
 class MailingGroupUpdate(BaseModel):
