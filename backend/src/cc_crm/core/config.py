@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     # einschalten, wenn die Auftragsverarbeitung mit Anthropic geklaert ist - ohne
     # den Schalter liefert der Endpunkt 404 und es verlassen keine Daten das System.
     ai_enabled: bool = False
+    # Darf der anonymisierte Profiltext (`short_profile`) in der MCP-Ausgabe eines einzelnen
+    # Kandidaten an Claude gehen? STANDARDMAESSIG AUS: der Text ist KI-erzeugt und vom Berater
+    # geprueft, aber technisch nicht auf Anonymitaet geprueft (kann Arbeitgeber/Stationen nennen).
+    ai_include_profile: bool = False
     # Maximale MCP-Werkzeugaufrufe pro Nutzer und Tag (UTC).
     mcp_daily_limit: int = 500
     anthropic_api_key: str | None = None

@@ -9,7 +9,8 @@ Kuendigungsfrist) tauchen in keiner Ausgabe auf.
 
 Bekannte, bewusst freigegebene Textfelder (siehe Bericht zu Punkt 7): `short_profile` (der
 anonymisierte Profiltext, KI-erzeugt und vom Berater geprueft, aber technisch nicht auf
-Anonymitaet geprueft) und die Kanzlei-Felder `name`/`website` (ein Kanzleiname kann Familiennamen
+Anonymitaet geprueft) NUR bei gesetztem `CC_CRM_AI_INCLUDE_PROFILE` (Standard aus) und die
+Kanzlei-Felder `name`/`website` (ein Kanzleiname kann Familiennamen
 enthalten)."""
 
 from __future__ import annotations
@@ -18,9 +19,11 @@ import json
 import uuid
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
+from cc_crm.core.config import get_settings
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.task import Task
 from tests.api.test_mcp import _call, _mcp_key, ai_on  # noqa: F401  (Fixture)
@@ -39,7 +42,8 @@ CANDIDATE_BRIEF = frozenset(
         "last_contact_at",
     }
 )
-CANDIDATE_DETAIL = CANDIDATE_BRIEF | {"short_profile"}
+CANDIDATE_DETAIL = CANDIDATE_BRIEF  # Standard: ohne short_profile
+CANDIDATE_DETAIL_WITH_PROFILE = CANDIDATE_BRIEF | {"short_profile"}
 CLIENT_LIST_ITEM = frozenset({"id", "name", "city", "status", "kanzleigruppe", "website"})
 CLIENT_DETAIL = frozenset(
     {"id", "name", "city", "postal_code", "status", "kanzleigruppe", "website"}
@@ -112,10 +116,37 @@ def test_candidate_outputs_have_exactly_the_approved_fields(
         _call(client, headers, "get_candidate", candidate_id=ids["candidate_id"])
     )
     assert frozenset(detail) == CANDIDATE_DETAIL
-    assert detail["short_profile"] == "Anonymisiertes Profil mit DATEV-Erfahrung"
+    assert "DATEV" not in found_text + detail_text  # Standard: Profiltext geht nicht raus
 
     for value in FORBIDDEN:
         assert value not in found_text + detail_text, value
+
+
+def test_candidate_detail_includes_profile_only_with_switch(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+    team: Team,
+    ai_on: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CC_CRM_AI_INCLUDE_PROFILE", "true")
+    get_settings.cache_clear()
+    try:
+        ids = _data(client, session_factory, team)
+        headers = _mcp_key(session_factory, team.a)
+        found, found_text = _payload(_call(client, headers, "search_candidates", query="Whitelist"))
+        detail, detail_text = _payload(
+            _call(client, headers, "get_candidate", candidate_id=ids["candidate_id"])
+        )
+        # Die Suchtreffer bleiben auch mit Schalter ohne Profiltext.
+        assert {frozenset(item) for item in found["items"]} == {CANDIDATE_BRIEF}
+        assert frozenset(detail) == CANDIDATE_DETAIL_WITH_PROFILE
+        assert detail["short_profile"] == "Anonymisiertes Profil mit DATEV-Erfahrung"
+        for value in FORBIDDEN:
+            assert value not in found_text + detail_text, value
+    finally:
+        monkeypatch.delenv("CC_CRM_AI_INCLUDE_PROFILE", raising=False)
+        get_settings.cache_clear()
 
 
 def test_client_outputs_have_exactly_the_approved_fields(
