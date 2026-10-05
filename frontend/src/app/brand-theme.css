@@ -164,13 +164,16 @@ aside .bg-white\/10, .bg-\[\#050B14\] .bg-white\/10 { background-color: var(--wa
 /* Logo in der Seitenleiste: Zeichen und Schriftzug sind Teile EINES Logos (gleiche Hoehe,
    nahtlos zugeschnitten, der Abstand mit senkrechtem Strich steckt im Schriftzug-Bild,
    gemessen am Original). Kein Zusatzabstand; Gesamtbreite ca. 180px passt in die 236px-Leiste. */
-aside a[href="/"] { gap: 0 !important; margin-left: 8px; }
-aside a[href="/"] img { width: auto !important; max-width: none !important; flex-shrink: 0; }
-aside a[href="/"] img[src*="nomicon-mark"],
-aside a[href="/"] img[src*="nomicon-wordmark"] { height: 46.8px !important; }
+aside > div:first-child a[href="/"] { gap: 0 !important; margin-left: 8px; }
+aside > div:first-child a[href="/"] img { width: auto !important; max-width: none !important; flex-shrink: 0; }
+aside > div:first-child a[href="/"] img[src*="nomicon-mark"],
+aside > div:first-child a[href="/"] img[src*="nomicon-wordmark"] { height: 46.8px !important; }
+/* Menuepunkte: der aktive hat einen 2px-Rand links, die uebrigen nicht - Icons und Texte
+   sprangen deshalb um 2px. Unsichtbarer Rand gleicher Breite haelt alle in einer Linie. */
+aside a.h-\[38px\]:not(.border-l-2) { border-left: 2px solid transparent; }
 /* eingeklappt (72px): nur das NP-Zeichen, kleiner */
-aside.w-\[72px\] a[href="/"] { margin-left: 0; }
-aside.w-\[72px\] a[href="/"] img[src*="nomicon-mark"] { height: 36px !important; }
+aside.w-\[72px\] > div:first-child a[href="/"] { margin-left: 0; }
+aside.w-\[72px\] > div:first-child a[href="/"] img[src*="nomicon-mark"] { height: 36px !important; }
 /* Anmeldeseite: Navy statt des festen Fremd-Blaus, Standard-Button einfarbig hell */
 .bg-\[\#050B14\] { background-color: #001c4a; }
 .bg-\[\#050B14\] .bg-gradient-to-b[class*="from-brand-accent"] {
