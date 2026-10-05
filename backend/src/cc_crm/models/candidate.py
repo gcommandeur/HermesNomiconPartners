@@ -47,6 +47,14 @@ class Candidate(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     cv_in_recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     short_profile: Mapped[str | None] = mapped_column(Text)
     consent_received: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Einwilligungsnachweis OHNE Personenbezug (bleibt bei der Anonymisierung stehen, waehrend
+    # consent_received dort auf False faellt): Zeitpunkt, an dem das Flag in Hermes auf True
+    # gesetzt wurde (Altbestand: unbekannt = NULL, wird nie geraten), und die Quelle.
+    # Die pseudonyme Kennung ist candidate_number.
+    consent_recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    consent_source: Mapped[str | None] = mapped_column(String(60))
+    # Zeitpunkt der Anonymisierung (DSGVO), NULL = nicht anonymisiert.
+    anonymized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     summary: Mapped[str | None] = mapped_column(Text)
     status: Mapped[CandidateStatus] = mapped_column(
         Enum(CandidateStatus, native_enum=False, length=32),

@@ -2363,6 +2363,18 @@
             ],
             "title": "Aktuelles Umfeld Kanzleityp"
           },
+          "anonymized_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anonymized At"
+          },
           "anrede": {
             "anyOf": [
               {
@@ -2432,6 +2444,29 @@
             "default": false,
             "title": "Consent Received",
             "type": "boolean"
+          },
+          "consent_recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Recorded At"
+          },
+          "consent_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Source"
           },
           "created_at": {
             "format": "date-time",

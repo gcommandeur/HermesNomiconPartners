@@ -3798,6 +3798,8 @@ export interface components {
             aktuelles_umfeld_kanzleigroesse?: string | null;
             /** Aktuelles Umfeld Kanzleityp */
             aktuelles_umfeld_kanzleityp?: string | null;
+            /** Anonymized At */
+            anonymized_at?: string | null;
             anrede?: components["schemas"]["Anrede"] | null;
             /** Ausbildung Titel */
             ausbildung_titel?: string | null;
@@ -3814,6 +3816,10 @@ export interface components {
              * @default false
              */
             consent_received: boolean;
+            /** Consent Recorded At */
+            consent_recorded_at?: string | null;
+            /** Consent Source */
+            consent_source?: string | null;
             /**
              * Created At
              * Format: date-time
