@@ -77,6 +77,179 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/presentation-archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Records */
+        get: operations["list_records_api_v1_admin_presentation_archive_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/count-without-record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Count Without Record
+         * @description Nur Zaehlung: Prozesse ab cv_out und davon die ohne Archiv-Eintrag (kein Backfill).
+         */
+        get: operations["count_without_record_api_v1_admin_presentation_archive_count_without_record_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/removal-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Removal Requests */
+        get: operations["list_removal_requests_api_v1_admin_presentation_archive_removal_requests_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/removal-requests/{request_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Removal */
+        post: operations["approve_removal_api_v1_admin_presentation_archive_removal_requests__request_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/removal-requests/{request_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Removal */
+        post: operations["reject_removal_api_v1_admin_presentation_archive_removal_requests__request_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Record */
+        get: operations["get_record_api_v1_admin_presentation_archive__record_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/{record_id}/files/{file_index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download File */
+        get: operations["download_file_api_v1_admin_presentation_archive__record_id__files__file_index__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/{record_id}/removal-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Removal */
+        post: operations["request_removal_api_v1_admin_presentation_archive__record_id__removal_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/{record_id}/retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Retention */
+        put: operations["set_retention_api_v1_admin_presentation_archive__record_id__retention_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/{record_id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verify Record */
+        get: operations["verify_record_api_v1_admin_presentation_archive__record_id__verify_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai-proposals": {
         parameters: {
             query?: never;
@@ -6304,6 +6477,8 @@ export interface components {
         };
         /** MailingGroupCreate */
         MailingGroupCreate: {
+            /** Context Candidate Id */
+            context_candidate_id?: string | null;
             /** Name */
             name: string;
             /** Recipients */
@@ -6326,6 +6501,8 @@ export interface components {
         };
         /** MailingGroupRead */
         MailingGroupRead: {
+            /** Context Candidate Id */
+            context_candidate_id?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -6844,6 +7021,147 @@ export interface components {
             start_date?: string | null;
             status?: components["schemas"]["PlacementStatus"] | null;
         };
+        /** PresentationCountResult */
+        PresentationCountResult: {
+            /** Presented Submissions */
+            presented_submissions: number;
+            /** Without Archive Record */
+            without_archive_record: number;
+        };
+        /** PresentationFileRead */
+        PresentationFileRead: {
+            /** Content Type */
+            content_type: string;
+            /** Filename */
+            filename: string;
+            /** Index */
+            index: number;
+            /** Sha256 */
+            sha256: string;
+            /** Size */
+            size: number;
+        };
+        /** PresentationRecordDetail */
+        PresentationRecordDetail: {
+            /** Candidate Id */
+            candidate_id?: string | null;
+            /** Candidate Name */
+            candidate_name?: string | null;
+            /** Candidate Number */
+            candidate_number?: string | null;
+            /** Client Id */
+            client_id?: string | null;
+            /** Client Name */
+            client_name?: string | null;
+            /** File Count */
+            file_count: number;
+            /** Files */
+            files: components["schemas"]["PresentationFileRead"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Mail Body Text */
+            mail_body_text: string;
+            /** Mail Message Id */
+            mail_message_id?: string | null;
+            /** Mail Subject */
+            mail_subject: string;
+            /** Profile Text Snapshot */
+            profile_text_snapshot?: string | null;
+            /** Recipient Emails */
+            recipient_emails: string[];
+            /**
+             * Removal Requested
+             * @default false
+             */
+            removal_requested: boolean;
+            /** Retention Set At */
+            retention_set_at?: string | null;
+            /** Retention Set By */
+            retention_set_by?: string | null;
+            /** Retention Until */
+            retention_until?: string | null;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            /** Sent By Email */
+            sent_by_email?: string | null;
+            /** Submission Id */
+            submission_id?: string | null;
+        };
+        /** PresentationRecordListItem */
+        PresentationRecordListItem: {
+            /** Candidate Id */
+            candidate_id?: string | null;
+            /** Candidate Name */
+            candidate_name?: string | null;
+            /** Candidate Number */
+            candidate_number?: string | null;
+            /** Client Id */
+            client_id?: string | null;
+            /** Client Name */
+            client_name?: string | null;
+            /** File Count */
+            file_count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Mail Subject */
+            mail_subject: string;
+            /** Recipient Emails */
+            recipient_emails: string[];
+            /**
+             * Removal Requested
+             * @default false
+             */
+            removal_requested: boolean;
+            /** Retention Until */
+            retention_until?: string | null;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            /** Sent By Email */
+            sent_by_email?: string | null;
+            /** Submission Id */
+            submission_id?: string | null;
+        };
+        /** PresentationRecordPage */
+        PresentationRecordPage: {
+            /** Items */
+            items: components["schemas"]["PresentationRecordListItem"][];
+            /** Total */
+            total: number;
+        };
+        /** PresentationVerifyItem */
+        PresentationVerifyItem: {
+            /** Actual Sha256 */
+            actual_sha256?: string | null;
+            /** Expected Sha256 */
+            expected_sha256: string;
+            /** Filename */
+            filename: string;
+            /** Index */
+            index: number;
+            /** Missing */
+            missing: boolean;
+            /** Ok */
+            ok: boolean;
+        };
+        /** PresentationVerifyResult */
+        PresentationVerifyResult: {
+            /** All Ok */
+            all_ok: boolean;
+            /** Files */
+            files: components["schemas"]["PresentationVerifyItem"][];
+        };
         /** ProfileSuggestion */
         ProfileSuggestion: {
             /**
@@ -6927,6 +7245,50 @@ export interface components {
             /** Plz Prefix */
             plz_prefix?: string | null;
         };
+        /** RemovalDecision */
+        RemovalDecision: {
+            /** Note */
+            note?: string | null;
+        };
+        /** RemovalRequestCreate */
+        RemovalRequestCreate: {
+            /** Reason */
+            reason: string;
+        };
+        /** RemovalRequestRead */
+        RemovalRequestRead: {
+            /** Candidate Number */
+            candidate_number?: string | null;
+            /** Client Name */
+            client_name?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at?: string | null;
+            /** Decided By */
+            decided_by?: string | null;
+            /** Decision Note */
+            decision_note?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Record Id
+             * Format: uuid
+             */
+            record_id: string;
+            /** Requested By */
+            requested_by: string;
+            /** Status */
+            status: string;
+        };
         /** ResendLoginCodeRequest */
         ResendLoginCodeRequest: {
             /**
@@ -6947,6 +7309,11 @@ export interface components {
              * Format: date-time
              */
             expires_at: string;
+        };
+        /** RetentionUpdate */
+        RetentionUpdate: {
+            /** Retention Until */
+            retention_until?: string | null;
         };
         /**
          * Rolle
@@ -8051,6 +8418,354 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KpiPointRuleRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_records_api_v1_admin_presentation_archive_get: {
+        parameters: {
+            query?: {
+                client_id?: string | null;
+                candidate_number?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationRecordPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    count_without_record_api_v1_admin_presentation_archive_count_without_record_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationCountResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_removal_requests_api_v1_admin_presentation_archive_removal_requests_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalRequestRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_removal_api_v1_admin_presentation_archive_removal_requests__request_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemovalDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalRequestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_removal_api_v1_admin_presentation_archive_removal_requests__request_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemovalDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalRequestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_record_api_v1_admin_presentation_archive__record_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationRecordDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_file_api_v1_admin_presentation_archive__record_id__files__file_index__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                record_id: string;
+                file_index: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_removal_api_v1_admin_presentation_archive__record_id__removal_requests_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemovalRequestCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalRequestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_retention_api_v1_admin_presentation_archive__record_id__retention_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationRecordDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_record_api_v1_admin_presentation_archive__record_id__verify_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationVerifyResult"];
                 };
             };
             /** @description Validation Error */

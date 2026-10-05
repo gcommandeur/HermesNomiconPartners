@@ -32,6 +32,7 @@ from cc_crm.api.v1.notes import router as notes_router
 from cc_crm.api.v1.oauth import public_router as oauth_public_router
 from cc_crm.api.v1.oauth import router as oauth_router
 from cc_crm.api.v1.operational import router as operational_router
+from cc_crm.api.v1.presentation_archive import router as presentation_archive_router
 from cc_crm.api.v1.profile_generator import router as profile_generator_router
 from cc_crm.api.v1.recruiting import router as recruiting_router
 from cc_crm.api.v1.region_modifiers import router as region_modifiers_router
@@ -96,6 +97,7 @@ protected_router.include_router(recruiting_router, tags=["recruiting-process"])
 protected_router.include_router(region_modifiers_router, tags=["region-modifiers"])
 protected_router.include_router(sequences_router, tags=["outreach-sequences"])
 protected_router.include_router(mailing_groups_router, tags=["mailing-groups"])
+protected_router.include_router(presentation_archive_router, tags=["presentation-archive"])
 protected_router.include_router(users_router, tags=["users"])
 protected_router.include_router(audit_logs_router, tags=["audit-logs"])
 protected_router.include_router(deletion_requests_router, tags=["deletion-requests"])
