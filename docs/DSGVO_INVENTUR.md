@@ -87,6 +87,36 @@ Alles andere in diesem Dokument wird **nicht** angefasst.
 | `deletion_requests` (`requested_via`) | `candidate_id` | nicht relevant | der Loeschantrag selbst, als Nachweis sinnvoll zu behalten |
 | `webhook_deliveries` (`payload`), `event_outbox` | nur IDs | **unkritisch** | Nutzlast enthaelt bewusst nur `entity_type`, `entity_id`, `audit_log_id` (Entscheidung E4) |
 
+### 3a. Neue Datenkategorie: Vorstellungs-Archiv (seit 2026-10-05)
+
+Tabelle `presentation_records` (+ `presentation_removal_requests`) und Dateien unter dem Speicher-
+Praefix `presentation-archive/`. **Zweck:** Nachweis im Honorar-Streitfall, was bei einer Vorstellung an
+eine Kanzlei gegangen ist. **Inhalt je Versand:** Empfaenger-Adresse(n), Betreff, Mailtext, Message-ID,
+Versender (Mitarbeiter), die exakten versendeten Anhaenge mit SHA-256, der Profiltext zum Versandzeitpunkt,
+die Kandidatennummer (Pseudonym), Name der Kanzlei, optional Prozess-ID. **Rechtsgrundlage (Vorschlag):**
+berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO) am Nachweis des Honoraranspruchs; Interessenabwaegung
+und Aufnahme ins Verarbeitungsverzeichnis sind Sache des Nutzers - keine Rechtsberatung.
+
+- **Zugriff:** ausschliesslich Admins; fuer alle anderen antworten die Routen mit 404. Nicht in
+  Dokumentenlisten, Suche, Exporten, Webhooks oder der MCP-Ausgabe.
+- **Bewusst NICHT von der Anonymisierung oder einer Teil-Loeschung beruehrt:** der Nachweis soll genau dann
+  noch da sein, wenn der Kandidat nicht mehr identifizierbar im System steht. Er enthaelt aber weiterhin
+  den versendeten Text und die Dateien (anonymes Profil, ggf. mit Hinweisen auf die Person). Das ist eine
+  bewusste Ausnahme von Abschnitt 1 und muss in der Datenschutzinformation und beim Loeschkonzept
+  beruecksichtigt werden.
+- **Keine Fremdschluessel:** ueberlebt auch das endgueltige Loeschen von Kandidat, Kanzlei oder Prozess.
+- **Unveraenderlich** (Postgres-Trigger) bis auf die Aufbewahrungsfrist `retention_until`.
+- **Aufbewahrung offen:** `retention_until` setzt der Admin je Eintrag; es gibt keine Standardfrist und
+  keine automatische Loeschung. Entfernen nur nach Ablauf der Frist, mit Begruendung und Freigabe durch einen
+  zweiten Admin (Audit-Eintrag ohne Personendaten). **Zu klaeren (Nutzer):** welche Frist (z. B.
+  Verjaehrung der Honoraranspruchs plus Puffer) und ob sie beim Versand automatisch vorbelegt werden soll.
+- **Sicherungen/Betrieb:** der Trigger schuetzt gegen die laufende Software, nicht gegen Eigentuemer-
+  Zugang zur Datenbank; Datenbank-Sicherungen und der Objektspeicher (`presentation-archive/`) fallen unter
+  dieselben Aufbewahrungsfristen wie die Eintraege.
+- **Kein Backfill:** fuer Vorstellungen vor dem 2026-10-05 existiert kein Beleg. Die Zaehlung
+  `GET /admin/presentation-archive/count-without-record` nennt, wie viele Prozesse ab `cv_out` ohne
+  Eintrag dastehen.
+
 ## 4. Ausserhalb der Datenbank
 
 - **Dokumentenspeicher:** CV und anonymes Profil werden beim Anonymisieren geloescht (siehe oben); sonstige Kopien (z. B. an Kanzleien gesendete Mail-Anhaenge) liegen in fremden Postfaechern.

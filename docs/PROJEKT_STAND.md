@@ -26,7 +26,7 @@ Ziel des Nutzers: moeglichst alles vom Handy aus erledigen koennen.
 
 ## Uebergabe an die Cloud (2026-10-04, Laptop hoert auf)
 
-Stand: `entwicklung` = Commits `a7907d9` bis `5f9edf5` (siehe `PROTOKOLL.md`, 2026-10-05) plus dieser Commit; CI-Stand steht im Protokoll. `origin/main` steht auf `192497c` und ist NICHT nachgezogen - alles seit den Review-Nachbesserungen liegt nur auf `entwicklung`, Merge nach `main` nur mit gruenem Licht. Weiterarbeiten: erst `PROTOKOLL.md` (oberste ca. 15 Eintraege), dann die Liste "Offen (Claude)" unten. Die Kopie `HermesNomiconPartners` liegt nur auf dem Laptop des Nutzers - nicht anfassen. Lehre: Tests, die nur auf Postgres laufen, erst nach gruener CI als fertig melden.
+Stand: `entwicklung` = Commits `a7907d9` bis `e48bb33` plus Dokumentations-Commit (siehe `PROTOKOLL.md`, 2026-10-05); CI-Stand steht im Protokoll. `origin/main` steht auf `192497c` und ist NICHT nachgezogen - alles seit den Review-Nachbesserungen liegt nur auf `entwicklung`, Merge nach `main` nur mit gruenem Licht. Weiterarbeiten: erst `PROTOKOLL.md` (oberste ca. 15 Eintraege), dann die Liste "Offen (Claude)" unten. Die Kopie `HermesNomiconPartners` liegt nur auf dem Laptop des Nutzers - nicht anfassen. Lehre: Tests, die nur auf Postgres laufen, erst nach gruener CI als fertig melden.
 
 ## Offene Punkte
 
@@ -37,7 +37,8 @@ Stand: `entwicklung` = Commits `a7907d9` bis `5f9edf5` (siehe `PROTOKOLL.md`, 20
 - Produktions-Skripte in `backend/scripts/` (`cleanup_service_users.py`, `backfill_cv_in_recorded_at.py`, `backfill_cv_available_from_documents.py`, alle Dry-Run) und Zuruecksetzen des `doadmin`-Passworts.
 - Auftragsverarbeitung mit Anthropic klaeren, bevor `CC_CRM_AI_ENABLED` eingeschaltet wird (Vorgehen vom Nutzer bestaetigt). `short_profile` geht nur noch mit `CC_CRM_AI_INCLUDE_PROFILE=true` an Claude (Standard aus, entschieden 2026-10-05).
 - Produktions-Aufraeumen der Scan-Job-Bytes: `python scripts/purge_job_blobs.py` (Probelauf), danach `--apply` - nur der Nutzer, gegen Produktion nicht von Claude ausgefuehrt.
-- Migration `f2a4c6e8b0d1` (candidates: `consent_recorded_at`, `consent_source`, `anonymized_at`) laeuft beim naechsten Deploy mit.
+- Migrationen `f2a4c6e8b0d1` (candidates: Einwilligungsnachweis, `anonymized_at`) und `g3b5d7f9a1c2` (Vorstellungs-Archiv, `mailing_groups.context_candidate_id`, Postgres-Trigger) laufen beim naechsten Deploy mit.
+- **Vorstellungs-Archiv:** Aufbewahrungsfrist festlegen (`retention_until` je Eintrag, keine Standardfrist) und klaeren, ob ein einzelner Admin reicht: Entfernen braucht einen ZWEITEN Admin (bei nur einem Admin nicht moeglich). Rechtsgrundlage/Verarbeitungsverzeichnis: `DSGVO_INVENTUR.md` 3a.
 - Kopie `HermesNomiconPartners`: lokal ca. 20 Commits vor GitHub, bewusst nicht gepusht; Freigabe zum Pushen offen.
 
 **Offen (Claude):**
@@ -61,6 +62,7 @@ Stand: `entwicklung` = Commits `a7907d9` bis `5f9edf5` (siehe `PROTOKOLL.md`, 20
 ## Entscheidungen (Kurzfassung, Details in `ENTSCHEIDUNGEN.md`)
 
 - **2026-10-05 (Nutzer):** `short_profile` bleibt aus der MCP-Ausgabe, zuschaltbar per `CC_CRM_AI_INCLUDE_PROFILE` (Standard aus). DSGVO-Umfang: Anonymisierung leert zusaetzlich `cv_extraction_raw`, Stationen, aktuellen Arbeitgeber, Examensnoten, Gehalt und Kuendigungsfrist; Einwilligungsnachweis (Datum, Quelle, Pseudonym `candidate_number`, `anonymized_at`) bleibt, das Flag `consent_received` faellt auf false; Lebenslauf-Bytes endgueltig fehlgeschlagener Scan-Jobs werden sofort geloescht.
+- **2026-10-05 (Nutzer):** Vorstellungs-Archiv: bei jeder tatsaechlich versendeten Vorstellung (Mail mit Kandidat UND Kanzlei) wird der Versand unveraenderlich archiviert, nur Admins sehen ihn (404 sonst), kein Backfill; Entfernen nur nach Fristablauf, mit Antrag und zweitem Admin (Umsetzung durch Claude: eigene Antragstabelle statt der allen lesbaren Freigabe-Inbox).
 
 - Kandidaten und Kanzleien = gemeinsamer Pool; **Prozesse und alles daran owner-gescopt** (`process_owner_scope`), Kommentare fuer alle sichtbar. Fremd = **404** (nie 403). Rollen `member` / `team_lead` / `admin`.
 - Teamleiter sehen in Kalender, Team-KPIs und Analytics ihr Team; Live-KPI-Ranking bleibt fuer alle sichtbar; Kanzlei-Freigabeanfragen fuer alle lesbar.
