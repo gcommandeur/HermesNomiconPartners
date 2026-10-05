@@ -26,7 +26,7 @@ Ziel des Nutzers: moeglichst alles vom Handy aus erledigen koennen.
 
 ## Uebergabe an die Cloud (2026-10-04, Laptop hoert auf)
 
-Stand: `entwicklung` = `ec5e838` plus dieser Commit, **CI gruen** (backend SQLite 1274 bestanden/32 uebersprungen, backend-postgres 1306 bestanden/0 uebersprungen, frontend). `origin/main` steht auf `192497c` und ist NICHT nachgezogen - alle Review-Nachbesserungen (Punkte 1-9) liegen nur auf `entwicklung`, Merge nach `main` nur mit gruenem Licht. Weiterarbeiten: erst `PROTOKOLL.md` (oberste ca. 15 Eintraege), dann die Liste "Offen (Claude)" unten. Die Kopie `HermesNomiconPartners` liegt nur auf dem Laptop des Nutzers - nicht anfassen. Lehre: Tests, die nur auf Postgres laufen, erst nach gruener CI als fertig melden.
+Stand: `entwicklung` = Commits `a7907d9` bis `5f9edf5` (siehe `PROTOKOLL.md`, 2026-10-05) plus dieser Commit; CI-Stand steht im Protokoll. `origin/main` steht auf `192497c` und ist NICHT nachgezogen - alles seit den Review-Nachbesserungen liegt nur auf `entwicklung`, Merge nach `main` nur mit gruenem Licht. Weiterarbeiten: erst `PROTOKOLL.md` (oberste ca. 15 Eintraege), dann die Liste "Offen (Claude)" unten. Die Kopie `HermesNomiconPartners` liegt nur auf dem Laptop des Nutzers - nicht anfassen. Lehre: Tests, die nur auf Postgres laufen, erst nach gruener CI als fertig melden.
 
 ## Offene Punkte
 
@@ -35,16 +35,18 @@ Stand: `entwicklung` = `ec5e838` plus dieser Commit, **CI gruen** (backend SQLit
 - Entra ID: Umleitungs-URI `https://hermescrm-v9sle.ondigitalocean.app/api/v1/auth/microsoft/callback`, delegierte Graph-Berechtigungen, Admin-Zustimmung (`DEPLOYMENT.md` "Outlook & Teams"), danach Login mit echtem Konto testen (Nutzer mit gleicher E-Mail muss existieren).
 - DigitalOcean: Pre-Deploy-Job fuer Migrationen + `CC_CRM_MIGRATE_ON_STARTUP=false`; Scheduled Jobs `scripts/send_due_reminders.py` (Cron `0 5 * * *` UTC) und `scripts/run_outreach_sequences.py` (`15 5 * * *`); optional Sentry-DSN.
 - Produktions-Skripte in `backend/scripts/` (`cleanup_service_users.py`, `backfill_cv_in_recorded_at.py`, `backfill_cv_available_from_documents.py`, alle Dry-Run) und Zuruecksetzen des `doadmin`-Passworts.
-- Auftragsverarbeitung mit Anthropic klaeren, bevor `CC_CRM_AI_ENABLED` eingeschaltet wird (Vorgehen vom Nutzer bestaetigt); Entscheidung, ob `short_profile` an Claude gehen darf.
+- Auftragsverarbeitung mit Anthropic klaeren, bevor `CC_CRM_AI_ENABLED` eingeschaltet wird (Vorgehen vom Nutzer bestaetigt). `short_profile` geht nur noch mit `CC_CRM_AI_INCLUDE_PROFILE=true` an Claude (Standard aus, entschieden 2026-10-05).
+- Produktions-Aufraeumen der Scan-Job-Bytes: `python scripts/purge_job_blobs.py` (Probelauf), danach `--apply` - nur der Nutzer, gegen Produktion nicht von Claude ausgefuehrt.
+- Migration `f2a4c6e8b0d1` (candidates: `consent_recorded_at`, `consent_source`, `anonymized_at`) laeuft beim naechsten Deploy mit.
 - Kopie `HermesNomiconPartners`: lokal ca. 20 Commits vor GitHub, bewusst nicht gepusht; Freigabe zum Pushen offen.
 
 **Offen (Claude):**
-1. Review-Nachbesserungen vom 2026-10-04 sind umgesetzt (Punkte 1-9, Einzelheiten im `PROTOKOLL.md`). Offen daraus: Entscheidung zu `short_profile` (siehe oben), ob/wie die DSGVO-Luecken geschlossen werden, und die echte Microsoft-/Claude-Anbindung live pruefen.
+1. Offen aus den Review-Nachbesserungen: die echte Microsoft-/Claude-Anbindung live pruefen (haengt an den Punkten des Nutzers oben).
 2. Nachmessung bei 200.000 Kandidaten ist erledigt (2026-10-04, Cloud, lokales Postgres): alle sechs Vorgaenge innerhalb der Ziele, Details in `docs/PERFORMANCE.md`. Nicht gemessen: Eigene-Felder-Filter, echte DigitalOcean-Latenz.
 3. Start-Hook in einer frischen Cloud-Sitzung gegenpruefen (manuell ok, Start ungetestet).
 4. Nicht live im Browser geprueft: Teamleiter-Verwaltung, Freigabe-Inbox, Rechnungen, Sourcing-Umkreis, Kandidaten-Timeline, Prozess-Sperren mit echten Logins, "Geteilt mit" (auch Migration auf Postgres-Kopie).
-5. DSGVO-Anonymisierung vervollstaendigen: Inventur steht in `docs/DSGVO_INVENTUR.md` (groesste Luecken: `cv_extraction_raw`, liegen gebliebener CV in fehlgeschlagenen Scan-Jobs, Notizen/Mails/Termine); der Nutzer entscheidet, ob und wie.
-6. Typ-Abweichungen: Geldfelder (Decimal kommt als String) sind bereinigt. Bewusst stehen geblieben: vier reine Demo-Felder bei Kanzleien (`last_contact`, `size`, `contact_name`, `active_mandates`) und `Candidate.last_contact` in `schema-conformance.ts`; Entfernen heisst Spalten in `clients-table.tsx` streichen (Entscheidung des Nutzers).
+5. DSGVO: Stufe 2 der Anonymisierung (Kandidatenfelder, Einwilligungsnachweis, Scan-Job-Bytes) ist umgesetzt. Offen, Entscheidung des Nutzers: Verlauf und Kommunikation (`notes`, `activities`, `tasks`, `submission_feedback`, `interviews`, `candidate_submissions`-Texte, `ai_proposals`, `mail_messages`, `email_draft_logs`, `calendar_events`) - Vorschlaege und fuenf Fragen in `docs/DSGVO_INVENTUR.md` Abschnitt 7; noch NICHTS davon geaendert. Ausserdem die uebrigen strukturierten Felder (`ausbildung_titel`, `abschluesse`, `rechtsgebiete`, Umfeld-/Praeferenzfelder) und ob der Einwilligungs-UMFANG erfasst werden soll.
+6. Typ-Abweichungen Frontend/Backend: keine mehr (`schema-conformance.ts` ohne Ausnahmeliste); die Demo-Felder sind entfernt.
 7. Kopie: `mail_sync.py`/`due_reminders.py` enthalten keinen Firmentext. Konfigurierbar gemacht: Briefkopf-Erkennung (`CC_CRM_AGENCY_LETTERHEAD_MARKER`) und Sourcing-User-Agent (`CC_CRM_COMPANY_NAME`). Offen: die Prompts in `profile_generator.py` sind Commandeur-spezifisch (Stil), in der Kopie anpassen; Briefkopf-Vorlage der Kopie ersetzen.
 8. Optional: Browser-Tests (Playwright, Demo-Modus). Kleinigkeiten: Quick-Log auf Kandidat mit offenem Kollegen-Prozess fuehrt dessen Prozess weiter (bewusst); Aktivitaet "Prozess angelegt" hat keinen Autor.
 
@@ -57,6 +59,8 @@ Stand: `entwicklung` = `ec5e838` plus dieser Commit, **CI gruen** (backend SQLit
 - Nomicon-Design (Off-White, Navy-Seitenleiste, Poppins mit `size-adjust 87.5%`) liegt nur lokal in der Kopie. Lokale Vorschau: `starten.local.cmd` / `anmelden.local.cmd` (Git-ausgeschlossen, nur Dummy-Datenbank `cc_crm_nomicon.db`, nie Produktion). Den Login im Code zu entfernen wurde bewusst abgelehnt (Merge-Konflikte, Sicherheitsrisiko).
 
 ## Entscheidungen (Kurzfassung, Details in `ENTSCHEIDUNGEN.md`)
+
+- **2026-10-05 (Nutzer):** `short_profile` bleibt aus der MCP-Ausgabe, zuschaltbar per `CC_CRM_AI_INCLUDE_PROFILE` (Standard aus). DSGVO-Umfang: Anonymisierung leert zusaetzlich `cv_extraction_raw`, Stationen, aktuellen Arbeitgeber, Examensnoten, Gehalt und Kuendigungsfrist; Einwilligungsnachweis (Datum, Quelle, Pseudonym `candidate_number`, `anonymized_at`) bleibt, das Flag `consent_received` faellt auf false; Lebenslauf-Bytes endgueltig fehlgeschlagener Scan-Jobs werden sofort geloescht.
 
 - Kandidaten und Kanzleien = gemeinsamer Pool; **Prozesse und alles daran owner-gescopt** (`process_owner_scope`), Kommentare fuer alle sichtbar. Fremd = **404** (nie 403). Rollen `member` / `team_lead` / `admin`.
 - Teamleiter sehen in Kalender, Team-KPIs und Analytics ihr Team; Live-KPI-Ranking bleibt fuer alle sichtbar; Kanzlei-Freigabeanfragen fuer alle lesbar.
