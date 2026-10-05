@@ -119,7 +119,7 @@ def create_submission(
     if payload.owner_user_id is None:
         payload = payload.model_copy(update={"owner_user_id": current_user.id})
     return CandidateSubmissionRead.model_validate(
-        CandidateSubmissionService(session).create(payload)
+        CandidateSubmissionService(session).create(payload, created_by_user_id=current_user.id)
     )
 
 

@@ -199,7 +199,15 @@ class CandidateSubmissionService(
             limit=limit,
         )
 
-    def create(self, payload: CandidateSubmissionCreate) -> CandidateSubmission:
+    def create(
+        self,
+        payload: CandidateSubmissionCreate,
+        created_by_user_id: uuid.UUID | None = None,
+    ) -> CandidateSubmission:
+        """Legt den Prozess an. `created_by_user_id` ist der Nutzer, der ihn anlegt (nicht
+        zwingend der Verantwortliche); er wird als Autor der Aktivitaet "submission_created"
+        gespeichert, damit die Timeline den Urheber zeigt wie bei den uebrigen
+        Prozess-Ereignissen."""
         # Ein Prozess ohne Verantwortlichen ist fuer Nicht-Admins unsichtbar und verschwindet
         # aus Listen, Kennzahlen und Abrechnung - deshalb keine Neuanlage ohne Owner (nur
         # anwendungsseitig, kein DB-NOT-NULL, weil Altdaten ohne Owner existieren). Die
@@ -236,6 +244,7 @@ class CandidateSubmissionService(
                     "client_company_id": submission.client_company_id,
                     "candidate_submission_id": submission.id,
                     "activity_type": "submission_created",
+                    "sent_by_user_id": created_by_user_id,
                     "subject": "Candidate submission created",
                     "details": f"Initial status: {submission.status.value}",
                     "occurred_at": now,
