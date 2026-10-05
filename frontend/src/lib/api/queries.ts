@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
-import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { UnownedSubmissionList, Activity, AdminUser, ClaudeConnection, ClaudeConsentInfo, AiProposal, AiProposalStatus, AiProposalSummary, MailConnectionTestResult, MyMailAccount, MyMailAccountInput, OutlookStatus, BackgroundJob, CustomFieldDefinition, CustomFieldEntity, CustomFieldValue, WebhookDelivery, WebhookEndpoint, WebhookEndpointWithSecret, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, OutreachSequence, SequenceEnrollment, SequenceStepInput, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
+import { apiDelete, apiDownload, apiGet, apiPatch, apiPost, apiPut } from "./client";
+import type { PresentationRecordDetail, PresentationRecordItem, PresentationRemovalRequest, PresentationVerifyResult, UnownedSubmissionList, Activity, AdminUser, ClaudeConnection, ClaudeConsentInfo, AiProposal, AiProposalStatus, AiProposalSummary, MailConnectionTestResult, MyMailAccount, MyMailAccountInput, OutlookStatus, BackgroundJob, CustomFieldDefinition, CustomFieldEntity, CustomFieldValue, WebhookDelivery, WebhookEndpoint, WebhookEndpointWithSecret, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, OutreachSequence, SequenceEnrollment, SequenceStepInput, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -833,4 +833,51 @@ export async function getClaudeConnections() {
 
 export async function revokeClaudeConnection(connectionId: string) {
   return apiDelete(`/oauth/connections/${connectionId}`);
+}
+
+/** Vorstellungs-Archiv (nur Admins; fuer andere antwortet das Backend mit 404). */
+const PRESENTATION_ARCHIVE = "/admin/presentation-archive";
+
+export async function getPresentationRecords(params: { candidateNumber?: string; offset?: number }) {
+  const query = new URLSearchParams({ limit: "50", offset: String(params.offset ?? 0) });
+  if (params.candidateNumber) query.set("candidate_number", params.candidateNumber);
+  return apiGet<{ total: number; items: PresentationRecordItem[] }>(
+    `${PRESENTATION_ARCHIVE}?${query.toString()}`,
+    { total: 0, items: [] },
+  );
+}
+
+export async function getPresentationRecord(recordId: string) {
+  return apiGet<PresentationRecordDetail | null>(`${PRESENTATION_ARCHIVE}/${recordId}`, null);
+}
+
+export async function verifyPresentationRecord(recordId: string) {
+  return apiGet<PresentationVerifyResult | null>(`${PRESENTATION_ARCHIVE}/${recordId}/verify`, null);
+}
+
+export async function downloadPresentationFile(recordId: string, index: number, fallbackName: string) {
+  return apiDownload(`${PRESENTATION_ARCHIVE}/${recordId}/files/${index}`, fallbackName);
+}
+
+export async function setPresentationRetention(recordId: string, retentionUntil: string | null) {
+  return apiPut<PresentationRecordDetail>(`${PRESENTATION_ARCHIVE}/${recordId}/retention`, {
+    retention_until: retentionUntil,
+  });
+}
+
+export async function requestPresentationRemoval(recordId: string, reason: string) {
+  return apiPost<PresentationRemovalRequest>(`${PRESENTATION_ARCHIVE}/${recordId}/removal-requests`, {
+    reason,
+  });
+}
+
+export async function getPresentationRemovalRequests() {
+  return apiGet<PresentationRemovalRequest[]>(`${PRESENTATION_ARCHIVE}/removal-requests`, []);
+}
+
+export async function decidePresentationRemoval(requestId: string, approve: boolean, note?: string) {
+  return apiPost<PresentationRemovalRequest>(
+    `${PRESENTATION_ARCHIVE}/removal-requests/${requestId}/${approve ? "approve" : "reject"}`,
+    { note: note ?? null },
+  );
 }

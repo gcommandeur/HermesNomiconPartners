@@ -135,6 +135,8 @@ export function CvOutCampaignModal({
         name: groupName,
         recipients,
         template_key: CV_OUT_TEMPLATE_KEY,
+        // Der vorgestellte Kandidat: damit gilt der Versand als Vorstellung (Vorstellungs-Archiv).
+        context_candidate_id: candidateId,
       });
       router.push(`/mailing?group=${group.id}`);
     } catch (exception) {

@@ -56,6 +56,7 @@ export const ADMINISTRATION_PATHS = [
   "/einstellungen/felder",
   "/einstellungen/audit-log",
   "/einstellungen/loeschanfragen",
+  "/einstellungen/vorstellungs-archiv",
 ];
 
 // Aufbau mit dem Nutzer abgestimmt (Arbeitsplan 2, Q2). Rechte (adminOnly /

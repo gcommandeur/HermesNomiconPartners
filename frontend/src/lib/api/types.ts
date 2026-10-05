@@ -439,6 +439,8 @@ export interface MailingGroup extends Entity {
   name: string;
   recipients: MailingRecipient[];
   template_key?: string | null;
+  /** Vorgestellter Kandidat einer CV-Out-Kampagne (Vorstellungs-Archiv im Backend). */
+  context_candidate_id?: string | null;
 }
 
 // "CV Out"-Kampagne (Radius-Umkreissuche ab Kandidat, siehe
@@ -1386,4 +1388,65 @@ export interface ClaudeConnection {
   client_name: string;
   created_at: string;
   last_used_at: string | null;
+}
+
+/** Vorstellungs-Archiv (nur Admins, Backend api/v1/presentation_archive.py). */
+export interface PresentationRecordItem {
+  id: string;
+  sent_at: string;
+  client_id: string | null;
+  client_name: string | null;
+  candidate_id: string | null;
+  candidate_number: string | null;
+  candidate_name: string | null;
+  submission_id: string | null;
+  sent_by_email: string | null;
+  recipient_emails: string[];
+  mail_subject: string;
+  file_count: number;
+  retention_until: string | null;
+  removal_requested: boolean;
+}
+
+export interface PresentationRecordFile {
+  index: number;
+  filename: string;
+  sha256: string;
+  size: number;
+  content_type: string;
+}
+
+export interface PresentationRecordDetail extends PresentationRecordItem {
+  mail_body_text: string;
+  mail_message_id: string | null;
+  profile_text_snapshot: string | null;
+  files: PresentationRecordFile[];
+  retention_set_by: string | null;
+  retention_set_at: string | null;
+}
+
+export interface PresentationVerifyResult {
+  all_ok: boolean;
+  files: {
+    index: number;
+    filename: string;
+    expected_sha256: string;
+    actual_sha256: string | null;
+    ok: boolean;
+    missing: boolean;
+  }[];
+}
+
+export interface PresentationRemovalRequest {
+  id: string;
+  record_id: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  requested_by: string;
+  created_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  client_name: string | null;
+  candidate_number: string | null;
 }
