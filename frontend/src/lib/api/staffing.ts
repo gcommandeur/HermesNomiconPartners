@@ -1,0 +1,247 @@
+// NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
+// Typen kommen aus dem erzeugten Schema (schema.d.ts), Abfragen/Aktionen gegen /staffing.
+// Plain-Modul (kein "use client"): aus Server- und Client-Komponenten nutzbar.
+import { apiGet, apiPatch, apiPost, apiPut } from "./client";
+import type { components } from "./schema";
+import type { DataResult } from "./types";
+import {
+  DEMO_ASSIGNMENT_DETAIL,
+  DEMO_ASSIGNMENTS,
+  DEMO_CONTRACTS,
+  DEMO_DEADLINES,
+  DEMO_LICENSES,
+  DEMO_OVERVIEW,
+  DEMO_SETTINGS,
+  DEMO_WORKERS,
+} from "@/lib/staffing-demo";
+
+type Schemas = components["schemas"];
+
+export type StaffingWorker = Schemas["StaffingWorkerRead"];
+export type StaffingWorkerStatus = Schemas["StaffingWorkerStatus"];
+export type StaffingContract = Schemas["StaffingContractRead"];
+export type StaffingAssignment = Schemas["StaffingAssignmentRead"];
+export type StaffingAssignmentDetail = Schemas["StaffingAssignmentDetail"];
+export type StaffingAssignmentStatus = Schemas["StaffingAssignmentStatus"];
+export type StaffingChecklistItem = Schemas["StaffingChecklistItemRead"];
+export type StaffingChecklistKey = Schemas["StaffingChecklistKey"];
+export type StaffingDeadline = Schemas["StaffingDeadlineRead"];
+export type StaffingPairDeadline = Schemas["StaffingPairDeadlineRead"];
+export type StaffingLicense = Schemas["StaffingLicenseRead"];
+export type StaffingOverview = Schemas["StaffingOverviewRead"];
+export type StaffingSettings = Schemas["StaffingSettingsRead"];
+export type StaffingSettingsInput = Schemas["StaffingSettingsUpdate"];
+export type Traffic = Schemas["Traffic"];
+
+export const WORKER_STATUS_LABELS: Record<StaffingWorkerStatus, string> = {
+  applicant: "Anwärter",
+  active: "Aktiv",
+  dormant: "Ruhend",
+  left: "Ausgeschieden",
+};
+
+export const ASSIGNMENT_STATUS_LABELS: Record<StaffingAssignmentStatus, string> = {
+  planned: "Geplant",
+  active: "Aktiv",
+  ended: "Beendet",
+  aborted: "Abgebrochen",
+};
+
+export const CONTRACT_STATUS_LABELS: Record<Schemas["StaffingContractStatus"], string> = {
+  draft: "Entwurf",
+  active: "Aktiv",
+  expired: "Abgelaufen",
+  terminated: "Gekündigt",
+};
+
+export const CHECKLIST_LABELS: Record<StaffingChecklistKey, string> = {
+  employment_contract: "Arbeitsvertrag / Nachweis (§ 11 AÜG)",
+  info_leaflet: "Merkblatt für Leiharbeitnehmer",
+  supply_contract: "Überlassungsvertrag (§ 12 AÜG)",
+  specification: "Konkretisierung der Person",
+  safety_briefing: "Sicherheitsunterweisung",
+  ppe_protocol: "PSA-Übergabeprotokoll",
+};
+
+export const TRAFFIC_LABELS: Record<Traffic, string> = {
+  green: "Im Rahmen",
+  yellow: "Bald fällig",
+  red: "Dringend",
+};
+
+/** Geld kommt als Text ("14.50"), `null` für alle ohne Admin-Recht. */
+export function formatMoney(value: string | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "–";
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return "–";
+  return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(amount);
+}
+
+/** "9 Monate, 3 Tage" für die bisherige Überlassungsdauer. */
+export function formatElapsed(deadline: Pick<StaffingDeadline, "elapsed_months" | "elapsed_days">): string {
+  const months = `${deadline.elapsed_months} ${deadline.elapsed_months === 1 ? "Monat" : "Monate"}`;
+  const days = `${deadline.elapsed_days} ${deadline.elapsed_days === 1 ? "Tag" : "Tage"}`;
+  return deadline.elapsed_months === 0 ? days : `${months}, ${days}`;
+}
+
+/** Restlaufzeit als Satz ("noch 45 Tage" / "seit 3 Tagen überschritten"). */
+export function formatRemaining(daysRemaining: number | null): string {
+  if (daysRemaining === null) return "–";
+  if (daysRemaining < 0) return `seit ${-daysRemaining} ${-daysRemaining === 1 ? "Tag" : "Tagen"} überschritten`;
+  if (daysRemaining === 0) return "letzter zulässiger Tag";
+  return `noch ${daysRemaining} ${daysRemaining === 1 ? "Tag" : "Tage"}`;
+}
+
+// --- Abfragen --------------------------------------------------------------------------------
+
+export async function getStaffingOverview(): Promise<DataResult<StaffingOverview>> {
+  return apiGet<StaffingOverview>("/staffing/overview", DEMO_OVERVIEW);
+}
+
+export async function getStaffingDeadlines(): Promise<DataResult<StaffingPairDeadline[]>> {
+  return apiGet<StaffingPairDeadline[]>("/staffing/deadlines", DEMO_DEADLINES);
+}
+
+export async function getStaffingSettings(): Promise<DataResult<StaffingSettings>> {
+  return apiGet<StaffingSettings>("/staffing/settings", DEMO_SETTINGS);
+}
+
+export async function getStaffingLicenses(): Promise<DataResult<StaffingLicense[]>> {
+  return apiGet<StaffingLicense[]>("/staffing/licenses", DEMO_LICENSES);
+}
+
+export async function getStaffingWorkers(status?: StaffingWorkerStatus): Promise<DataResult<StaffingWorker[]>> {
+  const query = status ? `?status=${status}` : "";
+  return apiGet<StaffingWorker[]>(`/staffing/workers${query}`, DEMO_WORKERS);
+}
+
+export async function getStaffingWorker(id: string): Promise<DataResult<StaffingWorker | null>> {
+  return apiGet<StaffingWorker | null>(`/staffing/workers/${id}`, DEMO_WORKERS.find((w) => w.id === id) ?? null);
+}
+
+/** `null` = der Kandidat hat (noch) kein Überlassungsprofil (Backend antwortet 404 mit dieser
+ * Meldung); jeder andere Fehler wird weitergereicht, damit er nicht als „kein Profil“ erscheint. */
+export async function getStaffingWorkerForCandidate(candidateId: string): Promise<StaffingWorker | null> {
+  try {
+    const result = await apiGet<StaffingWorker | null>(`/staffing/workers/by-candidate/${candidateId}`, null);
+    return result.data;
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Kein Leiharbeitnehmer-Profil")) return null;
+    throw error;
+  }
+}
+
+export async function getStaffingContracts(clientCompanyId?: string): Promise<DataResult<StaffingContract[]>> {
+  const query = clientCompanyId ? `?client_company_id=${clientCompanyId}` : "";
+  return apiGet<StaffingContract[]>(`/staffing/contracts${query}`, DEMO_CONTRACTS);
+}
+
+export interface AssignmentFilter {
+  status?: StaffingAssignmentStatus;
+  workerId?: string;
+  clientCompanyId?: string;
+}
+
+export function assignmentsPath(filter: AssignmentFilter = {}): string {
+  const params = new URLSearchParams();
+  if (filter.status) params.set("status", filter.status);
+  if (filter.workerId) params.set("worker_id", filter.workerId);
+  if (filter.clientCompanyId) params.set("client_company_id", filter.clientCompanyId);
+  const query = params.toString();
+  return `/staffing/assignments${query ? `?${query}` : ""}`;
+}
+
+export async function getStaffingAssignments(filter: AssignmentFilter = {}): Promise<DataResult<StaffingAssignment[]>> {
+  return apiGet<StaffingAssignment[]>(assignmentsPath(filter), DEMO_ASSIGNMENTS);
+}
+
+export async function getStaffingAssignment(id: string): Promise<DataResult<StaffingAssignmentDetail | null>> {
+  return apiGet<StaffingAssignmentDetail | null>(
+    `/staffing/assignments/${id}`,
+    DEMO_ASSIGNMENT_DETAIL.id === id ? DEMO_ASSIGNMENT_DETAIL : null,
+  );
+}
+
+// --- Aktionen --------------------------------------------------------------------------------
+
+export interface NewWorkerInput {
+  candidate_id: string;
+  status?: StaffingWorkerStatus;
+  entry_date?: string | null;
+  pay_grade?: string | null;
+  weekly_hours?: string | null;
+  work_permit_valid_until?: string | null;
+  hourly_wage?: string | null; // nur Admins - das Backend lehnt es sonst mit 403 ab
+  notes?: string | null;
+}
+
+export function createStaffingWorker(input: NewWorkerInput) {
+  return apiPost<StaffingWorker>("/staffing/workers", input);
+}
+
+export function updateStaffingWorker(id: string, input: Partial<Omit<NewWorkerInput, "candidate_id">> & { exit_date?: string | null }) {
+  return apiPatch<StaffingWorker>(`/staffing/workers/${id}`, input);
+}
+
+export interface NewAssignmentInput {
+  worker_id: string;
+  client_company_id: string;
+  contract_id?: string | null;
+  owner_user_id?: string | null;
+  start_date: string;
+  planned_end_date?: string | null;
+  location?: string | null;
+  activity?: string | null;
+  billing_rate?: string | null; // nur Admins
+  hourly_wage?: string | null; // nur Admins
+  notes?: string | null;
+}
+
+export function createStaffingAssignment(input: NewAssignmentInput) {
+  return apiPost<StaffingAssignment>("/staffing/assignments", input);
+}
+
+export function updateStaffingAssignment(id: string, input: Partial<Omit<NewAssignmentInput, "worker_id" | "client_company_id">>) {
+  return apiPatch<StaffingAssignmentDetail>(`/staffing/assignments/${id}`, input);
+}
+
+export function changeStaffingAssignmentStatus(id: string, status: StaffingAssignmentStatus, actualEndDate?: string) {
+  return apiPost<StaffingAssignmentDetail>(`/staffing/assignments/${id}/status`, {
+    status,
+    actual_end_date: actualEndDate ?? null,
+  });
+}
+
+export function setStaffingChecklistItem(assignmentId: string, itemId: string, done: boolean) {
+  return apiPatch<StaffingAssignmentDetail>(`/staffing/assignments/${assignmentId}/checklist/${itemId}`, { done });
+}
+
+export function createStaffingLicense(input: {
+  authority: string;
+  file_number?: string | null;
+  valid_from: string;
+  valid_to?: string | null;
+  reminder_days?: number;
+  notes?: string | null;
+}) {
+  return apiPost<StaffingLicense>("/staffing/licenses", input);
+}
+
+export function updateStaffingLicense(id: string, input: Partial<Omit<StaffingLicense, "id" | "created_at" | "updated_at" | "document_id">>) {
+  return apiPatch<StaffingLicense>(`/staffing/licenses/${id}`, input);
+}
+
+export function saveStaffingSettings(input: StaffingSettingsInput) {
+  return apiPut<StaffingSettings>("/staffing/settings", input);
+}
+
+export function createStaffingContract(input: {
+  client_company_id: string;
+  contract_number?: string | null;
+  valid_from?: string | null;
+  valid_to?: string | null;
+  industry_sector?: string | null;
+  status?: Schemas["StaffingContractStatus"];
+}) {
+  return apiPost<StaffingContract>("/staffing/contracts", input);
+}

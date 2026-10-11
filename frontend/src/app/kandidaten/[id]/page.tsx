@@ -29,6 +29,7 @@ import { CandidateProcessLog } from "@/components/crm/candidate-process-log";
 import { CandidateTimeline } from "@/components/crm/candidate-timeline";
 import { CandidateRollenUnbestaetigtHint } from "@/components/crm/candidate-rollen-unbestaetigt-hint";
 import { NotesPanel } from "@/components/crm/notes-panel";
+import { StaffingCandidatePanel } from "@/components/crm/staffing-candidate-panel"; // NOMICON
 import { CustomFieldsPanel } from "@/components/crm/custom-fields-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -94,7 +95,7 @@ export default async function CandidateDetailPage({
     `Gehaltsrahmen: ${candidate.salary_expectation ?? "nach Absprache"}.`,
     `Verfügbarkeit: ${candidate.notice_period ?? "nach Absprache"}.`,
   ].join("\n");
-  const tabs = ["Übersicht", "Anonymes Profil", "Notizen", "Matching", "CV-Outs", "Timeline", "Aufgaben", "Dokumente"];
+  const tabs = ["Übersicht", "Anonymes Profil", "Notizen", "Matching", "CV-Outs", "Timeline", "Aufgaben", "Dokumente", "Überlassung" /* NOMICON */];
   // Erlaubt einen direkten Link auf einen bestimmten Tab (z.B. "?tab=Dokumente"
   // nach dem Anlegen eines Kandidaten, siehe candidate-create-modal.tsx) -
   // faellt auf "Übersicht" zurueck, wenn der Wert fehlt oder ungueltig ist.
@@ -303,6 +304,10 @@ export default async function CandidateDetailPage({
         </TabsContent>
         <TabsContent value="Dokumente">
           <DocumentPanel ownerType="candidate" ownerId={candidate.id} documentType="cv" documents={documents} />
+        </TabsContent>
+        {/* NOMICON: Arbeitnehmerüberlassung */}
+        <TabsContent value="Überlassung">
+          <StaffingCandidatePanel candidateId={candidate.id} />
         </TabsContent>
       </Tabs>
     </>

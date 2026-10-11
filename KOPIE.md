@@ -72,9 +72,17 @@ Tabellen tragen das Praefix `staffing_`, die Migration den Dateinamen-Praefix `n
   `test_staffing_deadline_job.py`, `tests/api/test_staffing_api.py`,
   `tests/api/test_staffing_access_guard.py`
 
+**Neue Dateien (Frontend):**
+- `frontend/src/app/ueberlassung/**` (`layout.tsx`, `page.tsx`, `einsaetze/`, `leiharbeitnehmer/`, `compliance/`)
+- `frontend/src/components/crm/staffing-*.tsx` (ui, overview-view, assignments-view, assignment-detail,
+  assignment-create-modal, workers-view, compliance-view, candidate-panel)
+- `frontend/src/lib/api/staffing.ts`, `staffing-hooks.ts`, `frontend/src/lib/staffing-demo.ts`
+
 **Markierte Aenderungen an gemeinsamen Dateien:**
 - `backend/src/cc_crm/models/__init__.py` (Import und `__all__` der `Staffing*`-Modelle)
 - `backend/src/cc_crm/api/v1/router.py` (Import und `include_router` fuer `staffing_router`, 2 Zeilen)
+- `frontend/src/components/layout/navigation.ts` (Icon-Import `HardHat` und die Gruppe `ueberlassung`)
+- `frontend/src/app/kandidaten/[id]/page.tsx` (Import, Reiter `Überlassung` in `tabs`, ein `TabsContent`)
 - `frontend/src/lib/api/openapi.json` und `schema.d.ts` sind ERZEUGT: nach jedem Merge aus Hermes neu
   erzeugen (`cd backend && python scripts/export_openapi.py && cd ../frontend && pnpm gen:api`),
   Konflikte dort nie von Hand loesen.

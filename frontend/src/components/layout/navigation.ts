@@ -5,6 +5,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   ContactRound,
+  HardHat, // NOMICON
   KanbanSquare,
   UserRoundSearch,
   LayoutDashboard,
@@ -94,6 +95,12 @@ export const navigationGroups: NavigationGroup[] = [
       { label: "Kontakte", href: "/kontakte", icon: ContactRound },
       { label: "Geo Mapping", href: "/geo-mapping", icon: Map },
     ],
+  },
+  // NOMICON: Arbeitnehmerüberlassung (nur in der Nomicon-Kopie)
+  {
+    id: "ueberlassung",
+    label: "Überlassung",
+    items: [{ label: "Überlassung", href: "/ueberlassung", icon: HardHat }],
   },
   {
     id: "management",
