@@ -216,7 +216,9 @@ Einsatz), alle über die echten Services und Regeln.
 4. **Überschrittene Höchstdauer:** soll die Aktivierung oder Verlängerung blockiert werden?
 5. **Equal Pay:** welche Lohnbestandteile? Das System rechnet nicht, es erinnert nur.
 6. **DSGVO:** Löschfristen für Überlassungs- und Lohnunterlagen, Verhalten beim Löschen/Anonymisieren
-   eines Leiharbeitnehmers (Verknüpfung `RESTRICT`).
+   eines Leiharbeitnehmers. Stand: Ein Kandidat mit Überlassungsprofil lässt sich nicht löschen (409, Verknüpfung
+   `RESTRICT`), wohl aber anonymisieren — dabei bleiben Notizen am Leiharbeitnehmer, Einsatz und Vertrag sowie
+   Stundenzettel unverändert stehen (sie können Personenbezug haben). Ob und was dort geleert wird, ist offen.
 7. **Arbeitserlaubnis (Ausländer):** das Datum wird gespeichert, aber noch nicht für die Aktivierung geprüft.
 
 ## Was für andere Branchen konfigurierbar werden müsste (Analyse, nicht umgesetzt)
