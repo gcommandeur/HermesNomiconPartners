@@ -1,8 +1,10 @@
 # Diese Installation ist eine Kopie von Hermes (zweite Firma)
 
 Der Code kommt aus dem Hermes-Repo `gcommandeur/hermescrm` (Remote `upstream`).
-Hier entstehen **keine** neuen Funktionen und **keine** Datenbank-Migrationen -
-beides passiert nur in Hermes und kommt per Merge hierher.
+Hier entstehen grundsaetzlich **keine** neuen Funktionen und **keine** Datenbank-Migrationen -
+beides passiert nur in Hermes und kommt per Merge hierher. **Ausnahme (Nutzerauftrag
+2026-10-11):** die Nomicon-eigenen Module (Arbeitnehmerueberlassung, Provisionsmodell), gebaut
+in der merge-schonenden Bauweise unten.
 
 ## Neue Funktionen uebernehmen
 
@@ -49,3 +51,28 @@ Hermes machen lassen und hier verwerfen.
 1. Backend: `backend/.venv` anlegen und `pip install -e ".[dev]"`, `backend/.env` mit `CC_CRM_DATABASE_URL=sqlite:///<absoluter Pfad>/cc_crm_nomicon.db`, dann `alembic upgrade head`, `python scripts/seed_data.py seed --clients 14 --candidates 60`, `python scripts/create_test_user.py <mail> <passwort> "Name" --admin`.
 2. Start: Backend `uvicorn cc_crm.main:app --app-dir src --port 8000`, Frontend `pnpm dev` (nie `pnpm build` gleichzeitig).
 3. Die Anmeldung braucht einen Code per E-Mail (Resend). Lokal ohne Resend: **`anmelden.local.cmd`** doppelklicken (ruft `dev-login.local.py` auf, beides nur lokal und von Git ausgeschlossen). Es meldet den Browser fuer den Test-Nutzer an, die Sitzung gilt ein Jahr, danach erscheint die Anmeldeseite lokal nicht mehr. Das Skript bricht ab, wenn die Datenbank nicht `cc_crm_nomicon.db` ist. Der Anmeldecode im Projekt bleibt unveraendert, damit die Kopie spaeter mit echten Daten sicher ist. NIE auf Produktion verwenden.
+
+
+## Nomicon-eigener Code (Checkliste fuer Merge-Konflikte)
+
+**Bauweise:** Nomicon-Code steht in NEUEN Dateien, die es in Hermes nicht gibt. Aenderungen an
+gemeinsamen Dateien sind minimal und mit `NOMICON` markiert (`grep -rn NOMICON backend frontend`).
+Tabellen tragen das Praefix `staffing_`, die Migration den Dateinamen-Praefix `nomicon_`.
+
+**Neue Dateien (Backend):**
+- `models/staffing.py`, `schemas/staffing.py`, `repositories/staffing.py`
+- `services/staffing_audit.py`, `services/staffing_workers.py`, `services/staffing_assignments.py`,
+  `services/staffing_licenses.py`
+- `alembic/versions/nomicon_01_staffing.py` (Revision `nomicon01staff`, haengt an `g3b5d7f9a1c2`)
+- `tests/services/test_staffing_services.py`
+
+**Markierte Aenderungen an gemeinsamen Dateien:**
+- `backend/src/cc_crm/models/__init__.py` (Import und `__all__` der `Staffing*`-Modelle)
+
+**Alembic-Heads:** Bekommt Hermes spaeter eine eigene Migration, entstehen nach dem Merge zwei
+Heads (Hermes-Kopf und `nomicon01staff`). Dann eine Merge-Migration anlegen
+(`alembic merge -m "merge hermes und nomicon" <head1> <head2>`) und `alembic heads` pruefen
+(`tests/test_alembic_heads.py` erzwingt genau einen Head). Alternativ die Nomicon-Migration auf den
+neuen Hermes-Kopf umhaengen (`down_revision`), solange sie noch nirgends ausgerollt ist.
+
+(Pakete C bis I ergaenzen diese Liste.)

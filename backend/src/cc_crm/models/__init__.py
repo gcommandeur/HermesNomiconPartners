@@ -39,6 +39,15 @@ from cc_crm.models.recruiting import (
 from cc_crm.models.region_modifier import RegionModifier
 from cc_crm.models.sourcing_lead import SourcingLead
 from cc_crm.models.sourcing_run import SourcingRun
+from cc_crm.models.staffing import (  # NOMICON
+    StaffingAssignment,
+    StaffingChecklistItem,
+    StaffingContract,
+    StaffingLicense,
+    StaffingTimesheet,
+    StaffingTimesheetEntry,
+    StaffingWorker,
+)
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.submission_share import SubmissionShare
 from cc_crm.models.task import Task
@@ -95,6 +104,13 @@ __all__ = [
     "SourcingLead",
     "SourcingMetric",
     "SourcingRun",
+    "StaffingAssignment",  # NOMICON
+    "StaffingChecklistItem",
+    "StaffingContract",
+    "StaffingLicense",
+    "StaffingTimesheet",
+    "StaffingTimesheetEntry",
+    "StaffingWorker",
     "SubmissionShare",
     "Task",
     "TrustedDevice",

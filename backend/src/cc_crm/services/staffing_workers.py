@@ -1,0 +1,95 @@
+# NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
+"""Leiharbeitnehmer: ein bestehender Kandidat mit zusaetzlichem AUeG-Profil (1:1)."""
+
+import uuid
+
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from cc_crm.core.errors import BusinessRuleError, ConflictError, EntityNotFoundError
+from cc_crm.models.candidate import Candidate
+from cc_crm.models.staffing import StaffingWorker, StaffingWorkerStatus
+from cc_crm.models.user import User
+from cc_crm.repositories.staffing import StaffingWorkerRepository, WorkerRow
+from cc_crm.schemas.staffing import (
+    StaffingWorkerCreate,
+    StaffingWorkerRead,
+    StaffingWorkerUpdate,
+)
+from cc_crm.services import staffing_audit as audit
+
+
+def worker_read(row: WorkerRow) -> StaffingWorkerRead:
+    worker = row.worker
+    return StaffingWorkerRead(
+        id=worker.id,
+        created_at=worker.created_at,
+        updated_at=worker.updated_at,
+        candidate_id=worker.candidate_id,
+        candidate_name=row.candidate_name,
+        candidate_number=row.candidate_number,
+        status=worker.status,
+        entry_date=worker.entry_date,
+        exit_date=worker.exit_date,
+        hourly_wage=worker.hourly_wage,
+        pay_grade=worker.pay_grade,
+        weekly_hours=worker.weekly_hours,
+        work_permit_valid_until=worker.work_permit_valid_until,
+        notes=worker.notes,
+    )
+
+
+class StaffingWorkerService:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+        self.workers = StaffingWorkerRepository(session)
+
+    def get_row(self, worker_id: uuid.UUID) -> WorkerRow:
+        row = self.workers.row(worker_id)
+        if row is None:
+            raise EntityNotFoundError("Leiharbeitnehmer nicht gefunden")
+        return row
+
+    def row_for_candidate(self, candidate_id: uuid.UUID) -> WorkerRow | None:
+        worker = self.workers.by_candidate(candidate_id)
+        return None if worker is None else self.workers.row(worker.id)
+
+    def create(self, payload: StaffingWorkerCreate, actor: User) -> WorkerRow:
+        candidate = self.session.get(Candidate, payload.candidate_id)
+        if candidate is None:
+            raise EntityNotFoundError("Kandidat nicht gefunden")
+        if candidate.anonymized_at is not None:
+            raise BusinessRuleError("Ein anonymisierter Kandidat kann kein Leiharbeitnehmer sein.")
+        if self.workers.by_candidate(candidate.id) is not None:
+            raise ConflictError("Dieser Kandidat ist bereits als Leiharbeitnehmer angelegt.")
+        values = payload.model_dump()
+        try:
+            worker = self.workers.create(values)
+            audit.log_created(self.session, audit.ENTITY_WORKER, worker.id, values, actor.email)
+            self.session.commit()
+        except IntegrityError as exception:
+            self.session.rollback()
+            raise ConflictError("Leiharbeitnehmer existiert bereits.") from exception
+        return self.get_row(worker.id)
+
+    def update(self, worker_id: uuid.UUID, payload: StaffingWorkerUpdate, actor: User) -> WorkerRow:
+        worker = self.get_row(worker_id).worker
+        values = payload.model_dump(exclude_unset=True)
+        merged_entry = values.get("entry_date", worker.entry_date)
+        merged_exit = values.get("exit_date", worker.exit_date)
+        if merged_entry and merged_exit and merged_exit < merged_entry:
+            raise BusinessRuleError("Austritt liegt vor dem Eintritt.")
+        if values.get("status") is None:
+            values.pop("status", None)
+        audit.log_updated(self.session, audit.ENTITY_WORKER, worker, worker.id, values, actor.email)
+        self.workers.update(worker, values)
+        self.session.commit()
+        return self.get_row(worker.id)
+
+    def rows(
+        self, *, status: StaffingWorkerStatus | None = None, offset: int = 0, limit: int = 200
+    ) -> list[WorkerRow]:
+        return self.workers.rows(status=status, offset=offset, limit=limit)
+
+
+__all__ = ["StaffingWorker", "StaffingWorkerService", "worker_read"]
