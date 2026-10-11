@@ -515,7 +515,7 @@ export default function PostfaecherPage() {
                       type="email"
                       value={form.address}
                       onChange={(e) => set("address", e.target.value)}
-                      placeholder="info@commandeurconsulting.de"
+                      placeholder="postfach@beispiel.de"
                       className={inputClass}
                     />
                   </Field>
