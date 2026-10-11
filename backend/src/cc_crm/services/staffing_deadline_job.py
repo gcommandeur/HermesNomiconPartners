@@ -210,7 +210,7 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
                     f"[staffing-license:{lic.id}:{lic.valid_to.isoformat()}:"
                     f"{'expired' if remaining < 0 else 'expiring'}:{user_id}]"
                 ),
-                title=f"AUeG-Erlaubnis {'abgelaufen' if remaining < 0 else 'laeuft ab'}: "
+                title=f"AÜG-Erlaubnis {'abgelaufen' if remaining < 0 else 'laeuft ab'}: "
                 f"{lic.authority}",
                 body=(
                     f"Die Erlaubnis zur Arbeitnehmerueberlassung ({lic.authority}"

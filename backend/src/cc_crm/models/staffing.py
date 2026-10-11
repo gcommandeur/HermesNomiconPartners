@@ -1,4 +1,4 @@
-# NOMICON: Arbeitnehmerueberlassung (AUeG) - nur in der Nomicon-Kopie, nicht in Hermes.
+# NOMICON: Arbeitnehmerueberlassung (AÜG) - nur in der Nomicon-Kopie, nicht in Hermes.
 # Alle Tabellen tragen das Praefix `staffing_`, damit spaetere Hermes-Tabellen nicht kollidieren.
 """Datenmodell der Arbeitnehmerueberlassung.
 
@@ -61,9 +61,9 @@ class StaffingTimesheetStatus(StrEnum):
 class StaffingChecklistKey(StrEnum):
     """Pflichtpunkte je Einsatz (Reihenfolge = Anzeigereihenfolge)."""
 
-    EMPLOYMENT_CONTRACT = "employment_contract"  # Arbeitsvertrag / Nachweis nach Par. 11 AUeG
+    EMPLOYMENT_CONTRACT = "employment_contract"  # Arbeitsvertrag / Nachweis nach Par. 11 AÜG
     INFO_LEAFLET = "info_leaflet"  # Merkblatt fuer Leiharbeitnehmer
-    SUPPLY_CONTRACT = "supply_contract"  # Ueberlassungsvertrag, Par. 12 AUeG
+    SUPPLY_CONTRACT = "supply_contract"  # Ueberlassungsvertrag, Par. 12 AÜG
     SPECIFICATION = "specification"  # Konkretisierung der Person im Ueberlassungsvertrag
     SAFETY_BRIEFING = "safety_briefing"  # Sicherheitsunterweisung
     PPE_PROTOCOL = "ppe_protocol"  # Uebergabeprotokoll persoenliche Schutzausruestung
@@ -171,7 +171,7 @@ class StaffingChecklistItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 
 class StaffingLicense(UUIDPrimaryKeyMixin, TimestampMixin, Base):
-    """Erlaubnis zur Arbeitnehmerueberlassung nach AUeG."""
+    """Erlaubnis zur Arbeitnehmerueberlassung nach AÜG."""
 
     __tablename__ = "staffing_licenses"
 

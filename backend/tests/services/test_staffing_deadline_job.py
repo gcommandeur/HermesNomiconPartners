@@ -242,7 +242,7 @@ def test_job_license_reminders(session: Session) -> None:
     session.add(
         StaffingLicense(
             authority="Bundesagentur fuer Arbeit",
-            file_number="AUeG-123",
+            file_number="AÜG-123",
             valid_from=D(2024, 1, 1),
             valid_to=D(2026, 12, 31),
             reminder_days=90,
@@ -258,11 +258,11 @@ def test_job_license_reminders(session: Session) -> None:
     assert len(tasks) == 1
     assert tasks[0].owner_user_id == admin.id
     assert "laeuft ab" in tasks[0].title
-    assert "AUeG-123" in (tasks[0].description or "")
+    assert "AÜG-123" in (tasks[0].description or "")
     assert run_deadline_job(session, D(2026, 10, 3)).tasks_created == 0  # keine Dublette
     # Verlaengerung (neues valid_to) -> bei Annaeherung wieder eine neue Aufgabe
     lic = session.scalars(
-        select(StaffingLicense).where(StaffingLicense.file_number == "AUeG-123")
+        select(StaffingLicense).where(StaffingLicense.file_number == "AÜG-123")
     ).one()
     lic.valid_to = D(2027, 12, 31)
     session.commit()

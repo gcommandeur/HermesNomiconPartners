@@ -141,15 +141,33 @@ class StaffingAssignmentService:
             raise EntityNotFoundError("Einsatz nicht gefunden")
         return row
 
-    def detail(self, assignment_id: uuid.UUID) -> StaffingAssignmentDetail:
+    def detail(
+        self, assignment_id: uuid.UUID, today: date | None = None
+    ) -> StaffingAssignmentDetail:
+        # Lokale Importe: staffing_activation und staffing_overview bauen auf diesem Modul auf.
+        from cc_crm.services.staffing_activation import StaffingActivationService
+        from cc_crm.services.staffing_deadline_job import pair_deadline
+        from cc_crm.services.staffing_overview import deadline_read
+
+        day = today or date.today()
         row = self.get_row(assignment_id)
         order = {key: index for index, key in enumerate(CHECKLIST_KEYS)}
         items = sorted(
             self.assignments.checklist(assignment_id), key=lambda item: order[item.item_key]
         )
+        assignment = row.assignment
+        problems = (
+            StaffingActivationService(self.session).activation_problems(assignment_id, day)
+            if assignment.status == StaffingAssignmentStatus.PLANNED
+            else []
+        )
         return StaffingAssignmentDetail(
             **assignment_read(row).model_dump(),
             checklist=[StaffingChecklistItemRead.model_validate(item) for item in items],
+            deadline=deadline_read(
+                pair_deadline(self.session, assignment.worker_id, assignment.client_company_id, day)
+            ),
+            activation_problems=problems,
         )
 
     def _check_contract(self, contract_id: uuid.UUID, client_company_id: uuid.UUID) -> None:

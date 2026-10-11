@@ -18,6 +18,7 @@ from cc_crm.models.staffing import (
     StaffingWorkerStatus,
 )
 from cc_crm.schemas.base import EntityRead, ORMModel
+from cc_crm.services.staffing_deadlines import Traffic
 
 
 def _check_range(start: date | None, end: date | None, message: str) -> None:
@@ -185,8 +186,35 @@ class StaffingAssignmentRead(EntityRead):
     checklist_total: int
 
 
+class StaffingDeadlineRead(BaseModel):
+    """Fristen eines Paares (Leiharbeitnehmer, Kunde), siehe services/staffing_deadlines.py."""
+
+    has_chain: bool
+    chain_start: date | None
+    elapsed_months: int
+    elapsed_days: int
+    counted_days: int
+    equal_pay_from: date | None
+    equal_pay_reached: bool
+    max_end_date: date | None
+    days_remaining: int | None
+    exceeded: bool
+    traffic: Traffic
+
+
+class StaffingPairDeadlineRead(StaffingDeadlineRead):
+    worker_id: uuid.UUID
+    worker_name: str
+    client_company_id: uuid.UUID
+    client_name: str
+    owner_user_id: uuid.UUID | None
+
+
 class StaffingAssignmentDetail(StaffingAssignmentRead):
     checklist: list[StaffingChecklistItemRead]
+    deadline: StaffingDeadlineRead
+    # Nicht erfuellte Voraussetzungen fuer die Aktivierung (leer = aktivierbar).
+    activation_problems: list[str]
 
 
 # --- Erlaubnis ----------------------------------------------------------------------------------
@@ -225,3 +253,40 @@ class StaffingLicenseRead(EntityRead):
     document_id: uuid.UUID | None
     reminder_days: int
     notes: str | None
+
+
+# --- Uebersicht und Einstellungen -------------------------------------------------------------
+
+
+class StaffingLicenseStatus(BaseModel):
+    """Zustand der AÜG-Erlaubnis heute."""
+
+    valid: bool
+    valid_to: date | None  # Ende der heute gueltigen Erlaubnis (None = unbefristet oder keine)
+    days_remaining: int | None
+    traffic: Traffic
+
+
+class StaffingOverviewRead(BaseModel):
+    active_assignments: int
+    planned_assignments: int
+    open_checklist_assignments: int  # geplante/aktive Einsaetze mit unvollstaendiger Checkliste
+    license: StaffingLicenseStatus
+    deadlines: list[StaffingPairDeadlineRead]  # dringendste zuerst, nur Paare mit Zaehler
+
+
+class StaffingSettingsRead(BaseModel):
+    max_months: int
+    equal_pay_months: int
+    reset_gap_months: int
+    yellow_days: int
+    red_days: int
+    notice: str
+
+
+class StaffingSettingsUpdate(BaseModel):
+    max_months: int = Field(gt=0, le=120)
+    equal_pay_months: int = Field(gt=0, le=120)
+    reset_gap_months: int = Field(gt=0, le=60)
+    yellow_days: int = Field(gt=0, le=3650)
+    red_days: int = Field(gt=0, le=3650)

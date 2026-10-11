@@ -1,5 +1,5 @@
 # NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
-"""Leiharbeitnehmer: ein bestehender Kandidat mit zusaetzlichem AUeG-Profil (1:1)."""
+"""Leiharbeitnehmer: ein bestehender Kandidat mit zusaetzlichem AÜG-Profil (1:1)."""
 
 import uuid
 

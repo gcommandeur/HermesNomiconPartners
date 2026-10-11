@@ -64,13 +64,20 @@ Tabellen tragen das Praefix `staffing_`, die Migration den Dateinamen-Praefix `n
 - `services/staffing_audit.py`, `services/staffing_workers.py`, `services/staffing_assignments.py`,
   `services/staffing_licenses.py`, `services/staffing_deadlines.py` (Rechenkern),
   `services/staffing_settings.py`, `services/staffing_deadline_job.py`
+- `services/staffing_activation.py`, `services/staffing_overview.py`, `services/staffing_visibility.py`
+- `api/staffing_dependencies.py` (Owner-Scope, `AssignmentAccess`/`TimesheetAccess`), `api/v1/staffing.py`
 - `scripts/run_staffing_deadlines.py` (taeglicher Job)
 - `alembic/versions/nomicon_01_staffing.py` (Revision `nomicon01staff`, haengt an `g3b5d7f9a1c2`)
 - `tests/services/test_staffing_services.py`, `test_staffing_deadlines.py`,
-  `test_staffing_deadline_job.py`
+  `test_staffing_deadline_job.py`, `tests/api/test_staffing_api.py`,
+  `tests/api/test_staffing_access_guard.py`
 
 **Markierte Aenderungen an gemeinsamen Dateien:**
 - `backend/src/cc_crm/models/__init__.py` (Import und `__all__` der `Staffing*`-Modelle)
+- `backend/src/cc_crm/api/v1/router.py` (Import und `include_router` fuer `staffing_router`, 2 Zeilen)
+- `frontend/src/lib/api/openapi.json` und `schema.d.ts` sind ERZEUGT: nach jedem Merge aus Hermes neu
+  erzeugen (`cd backend && python scripts/export_openapi.py && cd ../frontend && pnpm gen:api`),
+  Konflikte dort nie von Hand loesen.
 
 **Alembic-Heads:** Bekommt Hermes spaeter eine eigene Migration, entstehen nach dem Merge zwei
 Heads (Hermes-Kopf und `nomicon01staff`). Dann eine Merge-Migration anlegen

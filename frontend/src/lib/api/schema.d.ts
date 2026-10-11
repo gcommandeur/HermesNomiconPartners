@@ -2534,6 +2534,258 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staffing/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Assignments */
+        get: operations["list_assignments_api_v1_staffing_assignments_get"];
+        put?: never;
+        /** Create Assignment */
+        post: operations["create_assignment_api_v1_staffing_assignments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/assignments/{assignment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Assignment */
+        get: operations["get_assignment_api_v1_staffing_assignments__assignment_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Assignment */
+        patch: operations["update_assignment_api_v1_staffing_assignments__assignment_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/staffing/assignments/{assignment_id}/checklist/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Checklist Item */
+        patch: operations["update_checklist_item_api_v1_staffing_assignments__assignment_id__checklist__item_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/staffing/assignments/{assignment_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Assignment Status
+         * @description Aktivierung nur mit gueltiger AÜG-Erlaubnis und vollstaendiger Pflicht-Checkliste.
+         */
+        post: operations["change_assignment_status_api_v1_staffing_assignments__assignment_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Contracts */
+        get: operations["list_contracts_api_v1_staffing_contracts_get"];
+        put?: never;
+        /** Create Contract */
+        post: operations["create_contract_api_v1_staffing_contracts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/contracts/{contract_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Contract */
+        get: operations["get_contract_api_v1_staffing_contracts__contract_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Contract */
+        patch: operations["update_contract_api_v1_staffing_contracts__contract_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/staffing/deadlines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Deadlines
+         * @description Fristen je Paar (Leiharbeitnehmer, Kunde), dringendste zuerst.
+         */
+        get: operations["list_deadlines_api_v1_staffing_deadlines_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/licenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Licenses */
+        get: operations["list_licenses_api_v1_staffing_licenses_get"];
+        put?: never;
+        /** Create License */
+        post: operations["create_license_api_v1_staffing_licenses_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/licenses/{license_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update License */
+        patch: operations["update_license_api_v1_staffing_licenses__license_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/staffing/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Overview */
+        get: operations["get_overview_api_v1_staffing_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings */
+        get: operations["get_settings_api_v1_staffing_settings_get"];
+        /** Put Settings */
+        put: operations["put_settings_api_v1_staffing_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/workers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Workers */
+        get: operations["list_workers_api_v1_staffing_workers_get"];
+        put?: never;
+        /** Create Worker */
+        post: operations["create_worker_api_v1_staffing_workers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/workers/by-candidate/{candidate_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Worker By Candidate */
+        get: operations["get_worker_by_candidate_api_v1_staffing_workers_by_candidate__candidate_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/workers/{worker_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Worker */
+        get: operations["get_worker_api_v1_staffing_workers__worker_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Worker */
+        patch: operations["update_worker_api_v1_staffing_workers__worker_id__patch"];
+        trace?: never;
+    };
     "/api/v1/submissions": {
         parameters: {
             query?: never;
@@ -7670,6 +7922,592 @@ export interface components {
          * @enum {string}
          */
         SourcingSourceType: "steuerberaterverzeichnis" | "wpk_berufsregister" | "brak_anwaltsverzeichnis" | "kanzlei_team_page";
+        /** StaffingAssignmentCreate */
+        StaffingAssignmentCreate: {
+            /** Activity */
+            activity?: string | null;
+            /** Billing Rate */
+            billing_rate?: number | string | null;
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Contract Id */
+            contract_id?: string | null;
+            /** Hourly Wage */
+            hourly_wage?: number | string | null;
+            /** Location */
+            location?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Planned End Date */
+            planned_end_date?: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+        };
+        /** StaffingAssignmentDetail */
+        StaffingAssignmentDetail: {
+            /** Activation Problems */
+            activation_problems: string[];
+            /** Activity */
+            activity: string | null;
+            /** Actual End Date */
+            actual_end_date: string | null;
+            /** Billing Rate */
+            billing_rate: string | null;
+            /** Checklist */
+            checklist: components["schemas"]["StaffingChecklistItemRead"][];
+            /** Checklist Done */
+            checklist_done: number;
+            /** Checklist Total */
+            checklist_total: number;
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Contract Id */
+            contract_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            deadline: components["schemas"]["StaffingDeadlineRead"];
+            /** Hourly Wage */
+            hourly_wage: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Location */
+            location: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /** Planned End Date */
+            planned_end_date: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            status: components["schemas"]["StaffingAssignmentStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /** StaffingAssignmentRead */
+        StaffingAssignmentRead: {
+            /** Activity */
+            activity: string | null;
+            /** Actual End Date */
+            actual_end_date: string | null;
+            /** Billing Rate */
+            billing_rate: string | null;
+            /** Checklist Done */
+            checklist_done: number;
+            /** Checklist Total */
+            checklist_total: number;
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Contract Id */
+            contract_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Hourly Wage */
+            hourly_wage: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Location */
+            location: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /** Planned End Date */
+            planned_end_date: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            status: components["schemas"]["StaffingAssignmentStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /**
+         * StaffingAssignmentStatus
+         * @enum {string}
+         */
+        StaffingAssignmentStatus: "planned" | "active" | "ended" | "aborted";
+        /** StaffingAssignmentStatusChange */
+        StaffingAssignmentStatusChange: {
+            /** Actual End Date */
+            actual_end_date?: string | null;
+            status: components["schemas"]["StaffingAssignmentStatus"];
+        };
+        /** StaffingAssignmentUpdate */
+        StaffingAssignmentUpdate: {
+            /** Activity */
+            activity?: string | null;
+            /** Billing Rate */
+            billing_rate?: number | string | null;
+            /** Contract Id */
+            contract_id?: string | null;
+            /** Hourly Wage */
+            hourly_wage?: number | string | null;
+            /** Location */
+            location?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Planned End Date */
+            planned_end_date?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+        };
+        /** StaffingChecklistItemRead */
+        StaffingChecklistItemRead: {
+            /** Document Id */
+            document_id: string | null;
+            /** Done */
+            done: boolean;
+            /** Done On */
+            done_on: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            item_key: components["schemas"]["StaffingChecklistKey"];
+        };
+        /** StaffingChecklistItemUpdate */
+        StaffingChecklistItemUpdate: {
+            /** Document Id */
+            document_id?: string | null;
+            /** Done */
+            done: boolean;
+            /** Done On */
+            done_on?: string | null;
+        };
+        /**
+         * StaffingChecklistKey
+         * @description Pflichtpunkte je Einsatz (Reihenfolge = Anzeigereihenfolge).
+         * @enum {string}
+         */
+        StaffingChecklistKey: "employment_contract" | "info_leaflet" | "supply_contract" | "specification" | "safety_briefing" | "ppe_protocol";
+        /** StaffingContractCreate */
+        StaffingContractCreate: {
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Contract Number */
+            contract_number?: string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** Industry Sector */
+            industry_sector?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** @default draft */
+            status: components["schemas"]["StaffingContractStatus"];
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** StaffingContractRead */
+        StaffingContractRead: {
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Contract Number */
+            contract_number: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Document Id */
+            document_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Industry Sector */
+            industry_sector: string | null;
+            /** Notes */
+            notes: string | null;
+            status: components["schemas"]["StaffingContractStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Valid From */
+            valid_from: string | null;
+            /** Valid To */
+            valid_to: string | null;
+        };
+        /**
+         * StaffingContractStatus
+         * @enum {string}
+         */
+        StaffingContractStatus: "draft" | "active" | "expired" | "terminated";
+        /** StaffingContractUpdate */
+        StaffingContractUpdate: {
+            /** Contract Number */
+            contract_number?: string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** Industry Sector */
+            industry_sector?: string | null;
+            /** Notes */
+            notes?: string | null;
+            status?: components["schemas"]["StaffingContractStatus"] | null;
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /**
+         * StaffingDeadlineRead
+         * @description Fristen eines Paares (Leiharbeitnehmer, Kunde), siehe services/staffing_deadlines.py.
+         */
+        StaffingDeadlineRead: {
+            /** Chain Start */
+            chain_start: string | null;
+            /** Counted Days */
+            counted_days: number;
+            /** Days Remaining */
+            days_remaining: number | null;
+            /** Elapsed Days */
+            elapsed_days: number;
+            /** Elapsed Months */
+            elapsed_months: number;
+            /** Equal Pay From */
+            equal_pay_from: string | null;
+            /** Equal Pay Reached */
+            equal_pay_reached: boolean;
+            /** Exceeded */
+            exceeded: boolean;
+            /** Has Chain */
+            has_chain: boolean;
+            /** Max End Date */
+            max_end_date: string | null;
+            traffic: components["schemas"]["Traffic"];
+        };
+        /** StaffingLicenseCreate */
+        StaffingLicenseCreate: {
+            /** Authority */
+            authority: string;
+            /** Document Id */
+            document_id?: string | null;
+            /** File Number */
+            file_number?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Reminder Days
+             * @default 90
+             */
+            reminder_days: number;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** StaffingLicenseRead */
+        StaffingLicenseRead: {
+            /** Authority */
+            authority: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Document Id */
+            document_id: string | null;
+            /** File Number */
+            file_number: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Notes */
+            notes: string | null;
+            /** Reminder Days */
+            reminder_days: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to: string | null;
+        };
+        /**
+         * StaffingLicenseStatus
+         * @description Zustand der AÜG-Erlaubnis heute.
+         */
+        StaffingLicenseStatus: {
+            /** Days Remaining */
+            days_remaining: number | null;
+            traffic: components["schemas"]["Traffic"];
+            /** Valid */
+            valid: boolean;
+            /** Valid To */
+            valid_to: string | null;
+        };
+        /** StaffingLicenseUpdate */
+        StaffingLicenseUpdate: {
+            /** Authority */
+            authority?: string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** File Number */
+            file_number?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Reminder Days */
+            reminder_days?: number | null;
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** StaffingOverviewRead */
+        StaffingOverviewRead: {
+            /** Active Assignments */
+            active_assignments: number;
+            /** Deadlines */
+            deadlines: components["schemas"]["StaffingPairDeadlineRead"][];
+            license: components["schemas"]["StaffingLicenseStatus"];
+            /** Open Checklist Assignments */
+            open_checklist_assignments: number;
+            /** Planned Assignments */
+            planned_assignments: number;
+        };
+        /** StaffingPairDeadlineRead */
+        StaffingPairDeadlineRead: {
+            /** Chain Start */
+            chain_start: string | null;
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Counted Days */
+            counted_days: number;
+            /** Days Remaining */
+            days_remaining: number | null;
+            /** Elapsed Days */
+            elapsed_days: number;
+            /** Elapsed Months */
+            elapsed_months: number;
+            /** Equal Pay From */
+            equal_pay_from: string | null;
+            /** Equal Pay Reached */
+            equal_pay_reached: boolean;
+            /** Exceeded */
+            exceeded: boolean;
+            /** Has Chain */
+            has_chain: boolean;
+            /** Max End Date */
+            max_end_date: string | null;
+            /** Owner User Id */
+            owner_user_id: string | null;
+            traffic: components["schemas"]["Traffic"];
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /** StaffingSettingsRead */
+        StaffingSettingsRead: {
+            /** Equal Pay Months */
+            equal_pay_months: number;
+            /** Max Months */
+            max_months: number;
+            /** Notice */
+            notice: string;
+            /** Red Days */
+            red_days: number;
+            /** Reset Gap Months */
+            reset_gap_months: number;
+            /** Yellow Days */
+            yellow_days: number;
+        };
+        /** StaffingSettingsUpdate */
+        StaffingSettingsUpdate: {
+            /** Equal Pay Months */
+            equal_pay_months: number;
+            /** Max Months */
+            max_months: number;
+            /** Red Days */
+            red_days: number;
+            /** Reset Gap Months */
+            reset_gap_months: number;
+            /** Yellow Days */
+            yellow_days: number;
+        };
+        /** StaffingWorkerCreate */
+        StaffingWorkerCreate: {
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Entry Date */
+            entry_date?: string | null;
+            /** Exit Date */
+            exit_date?: string | null;
+            /** Hourly Wage */
+            hourly_wage?: number | string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Pay Grade */
+            pay_grade?: string | null;
+            /** @default applicant */
+            status: components["schemas"]["StaffingWorkerStatus"];
+            /** Weekly Hours */
+            weekly_hours?: number | string | null;
+            /** Work Permit Valid Until */
+            work_permit_valid_until?: string | null;
+        };
+        /** StaffingWorkerRead */
+        StaffingWorkerRead: {
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Candidate Name */
+            candidate_name: string;
+            /** Candidate Number */
+            candidate_number?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Entry Date */
+            entry_date: string | null;
+            /** Exit Date */
+            exit_date: string | null;
+            /** Hourly Wage */
+            hourly_wage: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Notes */
+            notes: string | null;
+            /** Pay Grade */
+            pay_grade: string | null;
+            status: components["schemas"]["StaffingWorkerStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Weekly Hours */
+            weekly_hours: string | null;
+            /** Work Permit Valid Until */
+            work_permit_valid_until: string | null;
+        };
+        /**
+         * StaffingWorkerStatus
+         * @enum {string}
+         */
+        StaffingWorkerStatus: "applicant" | "active" | "dormant" | "left";
+        /** StaffingWorkerUpdate */
+        StaffingWorkerUpdate: {
+            /** Entry Date */
+            entry_date?: string | null;
+            /** Exit Date */
+            exit_date?: string | null;
+            /** Hourly Wage */
+            hourly_wage?: number | string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Pay Grade */
+            pay_grade?: string | null;
+            status?: components["schemas"]["StaffingWorkerStatus"] | null;
+            /** Weekly Hours */
+            weekly_hours?: number | string | null;
+            /** Work Permit Valid Until */
+            work_permit_valid_until?: string | null;
+        };
         /**
          * SubmissionCancellationReason
          * @enum {string}
@@ -7864,6 +8702,11 @@ export interface components {
             /** User Id */
             user_id: string;
         };
+        /**
+         * Traffic
+         * @enum {string}
+         */
+        Traffic: "green" | "yellow" | "red";
         /** UnownedSubmissionList */
         UnownedSubmissionList: {
             /** Items */
@@ -13764,6 +14607,767 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SourcingRunStatusRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_assignments_api_v1_staffing_assignments_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["StaffingAssignmentStatus"] | null;
+                worker_id?: string | null;
+                client_company_id?: string | null;
+                offset?: number;
+                limit?: number;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_assignment_api_v1_staffing_assignments_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingAssignmentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_assignment_api_v1_staffing_assignments__assignment_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_assignment_api_v1_staffing_assignments__assignment_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingAssignmentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_checklist_item_api_v1_staffing_assignments__assignment_id__checklist__item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingChecklistItemUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_assignment_status_api_v1_staffing_assignments__assignment_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingAssignmentStatusChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_contracts_api_v1_staffing_contracts_get: {
+        parameters: {
+            query?: {
+                client_company_id?: string | null;
+                offset?: number;
+                limit?: number;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingContractRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_contract_api_v1_staffing_contracts_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingContractCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingContractRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_contract_api_v1_staffing_contracts__contract_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingContractRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_contract_api_v1_staffing_contracts__contract_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingContractUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingContractRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_deadlines_api_v1_staffing_deadlines_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingPairDeadlineRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_licenses_api_v1_staffing_licenses_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingLicenseRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_license_api_v1_staffing_licenses_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingLicenseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingLicenseRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_license_api_v1_staffing_licenses__license_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                license_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingLicenseUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingLicenseRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_overview_api_v1_staffing_overview_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingOverviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings_api_v1_staffing_settings_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingSettingsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_settings_api_v1_staffing_settings_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingSettingsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_workers_api_v1_staffing_workers_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["StaffingWorkerStatus"] | null;
+                offset?: number;
+                limit?: number;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingWorkerRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_worker_api_v1_staffing_workers_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingWorkerCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingWorkerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_worker_by_candidate_api_v1_staffing_workers_by_candidate__candidate_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingWorkerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_worker_api_v1_staffing_workers__worker_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingWorkerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_worker_api_v1_staffing_workers__worker_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingWorkerUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingWorkerRead"];
                 };
             };
             /** @description Validation Error */

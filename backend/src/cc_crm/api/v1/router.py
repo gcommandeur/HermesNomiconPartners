@@ -38,6 +38,7 @@ from cc_crm.api.v1.recruiting import router as recruiting_router
 from cc_crm.api.v1.region_modifiers import router as region_modifiers_router
 from cc_crm.api.v1.sequences import router as sequences_router
 from cc_crm.api.v1.sourcing import router as sourcing_router
+from cc_crm.api.v1.staffing import router as staffing_router  # NOMICON
 from cc_crm.api.v1.submissions import router as submissions_router
 from cc_crm.api.v1.system import router as system_router
 from cc_crm.api.v1.tasks import router as tasks_router
@@ -99,6 +100,7 @@ protected_router.include_router(sequences_router, tags=["outreach-sequences"])
 protected_router.include_router(mailing_groups_router, tags=["mailing-groups"])
 protected_router.include_router(presentation_archive_router, tags=["presentation-archive"])
 protected_router.include_router(users_router, tags=["users"])
+protected_router.include_router(staffing_router, tags=["staffing"])  # NOMICON
 protected_router.include_router(audit_logs_router, tags=["audit-logs"])
 protected_router.include_router(deletion_requests_router, tags=["deletion-requests"])
 api_router.include_router(protected_router)
