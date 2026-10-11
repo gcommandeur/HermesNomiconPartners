@@ -140,6 +140,8 @@ im Einsatz-Detail unter „Stundenzettel“.
 * **Ratenbegrenzung** wie beim Login (`LoginRateLimiter`): 10 Fehlversuche je Client-IP in 10 Minuten, danach
   429, **bevor** der Token nachgeschlagen wird. Das Next-Frontend reicht dafür `CF-Connecting-IP` /
   `X-Forwarded-For` weiter (sonst teilten alle Kunden eine IP und eine Sperre).
+* Die Client-IP stammt wie beim Login aus `CF-Connecting-IP` (Cloudflare setzt sie am Rand); ohne Cloudflare davor
+  (lokal) wäre sie fälschbar — für die Produktion also nur hinter Cloudflare betreiben.
 * Antworten: unbekannter Token 404; abgelaufen, verbraucht oder ersetzt 410 mit allgemeiner Meldung.
 * Die Seite ist nicht indexierbar und sendet keinen Referrer (der Token steht in der Adresse).
 * Tests: `tests/api/test_staffing_timesheets.py` (Ablauf, ungültig/abgelaufen/Wiederverwendung, Token eines
