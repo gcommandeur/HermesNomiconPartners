@@ -9,6 +9,7 @@ Usage (from backend/, with the venv active):
 
     python scripts/seed_data.py seed --clients 12 --candidates 40
     python scripts/seed_data.py seed --clients 100 --candidates 500  # larger volume
+    python scripts/seed_data.py seed --candidates 60 --staffing 8   # NOMICON: mit Ueberlassung
     python scripts/seed_data.py clear
     python scripts/seed_data.py stats
 """
@@ -575,6 +576,14 @@ def cmd_seed(args: argparse.Namespace) -> None:
         clients = seed_clients(session, args.clients)
         candidates = seed_candidates(session, args.candidates)
         seed_submissions(session, clients, candidates, args.submissions)
+        if args.staffing:  # NOMICON: Dummy-Daten der Arbeitnehmerueberlassung
+            from seed_staffing import seed_staffing
+
+            staffing = seed_staffing(session, args.staffing, random.Random(args.random_seed))
+            print(
+                f"Ueberlassung: {staffing.workers} Leiharbeitnehmer, "
+                f"{staffing.contracts} Vertraege, {staffing.assignments} Einsaetze."
+            )
     print(
         f"Seed abgeschlossen: {args.clients} Kanzleien, "
         f"{args.candidates} Kandidaten, {args.submissions} Prozesse."
@@ -612,6 +621,8 @@ def main() -> None:
     seed_parser.add_argument("--candidates", type=int, default=40)
     seed_parser.add_argument("--submissions", type=int, default=25)
     seed_parser.add_argument("--random-seed", type=int, default=None)
+    # NOMICON: Anzahl Leiharbeitnehmer (Arbeitnehmerueberlassung), 0 = keine
+    seed_parser.add_argument("--staffing", type=int, default=0)
     seed_parser.set_defaults(func=cmd_seed)
 
     clear_parser = subparsers.add_parser("clear", help="Alle Geschaeftsdaten entfernen")

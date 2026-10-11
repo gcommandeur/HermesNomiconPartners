@@ -1,0 +1,168 @@
+# Arbeitnehmerüberlassung (AÜG) — Nomicon-Modul
+
+Nur in der Nomicon-Kopie (nicht in Hermes). Gebaut in der merge-schonenden Bauweise aus `KOPIE.md`
+(neue Dateien, markierte Eingriffe `NOMICON`, Tabellen mit Präfix `staffing_`).
+
+> **Kein Rechtsrat.** Alle gesetzlichen Werte (Höchstdauer, Equal Pay, Unterbrechung) sind
+> einstellbare Annahmen und müssen mit Fachanwalt oder Verband bestätigt werden. Tarifverträge
+> (z. B. Branchenzuschläge) können abweichen. Das gilt auch für die Oberfläche; dort steht derselbe
+> Hinweis.
+
+## Zweck und Abgrenzung
+
+Das Modul verwaltet Leiharbeitnehmer, Überlassungsverträge, Einsätze, die Pflicht-Checkliste je
+Einsatz, die Erlaubnis nach AÜG, die Fristen (Höchstüberlassungsdauer, Equal Pay) und — in den
+späteren Paketen — Stundenzettel und Abrechnung.
+
+**Bewusst nicht gebaut: die Lohnabrechnung.** Das System berechnet **keine Löhne, Steuern oder
+Sozialabgaben**. Der Stundenlohn ist ein Stammdatum; für die Lohnabrechnung gibt es später nur einen
+CSV-Export (Stunden je Leiharbeitnehmer und Zeitraum) für Steuerberater oder Lohnsoftware.
+
+## Datenmodell
+
+Ein Leiharbeitnehmer ist ein **bestehender `Candidate`** mit zusätzlichem Profil — der
+Kandidatenpool bleibt gemeinsam (Kandidaten sind agenturweit sichtbar, nur das Überlassungsprofil
+und die Einsätze folgen eigenen Regeln).
+
+| Tabelle | Inhalt |
+|---|---|
+| `staffing_workers` | 1:1 zu `candidates`; Status (Anwärter, aktiv, ruhend, ausgeschieden), Eintritt/Austritt, Stundenlohn, Entgeltgruppe, Wochenstunden, Arbeitserlaubnis gültig bis, Notizen |
+| `staffing_contracts` | Überlassungs-/Rahmenvertrag je Kunde: Nummer, gültig von/bis, Branche (Branchenzuschlag), Dokument, Status |
+| `staffing_assignments` | Einsatz: Leiharbeitnehmer, Kunde, Vertrag, Disponent (`owner_user_id`), Beginn, geplantes/tatsächliches Ende, Ort, Tätigkeit, Verrechnungssatz, Lohn, Status (geplant, aktiv, beendet, abgebrochen) |
+| `staffing_assignment_checklist_items` | sechs Pflichtpunkte je Einsatz (Arbeitsvertrag/Nachweis § 11, Merkblatt, Überlassungsvertrag § 12, Konkretisierung, Sicherheitsunterweisung, PSA-Protokoll) mit erledigt/Datum/Dokument |
+| `staffing_licenses` | Erlaubnis nach AÜG: Behörde, Aktenzeichen, gültig von/bis (leer = unbefristet), Dokument, Erinnerungsvorlauf in Tagen |
+| `staffing_timesheets`, `staffing_timesheet_entries` | Stundenzettel je Einsatz und Zeitraum (Paket G); Freigabe-Token nur als Hash |
+
+Abweichung von der Aufgabenbeschreibung: Tabellen heißen durchgehend `staffing_…` (auch
+`staffing_assignments` statt `assignments`), damit spätere Hermes-Tabellen nicht kollidieren.
+Geld ist `Numeric(8,2)` (Stundensätze); im API-Schema kommt es wie die übrigen Geldfelder als Text
+(`"14.50"`). Änderungen werden im Audit-Log (`audit_logs`, `entity_type` mit Präfix `staffing_`)
+festgehalten.
+
+Hinweis zum Löschen: Ein Kandidat mit Überlassungsprofil kann nicht gelöscht werden (Fremdschlüssel
+`RESTRICT`) — er lässt sich anonymisieren; ein anonymisierter Kandidat kann aber kein neues
+Überlassungsprofil bekommen. Das Verhalten beim DSGVO-Löschen von Leiharbeitnehmern (Aufbewahrungsfristen
+für Lohn- und Überlassungsunterlagen) ist **nicht geklärt** (siehe offene Fragen).
+
+## Fristen (`services/staffing_deadlines.py`)
+
+Reine Funktionen ohne Datenbank und ohne Uhr, mit eigener Testsuite (`tests/services/test_staffing_deadlines.py`).
+
+**Einstellbare Werte** (Standard, `DeadlineConfig`; gespeichert in `app_settings`, Admin-Oberfläche
+unter *Überlassung → Compliance*):
+
+| Wert | Standard | Bedeutung |
+|---|---|---|
+| Höchstüberlassungsdauer | 18 Monate | je Paar (Leiharbeitnehmer, Kunde) |
+| Equal Pay | nach 9 Monaten | gilt ab dem Folgetag |
+| Unterbrechung | 3 Monate | **länger** als dieser Wert setzt den Zähler zurück; genau 3 Monate zählen noch zusammen |
+| Ampel gelb | unter 60 Tagen Restlaufzeit | |
+| Ampel rot | unter 30 Tagen oder überschritten | |
+
+**Rechenmodell.** Gezählt werden Einsatztage; ineinanderliegende oder unmittelbar aufeinanderfolgende
+Einsätze werden vereinigt, **Lücken zählen nicht mit**. „N Monate“ sind die Kalendertage von
+Kettenbeginn bis `add_months(Beginn, N)`. Ohne Lücke endet die Höchstdauer am Tag vor
+`add_months(Beginn, 18)`; jede Lücke (bis 3 Monate) verschiebt sie um ihre Länge nach hinten.
+Monatsarithmetik schneidet am Monatsende ab (31.8. + 6 Monate = 29.2./28.2.). Ein offener Einsatz
+läuft bis heute; nach dem letzten bekannten Ende wird ununterbrochene Fortsetzung angenommen
+(Projektion der Frist). Liegt der letzte Einsatz länger als die Unterbrechungsgrenze zurück, gibt es
+keinen fortsetzbaren Zähler mehr; ein neuer Einsatz beginnt bei null.
+
+Beispiele (Standardwerte): Beginn 1.1.2025, ohne Lücke → Equal Pay ab 1.10.2025, Höchstdauer bis
+30.6.2026. Einsatz 1.1.–31.3.2025, nächster ab 1.7.2025 (Lücke genau 3 Monate) → Zähler läuft weiter,
+Höchstdauer bis 29.9.2026; nächster ab 2.7.2025 → Zähler beginnt neu.
+
+**Täglicher Job** `scripts/run_staffing_deadlines.py` (`services/staffing_deadline_job.py`): legt
+Aufgaben (`tasks`) an — an den Disponenten des Paares (ohne Disponent: an alle aktiven Admins) bei
+gelb, rot, überschritten und Equal-Pay-Beginn, und an die Admins für ablaufende/abgelaufene
+Erlaubnisse. Je Paar und Stufe genau **eine** Aufgabe (Kennung in der Beschreibung), auch wenn sie
+erledigt ist; ändert sich die Kette (neuer Beginn), kommen neue Aufgaben. Die Aufgaben erscheinen in
+der Aufgabenliste und in der vorhandenen täglichen Fälligkeits-Mail.
+
+## Aktivierungsregel
+
+Statusfolge: geplant → aktiv | abgebrochen; aktiv → beendet | abgebrochen; beendet/abgebrochen sind
+endgültig und nicht mehr änderbar. Ein Einsatz wird nur **aktiv**, wenn
+
+1. eine gültige AÜG-Erlaubnis den Zeitraum abdeckt (Beginn bis geplantes Ende; ohne geplantes Ende bis
+   heute — eine später ablaufende Erlaubnis meldet der tägliche Job) **und**
+2. die Pflicht-Checkliste vollständig ist.
+
+Die Fehlermeldung nennt beide Probleme, z. B. „Keine gültige AÜG-Erlaubnis für den Zeitraum … Pflicht-Checkliste
+unvollständig (offen: Merkblatt …)“. Mit der ersten Aktivierung wird ein Anwärter automatisch zum
+aktiven Leiharbeitnehmer. **Annahme:** Eine überschrittene Höchstdauer blockiert die Aktivierung
+nicht; sie wird als rote Frist angezeigt und als Aufgabe gemeldet.
+
+## Rechte
+
+| | Mitarbeiter | Teamleiter | Admin |
+|---|---|---|---|
+| Einsätze (Liste, Detail, Checkliste, Statuswechsel) | eigene | eigene + Team | alle |
+| Leiharbeitnehmer, Verträge, Fristenliste, Erlaubnis lesen | ja | ja | ja |
+| Lohn und Verrechnungssatz **sehen und setzen** | nein (`null`/403) | nein | ja |
+| Erlaubnis und Einstellungen **ändern** | nein | nein | ja |
+
+* Sichtbarkeit der Einsätze folgt dem Disponenten (`owner_user_id`), wie bei Prozessen
+  (`api/staffing_dependencies.py::staffing_owner_scope`). Fremd **und** nicht existent liefert dasselbe
+  404. Einsätze ohne Disponent sind für Nicht-Admins unsichtbar. Ein Nicht-Admin darf nur Disponenten
+  seines Bereichs zuweisen.
+* Neue Routen mit `assignment_id` oder `timesheet_id` im Pfad **müssen** `AssignmentAccess` bzw.
+  `TimesheetAccess` bekommen — erzwungen von `tests/api/test_staffing_access_guard.py`.
+* Lohn/Marge erscheinen nirgends für Nicht-Admins: nicht in Listen, Details, Fristen-Übersicht; das
+  Audit-Log (`/audit-logs`) ist Admin-only; die für alle lesbare Kandidaten-Historie enthält keine
+  Überlassungs-Einträge (per Test belegt).
+
+## Schnittstellen (`/api/v1/staffing`)
+
+`GET /overview`, `GET /deadlines`, `GET|PUT /settings`; `GET|POST /workers`, `GET /workers/by-candidate/{id}`,
+`GET|PATCH /workers/{id}`; `GET|POST /contracts`, `GET|PATCH /contracts/{id}`; `GET|POST /assignments`,
+`GET|PATCH /assignments/{id}`, `POST /assignments/{id}/status`, `PATCH /assignments/{id}/checklist/{item}`;
+`GET|POST /licenses`, `PATCH /licenses/{id}`. Das OpenAPI-Schema (`/docs`) beschreibt Felder und Fehler.
+
+## Betrieb und Umgebungsvariablen
+
+Es gibt **keine neuen Umgebungsvariablen**. Zu tun (nur der Nutzer, nicht von Claude angelegt):
+
+* **Scheduled Job** auf DigitalOcean: `python scripts/run_staffing_deadlines.py` einmal täglich, z. B.
+  `30 5 * * *` UTC (vor dem Versand der Fälligkeits-Mails); gleiche Variablen wie `send_due_reminders.py`
+  (`CC_CRM_DATABASE_URL` u. a.).
+* Migration `nomicon_01_staffing.py` läuft beim Deploy mit (siehe `KOPIE.md` zu Alembic-Heads).
+* Erlaubnis nach AÜG unter *Überlassung → Compliance* eintragen (Admin); ohne sie kann kein Einsatz aktiv werden.
+
+## Dummy-Daten
+
+`python scripts/seed_data.py seed --candidates 60 --staffing 8` (nur lokale Entwicklungs-Datenbank,
+nie Produktion). Es entstehen Leiharbeitnehmer, Verträge, eine Beispiel-Erlaubnis und Einsätze für
+mehrere Fälle (Frist rot/gelb/grün, Lücke unter 3 Monaten, geplanter und beendeter Einsatz, Anwärter ohne
+Einsatz), alle über die echten Services und Regeln.
+
+## Offene rechtliche und fachliche Fragen (an Nutzer / Fachanwalt)
+
+1. **Zählweise:** Kalendermonate oder Einsatztage? (Umgesetzt: Einsatztage, Lücken zählen nicht mit.)
+2. **Verleiherwechsel / Konzernverbund:** Einsatzzeiten desselben Kunden bei anderen Verleihern werden
+   nicht berücksichtigt (nur eigene Einsätze).
+3. **Abweichungen durch Tarifvertrag** (Höchstdauer, Equal Pay nach 15 Monaten mit Branchenzuschlag):
+   derzeit nur über die einstellbaren Werte abbildbar, nicht je Kunde/Branche.
+4. **Überschrittene Höchstdauer:** soll die Aktivierung oder Verlängerung blockiert werden?
+5. **Equal Pay:** welche Lohnbestandteile? Das System rechnet nicht, es erinnert nur.
+6. **DSGVO:** Löschfristen für Überlassungs- und Lohnunterlagen, Verhalten beim Löschen/Anonymisieren
+   eines Leiharbeitnehmers (Verknüpfung `RESTRICT`).
+7. **Arbeitserlaubnis (Ausländer):** das Datum wird gespeichert, aber noch nicht für die Aktivierung geprüft.
+
+## Was für andere Branchen konfigurierbar werden müsste (Analyse, nicht umgesetzt)
+
+Die Anwendung ist für Steuer-/Rechtskanzleien gebaut. Für eine andere Branche (z. B. Industrie, Logistik)
+müssten folgende Stellen konfigurierbar werden — bisher fest im Code:
+
+* **Taxonomien:** `Rolle` (10 Steuer-/Rechtsrollen), `Abschlussart`, `Rechtsgebiet`
+  (`backend/src/cc_crm/models/enums.py`, Labels in `frontend/src/lib/utils.ts`), samt Kandidatenfeldern
+  (`ausbildung_titel`, `abschluesse`, `rechtsgebiete`, `examensnoten`, Umfeldfelder) und dem
+  Lebenslauf-Extraktions-Prompt (`services/cv_extraction.py`).
+* **Begriffe:** „Kanzlei/Kanzleien“ (ca. 60 Frontend- und 120 Backend-Dateien), Kanzleityp/-größe,
+  Kanzleigruppe, Honorar-Stufen (Vermittlungshonorar in Prozent des Zielgehalts).
+* **Texte und Vorlagen:** Profil-Generator (`services/profile_generator.py`) und
+  `backend/templates/anonymes_profil_master.docx` (Commandeur-Stil), E-Mail-Vorlagen, Sourcing
+  (Steuerberater-/Berufsregister-Quellen, `services/steuerberater_verzeichnis.py`, `wpk_berufsregister.py`).
+* **Fachlogik:** Garantiezeit (`services/warranty.py`), Closing-Score, KPI-Punkte je Pipeline-Stufe.
+* **Überlassung selbst** ist branchenneutral; nur die Checkliste (sechs feste Punkte) und die Branche je
+  Vertrag (Freitext) wären je Branche anzupassen.

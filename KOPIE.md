@@ -66,11 +66,12 @@ Tabellen tragen das Praefix `staffing_`, die Migration den Dateinamen-Praefix `n
   `services/staffing_settings.py`, `services/staffing_deadline_job.py`
 - `services/staffing_activation.py`, `services/staffing_overview.py`, `services/staffing_visibility.py`
 - `api/staffing_dependencies.py` (Owner-Scope, `AssignmentAccess`/`TimesheetAccess`), `api/v1/staffing.py`
-- `scripts/run_staffing_deadlines.py` (taeglicher Job)
+- `scripts/run_staffing_deadlines.py` (taeglicher Job), `scripts/seed_staffing.py` (Dummy-Daten)
+- `docs/UEBERLASSUNG.md` (Datenmodell, Fristenregeln, Rechte, offene rechtliche Fragen)
 - `alembic/versions/nomicon_01_staffing.py` (Revision `nomicon01staff`, haengt an `g3b5d7f9a1c2`)
 - `tests/services/test_staffing_services.py`, `test_staffing_deadlines.py`,
   `test_staffing_deadline_job.py`, `tests/api/test_staffing_api.py`,
-  `tests/api/test_staffing_access_guard.py`
+  `tests/api/test_staffing_access_guard.py`, `tests/test_seed_staffing.py`
 
 **Neue Dateien (Frontend):**
 - `frontend/src/app/ueberlassung/**` (`layout.tsx`, `page.tsx`, `einsaetze/`, `leiharbeitnehmer/`, `compliance/`)
@@ -80,6 +81,7 @@ Tabellen tragen das Praefix `staffing_`, die Migration den Dateinamen-Praefix `n
 
 **Markierte Aenderungen an gemeinsamen Dateien:**
 - `backend/src/cc_crm/models/__init__.py` (Import und `__all__` der `Staffing*`-Modelle)
+- `backend/scripts/seed_data.py` (Option `--staffing`, 3 markierte Stellen)
 - `backend/src/cc_crm/api/v1/router.py` (Import und `include_router` fuer `staffing_router`, 2 Zeilen)
 - `frontend/src/components/layout/navigation.ts` (Icon-Import `HardHat` und die Gruppe `ueberlassung`)
 - `frontend/src/app/kandidaten/[id]/page.tsx` (Import, Reiter `Überlassung` in `tabs`, ein `TabsContent`)

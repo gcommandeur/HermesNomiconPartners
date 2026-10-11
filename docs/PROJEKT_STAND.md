@@ -39,6 +39,7 @@ Stand: `entwicklung` = Commits `a7907d9` bis `e48bb33` plus Dokumentations-Commi
 - Produktions-Aufraeumen der Scan-Job-Bytes: `python scripts/purge_job_blobs.py` (Probelauf), danach `--apply` - nur der Nutzer, gegen Produktion nicht von Claude ausgefuehrt.
 - Migrationen `f2a4c6e8b0d1` (candidates: Einwilligungsnachweis, `anonymized_at`) und `g3b5d7f9a1c2` (Vorstellungs-Archiv, `mailing_groups.context_candidate_id`, Postgres-Trigger) laufen beim naechsten Deploy mit.
 - **Vorstellungs-Archiv:** Aufbewahrungsfrist festlegen (`retention_until` je Eintrag, keine Standardfrist) und klaeren, ob ein einzelner Admin reicht: Entfernen braucht einen ZWEITEN Admin (bei nur einem Admin nicht moeglich). Rechtsgrundlage/Verarbeitungsverzeichnis: `DSGVO_INVENTUR.md` 3a.
+- **Nomicon-Modul Überlassung (Details `docs/UEBERLASSUNG.md`):** Scheduled Job `python scripts/run_staffing_deadlines.py` (z. B. `30 5 * * *` UTC) auf DigitalOcean anlegen; AÜG-Erlaubnis unter Überlassung > Compliance eintragen; rechtliche Werte (18/9/3 Monate) und die offenen Fragen mit Fachanwalt klären.
 - Kopie `HermesNomiconPartners`: lokal ca. 20 Commits vor GitHub, bewusst nicht gepusht; Freigabe zum Pushen offen.
 
 **Offen (Claude):**
