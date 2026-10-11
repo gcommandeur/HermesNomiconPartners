@@ -68,9 +68,16 @@ Tabellen tragen das Praefix `staffing_`, die Migration den Dateinamen-Praefix `n
 - `api/staffing_dependencies.py` (Owner-Scope, `AssignmentAccess`/`TimesheetAccess`), `api/v1/staffing.py`,
   `api/v1/staffing_public.py` (Kundenfreigabe per Link, OHNE Login)
 - `scripts/run_staffing_deadlines.py` (taeglicher Job), `scripts/seed_staffing.py` (Dummy-Daten)
-- `docs/UEBERLASSUNG.md` (Datenmodell, Fristenregeln, Rechte, offene rechtliche Fragen)
+- `docs/UEBERLASSUNG.md` (Datenmodell, Fristenregeln, Rechte, offene rechtliche Fragen),
+  `docs/PROVISIONSMODELL.md`
+- Provisionsmodell (nur Admins): `models/commission.py`, `schemas/commission.py`,
+  `services/commission_model.py` (reine Rechenfunktionen), `commission_settings.py`, `commission_revenue.py`,
+  `commission_report.py`, `api/v1/commission.py`, `tests/services/test_commission_model.py`,
+  `tests/api/test_commission_api.py`; Frontend `components/crm/commission-report.tsx`,
+  `lib/api/commission.ts`, `commission-hooks.ts`
 - `alembic/versions/nomicon_01_staffing.py` (Revision `nomicon01staff`, haengt an `g3b5d7f9a1c2`) und
-  `nomicon_02_staffing_invoices.py` (Revision `nomicon02invoices`, haengt an `nomicon01staff`)
+  `nomicon_02_staffing_invoices.py` (Revision `nomicon02invoices`, haengt an `nomicon01staff`) und
+  `nomicon_03_commission.py` (Revision `nomicon03commission`, haengt an `nomicon02invoices`)
 - `tests/services/test_staffing_services.py`, `test_staffing_deadlines.py`,
   `test_staffing_deadline_job.py`, `tests/api/test_staffing_api.py`,
   `tests/api/test_staffing_access_guard.py`, `tests/api/test_staffing_timesheets.py`, `tests/api/test_staffing_billing.py`,
@@ -91,7 +98,9 @@ Tabellen tragen das Praefix `staffing_`, die Migration den Dateinamen-Praefix `n
 - `backend/src/cc_crm/services/approvals.py` (2 markierte Stellen: Freigabe `invoice_issue` fuer
   `entity_type="staffing_invoice"` und das Anzeigeetikett) - **bei Konflikten beide Zeilen behalten**
 - `backend/scripts/seed_data.py` (Option `--staffing`, 3 markierte Stellen)
-- `backend/src/cc_crm/api/v1/router.py` (Import und `include_router` fuer `staffing_router` und `staffing_public_router`, 4 Zeilen)
+- `backend/src/cc_crm/api/v1/router.py` (Import und `include_router` fuer `staffing_router`,
+  `staffing_public_router` und `commission_router`, 6 Zeilen)
+- `frontend/src/app/geschaeftsfuehrung/page.tsx` (Import und eine Zeile `<CommissionReport />` fuer Admins)
 - `frontend/src/middleware.ts` (Matcher: `api/stundenzettel` und `stundenzettel/` ohne Login erreichbar)
 - `frontend/src/components/layout/conditional-shell.tsx` (keine Seitenleiste auf `/stundenzettel/...`)
 - `frontend/src/components/layout/navigation.ts` (Icon-Import `HardHat` und die Gruppe `ueberlassung`)
@@ -106,4 +115,3 @@ Heads (Hermes-Kopf und `nomicon01staff`). Dann eine Merge-Migration anlegen
 (`tests/test_alembic_heads.py` erzwingt genau einen Head). Alternativ die Nomicon-Migration auf den
 neuen Hermes-Kopf umhaengen (`down_revision`), solange sie noch nirgends ausgerollt ist.
 
-(Pakete C bis I ergaenzen diese Liste.)

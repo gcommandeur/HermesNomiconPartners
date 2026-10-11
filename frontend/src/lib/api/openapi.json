@@ -5610,6 +5610,767 @@
         "title": "CockpitRead",
         "type": "object"
       },
+      "CommissionConfigRead": {
+        "properties": {
+          "general": {
+            "$ref": "#/components/schemas/CommissionGeneralConfig-Output"
+          },
+          "notice": {
+            "title": "Notice",
+            "type": "string"
+          },
+          "ranks": {
+            "items": {
+              "$ref": "#/components/schemas/CommissionRankConfig-Output"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Ranks",
+            "type": "array"
+          },
+          "revenue_basis": {
+            "$ref": "#/components/schemas/CommissionRevenueBasis"
+          }
+        },
+        "required": [
+          "general",
+          "ranks",
+          "revenue_basis",
+          "notice"
+        ],
+        "title": "CommissionConfigRead",
+        "type": "object"
+      },
+      "CommissionConfigUpdate": {
+        "properties": {
+          "general": {
+            "$ref": "#/components/schemas/CommissionGeneralConfig-Input"
+          },
+          "ranks": {
+            "items": {
+              "$ref": "#/components/schemas/CommissionRankConfig-Input"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Ranks",
+            "type": "array"
+          },
+          "revenue_basis": {
+            "$ref": "#/components/schemas/CommissionRevenueBasis"
+          }
+        },
+        "required": [
+          "general",
+          "ranks",
+          "revenue_basis"
+        ],
+        "title": "CommissionConfigUpdate",
+        "type": "object"
+      },
+      "CommissionGeneralConfig-Input": {
+        "properties": {
+          "commission_free_base": {
+            "anyOf": [
+              {
+                "maximum": 100000000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Commission Free Base"
+          },
+          "employer_factor": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Employer Factor"
+          },
+          "extra_cost_monthly": {
+            "anyOf": [
+              {
+                "maximum": 100000000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Extra Cost Monthly"
+          },
+          "fee_rate_on_target_salary": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Fee Rate On Target Salary"
+          },
+          "min_fee": {
+            "anyOf": [
+              {
+                "maximum": 100000000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Min Fee"
+          },
+          "target_margin": {
+            "anyOf": [
+              {
+                "exclusiveMaximum": 95.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Target Margin"
+          }
+        },
+        "required": [
+          "commission_free_base",
+          "employer_factor",
+          "extra_cost_monthly",
+          "fee_rate_on_target_salary",
+          "min_fee",
+          "target_margin"
+        ],
+        "title": "CommissionGeneralConfig",
+        "type": "object"
+      },
+      "CommissionGeneralConfig-Output": {
+        "properties": {
+          "commission_free_base": {
+            "title": "Commission Free Base",
+            "type": "string"
+          },
+          "employer_factor": {
+            "title": "Employer Factor",
+            "type": "string"
+          },
+          "extra_cost_monthly": {
+            "title": "Extra Cost Monthly",
+            "type": "string"
+          },
+          "fee_rate_on_target_salary": {
+            "title": "Fee Rate On Target Salary",
+            "type": "string"
+          },
+          "min_fee": {
+            "title": "Min Fee",
+            "type": "string"
+          },
+          "target_margin": {
+            "title": "Target Margin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "commission_free_base",
+          "employer_factor",
+          "extra_cost_monthly",
+          "fee_rate_on_target_salary",
+          "min_fee",
+          "target_margin"
+        ],
+        "title": "CommissionGeneralConfig",
+        "type": "object"
+      },
+      "CommissionRankConfig-Input": {
+        "properties": {
+          "fixed_monthly": {
+            "anyOf": [
+              {
+                "maximum": 100000000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Fixed Monthly"
+          },
+          "key": {
+            "maxLength": 40,
+            "minLength": 1,
+            "pattern": "^[a-z0-9_]+$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "rate1": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Rate1"
+          },
+          "rate2": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Rate2"
+          },
+          "rate3": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Rate3"
+          },
+          "threshold1": {
+            "anyOf": [
+              {
+                "maximum": 100000000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Threshold1"
+          },
+          "threshold2": {
+            "anyOf": [
+              {
+                "maximum": 100000000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Threshold2"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "fixed_monthly",
+          "rate1",
+          "threshold1",
+          "rate2",
+          "threshold2",
+          "rate3"
+        ],
+        "title": "CommissionRankConfig",
+        "type": "object"
+      },
+      "CommissionRankConfig-Output": {
+        "properties": {
+          "fixed_monthly": {
+            "title": "Fixed Monthly",
+            "type": "string"
+          },
+          "key": {
+            "maxLength": 40,
+            "minLength": 1,
+            "pattern": "^[a-z0-9_]+$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "rate1": {
+            "title": "Rate1",
+            "type": "string"
+          },
+          "rate2": {
+            "title": "Rate2",
+            "type": "string"
+          },
+          "rate3": {
+            "title": "Rate3",
+            "type": "string"
+          },
+          "threshold1": {
+            "title": "Threshold1",
+            "type": "string"
+          },
+          "threshold2": {
+            "title": "Threshold2",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "fixed_monthly",
+          "rate1",
+          "threshold1",
+          "rate2",
+          "threshold2",
+          "rate3"
+        ],
+        "title": "CommissionRankConfig",
+        "type": "object"
+      },
+      "CommissionReportRead": {
+        "properties": {
+          "notice": {
+            "title": "Notice",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "quarter": {
+            "title": "Quarter",
+            "type": "integer"
+          },
+          "revenue_basis": {
+            "$ref": "#/components/schemas/CommissionRevenueBasis"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/CommissionRowRead"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "target_margin": {
+            "title": "Target Margin",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/CommissionTotalsRead"
+          },
+          "unassigned": {
+            "items": {
+              "$ref": "#/components/schemas/CommissionUnassignedRead"
+            },
+            "title": "Unassigned",
+            "type": "array"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "quarter",
+          "period_start",
+          "period_end",
+          "target_margin",
+          "rows",
+          "unassigned",
+          "totals",
+          "revenue_basis",
+          "notice"
+        ],
+        "title": "CommissionReportRead",
+        "type": "object"
+      },
+      "CommissionRevenueBasis": {
+        "properties": {
+          "include_staffing": {
+            "title": "Include Staffing",
+            "type": "boolean"
+          },
+          "placement_fees": {
+            "enum": [
+              "paid",
+              "issued"
+            ],
+            "title": "Placement Fees",
+            "type": "string"
+          },
+          "staffing": {
+            "enum": [
+              "issued",
+              "paid"
+            ],
+            "title": "Staffing",
+            "type": "string"
+          }
+        },
+        "required": [
+          "placement_fees",
+          "include_staffing",
+          "staffing"
+        ],
+        "title": "CommissionRevenueBasis",
+        "type": "object"
+      },
+      "CommissionRowRead": {
+        "properties": {
+          "band1_commission": {
+            "title": "Band1 Commission",
+            "type": "string"
+          },
+          "band1_revenue": {
+            "title": "Band1 Revenue",
+            "type": "string"
+          },
+          "band2_commission": {
+            "title": "Band2 Commission",
+            "type": "string"
+          },
+          "band2_revenue": {
+            "title": "Band2 Revenue",
+            "type": "string"
+          },
+          "band3_commission": {
+            "title": "Band3 Commission",
+            "type": "string"
+          },
+          "band3_revenue": {
+            "title": "Band3 Revenue",
+            "type": "string"
+          },
+          "break_even_revenue": {
+            "title": "Break Even Revenue",
+            "type": "string"
+          },
+          "commission": {
+            "title": "Commission",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "employer_cost": {
+            "title": "Employer Cost",
+            "type": "string"
+          },
+          "fixed_pay": {
+            "title": "Fixed Pay",
+            "type": "string"
+          },
+          "margin": {
+            "title": "Margin",
+            "type": "string"
+          },
+          "margin_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margin Percent"
+          },
+          "promotion_hurdle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promotion Hurdle"
+          },
+          "promotion_to_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promotion To Key"
+          },
+          "promotion_to_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promotion To Label"
+          },
+          "rank_key": {
+            "title": "Rank Key",
+            "type": "string"
+          },
+          "rank_label": {
+            "title": "Rank Label",
+            "type": "string"
+          },
+          "revenue": {
+            "title": "Revenue",
+            "type": "string"
+          },
+          "revenue_fees": {
+            "title": "Revenue Fees",
+            "type": "string"
+          },
+          "revenue_staffing": {
+            "title": "Revenue Staffing",
+            "type": "string"
+          },
+          "target_revenue": {
+            "title": "Target Revenue",
+            "type": "string"
+          },
+          "traffic": {
+            "$ref": "#/components/schemas/Traffic"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "display_name",
+          "rank_key",
+          "rank_label",
+          "revenue_fees",
+          "revenue_staffing",
+          "revenue",
+          "commission",
+          "band1_revenue",
+          "band2_revenue",
+          "band3_revenue",
+          "band1_commission",
+          "band2_commission",
+          "band3_commission",
+          "fixed_pay",
+          "employer_cost",
+          "margin",
+          "margin_percent",
+          "break_even_revenue",
+          "target_revenue",
+          "traffic",
+          "promotion_hurdle",
+          "promotion_to_key",
+          "promotion_to_label"
+        ],
+        "title": "CommissionRowRead",
+        "type": "object"
+      },
+      "CommissionTotalsRead": {
+        "properties": {
+          "commission": {
+            "title": "Commission",
+            "type": "string"
+          },
+          "employer_cost": {
+            "title": "Employer Cost",
+            "type": "string"
+          },
+          "fixed_pay": {
+            "title": "Fixed Pay",
+            "type": "string"
+          },
+          "margin": {
+            "title": "Margin",
+            "type": "string"
+          },
+          "margin_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margin Percent"
+          },
+          "revenue": {
+            "title": "Revenue",
+            "type": "string"
+          },
+          "traffic": {
+            "$ref": "#/components/schemas/Traffic"
+          }
+        },
+        "required": [
+          "revenue",
+          "commission",
+          "fixed_pay",
+          "employer_cost",
+          "margin",
+          "margin_percent",
+          "traffic"
+        ],
+        "title": "CommissionTotalsRead",
+        "type": "object"
+      },
+      "CommissionUnassignedRead": {
+        "description": "Mitarbeiter mit Umsatz, denen noch kein Rang zugeordnet ist.",
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "revenue": {
+            "title": "Revenue",
+            "type": "string"
+          },
+          "revenue_fees": {
+            "title": "Revenue Fees",
+            "type": "string"
+          },
+          "revenue_staffing": {
+            "title": "Revenue Staffing",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "display_name",
+          "revenue_fees",
+          "revenue_staffing",
+          "revenue"
+        ],
+        "title": "CommissionUnassignedRead",
+        "type": "object"
+      },
+      "CommissionUserRankRead": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "effective_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective From"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "rank_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank Key"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "display_name",
+          "email",
+          "rank_key",
+          "effective_from"
+        ],
+        "title": "CommissionUserRankRead",
+        "type": "object"
+      },
+      "CommissionUserRankUpdate": {
+        "properties": {
+          "effective_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective From"
+          },
+          "rank_key": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank Key"
+          }
+        },
+        "title": "CommissionUserRankUpdate",
+        "type": "object"
+      },
       "ConsentDecision": {
         "properties": {
           "approve": {
@@ -23406,6 +24167,345 @@
         "summary": "Get Cockpit",
         "tags": [
           "operations"
+        ]
+      }
+    },
+    "/api/v1/commission/config": {
+      "get": {
+        "operationId": "get_config_api_v1_commission_config_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionConfigRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Config",
+        "tags": [
+          "commission"
+        ]
+      },
+      "put": {
+        "operationId": "put_config_api_v1_commission_config_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommissionConfigUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionConfigRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Config",
+        "tags": [
+          "commission"
+        ]
+      }
+    },
+    "/api/v1/commission/report": {
+      "get": {
+        "description": "Quartalsbericht je Mitarbeiter (Standard: das laufende Quartal).",
+        "operationId": "get_report_api_v1_commission_report_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 2200,
+                  "minimum": 2000,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quarter",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 4,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quarter"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionReportRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Report",
+        "tags": [
+          "commission"
+        ]
+      }
+    },
+    "/api/v1/commission/users": {
+      "get": {
+        "operationId": "get_user_ranks_api_v1_commission_users_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CommissionUserRankRead"
+                  },
+                  "title": "Response Get User Ranks Api V1 Commission Users Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get User Ranks",
+        "tags": [
+          "commission"
+        ]
+      }
+    },
+    "/api/v1/commission/users/{user_id}/rank": {
+      "put": {
+        "operationId": "put_user_rank_api_v1_commission_users__user_id__rank_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommissionUserRankUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionUserRankRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put User Rank",
+        "tags": [
+          "commission"
         ]
       }
     },

@@ -11,6 +11,7 @@ from cc_crm.api.v1.calendar_events import router as calendar_events_router
 from cc_crm.api.v1.calendar_feed import router as calendar_feed_router
 from cc_crm.api.v1.candidates import router as candidates_router
 from cc_crm.api.v1.clients import router as clients_router
+from cc_crm.api.v1.commission import router as commission_router  # NOMICON
 from cc_crm.api.v1.contacts import router as contacts_router
 from cc_crm.api.v1.custom_fields import router as custom_fields_router
 from cc_crm.api.v1.deletion_requests import router as deletion_requests_router
@@ -104,6 +105,7 @@ protected_router.include_router(mailing_groups_router, tags=["mailing-groups"])
 protected_router.include_router(presentation_archive_router, tags=["presentation-archive"])
 protected_router.include_router(users_router, tags=["users"])
 protected_router.include_router(staffing_router, tags=["staffing"])  # NOMICON
+protected_router.include_router(commission_router, tags=["commission"])  # NOMICON
 protected_router.include_router(audit_logs_router, tags=["audit-logs"])
 protected_router.include_router(deletion_requests_router, tags=["deletion-requests"])
 api_router.include_router(protected_router)

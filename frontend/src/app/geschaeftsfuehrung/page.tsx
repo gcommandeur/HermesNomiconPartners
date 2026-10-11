@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser, useTeamKpisCache, useUnownedSubmissionsCache } from "@/lib/api/hooks";
 import { PITCH_LABEL, STAGE_LABELS } from "@/lib/stage-labels";
+import { CommissionReport } from "@/components/crm/commission-report"; // NOMICON
 
 const STAGE_COLUMNS: { key: string; label: string }[] = [
   { key: "pitch", label: PITCH_LABEL },
@@ -153,6 +154,8 @@ export default function GeschaeftsfuehrungPage() {
           </CardContent>
         </Card>
       )}
+      {/* NOMICON: Provisionsmodell - nur für echte Admins (Teamleiter sehen diese Seite, aber keine Gehälter) */}
+      {meData?.data.is_admin && <CommissionReport />}
     </>
   );
 }

@@ -10,6 +10,7 @@ from cc_crm.models.calendar_event import CalendarEvent
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.candidate_pitch_log import CandidatePitchLog
 from cc_crm.models.client_company import ClientCompany
+from cc_crm.models.commission import CommissionUserRank  # NOMICON
 from cc_crm.models.contact_person import ContactPerson
 from cc_crm.models.custom_field import CustomFieldDefinition
 from cc_crm.models.cv_extraction_job import CvExtractionJob
@@ -72,6 +73,7 @@ __all__ = [
     "CandidatePitchLog",
     "CandidateSubmission",
     "ClientCompany",
+    "CommissionUserRank",  # NOMICON
     "ContactPerson",
     "CustomFieldDefinition",
     "CvExtractionJob",

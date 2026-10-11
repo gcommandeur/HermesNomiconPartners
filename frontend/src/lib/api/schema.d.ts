@@ -1155,6 +1155,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/commission/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Config */
+        get: operations["get_config_api_v1_commission_config_get"];
+        /** Put Config */
+        put: operations["put_config_api_v1_commission_config_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Report
+         * @description Quartalsbericht je Mitarbeiter (Standard: das laufende Quartal).
+         */
+        get: operations["get_report_api_v1_commission_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get User Ranks */
+        get: operations["get_user_ranks_api_v1_commission_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission/users/{user_id}/rank": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put User Rank */
+        put: operations["put_user_rank_api_v1_commission_users__user_id__rank_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contacts": {
         parameters: {
             query?: never;
@@ -5338,6 +5410,243 @@ export interface components {
             rates: components["schemas"]["CockpitRates"];
             recruiting_kpis: components["schemas"]["RecruitingKpis"];
             sourcing: components["schemas"]["SourcingFunnel"];
+        };
+        /** CommissionConfigRead */
+        CommissionConfigRead: {
+            general: components["schemas"]["CommissionGeneralConfig-Output"];
+            /** Notice */
+            notice: string;
+            /** Ranks */
+            ranks: components["schemas"]["CommissionRankConfig-Output"][];
+            revenue_basis: components["schemas"]["CommissionRevenueBasis"];
+        };
+        /** CommissionConfigUpdate */
+        CommissionConfigUpdate: {
+            general: components["schemas"]["CommissionGeneralConfig-Input"];
+            /** Ranks */
+            ranks: components["schemas"]["CommissionRankConfig-Input"][];
+            revenue_basis: components["schemas"]["CommissionRevenueBasis"];
+        };
+        /** CommissionGeneralConfig */
+        "CommissionGeneralConfig-Input": {
+            /** Commission Free Base */
+            commission_free_base: number | string;
+            /** Employer Factor */
+            employer_factor: number | string;
+            /** Extra Cost Monthly */
+            extra_cost_monthly: number | string;
+            /** Fee Rate On Target Salary */
+            fee_rate_on_target_salary: number | string;
+            /** Min Fee */
+            min_fee: number | string;
+            /** Target Margin */
+            target_margin: number | string;
+        };
+        /** CommissionGeneralConfig */
+        "CommissionGeneralConfig-Output": {
+            /** Commission Free Base */
+            commission_free_base: string;
+            /** Employer Factor */
+            employer_factor: string;
+            /** Extra Cost Monthly */
+            extra_cost_monthly: string;
+            /** Fee Rate On Target Salary */
+            fee_rate_on_target_salary: string;
+            /** Min Fee */
+            min_fee: string;
+            /** Target Margin */
+            target_margin: string;
+        };
+        /** CommissionRankConfig */
+        "CommissionRankConfig-Input": {
+            /** Fixed Monthly */
+            fixed_monthly: number | string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Rate1 */
+            rate1: number | string;
+            /** Rate2 */
+            rate2: number | string;
+            /** Rate3 */
+            rate3: number | string;
+            /** Threshold1 */
+            threshold1: number | string;
+            /** Threshold2 */
+            threshold2: number | string;
+        };
+        /** CommissionRankConfig */
+        "CommissionRankConfig-Output": {
+            /** Fixed Monthly */
+            fixed_monthly: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Rate1 */
+            rate1: string;
+            /** Rate2 */
+            rate2: string;
+            /** Rate3 */
+            rate3: string;
+            /** Threshold1 */
+            threshold1: string;
+            /** Threshold2 */
+            threshold2: string;
+        };
+        /** CommissionReportRead */
+        CommissionReportRead: {
+            /** Notice */
+            notice: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Quarter */
+            quarter: number;
+            revenue_basis: components["schemas"]["CommissionRevenueBasis"];
+            /** Rows */
+            rows: components["schemas"]["CommissionRowRead"][];
+            /** Target Margin */
+            target_margin: string;
+            totals: components["schemas"]["CommissionTotalsRead"];
+            /** Unassigned */
+            unassigned: components["schemas"]["CommissionUnassignedRead"][];
+            /** Year */
+            year: number;
+        };
+        /** CommissionRevenueBasis */
+        CommissionRevenueBasis: {
+            /** Include Staffing */
+            include_staffing: boolean;
+            /**
+             * Placement Fees
+             * @enum {string}
+             */
+            placement_fees: "paid" | "issued";
+            /**
+             * Staffing
+             * @enum {string}
+             */
+            staffing: "issued" | "paid";
+        };
+        /** CommissionRowRead */
+        CommissionRowRead: {
+            /** Band1 Commission */
+            band1_commission: string;
+            /** Band1 Revenue */
+            band1_revenue: string;
+            /** Band2 Commission */
+            band2_commission: string;
+            /** Band2 Revenue */
+            band2_revenue: string;
+            /** Band3 Commission */
+            band3_commission: string;
+            /** Band3 Revenue */
+            band3_revenue: string;
+            /** Break Even Revenue */
+            break_even_revenue: string;
+            /** Commission */
+            commission: string;
+            /** Display Name */
+            display_name: string;
+            /** Employer Cost */
+            employer_cost: string;
+            /** Fixed Pay */
+            fixed_pay: string;
+            /** Margin */
+            margin: string;
+            /** Margin Percent */
+            margin_percent: string | null;
+            /** Promotion Hurdle */
+            promotion_hurdle: string | null;
+            /** Promotion To Key */
+            promotion_to_key: string | null;
+            /** Promotion To Label */
+            promotion_to_label: string | null;
+            /** Rank Key */
+            rank_key: string;
+            /** Rank Label */
+            rank_label: string;
+            /** Revenue */
+            revenue: string;
+            /** Revenue Fees */
+            revenue_fees: string;
+            /** Revenue Staffing */
+            revenue_staffing: string;
+            /** Target Revenue */
+            target_revenue: string;
+            traffic: components["schemas"]["Traffic"];
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** CommissionTotalsRead */
+        CommissionTotalsRead: {
+            /** Commission */
+            commission: string;
+            /** Employer Cost */
+            employer_cost: string;
+            /** Fixed Pay */
+            fixed_pay: string;
+            /** Margin */
+            margin: string;
+            /** Margin Percent */
+            margin_percent: string | null;
+            /** Revenue */
+            revenue: string;
+            traffic: components["schemas"]["Traffic"];
+        };
+        /**
+         * CommissionUnassignedRead
+         * @description Mitarbeiter mit Umsatz, denen noch kein Rang zugeordnet ist.
+         */
+        CommissionUnassignedRead: {
+            /** Display Name */
+            display_name: string;
+            /** Revenue */
+            revenue: string;
+            /** Revenue Fees */
+            revenue_fees: string;
+            /** Revenue Staffing */
+            revenue_staffing: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** CommissionUserRankRead */
+        CommissionUserRankRead: {
+            /** Display Name */
+            display_name: string;
+            /** Effective From */
+            effective_from: string | null;
+            /** Email */
+            email: string;
+            /** Rank Key */
+            rank_key: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** CommissionUserRankUpdate */
+        CommissionUserRankUpdate: {
+            /** Effective From */
+            effective_from?: string | null;
+            /** Rank Key */
+            rank_key?: string | null;
         };
         /** ConsentDecision */
         ConsentDecision: {
@@ -12084,6 +12393,174 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CockpitRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_config_api_v1_commission_config_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_config_api_v1_commission_config_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommissionConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_api_v1_commission_report_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+                quarter?: number | null;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionReportRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_user_ranks_api_v1_commission_users_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionUserRankRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_user_rank_api_v1_commission_users__user_id__rank_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommissionUserRankUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionUserRankRead"];
                 };
             };
             /** @description Validation Error */
