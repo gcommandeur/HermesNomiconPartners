@@ -62,9 +62,12 @@ Tabellen tragen das Praefix `staffing_`, die Migration den Dateinamen-Praefix `n
 **Neue Dateien (Backend):**
 - `models/staffing.py`, `schemas/staffing.py`, `repositories/staffing.py`
 - `services/staffing_audit.py`, `services/staffing_workers.py`, `services/staffing_assignments.py`,
-  `services/staffing_licenses.py`
+  `services/staffing_licenses.py`, `services/staffing_deadlines.py` (Rechenkern),
+  `services/staffing_settings.py`, `services/staffing_deadline_job.py`
+- `scripts/run_staffing_deadlines.py` (taeglicher Job)
 - `alembic/versions/nomicon_01_staffing.py` (Revision `nomicon01staff`, haengt an `g3b5d7f9a1c2`)
-- `tests/services/test_staffing_services.py`
+- `tests/services/test_staffing_services.py`, `test_staffing_deadlines.py`,
+  `test_staffing_deadline_job.py`
 
 **Markierte Aenderungen an gemeinsamen Dateien:**
 - `backend/src/cc_crm/models/__init__.py` (Import und `__all__` der `Staffing*`-Modelle)
