@@ -12,7 +12,11 @@ from typing import Annotated
 from fastapi import APIRouter, Query, status
 
 from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
-from cc_crm.api.staffing_dependencies import AssignmentAccess, staffing_owner_scope
+from cc_crm.api.staffing_dependencies import (
+    AssignmentAccess,
+    TimesheetAccess,
+    staffing_owner_scope,
+)
 from cc_crm.core.errors import EntityNotFoundError, PermissionDeniedError
 from cc_crm.models.staffing import StaffingAssignmentStatus, StaffingWorkerStatus
 from cc_crm.schemas.staffing import (
@@ -32,6 +36,10 @@ from cc_crm.schemas.staffing import (
     StaffingPairDeadlineRead,
     StaffingSettingsRead,
     StaffingSettingsUpdate,
+    StaffingTimesheetCreate,
+    StaffingTimesheetEntriesUpdate,
+    StaffingTimesheetRead,
+    StaffingTimesheetSubmitResult,
     StaffingWorkerCreate,
     StaffingWorkerRead,
     StaffingWorkerUpdate,
@@ -47,6 +55,7 @@ from cc_crm.services.staffing_deadlines import DeadlineConfig
 from cc_crm.services.staffing_licenses import StaffingLicenseService
 from cc_crm.services.staffing_overview import DISCLAIMER, overview, pair_deadlines
 from cc_crm.services.staffing_settings import load_config, save_config
+from cc_crm.services.staffing_timesheets import StaffingTimesheetService
 from cc_crm.services.staffing_visibility import forbid_money_for_non_admin, redact
 from cc_crm.services.staffing_workers import StaffingWorkerService, worker_read
 
@@ -326,3 +335,73 @@ def update_license(
     return StaffingLicenseRead.model_validate(
         StaffingLicenseService(session).update(license_id, payload, admin)
     )
+
+
+# --- Stundenzettel -----------------------------------------------------------------------------
+# Stundenzettel gehoeren zu einem Einsatz und folgen dessen Sichtbarkeit: `AssignmentAccess`
+# (Pfad mit assignment_id) bzw. `TimesheetAccess` (Pfad mit timesheet_id). Die Kundenfreigabe per
+# Link steht ohne Login in api/v1/staffing_public.py.
+
+
+@router.get(
+    "/assignments/{assignment_id}/timesheets",
+    dependencies=[AssignmentAccess],
+    response_model=list[StaffingTimesheetRead],
+)
+def list_timesheets(
+    assignment_id: uuid.UUID, session: DatabaseSession, _user: CurrentUser
+) -> list[StaffingTimesheetRead]:
+    return StaffingTimesheetService(session).list_for_assignment(assignment_id)
+
+
+@router.post(
+    "/assignments/{assignment_id}/timesheets",
+    dependencies=[AssignmentAccess],
+    response_model=StaffingTimesheetRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_timesheet(
+    assignment_id: uuid.UUID,
+    payload: StaffingTimesheetCreate,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> StaffingTimesheetRead:
+    return StaffingTimesheetService(session).create(assignment_id, payload, current_user)
+
+
+@router.get(
+    "/timesheets/{timesheet_id}",
+    dependencies=[TimesheetAccess],
+    response_model=StaffingTimesheetRead,
+)
+def get_timesheet(
+    timesheet_id: uuid.UUID, session: DatabaseSession, _user: CurrentUser
+) -> StaffingTimesheetRead:
+    return StaffingTimesheetService(session).get_read(timesheet_id)
+
+
+@router.put(
+    "/timesheets/{timesheet_id}/entries",
+    dependencies=[TimesheetAccess],
+    response_model=StaffingTimesheetRead,
+)
+def set_timesheet_entries(
+    timesheet_id: uuid.UUID,
+    payload: StaffingTimesheetEntriesUpdate,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> StaffingTimesheetRead:
+    return StaffingTimesheetService(session).set_entries(timesheet_id, payload, current_user)
+
+
+@router.post(
+    "/timesheets/{timesheet_id}/submit",
+    dependencies=[TimesheetAccess],
+    response_model=StaffingTimesheetSubmitResult,
+)
+def submit_timesheet(
+    timesheet_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> StaffingTimesheetSubmitResult:
+    """Einreichen und den Freigabelink fuer den Kunden erzeugen (erneuter Aufruf = neuer Link,
+    der alte wird ungueltig). Der Link steht nur in dieser Antwort."""
+    return StaffingTimesheetService(session).submit(timesheet_id, current_user)

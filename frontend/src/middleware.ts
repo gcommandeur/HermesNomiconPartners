@@ -30,6 +30,7 @@ export const config = {
   // einen 307-Redirect auf /login statt des Bildes - der Tab zeigte dann nie
   // das Icon, bevor man sich einloggt.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|brand/|api/login|api/logout|api/proxy).*)",
+    // NOMICON: stundenzettel/ und api/stundenzettel (Kundenfreigabe per Link, ohne Login)
+    "/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|brand/|api/login|api/logout|api/proxy|api/stundenzettel|stundenzettel/).*)",
   ],
 };

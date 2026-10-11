@@ -2265,6 +2265,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/timesheets/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** View Timesheet */
+        get: operations["view_timesheet_api_v1_public_timesheets__token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/timesheets/{token}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Timesheet */
+        post: operations["approve_timesheet_api_v1_public_timesheets__token__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/timesheets/{token}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Timesheet */
+        post: operations["reject_timesheet_api_v1_public_timesheets__token__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/readyz": {
         parameters: {
             query?: never;
@@ -2607,6 +2658,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staffing/assignments/{assignment_id}/timesheets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Timesheets */
+        get: operations["list_timesheets_api_v1_staffing_assignments__assignment_id__timesheets_get"];
+        put?: never;
+        /** Create Timesheet */
+        post: operations["create_timesheet_api_v1_staffing_assignments__assignment_id__timesheets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staffing/contracts": {
         parameters: {
             query?: never;
@@ -2727,6 +2796,61 @@ export interface paths {
         /** Put Settings */
         put: operations["put_settings_api_v1_staffing_settings_put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/timesheets/{timesheet_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Timesheet */
+        get: operations["get_timesheet_api_v1_staffing_timesheets__timesheet_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/timesheets/{timesheet_id}/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Timesheet Entries */
+        put: operations["set_timesheet_entries_api_v1_staffing_timesheets__timesheet_id__entries_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/timesheets/{timesheet_id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Timesheet
+         * @description Einreichen und den Freigabelink fuer den Kunden erzeugen (erneuter Aufruf = neuer Link,
+         *     der alte wird ungueltig). Der Link steht nur in dieser Antwort.
+         */
+        post: operations["submit_timesheet_api_v1_staffing_timesheets__timesheet_id__submit_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7429,6 +7553,52 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** PublicTimesheetApprove */
+        PublicTimesheetApprove: {
+            /** Approver Name */
+            approver_name: string;
+        };
+        /**
+         * PublicTimesheetRead
+         * @description Alles, was der Kunde ueber den Freigabelink sieht - keine IDs, keine Lohn- oder
+         *     Verrechnungsdaten.
+         */
+        PublicTimesheetRead: {
+            /** Client Name */
+            client_name: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By Name */
+            decided_by_name: string | null;
+            /** Entries */
+            entries: components["schemas"]["StaffingTimesheetEntryRead"][];
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Rejection Reason */
+            rejection_reason: string | null;
+            status: components["schemas"]["StaffingTimesheetStatus"];
+            /** Total Hours */
+            total_hours: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /** PublicTimesheetReject */
+        PublicTimesheetReject: {
+            /** Approver Name */
+            approver_name: string;
+            /** Reason */
+            reason: string;
+        };
         /**
          * Rechtsgebiet
          * @description Strukturierte Rechtsgebiete fuer Candidate.rechtsgebiete - bei
@@ -8418,6 +8588,122 @@ export interface components {
             reset_gap_months: number;
             /** Yellow Days */
             yellow_days: number;
+        };
+        /** StaffingTimesheetCreate */
+        StaffingTimesheetCreate: {
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+        };
+        /**
+         * StaffingTimesheetEntriesUpdate
+         * @description Ersetzt ALLE Eintraege des Stundenzettels (idempotent). Leere Liste = alles loeschen.
+         */
+        StaffingTimesheetEntriesUpdate: {
+            /** Entries */
+            entries: components["schemas"]["StaffingTimesheetEntryInput"][];
+        };
+        /** StaffingTimesheetEntryInput */
+        StaffingTimesheetEntryInput: {
+            /**
+             * Break Minutes
+             * @default 0
+             */
+            break_minutes: number;
+            /** Hours */
+            hours: number | string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+        };
+        /** StaffingTimesheetEntryRead */
+        StaffingTimesheetEntryRead: {
+            /** Break Minutes */
+            break_minutes: number;
+            /** Hours */
+            hours: string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+        };
+        /** StaffingTimesheetRead */
+        StaffingTimesheetRead: {
+            /** Approval Link Expires At */
+            approval_link_expires_at: string | null;
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /** Client Name */
+            client_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By Name */
+            decided_by_name: string | null;
+            /** Entries */
+            entries: components["schemas"]["StaffingTimesheetEntryRead"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Rejection Reason */
+            rejection_reason: string | null;
+            status: components["schemas"]["StaffingTimesheetStatus"];
+            /** Submitted At */
+            submitted_at: string | null;
+            /** Total Hours */
+            total_hours: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /**
+         * StaffingTimesheetStatus
+         * @enum {string}
+         */
+        StaffingTimesheetStatus: "open" | "submitted" | "approved" | "rejected";
+        /** StaffingTimesheetSubmitResult */
+        StaffingTimesheetSubmitResult: {
+            /** Approval Path */
+            approval_path: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            timesheet: components["schemas"]["StaffingTimesheetRead"];
         };
         /** StaffingWorkerCreate */
         StaffingWorkerCreate: {
@@ -14025,6 +14311,107 @@ export interface operations {
             };
         };
     };
+    view_timesheet_api_v1_public_timesheets__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicTimesheetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_timesheet_api_v1_public_timesheets__token__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicTimesheetApprove"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicTimesheetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_timesheet_api_v1_public_timesheets__token__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicTimesheetReject"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicTimesheetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     readyz_api_v1_readyz_get: {
         parameters: {
             query?: never;
@@ -14837,6 +15224,76 @@ export interface operations {
             };
         };
     };
+    list_timesheets_api_v1_staffing_assignments__assignment_id__timesheets_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTimesheetRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_timesheet_api_v1_staffing_assignments__assignment_id__timesheets_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingTimesheetCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTimesheetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_contracts_api_v1_staffing_contracts_get: {
         parameters: {
             query?: {
@@ -15195,6 +15652,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaffingSettingsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_timesheet_api_v1_staffing_timesheets__timesheet_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                timesheet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTimesheetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_timesheet_entries_api_v1_staffing_timesheets__timesheet_id__entries_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                timesheet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingTimesheetEntriesUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTimesheetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_timesheet_api_v1_staffing_timesheets__timesheet_id__submit_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                timesheet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTimesheetSubmitResult"];
                 };
             };
             /** @description Validation Error */

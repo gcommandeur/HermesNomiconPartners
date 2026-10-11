@@ -21,6 +21,7 @@ import {
   type StaffingAssignmentStatus,
 } from "@/lib/api/staffing";
 import { formatDate } from "@/lib/utils";
+import { StaffingTimesheetsPanel } from "./staffing-timesheets-panel";
 import {
   AssignmentStatusBadge,
   DeadlineMeter,
@@ -161,6 +162,8 @@ export function StaffingAssignmentDetailView({ id }: { id: string }) {
           </ul>
         </CardContent>
       </Card>
+
+      <StaffingTimesheetsPanel assignmentId={id} enabled={assignment.status === "active" || assignment.status === "ended"} />
 
       {editing && <EditModal assignment={assignment} isAdmin={isAdmin} onClose={() => setEditing(false)} />}
       {ending && (

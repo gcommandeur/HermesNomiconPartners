@@ -39,6 +39,7 @@ from cc_crm.api.v1.region_modifiers import router as region_modifiers_router
 from cc_crm.api.v1.sequences import router as sequences_router
 from cc_crm.api.v1.sourcing import router as sourcing_router
 from cc_crm.api.v1.staffing import router as staffing_router  # NOMICON
+from cc_crm.api.v1.staffing_public import router as staffing_public_router  # NOMICON
 from cc_crm.api.v1.submissions import router as submissions_router
 from cc_crm.api.v1.system import router as system_router
 from cc_crm.api.v1.tasks import router as tasks_router
@@ -65,6 +66,8 @@ api_router.include_router(oauth_public_router, tags=["oauth"])
 # /mcp prueft selbst (API-Key ODER OAuth-Token) und antwortet ohne Anmeldung mit 401 +
 # Verweis auf die OAuth-Metadaten.
 api_router.include_router(mcp_router, tags=["mcp"])
+# NOMICON: Kundenfreigabe von Stundenzetteln per Link, ohne Login (Token-Schutz, siehe Modul).
+api_router.include_router(staffing_public_router, tags=["staffing-public"])
 
 protected_router = APIRouter(dependencies=[Depends(get_current_user)])
 protected_router.include_router(background_jobs_router, tags=["background-jobs"])

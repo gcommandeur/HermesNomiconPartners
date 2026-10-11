@@ -63,26 +63,32 @@ Tabellen tragen das Praefix `staffing_`, die Migration den Dateinamen-Praefix `n
 - `models/staffing.py`, `schemas/staffing.py`, `repositories/staffing.py`
 - `services/staffing_audit.py`, `services/staffing_workers.py`, `services/staffing_assignments.py`,
   `services/staffing_licenses.py`, `services/staffing_deadlines.py` (Rechenkern),
-  `services/staffing_settings.py`, `services/staffing_deadline_job.py`
+  `services/staffing_settings.py`, `services/staffing_deadline_job.py`, `services/staffing_timesheets.py`
 - `services/staffing_activation.py`, `services/staffing_overview.py`, `services/staffing_visibility.py`
-- `api/staffing_dependencies.py` (Owner-Scope, `AssignmentAccess`/`TimesheetAccess`), `api/v1/staffing.py`
+- `api/staffing_dependencies.py` (Owner-Scope, `AssignmentAccess`/`TimesheetAccess`), `api/v1/staffing.py`,
+  `api/v1/staffing_public.py` (Kundenfreigabe per Link, OHNE Login)
 - `scripts/run_staffing_deadlines.py` (taeglicher Job), `scripts/seed_staffing.py` (Dummy-Daten)
 - `docs/UEBERLASSUNG.md` (Datenmodell, Fristenregeln, Rechte, offene rechtliche Fragen)
 - `alembic/versions/nomicon_01_staffing.py` (Revision `nomicon01staff`, haengt an `g3b5d7f9a1c2`)
 - `tests/services/test_staffing_services.py`, `test_staffing_deadlines.py`,
   `test_staffing_deadline_job.py`, `tests/api/test_staffing_api.py`,
-  `tests/api/test_staffing_access_guard.py`, `tests/test_seed_staffing.py`
+  `tests/api/test_staffing_access_guard.py`, `tests/api/test_staffing_timesheets.py`, `tests/test_seed_staffing.py`
 
 **Neue Dateien (Frontend):**
 - `frontend/src/app/ueberlassung/**` (`layout.tsx`, `page.tsx`, `einsaetze/`, `leiharbeitnehmer/`, `compliance/`)
 - `frontend/src/components/crm/staffing-*.tsx` (ui, overview-view, assignments-view, assignment-detail,
   assignment-create-modal, workers-view, compliance-view, candidate-panel)
-- `frontend/src/lib/api/staffing.ts`, `staffing-hooks.ts`, `frontend/src/lib/staffing-demo.ts`
+- `frontend/src/lib/api/staffing.ts`, `staffing-hooks.ts`, `staffing-public.ts`, `frontend/src/lib/staffing-demo.ts`
+- `frontend/src/app/stundenzettel/[token]/page.tsx` (Freigabeseite des Kunden, ohne Login),
+  `frontend/src/app/api/stundenzettel/[...path]/route.ts` (schmale Weiterleitung, gibt die Client-IP weiter),
+  `components/crm/staffing-timesheets-panel.tsx`, `staffing-timesheet-approval.tsx`
 
 **Markierte Aenderungen an gemeinsamen Dateien:**
 - `backend/src/cc_crm/models/__init__.py` (Import und `__all__` der `Staffing*`-Modelle)
 - `backend/scripts/seed_data.py` (Option `--staffing`, 3 markierte Stellen)
-- `backend/src/cc_crm/api/v1/router.py` (Import und `include_router` fuer `staffing_router`, 2 Zeilen)
+- `backend/src/cc_crm/api/v1/router.py` (Import und `include_router` fuer `staffing_router` und `staffing_public_router`, 4 Zeilen)
+- `frontend/src/middleware.ts` (Matcher: `api/stundenzettel` und `stundenzettel/` ohne Login erreichbar)
+- `frontend/src/components/layout/conditional-shell.tsx` (keine Seitenleiste auf `/stundenzettel/...`)
 - `frontend/src/components/layout/navigation.ts` (Icon-Import `HardHat` und die Gruppe `ueberlassung`)
 - `frontend/src/app/kandidaten/[id]/page.tsx` (Import, Reiter `Überlassung` in `tabs`, ein `TabsContent`)
 - `frontend/src/lib/api/openapi.json` und `schema.d.ts` sind ERZEUGT: nach jedem Merge aus Hermes neu

@@ -6,7 +6,7 @@ optionale Felder: fuer Nicht-Admins setzt die API-Schicht sie auf `None`
 (services/staffing_visibility.py). Die Felder fehlen also nie im Schema, nur der Wert."""
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, Field, model_validator
@@ -15,6 +15,7 @@ from cc_crm.models.staffing import (
     StaffingAssignmentStatus,
     StaffingChecklistKey,
     StaffingContractStatus,
+    StaffingTimesheetStatus,
     StaffingWorkerStatus,
 )
 from cc_crm.schemas.base import EntityRead, ORMModel
@@ -290,3 +291,84 @@ class StaffingSettingsUpdate(BaseModel):
     reset_gap_months: int = Field(gt=0, le=60)
     yellow_days: int = Field(gt=0, le=3650)
     red_days: int = Field(gt=0, le=3650)
+
+
+# --- Stundenzettel und Kundenfreigabe ---------------------------------------------------------
+
+
+class StaffingTimesheetCreate(BaseModel):
+    period_start: date
+    period_end: date
+
+    @model_validator(mode="after")
+    def _dates(self) -> "StaffingTimesheetCreate":
+        _check_range(self.period_start, self.period_end, "Das Ende liegt vor dem Beginn.")
+        return self
+
+
+class StaffingTimesheetEntryInput(BaseModel):
+    work_date: date
+    hours: Decimal = Field(gt=0, le=Decimal("24"), decimal_places=2)
+    break_minutes: int = Field(default=0, ge=0, le=600)
+
+
+class StaffingTimesheetEntriesUpdate(BaseModel):
+    """Ersetzt ALLE Eintraege des Stundenzettels (idempotent). Leere Liste = alles loeschen."""
+
+    entries: list[StaffingTimesheetEntryInput] = Field(max_length=93)
+
+
+class StaffingTimesheetEntryRead(ORMModel):
+    work_date: date
+    hours: Decimal
+    break_minutes: int
+
+
+class StaffingTimesheetRead(EntityRead):
+    assignment_id: uuid.UUID
+    worker_name: str
+    client_name: str
+    period_start: date
+    period_end: date
+    status: StaffingTimesheetStatus
+    submitted_at: datetime | None
+    decided_at: datetime | None
+    decided_by_name: str | None
+    rejection_reason: str | None
+    approval_link_expires_at: datetime | None  # nur solange ein Link gilt
+    total_hours: Decimal
+    entries: list[StaffingTimesheetEntryRead]
+
+
+class StaffingTimesheetSubmitResult(BaseModel):
+    timesheet: StaffingTimesheetRead
+    # Pfad der Freigabeseite (ohne Host, das Frontend setzt die Adresse davor). Der Klartext
+    # steht NUR in dieser Antwort - in der Datenbank liegt nur der Hash.
+    approval_path: str
+    expires_at: datetime
+
+
+class PublicTimesheetRead(BaseModel):
+    """Alles, was der Kunde ueber den Freigabelink sieht - keine IDs, keine Lohn- oder
+    Verrechnungsdaten."""
+
+    worker_name: str
+    client_name: str
+    period_start: date
+    period_end: date
+    status: StaffingTimesheetStatus
+    total_hours: Decimal
+    entries: list[StaffingTimesheetEntryRead]
+    decided_at: datetime | None
+    decided_by_name: str | None
+    rejection_reason: str | None
+    expires_at: datetime | None
+
+
+class PublicTimesheetApprove(BaseModel):
+    approver_name: str = Field(min_length=2, max_length=160)
+
+
+class PublicTimesheetReject(BaseModel):
+    approver_name: str = Field(min_length=2, max_length=160)
+    reason: str = Field(min_length=3, max_length=2000)

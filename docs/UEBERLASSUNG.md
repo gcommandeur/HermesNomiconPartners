@@ -119,6 +119,34 @@ nicht; sie wird als rote Frist angezeigt und als Aufgabe gemeldet.
 `GET|PATCH /assignments/{id}`, `POST /assignments/{id}/status`, `PATCH /assignments/{id}/checklist/{item}`;
 `GET|POST /licenses`, `PATCH /licenses/{id}`. Das OpenAPI-Schema (`/docs`) beschreibt Felder und Fehler.
 
+## Stundenzettel und Kundenfreigabe
+
+Pro Einsatz (aktiv oder beendet) und Zeitraum (höchstens 62 Tage, ohne Überlappung, im Einsatzzeitraum)
+ein Stundenzettel mit Tageseinträgen (Stunden > 0 bis 24, Pause 0 bis 600 Minuten). Statusfolge:
+offen → eingereicht → freigegeben | abgelehnt; ein abgelehnter Zettel wird beim Korrigieren wieder
+offen (die Begründung bleibt im Audit-Log). Freigegebene Zettel sind endgültig. Die Oberfläche steht
+im Einsatz-Detail unter „Stundenzettel“.
+
+**Einreichen und Link.** „Einreichen“ erzeugt einen Freigabelink `…/stundenzettel/<token>`:
+
+* Token: 256 Bit Zufall (`secrets.token_urlsafe(32)`), in der Datenbank **nur als SHA-256-Hash**; der Klartext
+  steht nur in der Antwort des Einreichens (und wird einmal angezeigt).
+* Gültig **14 Tage** (`TOKEN_VALID_DAYS`), **einmal nutzbar** (Freigabe oder Ablehnung verbraucht ihn), gilt nur
+  für genau diesen Stundenzettel. „Link neu erzeugen“ ersetzt den alten Link.
+* Ohne Login erreichbar: `GET /api/v1/public/timesheets/{token}`, `POST …/approve`, `POST …/reject`
+  (Frontend: `/stundenzettel/<token>`, Weiterleitung `/api/stundenzettel/…`). Der Kunde sieht nur Name,
+  Kunde, Zeitraum, Stunden — keine IDs, **kein Lohn, keine Marge**. Er gibt seinen Namen an; Ablehnen
+  braucht eine Begründung.
+* **Ratenbegrenzung** wie beim Login (`LoginRateLimiter`): 10 Fehlversuche je Client-IP in 10 Minuten, danach
+  429, **bevor** der Token nachgeschlagen wird. Das Next-Frontend reicht dafür `CF-Connecting-IP` /
+  `X-Forwarded-For` weiter (sonst teilten alle Kunden eine IP und eine Sperre).
+* Antworten: unbekannter Token 404; abgelaufen, verbraucht oder ersetzt 410 mit allgemeiner Meldung.
+* Die Seite ist nicht indexierbar und sendet keinen Referrer (der Token steht in der Adresse).
+* Tests: `tests/api/test_staffing_timesheets.py` (Ablauf, ungültig/abgelaufen/Wiederverwendung, Token eines
+  anderen Zettels, Hash-Speicherung, Ratenbegrenzung, Eingabeprüfung).
+
+Der Link wird **nicht** automatisch per E-Mail versendet; der Disponent kopiert ihn und schickt ihn selbst.
+
 ## Betrieb und Umgebungsvariablen
 
 Es gibt **keine neuen Umgebungsvariablen**. Zu tun (nur der Nutzer, nicht von Claude angelegt):

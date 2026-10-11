@@ -12473,6 +12473,141 @@
         "title": "ProfileSuggestion",
         "type": "object"
       },
+      "PublicTimesheetApprove": {
+        "properties": {
+          "approver_name": {
+            "maxLength": 160,
+            "minLength": 2,
+            "title": "Approver Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "approver_name"
+        ],
+        "title": "PublicTimesheetApprove",
+        "type": "object"
+      },
+      "PublicTimesheetRead": {
+        "description": "Alles, was der Kunde ueber den Freigabelink sieht - keine IDs, keine Lohn- oder\nVerrechnungsdaten.",
+        "properties": {
+          "client_name": {
+            "title": "Client Name",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By Name"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/StaffingTimesheetEntryRead"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "rejection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Reason"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StaffingTimesheetStatus"
+          },
+          "total_hours": {
+            "title": "Total Hours",
+            "type": "string"
+          },
+          "worker_name": {
+            "title": "Worker Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "worker_name",
+          "client_name",
+          "period_start",
+          "period_end",
+          "status",
+          "total_hours",
+          "entries",
+          "decided_at",
+          "decided_by_name",
+          "rejection_reason",
+          "expires_at"
+        ],
+        "title": "PublicTimesheetRead",
+        "type": "object"
+      },
+      "PublicTimesheetReject": {
+        "properties": {
+          "approver_name": {
+            "maxLength": 160,
+            "minLength": 2,
+            "title": "Approver Name",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "approver_name",
+          "reason"
+        ],
+        "title": "PublicTimesheetReject",
+        "type": "object"
+      },
       "Rechtsgebiet": {
         "description": "Strukturierte Rechtsgebiete fuer Candidate.rechtsgebiete - bei\nrechtsanwalt/rechtsfachangestellte reicht Freitext (fachliche_\nschwerpunkte) nicht zum Filtern. Liste, da mehrere Rechtsgebiete\ngleichzeitig zutreffen koennen.",
         "enum": [
@@ -15393,6 +15528,270 @@
           "red_days"
         ],
         "title": "StaffingSettingsUpdate",
+        "type": "object"
+      },
+      "StaffingTimesheetCreate": {
+        "properties": {
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end"
+        ],
+        "title": "StaffingTimesheetCreate",
+        "type": "object"
+      },
+      "StaffingTimesheetEntriesUpdate": {
+        "description": "Ersetzt ALLE Eintraege des Stundenzettels (idempotent). Leere Liste = alles loeschen.",
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/StaffingTimesheetEntryInput"
+            },
+            "maxItems": 93,
+            "title": "Entries",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entries"
+        ],
+        "title": "StaffingTimesheetEntriesUpdate",
+        "type": "object"
+      },
+      "StaffingTimesheetEntryInput": {
+        "properties": {
+          "break_minutes": {
+            "default": 0,
+            "maximum": 600.0,
+            "minimum": 0.0,
+            "title": "Break Minutes",
+            "type": "integer"
+          },
+          "hours": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 24.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Hours"
+          },
+          "work_date": {
+            "format": "date",
+            "title": "Work Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "work_date",
+          "hours"
+        ],
+        "title": "StaffingTimesheetEntryInput",
+        "type": "object"
+      },
+      "StaffingTimesheetEntryRead": {
+        "properties": {
+          "break_minutes": {
+            "title": "Break Minutes",
+            "type": "integer"
+          },
+          "hours": {
+            "title": "Hours",
+            "type": "string"
+          },
+          "work_date": {
+            "format": "date",
+            "title": "Work Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "work_date",
+          "hours",
+          "break_minutes"
+        ],
+        "title": "StaffingTimesheetEntryRead",
+        "type": "object"
+      },
+      "StaffingTimesheetRead": {
+        "properties": {
+          "approval_link_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Link Expires At"
+          },
+          "assignment_id": {
+            "format": "uuid",
+            "title": "Assignment Id",
+            "type": "string"
+          },
+          "client_name": {
+            "title": "Client Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By Name"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/StaffingTimesheetEntryRead"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "rejection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Reason"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StaffingTimesheetStatus"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "total_hours": {
+            "title": "Total Hours",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "worker_name": {
+            "title": "Worker Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "updated_at",
+          "assignment_id",
+          "worker_name",
+          "client_name",
+          "period_start",
+          "period_end",
+          "status",
+          "submitted_at",
+          "decided_at",
+          "decided_by_name",
+          "rejection_reason",
+          "approval_link_expires_at",
+          "total_hours",
+          "entries"
+        ],
+        "title": "StaffingTimesheetRead",
+        "type": "object"
+      },
+      "StaffingTimesheetStatus": {
+        "enum": [
+          "open",
+          "submitted",
+          "approved",
+          "rejected"
+        ],
+        "title": "StaffingTimesheetStatus",
+        "type": "string"
+      },
+      "StaffingTimesheetSubmitResult": {
+        "properties": {
+          "approval_path": {
+            "title": "Approval Path",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "timesheet": {
+            "$ref": "#/components/schemas/StaffingTimesheetRead"
+          }
+        },
+        "required": [
+          "timesheet",
+          "approval_path",
+          "expires_at"
+        ],
+        "title": "StaffingTimesheetSubmitResult",
         "type": "object"
       },
       "StaffingWorkerCreate": {
@@ -27458,6 +27857,158 @@
         ]
       }
     },
+    "/api/v1/public/timesheets/{token}": {
+      "get": {
+        "operationId": "view_timesheet_api_v1_public_timesheets__token__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 8,
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicTimesheetRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "View Timesheet",
+        "tags": [
+          "staffing-public"
+        ]
+      }
+    },
+    "/api/v1/public/timesheets/{token}/approve": {
+      "post": {
+        "operationId": "approve_timesheet_api_v1_public_timesheets__token__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 8,
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicTimesheetApprove"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicTimesheetRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Timesheet",
+        "tags": [
+          "staffing-public"
+        ]
+      }
+    },
+    "/api/v1/public/timesheets/{token}/reject": {
+      "post": {
+        "operationId": "reject_timesheet_api_v1_public_timesheets__token__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 8,
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicTimesheetReject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicTimesheetRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Timesheet",
+        "tags": [
+          "staffing-public"
+        ]
+      }
+    },
     "/api/v1/readyz": {
       "get": {
         "description": "Bereit fuer Verkehr: Datenbank erreichbar UND Schema auf dem Stand des\nCodes (`alembic_version` = neueste Migration). Ein Deploy, dessen Migration\nnoch nicht gelaufen ist, soll keinen Verkehr bekommen. `/health` bleibt die\neinfache Lebendigkeitspruefung.",
@@ -29091,6 +29642,146 @@
         ]
       }
     },
+    "/api/v1/staffing/assignments/{assignment_id}/timesheets": {
+      "get": {
+        "operationId": "list_timesheets_api_v1_staffing_assignments__assignment_id__timesheets_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffingTimesheetRead"
+                  },
+                  "title": "Response List Timesheets Api V1 Staffing Assignments  Assignment Id  Timesheets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Timesheets",
+        "tags": [
+          "staffing"
+        ]
+      },
+      "post": {
+        "operationId": "create_timesheet_api_v1_staffing_assignments__assignment_id__timesheets_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffingTimesheetCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingTimesheetRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Timesheet",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
     "/api/v1/staffing/contracts": {
       "get": {
         "operationId": "list_contracts_api_v1_staffing_contracts_get",
@@ -29805,6 +30496,209 @@
           }
         ],
         "summary": "Put Settings",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/timesheets/{timesheet_id}": {
+      "get": {
+        "operationId": "get_timesheet_api_v1_staffing_timesheets__timesheet_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "timesheet_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Timesheet Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingTimesheetRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Timesheet",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/timesheets/{timesheet_id}/entries": {
+      "put": {
+        "operationId": "set_timesheet_entries_api_v1_staffing_timesheets__timesheet_id__entries_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "timesheet_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Timesheet Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffingTimesheetEntriesUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingTimesheetRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Timesheet Entries",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/timesheets/{timesheet_id}/submit": {
+      "post": {
+        "description": "Einreichen und den Freigabelink fuer den Kunden erzeugen (erneuter Aufruf = neuer Link,\nder alte wird ungueltig). Der Link steht nur in dieser Antwort.",
+        "operationId": "submit_timesheet_api_v1_staffing_timesheets__timesheet_id__submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "timesheet_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Timesheet Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingTimesheetSubmitResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Submit Timesheet",
         "tags": [
           "staffing"
         ]

@@ -32,6 +32,10 @@ export type StaffingOverview = Schemas["StaffingOverviewRead"];
 export type StaffingSettings = Schemas["StaffingSettingsRead"];
 export type StaffingSettingsInput = Schemas["StaffingSettingsUpdate"];
 export type Traffic = Schemas["Traffic"];
+export type StaffingTimesheet = Schemas["StaffingTimesheetRead"];
+export type StaffingTimesheetStatus = Schemas["StaffingTimesheetStatus"];
+export type StaffingTimesheetSubmitResult = Schemas["StaffingTimesheetSubmitResult"];
+export type PublicTimesheet = Schemas["PublicTimesheetRead"];
 
 export const WORKER_STATUS_LABELS: Record<StaffingWorkerStatus, string> = {
   applicant: "Anwärter",
@@ -61,6 +65,13 @@ export const CHECKLIST_LABELS: Record<StaffingChecklistKey, string> = {
   specification: "Konkretisierung der Person",
   safety_briefing: "Sicherheitsunterweisung",
   ppe_protocol: "PSA-Übergabeprotokoll",
+};
+
+export const TIMESHEET_STATUS_LABELS: Record<StaffingTimesheetStatus, string> = {
+  open: "Offen",
+  submitted: "Beim Kunden",
+  approved: "Freigegeben",
+  rejected: "Abgelehnt",
 };
 
 export const TRAFFIC_LABELS: Record<Traffic, string> = {
@@ -244,4 +255,32 @@ export function createStaffingContract(input: {
   status?: Schemas["StaffingContractStatus"];
 }) {
   return apiPost<StaffingContract>("/staffing/contracts", input);
+}
+
+// --- Stundenzettel ---------------------------------------------------------------------------
+
+export async function getStaffingTimesheets(assignmentId: string): Promise<DataResult<StaffingTimesheet[]>> {
+  return apiGet<StaffingTimesheet[]>(`/staffing/assignments/${assignmentId}/timesheets`, []);
+}
+
+export function createStaffingTimesheet(assignmentId: string, periodStart: string, periodEnd: string) {
+  return apiPost<StaffingTimesheet>(`/staffing/assignments/${assignmentId}/timesheets`, {
+    period_start: periodStart,
+    period_end: periodEnd,
+  });
+}
+
+export interface TimesheetEntryInput {
+  work_date: string;
+  hours: string;
+  break_minutes: number;
+}
+
+export function saveStaffingTimesheetEntries(timesheetId: string, entries: TimesheetEntryInput[]) {
+  return apiPut<StaffingTimesheet>(`/staffing/timesheets/${timesheetId}/entries`, { entries });
+}
+
+/** Reicht ein und erzeugt den Freigabelink für den Kunden (erneuter Aufruf = neuer Link). */
+export function submitStaffingTimesheet(timesheetId: string) {
+  return apiPost<StaffingTimesheetSubmitResult>(`/staffing/timesheets/${timesheetId}/submit`, {});
 }

@@ -11,6 +11,7 @@ import {
   getStaffingLicenses,
   getStaffingOverview,
   getStaffingSettings,
+  getStaffingTimesheets,
   getStaffingWorker,
   getStaffingWorkerForCandidate,
   getStaffingWorkers,
@@ -64,6 +65,10 @@ export function useStaffingAssignments(filter: AssignmentFilter = {}) {
 
 export function useStaffingAssignment(id: string) {
   return useSWR(`/staffing/assignments/${id}`, () => getStaffingAssignment(id), config);
+}
+
+export function useStaffingTimesheets(assignmentId: string, enabled = true) {
+  return useSWR(enabled ? `/staffing/assignments/${assignmentId}/timesheets` : null, () => getStaffingTimesheets(assignmentId), config);
 }
 
 /** Nach jeder Änderung aufrufen: lädt alle Überlassungs-Listen und -Details neu. */
