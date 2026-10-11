@@ -3,6 +3,7 @@
 // NOMICON: Überlassung - Einsatz: Stammdaten, Fristen, Pflicht-Checkliste, Statuswechsel.
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle, Pencil } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,9 @@ import {
   CHECKLIST_LABELS,
   changeStaffingAssignmentStatus,
   formatMoney,
+  getStaffingWorker,
   setStaffingChecklistItem,
+  takeOverStaffingAssignment,
   updateStaffingAssignment,
   type StaffingAssignmentDetail,
   type StaffingAssignmentStatus,
@@ -44,6 +47,7 @@ export function StaffingAssignmentDetailView({ id }: { id: string }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [ending, setEnding] = useState<"ended" | "aborted" | null>(null);
+  const [takingOver, setTakingOver] = useState(false);
 
   if (error) return <LoadError onRetry={() => void mutate()} />;
   if (isLoading || !data) return <LoadingRows />;
@@ -93,6 +97,7 @@ export function StaffingAssignmentDetailView({ id }: { id: string }) {
             </Button>
           )}
           {assignment.status === "active" && <Button size="sm" disabled={busy} onClick={() => setEnding("ended")}>Einsatz beenden</Button>}
+          {assignment.status === "active" && <Button size="sm" variant="outline" disabled={busy} onClick={() => setTakingOver(true)}>Übernahme durch den Kunden</Button>}
           {editable && <Button size="sm" variant="ghost" disabled={busy} onClick={() => setEnding("aborted")}>Abbrechen</Button>}
         </div>
       </div>
@@ -166,6 +171,7 @@ export function StaffingAssignmentDetailView({ id }: { id: string }) {
       <StaffingTimesheetsPanel assignmentId={id} enabled={assignment.status === "active" || assignment.status === "ended"} />
 
       {editing && <EditModal assignment={assignment} isAdmin={isAdmin} onClose={() => setEditing(false)} />}
+      {takingOver && <TakeoverModal assignmentId={id} workerId={assignment.worker_id} clientName={assignment.client_name} onClose={() => setTakingOver(false)} />}
       {ending && (
         <EndModal
           mode={ending}
@@ -265,6 +271,54 @@ function EditModal({ assignment, isAdmin, onClose }: { assignment: StaffingAssig
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose}>Abbrechen</Button>
           <Button type="submit" disabled={busy}>{busy ? "Speichern…" : "Speichern"}</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function TakeoverModal({ assignmentId, workerId, clientName, onClose }: { assignmentId: string; workerId: string; clientName: string; onClose: () => void }) {
+  const router = useRouter();
+  const [form, setForm] = useState({ takeover_date: today(), annual_salary: "", fee_percentage: "" });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await takeOverStaffingAssignment(assignmentId, {
+        takeover_date: form.takeover_date || null,
+        annual_salary: form.annual_salary ? form.annual_salary.replace(",", ".") : null,
+        fee_percentage: form.fee_percentage ? form.fee_percentage.replace(",", ".") : null,
+      });
+      await invalidateStaffing();
+      const worker = await getStaffingWorker(workerId);
+      router.push(worker.data ? `/kandidaten/${worker.data.candidate_id}` : "/prozesse");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Übernahme fehlgeschlagen.");
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal title="Übernahme durch den Kunden" eyebrow="Überlassung" onClose={onClose}>
+      <form className="space-y-4" onSubmit={submit}>
+        <p className="text-sm text-brand-soft">
+          {clientName} übernimmt den Leiharbeitnehmer fest. Der Einsatz wird beendet und ein <strong>Vermittlungsprozess mit Honorar</strong> angelegt
+          (Status „Quali-Call“ – die weiteren Stufen durchläuft ihr wie gewohnt).
+        </p>
+        <div><label className={labelClass} htmlFor="to-date">Übernahme am</label><Input id="to-date" type="date" required value={form.takeover_date} onChange={(e) => set("takeover_date", e.target.value)} /></div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div><label className={labelClass} htmlFor="to-salary">Jahresgehalt € (für das erwartete Honorar)</label><Input id="to-salary" inputMode="decimal" value={form.annual_salary} onChange={(e) => set("annual_salary", e.target.value)} /></div>
+          <div><label className={labelClass} htmlFor="to-fee">Honorar % (leer = Standard des Kunden)</label><Input id="to-fee" inputMode="decimal" value={form.fee_percentage} onChange={(e) => set("fee_percentage", e.target.value)} /></div>
+        </div>
+        <ErrorBanner message={error} />
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onClose}>Abbrechen</Button>
+          <Button type="submit" disabled={busy}>{busy ? "Übernehmen…" : "Übernahme durchführen"}</Button>
         </div>
       </form>
     </Modal>

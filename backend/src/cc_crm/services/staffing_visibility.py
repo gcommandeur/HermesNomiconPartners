@@ -11,7 +11,11 @@ from pydantic import BaseModel
 
 from cc_crm.core.errors import PermissionDeniedError
 from cc_crm.models.user import User
-from cc_crm.schemas.staffing import StaffingAssignmentRead, StaffingWorkerRead
+from cc_crm.schemas.staffing import (
+    StaffingAssignmentRead,
+    StaffingInvoiceRead,
+    StaffingWorkerRead,
+)
 
 MONEY_FIELDS = ("hourly_wage", "billing_rate")
 
@@ -28,3 +32,18 @@ def forbid_money_for_non_admin(payload: BaseModel, user: User) -> None:
         return
     if any(field in payload.model_fields_set for field in MONEY_FIELDS):
         raise PermissionDeniedError("Lohn und Verrechnungssatz duerfen nur Admins setzen.")
+
+
+def redact_invoice(invoice: StaffingInvoiceRead, user: User) -> StaffingInvoiceRead:
+    """Betraege einer Ueberlassungsrechnung (Verrechnungssatz mal Stunden) sind Margendaten."""
+    if user.is_admin:
+        return invoice
+    return invoice.model_copy(
+        update={
+            "amount_net": None,
+            "amount_gross": None,
+            "lines": [
+                line.model_copy(update={"rate": None, "amount_net": None}) for line in invoice.lines
+            ],
+        }
+    )

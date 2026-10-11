@@ -9,26 +9,32 @@ import uuid
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Response, status
 
 from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
 from cc_crm.api.staffing_dependencies import (
     AssignmentAccess,
+    InvoiceAccess,
     TimesheetAccess,
     staffing_owner_scope,
 )
 from cc_crm.core.errors import EntityNotFoundError, PermissionDeniedError
 from cc_crm.models.staffing import StaffingAssignmentStatus, StaffingWorkerStatus
+from cc_crm.schemas.approval import ApprovalRequestRead, InvoiceStatusChange
 from cc_crm.schemas.staffing import (
     StaffingAssignmentCreate,
     StaffingAssignmentDetail,
     StaffingAssignmentRead,
     StaffingAssignmentStatusChange,
     StaffingAssignmentUpdate,
+    StaffingBillableTimesheetRead,
     StaffingChecklistItemUpdate,
     StaffingContractCreate,
     StaffingContractRead,
     StaffingContractUpdate,
+    StaffingInvoiceCreate,
+    StaffingInvoiceRead,
+    StaffingInvoiceStatusResult,
     StaffingLicenseCreate,
     StaffingLicenseRead,
     StaffingLicenseUpdate,
@@ -36,6 +42,8 @@ from cc_crm.schemas.staffing import (
     StaffingPairDeadlineRead,
     StaffingSettingsRead,
     StaffingSettingsUpdate,
+    StaffingTakeoverInput,
+    StaffingTakeoverResult,
     StaffingTimesheetCreate,
     StaffingTimesheetEntriesUpdate,
     StaffingTimesheetRead,
@@ -44,6 +52,7 @@ from cc_crm.schemas.staffing import (
     StaffingWorkerRead,
     StaffingWorkerUpdate,
 )
+from cc_crm.services.approvals import ApprovalService
 from cc_crm.services.staffing_activation import StaffingActivationService
 from cc_crm.services.staffing_assignments import (
     StaffingAssignmentService,
@@ -52,11 +61,17 @@ from cc_crm.services.staffing_assignments import (
     contract_read,
 )
 from cc_crm.services.staffing_deadlines import DeadlineConfig
+from cc_crm.services.staffing_invoices import StaffingInvoiceService
 from cc_crm.services.staffing_licenses import StaffingLicenseService
 from cc_crm.services.staffing_overview import DISCLAIMER, overview, pair_deadlines
 from cc_crm.services.staffing_settings import load_config, save_config
+from cc_crm.services.staffing_takeover import StaffingTakeoverService
 from cc_crm.services.staffing_timesheets import StaffingTimesheetService
-from cc_crm.services.staffing_visibility import forbid_money_for_non_admin, redact
+from cc_crm.services.staffing_visibility import (
+    forbid_money_for_non_admin,
+    redact,
+    redact_invoice,
+)
 from cc_crm.services.staffing_workers import StaffingWorkerService, worker_read
 
 router = APIRouter(prefix="/staffing")
@@ -405,3 +420,108 @@ def submit_timesheet(
     """Einreichen und den Freigabelink fuer den Kunden erzeugen (erneuter Aufruf = neuer Link,
     der alte wird ungueltig). Der Link steht nur in dieser Antwort."""
     return StaffingTimesheetService(session).submit(timesheet_id, current_user)
+
+
+# --- Uebernahme durch den Kunden ----------------------------------------------------------------
+
+
+@router.post(
+    "/assignments/{assignment_id}/takeover",
+    dependencies=[AssignmentAccess],
+    response_model=StaffingTakeoverResult,
+)
+def take_over_assignment(
+    assignment_id: uuid.UUID,
+    payload: StaffingTakeoverInput,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> StaffingTakeoverResult:
+    """Beendet den Einsatz und legt einen Vermittlungsprozess mit Honorar an (siehe
+    services/staffing_takeover.py)."""
+    result = StaffingTakeoverService(session).take_over(assignment_id, payload, current_user)
+    return result.model_copy(update={"assignment": redact(result.assignment, current_user)})
+
+
+# --- Abrechnung und Export -----------------------------------------------------------------------
+# Rechnungen folgen dem Rechnungs- und Freigabemodell der Vermittlung
+# (services/staffing_invoices.py). Betraege sind Margendaten: Nicht-Admins sehen sie nie, koennen
+# aber Entwuerfe aus Stundenzetteln ihres Bereichs erstellen und das Stellen ueber die
+# Freigabe-Inbox beantragen.
+
+
+@router.get("/billable-timesheets", response_model=list[StaffingBillableTimesheetRead])
+def list_billable_timesheets(
+    session: DatabaseSession, current_user: CurrentUser
+) -> list[StaffingBillableTimesheetRead]:
+    return StaffingInvoiceService(session).billable_timesheets(
+        staffing_owner_scope(current_user, session)
+    )
+
+
+@router.get("/invoices", response_model=list[StaffingInvoiceRead])
+def list_invoices(session: DatabaseSession, current_user: CurrentUser) -> list[StaffingInvoiceRead]:
+    invoices = StaffingInvoiceService(session).list_invoices(
+        staffing_owner_scope(current_user, session)
+    )
+    return [redact_invoice(invoice, current_user) for invoice in invoices]
+
+
+@router.post("/invoices", response_model=StaffingInvoiceRead, status_code=status.HTTP_201_CREATED)
+def create_invoice_draft(
+    payload: StaffingInvoiceCreate, session: DatabaseSession, current_user: CurrentUser
+) -> StaffingInvoiceRead:
+    invoice = StaffingInvoiceService(session).create_draft(
+        payload, current_user, staffing_owner_scope(current_user, session)
+    )
+    return redact_invoice(invoice, current_user)
+
+
+@router.get(
+    "/invoices/{invoice_id}", dependencies=[InvoiceAccess], response_model=StaffingInvoiceRead
+)
+def get_invoice(
+    invoice_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> StaffingInvoiceRead:
+    return redact_invoice(StaffingInvoiceService(session).get_read(invoice_id), current_user)
+
+
+@router.post(
+    "/invoices/{invoice_id}/status",
+    dependencies=[InvoiceAccess],
+    response_model=StaffingInvoiceStatusResult,
+)
+def change_invoice_status(
+    invoice_id: uuid.UUID,
+    payload: InvoiceStatusChange,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> StaffingInvoiceStatusResult:
+    """Wie bei Vermittlungsrechnungen: "Rechnung stellen" durch einen Nicht-Admin wird zur
+    Freigabe-Anfrage (`approval_request`), Admins stellen direkt."""
+    service = StaffingInvoiceService(session)
+    _invoice, approval = service.change_status(invoice_id, payload, current_user)
+    return StaffingInvoiceStatusResult(
+        invoice=redact_invoice(service.get_read(invoice_id), current_user),
+        approval_request=(
+            ApprovalRequestRead.model_validate(approval).model_copy(
+                update={"entity_label": ApprovalService(session).entity_label(approval)}
+            )
+            if approval is not None
+            else None
+        ),
+    )
+
+
+@router.get("/export/hours.csv")
+def export_hours_csv(
+    period_start: date, period_end: date, session: DatabaseSession, _admin: AdminUser
+) -> Response:
+    """Stunden je Leiharbeitnehmer und Kunde fuer die Lohnabrechnung (nur Admins - enthaelt den
+    Stundenlohn). Nur vom Kunden freigegebene Stunden. Format: docs/UEBERLASSUNG.md."""
+    content = StaffingInvoiceService(session).export_hours_csv(period_start, period_end)
+    filename = f"stunden_{period_start:%Y%m%d}_{period_end:%Y%m%d}.csv"
+    return Response(
+        content=content.encode("utf-8"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

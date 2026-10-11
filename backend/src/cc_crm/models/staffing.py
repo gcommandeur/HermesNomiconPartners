@@ -28,6 +28,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cc_crm.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from cc_crm.models.enums import InvoiceStatus
 
 
 class StaffingWorkerStatus(StrEnum):
@@ -223,3 +224,59 @@ class StaffingTimesheetEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     work_date: Mapped[date] = mapped_column(Date, nullable=False)
     hours: Mapped[Decimal] = mapped_column(Numeric(4, 2), nullable=False)
     break_minutes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class StaffingInvoice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Rechnung ueber freigegebene Stundenzettel. Folgt dem Rechnungsmodell der Vermittlung
+    (`Fee`): gleiche Betragsfelder, derselbe Status (`InvoiceStatus`) und dieselbe Freigabe-Inbox
+    ("Rechnung stellen" durch Nicht-Admins braucht einen Admin), aber an Kunde und Stundenzettel
+    statt an ein Placement gehaengt."""
+
+    __tablename__ = "staffing_invoices"
+
+    client_company_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("client_companies.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    amount_net: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    vat_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    amount_gross: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    invoice_status: Mapped[InvoiceStatus] = mapped_column(
+        Enum(InvoiceStatus, native_enum=False, length=32),
+        default=InvoiceStatus.DRAFT,
+        nullable=False,
+        index=True,
+    )
+    invoice_date: Mapped[date | None] = mapped_column(Date)
+    payment_due_date: Mapped[date | None] = mapped_column(Date)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    notes: Mapped[str | None] = mapped_column(Text)
+
+
+class StaffingInvoiceLine(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Eine Zeile je Stundenzettel (Momentaufnahme von Name, Stunden und Satz). `timesheet_id` ist
+    eindeutig: ein Stundenzettel kann nur auf einer Rechnung stehen; bei Storno wird er auf NULL
+    gesetzt (wieder abrechenbar), die Zeile bleibt als Nachweis."""
+
+    __tablename__ = "staffing_invoice_lines"
+
+    invoice_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("staffing_invoices.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    timesheet_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("staffing_timesheets.id", ondelete="SET NULL"), unique=True
+    )
+    assignment_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("staffing_assignments.id", ondelete="SET NULL"), index=True
+    )
+    worker_name: Mapped[str] = mapped_column(String(240), nullable=False)
+    description: Mapped[str] = mapped_column(String(400), nullable=False)
+    period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    hours: Mapped[Decimal] = mapped_column(Numeric(8, 2), nullable=False)
+    rate: Mapped[Decimal] = mapped_column(Numeric(8, 2), nullable=False)
+    amount_net: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)

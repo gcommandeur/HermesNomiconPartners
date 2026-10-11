@@ -11,6 +11,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field, model_validator
 
+from cc_crm.models.enums import InvoiceStatus
 from cc_crm.models.staffing import (
     StaffingAssignmentStatus,
     StaffingChecklistKey,
@@ -18,6 +19,7 @@ from cc_crm.models.staffing import (
     StaffingTimesheetStatus,
     StaffingWorkerStatus,
 )
+from cc_crm.schemas.approval import ApprovalRequestRead
 from cc_crm.schemas.base import EntityRead, ORMModel
 from cc_crm.services.staffing_deadlines import Traffic
 
@@ -372,3 +374,76 @@ class PublicTimesheetApprove(BaseModel):
 class PublicTimesheetReject(BaseModel):
     approver_name: str = Field(min_length=2, max_length=160)
     reason: str = Field(min_length=3, max_length=2000)
+
+
+# --- Abrechnung, Export, Uebernahme ------------------------------------------------------------
+
+
+class StaffingBillableTimesheetRead(BaseModel):
+    """Freigegebener, noch nicht abgerechneter Stundenzettel."""
+
+    timesheet_id: uuid.UUID
+    assignment_id: uuid.UUID
+    worker_name: str
+    client_company_id: uuid.UUID
+    client_name: str
+    period_start: date
+    period_end: date
+    total_hours: Decimal
+    has_rate: bool  # Verrechnungssatz am Einsatz gesetzt (sonst nicht abrechenbar)
+
+
+class StaffingInvoiceCreate(BaseModel):
+    timesheet_ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+class StaffingInvoiceLineRead(ORMModel):
+    id: uuid.UUID
+    timesheet_id: uuid.UUID | None
+    worker_name: str
+    description: str
+    period_start: date
+    period_end: date
+    hours: Decimal
+    rate: Decimal | None  # nur Admins
+    amount_net: Decimal | None  # nur Admins
+
+
+class StaffingInvoiceRead(EntityRead):
+    client_company_id: uuid.UUID
+    client_name: str
+    period_start: date
+    period_end: date
+    amount_net: Decimal | None  # nur Admins
+    vat_rate: Decimal
+    amount_gross: Decimal | None  # nur Admins
+    invoice_status: InvoiceStatus
+    invoice_date: date | None
+    payment_due_date: date | None
+    paid_at: datetime | None
+    created_by_user_id: uuid.UUID | None
+    notes: str | None
+    approval_pending: bool  # "Rechnung stellen" wartet in der Freigabe-Inbox
+    lines: list[StaffingInvoiceLineRead]
+
+
+class StaffingInvoiceStatusResult(BaseModel):
+    invoice: StaffingInvoiceRead
+    # Gesetzt, wenn die Aenderung (Rechnung stellen durch Nicht-Admin) auf Freigabe wartet.
+    approval_request: ApprovalRequestRead | None = None
+
+
+class StaffingTakeoverInput(BaseModel):
+    """Uebernahme durch den Kunden: der Leiharbeitnehmer wird beim Kunden fest angestellt."""
+
+    takeover_date: date | None = None  # Standard: heute (= tatsaechliches Ende des Einsatzes)
+    annual_salary: Decimal | None = Field(default=None, gt=0, le=Decimal("10000000"))
+    fee_percentage: Decimal | None = Field(
+        default=None, gt=0, le=100
+    )  # Standard: der Kanzlei/des Kunden
+
+
+class StaffingTakeoverResult(BaseModel):
+    assignment: StaffingAssignmentDetail
+    submission_id: uuid.UUID  # der angelegte Vermittlungsprozess

@@ -14490,6 +14490,65 @@
         "title": "StaffingAssignmentUpdate",
         "type": "object"
       },
+      "StaffingBillableTimesheetRead": {
+        "description": "Freigegebener, noch nicht abgerechneter Stundenzettel.",
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "title": "Assignment Id",
+            "type": "string"
+          },
+          "client_company_id": {
+            "format": "uuid",
+            "title": "Client Company Id",
+            "type": "string"
+          },
+          "client_name": {
+            "title": "Client Name",
+            "type": "string"
+          },
+          "has_rate": {
+            "title": "Has Rate",
+            "type": "boolean"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "timesheet_id": {
+            "format": "uuid",
+            "title": "Timesheet Id",
+            "type": "string"
+          },
+          "total_hours": {
+            "title": "Total Hours",
+            "type": "string"
+          },
+          "worker_name": {
+            "title": "Worker Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timesheet_id",
+          "assignment_id",
+          "worker_name",
+          "client_company_id",
+          "client_name",
+          "period_start",
+          "period_end",
+          "total_hours",
+          "has_rate"
+        ],
+        "title": "StaffingBillableTimesheetRead",
+        "type": "object"
+      },
       "StaffingChecklistItemRead": {
         "properties": {
           "document_id": {
@@ -14983,6 +15042,296 @@
           "traffic"
         ],
         "title": "StaffingDeadlineRead",
+        "type": "object"
+      },
+      "StaffingInvoiceCreate": {
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "timesheet_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Timesheet Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "timesheet_ids"
+        ],
+        "title": "StaffingInvoiceCreate",
+        "type": "object"
+      },
+      "StaffingInvoiceLineRead": {
+        "properties": {
+          "amount_net": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Net"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "hours": {
+            "title": "Hours",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "timesheet_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timesheet Id"
+          },
+          "worker_name": {
+            "title": "Worker Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "timesheet_id",
+          "worker_name",
+          "description",
+          "period_start",
+          "period_end",
+          "hours",
+          "rate",
+          "amount_net"
+        ],
+        "title": "StaffingInvoiceLineRead",
+        "type": "object"
+      },
+      "StaffingInvoiceRead": {
+        "properties": {
+          "amount_gross": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Gross"
+          },
+          "amount_net": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Net"
+          },
+          "approval_pending": {
+            "title": "Approval Pending",
+            "type": "boolean"
+          },
+          "client_company_id": {
+            "format": "uuid",
+            "title": "Client Company Id",
+            "type": "string"
+          },
+          "client_name": {
+            "title": "Client Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By User Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "invoice_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Date"
+          },
+          "invoice_status": {
+            "$ref": "#/components/schemas/InvoiceStatus"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/StaffingInvoiceLineRead"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "payment_due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Due Date"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "vat_rate": {
+            "title": "Vat Rate",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "updated_at",
+          "client_company_id",
+          "client_name",
+          "period_start",
+          "period_end",
+          "amount_net",
+          "vat_rate",
+          "amount_gross",
+          "invoice_status",
+          "invoice_date",
+          "payment_due_date",
+          "paid_at",
+          "created_by_user_id",
+          "notes",
+          "approval_pending",
+          "lines"
+        ],
+        "title": "StaffingInvoiceRead",
+        "type": "object"
+      },
+      "StaffingInvoiceStatusResult": {
+        "properties": {
+          "approval_request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalRequestRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "invoice": {
+            "$ref": "#/components/schemas/StaffingInvoiceRead"
+          }
+        },
+        "required": [
+          "invoice"
+        ],
+        "title": "StaffingInvoiceStatusResult",
         "type": "object"
       },
       "StaffingLicenseCreate": {
@@ -15528,6 +15877,75 @@
           "red_days"
         ],
         "title": "StaffingSettingsUpdate",
+        "type": "object"
+      },
+      "StaffingTakeoverInput": {
+        "description": "Uebernahme durch den Kunden: der Leiharbeitnehmer wird beim Kunden fest angestellt.",
+        "properties": {
+          "annual_salary": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000000.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annual Salary"
+          },
+          "fee_percentage": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee Percentage"
+          },
+          "takeover_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Takeover Date"
+          }
+        },
+        "title": "StaffingTakeoverInput",
+        "type": "object"
+      },
+      "StaffingTakeoverResult": {
+        "properties": {
+          "assignment": {
+            "$ref": "#/components/schemas/StaffingAssignmentDetail"
+          },
+          "submission_id": {
+            "format": "uuid",
+            "title": "Submission Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment",
+          "submission_id"
+        ],
+        "title": "StaffingTakeoverResult",
         "type": "object"
       },
       "StaffingTimesheetCreate": {
@@ -29642,6 +30060,81 @@
         ]
       }
     },
+    "/api/v1/staffing/assignments/{assignment_id}/takeover": {
+      "post": {
+        "description": "Beendet den Einsatz und legt einen Vermittlungsprozess mit Honorar an (siehe\nservices/staffing_takeover.py).",
+        "operationId": "take_over_assignment_api_v1_staffing_assignments__assignment_id__takeover_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffingTakeoverInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingTakeoverResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Take Over Assignment",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
     "/api/v1/staffing/assignments/{assignment_id}/timesheets": {
       "get": {
         "operationId": "list_timesheets_api_v1_staffing_assignments__assignment_id__timesheets_get",
@@ -29777,6 +30270,64 @@
           }
         ],
         "summary": "Create Timesheet",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/billable-timesheets": {
+      "get": {
+        "operationId": "list_billable_timesheets_api_v1_staffing_billable_timesheets_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffingBillableTimesheetRead"
+                  },
+                  "title": "Response List Billable Timesheets Api V1 Staffing Billable Timesheets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Billable Timesheets",
         "tags": [
           "staffing"
         ]
@@ -30132,6 +30683,338 @@
           }
         ],
         "summary": "List Deadlines",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/export/hours.csv": {
+      "get": {
+        "description": "Stunden je Leiharbeitnehmer und Kunde fuer die Lohnabrechnung (nur Admins - enthaelt den\nStundenlohn). Nur vom Kunden freigegebene Stunden. Format: docs/UEBERLASSUNG.md.",
+        "operationId": "export_hours_csv_api_v1_staffing_export_hours_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period_start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Period Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "period_end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Period End",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Hours Csv",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/invoices": {
+      "get": {
+        "operationId": "list_invoices_api_v1_staffing_invoices_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffingInvoiceRead"
+                  },
+                  "title": "Response List Invoices Api V1 Staffing Invoices Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Invoices",
+        "tags": [
+          "staffing"
+        ]
+      },
+      "post": {
+        "operationId": "create_invoice_draft_api_v1_staffing_invoices_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffingInvoiceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingInvoiceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Invoice Draft",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/invoices/{invoice_id}": {
+      "get": {
+        "operationId": "get_invoice_api_v1_staffing_invoices__invoice_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingInvoiceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Invoice",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/invoices/{invoice_id}/status": {
+      "post": {
+        "description": "Wie bei Vermittlungsrechnungen: \"Rechnung stellen\" durch einen Nicht-Admin wird zur\nFreigabe-Anfrage (`approval_request`), Admins stellen direkt.",
+        "operationId": "change_invoice_status_api_v1_staffing_invoices__invoice_id__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceStatusChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingInvoiceStatusResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change Invoice Status",
         "tags": [
           "staffing"
         ]

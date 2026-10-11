@@ -2658,6 +2658,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staffing/assignments/{assignment_id}/takeover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take Over Assignment
+         * @description Beendet den Einsatz und legt einen Vermittlungsprozess mit Honorar an (siehe
+         *     services/staffing_takeover.py).
+         */
+        post: operations["take_over_assignment_api_v1_staffing_assignments__assignment_id__takeover_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staffing/assignments/{assignment_id}/timesheets": {
         parameters: {
             query?: never;
@@ -2670,6 +2691,23 @@ export interface paths {
         put?: never;
         /** Create Timesheet */
         post: operations["create_timesheet_api_v1_staffing_assignments__assignment_id__timesheets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/billable-timesheets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Billable Timesheets */
+        get: operations["list_billable_timesheets_api_v1_staffing_billable_timesheets_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2726,6 +2764,83 @@ export interface paths {
         get: operations["list_deadlines_api_v1_staffing_deadlines_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/export/hours.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Hours Csv
+         * @description Stunden je Leiharbeitnehmer und Kunde fuer die Lohnabrechnung (nur Admins - enthaelt den
+         *     Stundenlohn). Nur vom Kunden freigegebene Stunden. Format: docs/UEBERLASSUNG.md.
+         */
+        get: operations["export_hours_csv_api_v1_staffing_export_hours_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Invoices */
+        get: operations["list_invoices_api_v1_staffing_invoices_get"];
+        put?: never;
+        /** Create Invoice Draft */
+        post: operations["create_invoice_draft_api_v1_staffing_invoices_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/invoices/{invoice_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Invoice */
+        get: operations["get_invoice_api_v1_staffing_invoices__invoice_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/invoices/{invoice_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Invoice Status
+         * @description Wie bei Vermittlungsrechnungen: "Rechnung stellen" durch einen Nicht-Admin wird zur
+         *     Freigabe-Anfrage (`approval_request`), Admins stellen direkt.
+         */
+        post: operations["change_invoice_status_api_v1_staffing_invoices__invoice_id__status_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8283,6 +8398,45 @@ export interface components {
             /** Start Date */
             start_date?: string | null;
         };
+        /**
+         * StaffingBillableTimesheetRead
+         * @description Freigegebener, noch nicht abgerechneter Stundenzettel.
+         */
+        StaffingBillableTimesheetRead: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Has Rate */
+            has_rate: boolean;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Timesheet Id
+             * Format: uuid
+             */
+            timesheet_id: string;
+            /** Total Hours */
+            total_hours: string;
+            /** Worker Name */
+            worker_name: string;
+        };
         /** StaffingChecklistItemRead */
         StaffingChecklistItemRead: {
             /** Document Id */
@@ -8420,6 +8574,104 @@ export interface components {
             /** Max End Date */
             max_end_date: string | null;
             traffic: components["schemas"]["Traffic"];
+        };
+        /** StaffingInvoiceCreate */
+        StaffingInvoiceCreate: {
+            /** Notes */
+            notes?: string | null;
+            /** Timesheet Ids */
+            timesheet_ids: string[];
+        };
+        /** StaffingInvoiceLineRead */
+        StaffingInvoiceLineRead: {
+            /** Amount Net */
+            amount_net: string | null;
+            /** Description */
+            description: string;
+            /** Hours */
+            hours: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Rate */
+            rate: string | null;
+            /** Timesheet Id */
+            timesheet_id: string | null;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /** StaffingInvoiceRead */
+        StaffingInvoiceRead: {
+            /** Amount Gross */
+            amount_gross: string | null;
+            /** Amount Net */
+            amount_net: string | null;
+            /** Approval Pending */
+            approval_pending: boolean;
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Invoice Date */
+            invoice_date: string | null;
+            invoice_status: components["schemas"]["InvoiceStatus"];
+            /** Lines */
+            lines: components["schemas"]["StaffingInvoiceLineRead"][];
+            /** Notes */
+            notes: string | null;
+            /** Paid At */
+            paid_at: string | null;
+            /** Payment Due Date */
+            payment_due_date: string | null;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Vat Rate */
+            vat_rate: string;
+        };
+        /** StaffingInvoiceStatusResult */
+        StaffingInvoiceStatusResult: {
+            approval_request?: components["schemas"]["ApprovalRequestRead"] | null;
+            invoice: components["schemas"]["StaffingInvoiceRead"];
         };
         /** StaffingLicenseCreate */
         StaffingLicenseCreate: {
@@ -8588,6 +8840,27 @@ export interface components {
             reset_gap_months: number;
             /** Yellow Days */
             yellow_days: number;
+        };
+        /**
+         * StaffingTakeoverInput
+         * @description Uebernahme durch den Kunden: der Leiharbeitnehmer wird beim Kunden fest angestellt.
+         */
+        StaffingTakeoverInput: {
+            /** Annual Salary */
+            annual_salary?: number | string | null;
+            /** Fee Percentage */
+            fee_percentage?: number | string | null;
+            /** Takeover Date */
+            takeover_date?: string | null;
+        };
+        /** StaffingTakeoverResult */
+        StaffingTakeoverResult: {
+            assignment: components["schemas"]["StaffingAssignmentDetail"];
+            /**
+             * Submission Id
+             * Format: uuid
+             */
+            submission_id: string;
         };
         /** StaffingTimesheetCreate */
         StaffingTimesheetCreate: {
@@ -15224,6 +15497,43 @@ export interface operations {
             };
         };
     };
+    take_over_assignment_api_v1_staffing_assignments__assignment_id__takeover_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingTakeoverInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTakeoverResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_timesheets_api_v1_staffing_assignments__assignment_id__timesheets_get: {
         parameters: {
             query?: never;
@@ -15281,6 +15591,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaffingTimesheetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_billable_timesheets_api_v1_staffing_billable_timesheets_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingBillableTimesheetRead"][];
                 };
             };
             /** @description Validation Error */
@@ -15452,6 +15793,176 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaffingPairDeadlineRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_hours_csv_api_v1_staffing_export_hours_csv_get: {
+        parameters: {
+            query: {
+                period_start: string;
+                period_end: string;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_invoices_api_v1_staffing_invoices_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingInvoiceRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_invoice_draft_api_v1_staffing_invoices_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingInvoiceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingInvoiceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_invoice_api_v1_staffing_invoices__invoice_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingInvoiceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_invoice_status_api_v1_staffing_invoices__invoice_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceStatusChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingInvoiceStatusResult"];
                 };
             };
             /** @description Validation Error */

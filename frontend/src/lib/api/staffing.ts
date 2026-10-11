@@ -1,7 +1,7 @@
 // NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
 // Typen kommen aus dem erzeugten Schema (schema.d.ts), Abfragen/Aktionen gegen /staffing.
 // Plain-Modul (kein "use client"): aus Server- und Client-Komponenten nutzbar.
-import { apiGet, apiPatch, apiPost, apiPut } from "./client";
+import { apiDownload, apiGet, apiPatch, apiPost, apiPut } from "./client";
 import type { components } from "./schema";
 import type { DataResult } from "./types";
 import {
@@ -36,6 +36,11 @@ export type StaffingTimesheet = Schemas["StaffingTimesheetRead"];
 export type StaffingTimesheetStatus = Schemas["StaffingTimesheetStatus"];
 export type StaffingTimesheetSubmitResult = Schemas["StaffingTimesheetSubmitResult"];
 export type PublicTimesheet = Schemas["PublicTimesheetRead"];
+export type StaffingBillableTimesheet = Schemas["StaffingBillableTimesheetRead"];
+export type StaffingInvoice = Schemas["StaffingInvoiceRead"];
+export type StaffingInvoiceStatusResult = Schemas["StaffingInvoiceStatusResult"];
+export type StaffingTakeoverResult = Schemas["StaffingTakeoverResult"];
+export type InvoiceStatus = Schemas["InvoiceStatus"];
 
 export const WORKER_STATUS_LABELS: Record<StaffingWorkerStatus, string> = {
   applicant: "Anwärter",
@@ -72,6 +77,14 @@ export const TIMESHEET_STATUS_LABELS: Record<StaffingTimesheetStatus, string> = 
   submitted: "Beim Kunden",
   approved: "Freigegeben",
   rejected: "Abgelehnt",
+};
+
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  draft: "Entwurf",
+  issued: "Gestellt",
+  due: "Fällig",
+  paid: "Bezahlt",
+  cancelled: "Storniert",
 };
 
 export const TRAFFIC_LABELS: Record<Traffic, string> = {
@@ -283,4 +296,42 @@ export function saveStaffingTimesheetEntries(timesheetId: string, entries: Times
 /** Reicht ein und erzeugt den Freigabelink für den Kunden (erneuter Aufruf = neuer Link). */
 export function submitStaffingTimesheet(timesheetId: string) {
   return apiPost<StaffingTimesheetSubmitResult>(`/staffing/timesheets/${timesheetId}/submit`, {});
+}
+
+// --- Abrechnung, Export, Übernahme -----------------------------------------------------------
+
+export async function getBillableTimesheets(): Promise<DataResult<StaffingBillableTimesheet[]>> {
+  return apiGet<StaffingBillableTimesheet[]>("/staffing/billable-timesheets", []);
+}
+
+export async function getStaffingInvoices(): Promise<DataResult<StaffingInvoice[]>> {
+  return apiGet<StaffingInvoice[]>("/staffing/invoices", []);
+}
+
+export async function getStaffingInvoice(id: string): Promise<DataResult<StaffingInvoice | null>> {
+  return apiGet<StaffingInvoice | null>(`/staffing/invoices/${id}`, null);
+}
+
+export function createStaffingInvoice(timesheetIds: string[], notes?: string) {
+  return apiPost<StaffingInvoice>("/staffing/invoices", { timesheet_ids: timesheetIds, notes: notes || null });
+}
+
+export function changeStaffingInvoiceStatus(
+  id: string,
+  status: InvoiceStatus,
+  dates?: { invoice_date?: string; payment_due_date?: string },
+) {
+  return apiPost<StaffingInvoiceStatusResult>(`/staffing/invoices/${id}/status`, { invoice_status: status, ...dates });
+}
+
+/** Lädt die CSV für die Lohnabrechnung (nur Admins): Stunden je Leiharbeitnehmer und Kunde. */
+export function downloadHoursCsv(periodStart: string, periodEnd: string) {
+  return apiDownload(`/staffing/export/hours.csv?period_start=${periodStart}&period_end=${periodEnd}`, `stunden_${periodStart}_${periodEnd}.csv`);
+}
+
+export function takeOverStaffingAssignment(
+  id: string,
+  input: { takeover_date?: string | null; annual_salary?: string | null; fee_percentage?: string | null },
+) {
+  return apiPost<StaffingTakeoverResult>(`/staffing/assignments/${id}/takeover`, input);
 }

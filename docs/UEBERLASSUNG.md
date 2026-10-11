@@ -147,6 +147,46 @@ im Einsatz-Detail unter „Stundenzettel“.
 
 Der Link wird **nicht** automatisch per E-Mail versendet; der Disponent kopiert ihn und schickt ihn selbst.
 
+## Abrechnung, Export, Übernahme
+
+**Rechnung aus freigegebenen Stundenzetteln** (Tabellen `staffing_invoices`, `staffing_invoice_lines`,
+Migration `nomicon_02`). Es wird das vorhandene Rechnungs- und Freigabemodell der Vermittlung (`Fee`)
+genutzt, nicht neu erfunden: gleiche Betragsfelder (netto, Umsatzsteuer aus `default_vat_rate`, brutto),
+derselbe Status `InvoiceStatus` (Entwurf → gestellt → fällig → bezahlt, stornierbar) mit denselben
+erlaubten Übergängen (`services/invoices.py::ALLOWED_INVOICE_TRANSITIONS`) und dieselbe Freigabe-Inbox:
+
+* Aus **vom Kunden freigegebenen** Stundenzetteln (ein Kunde je Rechnung, Satz am Einsatz gesetzt) entsteht
+  ein **Entwurf**; je Zettel eine Zeile (Name, Zeitraum, Stunden × Satz, kaufmännisch auf Cent gerundet).
+  Ein Zettel steht nur auf **einer** Rechnung (eindeutig); beim Storno wird er wieder abrechenbar.
+* **„Rechnung stellen“ durch einen Nicht-Admin** erzeugt eine Freigabe-Anfrage (`kind=invoice_issue`,
+  `entity_type=staffing_invoice`), die ein Admin unter *Freigaben* entscheidet. Admins stellen direkt.
+  Nicht-Admins dürfen sonst nur einen Entwurf verwerfen; fällig/bezahlt/Storno gestellter Rechnungen ist
+  Admin-Sache.
+* **Beträge sind Margendaten:** Nicht-Admins sehen weder Satz noch Netto/Brutto (auch nicht in den
+  Listen); sie können Entwürfe aus Zetteln ihres Bereichs erstellen und das Stellen beantragen, ohne die
+  Beträge zu kennen. Rechnungen sehen Admins und wer sie angelegt hat (bzw. dessen Teamleiter).
+* Der Verrechnungssatz wird weiterhin nur von Admins am Einsatz gesetzt; ohne Satz ist ein Zettel nicht
+  abrechenbar (Hinweis in der Oberfläche).
+* Es gibt keine Rechnungsnummer und kein PDF; das Stellen setzt Datum und Zahlungsziel. Die
+  Buchhaltung/Rechnungsstellung selbst bleibt außerhalb.
+
+**CSV für die Lohnabrechnung** (`GET /api/v1/staffing/export/hours.csv?period_start=…&period_end=…`, **nur
+Admins**, da der Stundenlohn enthalten ist): vom Kunden **freigegebene** Stunden je Leiharbeitnehmer und Kunde
+im Zeitraum (nach Arbeitstag gefiltert). Format: UTF-8 **mit BOM**, Trennzeichen `;`, Zeilenende CRLF,
+Dezimalkomma, Datum `TT.MM.JJJJ`. Spalten: `Personalnummer` (Kandidatennummer), `Nachname`, `Vorname`, `Kunde`,
+`Entgeltgruppe`, `Wochenstunden`, `Stundenlohn EUR`, `Eintritt`, `Austritt`, `Zeitraum von`, `Zeitraum bis`,
+`Arbeitstage`, `Stunden`, `Pausen Minuten`. Texte, die mit `=`, `+`, `-`, `@` beginnen, bekommen ein
+vorangestelltes `'`, damit Excel sie nicht als Formel auswertet (CSV-Injection). Das System berechnet keine
+Löhne, Steuern oder Sozialabgaben.
+
+**Übernahme durch den Kunden** (`POST /assignments/{id}/takeover`, Knopf am aktiven Einsatz): legt einen
+Vermittlungsprozess (`CandidateSubmission`) für Kandidat und Kunde an — Honorar in Prozent (Standard: der
+Honorarsatz des Kunden, sonst angegeben) und, mit Jahresgehalt, das erwartete Honorar — und beendet den Einsatz
+zum Übernahmedatum. Der Prozess **beginnt im ersten Status** (Quali-Call); es werden keine Stufen
+vorgetäuscht (sie zählen in KPIs). Gibt es schon einen aktiven Prozess für Kandidat und Kunde, scheitert die
+Übernahme (409) und der Einsatz bleibt aktiv. Mindesthonorar und Rechtsfragen zur Vermittlungsprovision nach
+Überlassung (AÜG § 9) sind **nicht** abgebildet.
+
 ## Betrieb und Umgebungsvariablen
 
 Es gibt **keine neuen Umgebungsvariablen**. Zu tun (nur der Nutzer, nicht von Claude angelegt):

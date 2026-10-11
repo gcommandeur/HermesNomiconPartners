@@ -22,15 +22,17 @@ from tests.api.test_staffing_api import (
     crew,
     make_candidate,
 )
+from tests.api.test_staffing_billing import make_invoice
+from tests.api.test_staffing_timesheets import public
 
-ID_NAMES = ("assignment_id", "timesheet_id")
+ID_NAMES = ("assignment_id", "timesheet_id", "invoice_id")
 METHODS = ("get", "post", "put", "patch", "delete")
 
 # Operationen, die ABSICHTLICH nicht mit 404 antworten duerfen - nur mit Begruendung eintragen.
 # Format: (METHODE, Pfad-Schablone). Aktuell keine Ausnahme.
 ALLOWED_NON_404: dict[tuple[str, str], str] = {}
 
-_ = (crew, make_candidate)  # Fixtures (per Import registriert)
+_ = (crew, make_candidate, public)  # Fixtures (per Import registriert)
 
 
 def _operations(client: TestClient) -> list[tuple[str, str, dict[str, Any]]]:
@@ -85,17 +87,26 @@ def _real_ids(
     }
 
 
+def _invoice_id(client: TestClient, crew: Crew, make_candidate, public: TestClient) -> str:  # type: ignore[no-untyped-def]
+    """Rechnung, angelegt von A (Owner: A)."""
+    return str(make_invoice(client, crew, make_candidate, public)["id"])
+
+
 def test_every_staffing_id_route_hides_foreign_assignments(
     client: TestClient,
     crew: Crew,
     make_candidate,  # type: ignore[no-untyped-def]
+    public: TestClient,
     session_factory: sessionmaker[Session],
 ) -> None:
     real = _real_ids(client, crew, make_candidate, session_factory)
+    real["invoice_id"] = _invoice_id(client, crew, make_candidate, public)
     stranger, owner = crew.c, crew.a  # C ist weder A noch im Team von A
     operations = _operations(client)
     # Nicht wirkungslos: die Suche muss die bekannten Operationen finden (steigt mit neuen Routen).
     assert len(operations) >= 4, len(operations)
+    paths = {path for _method, path, _op in operations}
+    assert "/api/v1/staffing/invoices/{invoice_id}" in paths  # Rechnungen sind abgedeckt
 
     leaks = []
     reachable_for_owner = 0

@@ -4,10 +4,13 @@
 import useSWR, { mutate } from "swr";
 import {
   assignmentsPath,
+  getBillableTimesheets,
   getStaffingAssignment,
   getStaffingAssignments,
   getStaffingContracts,
   getStaffingDeadlines,
+  getStaffingInvoice,
+  getStaffingInvoices,
   getStaffingLicenses,
   getStaffingOverview,
   getStaffingSettings,
@@ -69,6 +72,18 @@ export function useStaffingAssignment(id: string) {
 
 export function useStaffingTimesheets(assignmentId: string, enabled = true) {
   return useSWR(enabled ? `/staffing/assignments/${assignmentId}/timesheets` : null, () => getStaffingTimesheets(assignmentId), config);
+}
+
+export function useBillableTimesheets() {
+  return useSWR("/staffing/billable-timesheets", getBillableTimesheets, config);
+}
+
+export function useStaffingInvoices() {
+  return useSWR("/staffing/invoices", getStaffingInvoices, config);
+}
+
+export function useStaffingInvoice(id: string) {
+  return useSWR(`/staffing/invoices/${id}`, () => getStaffingInvoice(id), config);
 }
 
 /** Nach jeder Änderung aufrufen: lädt alle Überlassungs-Listen und -Details neu. */

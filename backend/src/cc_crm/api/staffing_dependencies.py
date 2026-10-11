@@ -6,8 +6,9 @@ gescopt: Mitarbeiter sehen ihre eigenen, Teamleiter eigene und die ihres Teams, 
 Fremd UND nicht existent liefert dasselbe 404 (nie 403). Leiharbeitnehmer, Vertraege und
 Erlaubnis sind - wie Kandidaten und Kanzleien - ein gemeinsamer Pool.
 
-Neue Routen mit `assignment_id` / `timesheet_id` im Pfad MUESSEN `AssignmentAccess` bzw.
-`TimesheetAccess` bekommen (erzwungen von tests/api/test_staffing_access_guard.py)."""
+Neue Routen mit `assignment_id` / `timesheet_id` / `invoice_id` im Pfad MUESSEN `AssignmentAccess`,
+`TimesheetAccess` bzw. `InvoiceAccess` bekommen (erzwungen von
+tests/api/test_staffing_access_guard.py)."""
 
 import uuid
 
@@ -17,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from cc_crm.api.dependencies import CurrentUser, DatabaseSession, process_owner_scope
 from cc_crm.core.errors import EntityNotFoundError
-from cc_crm.models.staffing import StaffingAssignment, StaffingTimesheet
+from cc_crm.models.staffing import StaffingAssignment, StaffingInvoice, StaffingTimesheet
 from cc_crm.models.user import User
 
 
@@ -62,5 +63,20 @@ def require_timesheet_access(
         raise EntityNotFoundError("Stundenzettel nicht gefunden")
 
 
+def require_invoice_access(
+    invoice_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> None:
+    """Rechnungen sehen Admins und wer sie angelegt hat (bzw. dessen Teamleiter)."""
+    scope = staffing_owner_scope(current_user, session)
+    if scope is None:
+        return
+    creator = session.scalar(
+        select(StaffingInvoice.created_by_user_id).where(StaffingInvoice.id == invoice_id)
+    )
+    if creator is None or creator not in scope:
+        raise EntityNotFoundError("Rechnung nicht gefunden")
+
+
 AssignmentAccess = Depends(require_assignment_access)
 TimesheetAccess = Depends(require_timesheet_access)
+InvoiceAccess = Depends(require_invoice_access)

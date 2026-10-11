@@ -43,6 +43,7 @@ const SUB_NAV = [
   { href: "/ueberlassung", label: "Übersicht", exact: true },
   { href: "/ueberlassung/einsaetze", label: "Einsätze", exact: false },
   { href: "/ueberlassung/leiharbeitnehmer", label: "Leiharbeitnehmer", exact: false },
+  { href: "/ueberlassung/abrechnung", label: "Abrechnung", exact: false },
   { href: "/ueberlassung/compliance", label: "Compliance", exact: false },
 ];
 
