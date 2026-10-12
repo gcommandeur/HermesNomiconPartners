@@ -2,7 +2,7 @@
 # ankommen - mit CRLF bricht bash am "\r" ab.
 *.sh text eol=lf
 
-# Firmenschicht der Kopie: bei Merges aus Hermes (upstream) bleibt IMMER die
+# Altlast aus der Kopie-Zeit (seit 2026-10-12 kein Merge aus Hermes mehr): bei Merges bleibt die
 # eigene Fassung. Einmalig pro Klon: git config merge.ours.driver true
 frontend/src/app/brand-theme.css merge=ours
 frontend/public/brand/** merge=ours

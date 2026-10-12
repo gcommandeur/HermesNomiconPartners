@@ -1,22 +1,19 @@
-# Diese Installation ist eine Kopie von Hermes (zweite Firma)
+# Nomicon Partners - eigenstaendig, gleichberechtigt zu Hermes
 
-Der Code kommt aus dem Hermes-Repo `gcommandeur/hermescrm` (Remote `upstream`).
-Hier entstehen grundsaetzlich **keine** neuen Funktionen und **keine** Datenbank-Migrationen -
-beides passiert nur in Hermes und kommt per Merge hierher. **Ausnahme (Nutzerauftrag
-2026-10-11):** die Nomicon-eigenen Module (Arbeitnehmerueberlassung, Provisionsmodell), gebaut
-in der merge-schonenden Bauweise unten.
-
-## Neue Funktionen uebernehmen
+Ausgangspunkt war eine Kopie von Hermes (`gcommandeur/hermescrm`, gemeinsame Basis `0225fb6`).
+**Seit 2026-10-12 sind beide Repos getrennt und gleichberechtigt** (Nutzerentscheidung): kein
+`upstream`, kein Merge, keine Regel „Migrationen nur in Hermes". Jedes Repo baut selbst und hat seine
+eigene Alembic-Kette. Damit nichts auseinanderlaeuft, wird **immer verglichen**:
 
 ```bash
-git fetch upstream
-git merge upstream/main      # nur gepruefte Staende, nie upstream/entwicklung
+python scripts/vergleich.py --hermes <Pfad zum Hermes-Klon>   # zu Sitzungsbeginn und vor jedem Push
 ```
 
-Einmalig pro Klon: `git config merge.ours.driver true` (sonst greift der Schutz
-unten nicht). Der Push nach `upstream` ist gesperrt (`DISABLED`).
+Ergebnis (was macht der andere anders, und warum) steht in `docs/VERGLEICH.md` (Pruefstand + Register).
+Fehlerkorrekturen und Sicherheitsfixes aus dem anderen Repo werden uebernommen (Patch/Cherry-Pick,
+nicht Merge); Features nach Absprache mit dem Nutzer. Hermes wird von Nomicon-Sitzungen nur gelesen.
 
-## Was in dieser Kopie anders ist (die Firmenschicht, per .gitattributes geschuetzt)
+## Was in Nomicon anders ist (die Firmenschicht; `.gitattributes` `merge=ours` ist Altlast und bei Patch-Uebernahme wirkungslos)
 
 - `frontend/src/app/brand-theme.css` - Farben und Seitenhintergrund
 - `frontend/public/brand/*` - Logos
@@ -33,11 +30,11 @@ Eigene Datenbank, eigene DigitalOcean-App, eigene Microsoft-Entra-App, eigene
 Schluessel (`CC_CRM_MAIL_CREDENTIALS_ENCRYPTION_KEY` u. a.). Nie Zugangsdaten aus
 Hermes uebernehmen. Entwicklungsdaten nur Dummy-Daten.
 
-## Wenn ein Merge Konflikte meldet
+## Aenderungen aus Hermes uebernehmen
 
-Konflikte ausserhalb der Firmenschicht bedeuten, dass in dieser Kopie etwas
-geaendert wurde, das nur in Hermes geaendert werden darf. Die Aenderung in
-Hermes machen lassen und hier verwerfen.
+`git -C <hermes> diff <alt> <neu> -- <pfade> | git apply`, danach Tests, bei API-Aenderungen `openapi.json`
+neu erzeugen. Migrationen aus Hermes nicht kopieren, sondern als neue Revision in der Nomicon-Kette anlegen
+(`alembic heads` muss genau einen Kopf zeigen). Danach Eintrag in `docs/VERGLEICH.md`.
 
 ## Design Nomicon Partners (Stand: erste Fassung, nur lokal)
 
@@ -53,7 +50,7 @@ Hermes machen lassen und hier verwerfen.
 3. Die Anmeldung braucht einen Code per E-Mail (Resend). Lokal ohne Resend: **`anmelden.local.cmd`** doppelklicken (ruft `dev-login.local.py` auf, beides nur lokal und von Git ausgeschlossen). Es meldet den Browser fuer den Test-Nutzer an, die Sitzung gilt ein Jahr, danach erscheint die Anmeldeseite lokal nicht mehr. Das Skript bricht ab, wenn die Datenbank nicht `cc_crm_nomicon.db` ist. Der Anmeldecode im Projekt bleibt unveraendert, damit die Kopie spaeter mit echten Daten sicher ist. NIE auf Produktion verwenden.
 
 
-## Nomicon-eigener Code (Checkliste fuer Merge-Konflikte)
+## Nomicon-eigener Code (Checkliste: Stellen, an denen Nomicon und Hermes bewusst abweichen)
 
 **Bauweise:** Nomicon-Code steht in NEUEN Dateien, die es in Hermes nicht gibt. Aenderungen an
 gemeinsamen Dateien sind minimal und mit `NOMICON` markiert (`grep -rn NOMICON backend frontend`).

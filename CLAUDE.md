@@ -97,3 +97,7 @@ Laptop- und Cloud-Sitzungen sehen die Gespraeche der jeweils anderen NICHT. Der 
 - **Nach jeder Aufgabe, im selben Commit:** neuer Protokoll-Eintrag OBEN in `docs/PROTOKOLL.md` (Datum, Laptop/Cloud, was, Commits, was NICHT geprueft wurde, `Gemeldet:` = was dem Nutzer mitgeteilt wurde); in `docs/PROJEKT_STAND.md` nur offene Punkte und neue Entscheidungen/Stolperfallen pflegen (kurz halten, Ziel unter ca. 12 KB). Ohne aktualisierte Datei ist eine Aufgabe nicht fertig.
 - **Lokaler Branch `main` = `entwicklung` (Regel des Nutzers vom 2026-10-04, gilt ohne Rueckfrage):** Nach jeder Aufgabe, nach dem Push auf `entwicklung`, setzt die Sitzung den LOKALEN Branch `main` auf `entwicklung` (`git branch -f main entwicklung`, ohne den Branch auszuchecken). Das ist rein lokal und deployt nichts. **Ausdruecklich NICHT von der Regel gedeckt:** `origin/main` (GitHub, deployt nach DigitalOcean) - dorthin geht weiterhin nur mit dem gruenen Licht des Nutzers per Pull Request.
 - Nichts Geheimes eintragen.
+
+## Zwei Repos, gleichberechtigt (seit 2026-10-12)
+
+Dieses Repo (Nomicon Partners) und Hermes CRM (`gcommandeur/hermescrm`) sind getrennt und gleichberechtigt; kein Merge, eigene Migrationsketten. **Zu Sitzungsbeginn und vor jedem Push:** Hermes lesend klonen (falls noetig) und `python scripts/vergleich.py --hermes <Pfad>` ausfuehren, Abweichungen samt Grund in `docs/VERGLEICH.md` eintragen, Pruefstand fortschreiben. Fixes uebernehmen, Features nur nach Absprache. In Hermes wird nie geschrieben.
