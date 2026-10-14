@@ -471,7 +471,7 @@ def seed_submissions(session, clients: list, candidates: list, count: int) -> No
                     ),
                     follow_up_at=now + timedelta(days=random.randint(1, 10)),
                     owner=random.choice(["Team Recruiting", "M. Weber", "S. Klein"]),
-                    owner_user_id=seed_user.id,  # NOMICON: Seed-Prozesse haben einen Verantwortlichen
+                    owner_user_id=seed_user.id,  # NOMICON: Seed-Prozesse mit Verantwortlichem
                 )
             )
         except Exception:
