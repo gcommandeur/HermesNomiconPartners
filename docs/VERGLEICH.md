@@ -1,4 +1,4 @@
-<!-- pruefstand hermes=72f02ab nomicon=2568df2 -->
+<!-- pruefstand hermes=72f02ab nomicon=3d048d7 -->
 # Vergleich Hermes CRM <-> Nomicon Partners
 
 Beide Repos sind **gleichberechtigt und getrennt**: kein Merge, kein Upstream, eigene Migrationsketten.
@@ -16,9 +16,9 @@ Status: **uebernehmen** · **uebernommen** · **bewusst anders** · **offen** (N
 | Nr | Thema | Hermes | Nomicon | Status / Grund |
 |----|-------|--------|---------|----------------|
 | V-001 | Kalender: Outlook-Termin ohne Betreff liess Terminliste mit 500 ausfallen | `5e578de` | uebernommen (Patch inkl. Test, OpenAPI neu) | **uebernommen** (Bugfix) |
-| V-002 | DOCX-Profil-Export: Wasserzeichen VERTRAULICH | `14c9c64` entfernt (Wunsch Hermes-Nutzer) | noch vorhanden | **offen** – will Nomicon das Wasserzeichen auch weg? |
+| V-002 | DOCX-Profil-Export: Wasserzeichen VERTRAULICH | `14c9c64` entfernt (Wunsch Hermes-Nutzer) | entfernt per Patch (Nutzer 2026-10-14), Test angepasst | **uebernommen** |
 | V-003 | OpenAPI-Schema neu erzeugt | `3fe2872` (nach Kalender-Fix) | `71e969f` (pydantic 2.14, Decimal-Muster) | **bewusst anders**: jedes Repo erzeugt das Schema aus eigenem Code neu |
-| V-004 | Firmenschicht (Name, Logo, Navy/Poppins-Design, Mailvorlagen) | Hermes-Design | Nomicon-Design (`brand-theme.css`, `public/brand`, `backend/templates`) | **bewusst anders**: zwei Marken |
+| V-004 | Firmenschicht (Name, Logo, Navy/Poppins-Design, Mailvorlagen) | Hermes-Design | Nomicon-Design (`brand-theme.css`, `public/brand`, `backend/templates/anonymes_profil_master.docx` mit Nomicon-Logo, Navy `#001C4A`) | **bewusst anders**: zwei Marken. Profil-Briefkopf (DOCX) seit 2026-10-14 Nomicon statt Commandeur |
 | V-005 | Arbeitnehmerueberlassung (Einsaetze, Stundenzettel, Kundenfreigabe, Abrechnung) | nicht vorhanden | `staffing_*`, `/ueberlassung`, Migrationen `nomicon01staff`, `nomicon02invoices` | **bewusst anders**: Geschaeftsmodell nur Nomicon; Hermes kann es bei Bedarf uebernehmen |
 | V-006 | Provisionsmodell (Quartalsbericht, nur Admin) | nicht vorhanden | `commission_*`, Migration `nomicon03commission` | **bewusst anders**: nur Nomicon |
 | V-007 | Firmen-Reste in der Oberflaeche (`document-panel.tsx` nutzt `brand.companyName`, Platzhalter in `postfaecher/page.tsx`) | feste Texte | Platzhalter/Brand-Variable | **offen** – Kandidat fuer Hermes (neutral, schadet nicht) |
