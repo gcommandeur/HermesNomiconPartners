@@ -250,6 +250,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/users/{user_id}/views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get User Views */
+        get: operations["get_user_views_api_v1_admin_users__user_id__views_get"];
+        /** Put User Views */
+        put: operations["put_user_views_api_v1_admin_users__user_id__views_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/view-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List View Access */
+        get: operations["list_view_access_api_v1_admin_view_access_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/view-access/defaults": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get View Defaults */
+        get: operations["get_view_defaults_api_v1_admin_view_access_defaults_get"];
+        /** Put View Defaults */
+        put: operations["put_view_defaults_api_v1_admin_view_access_defaults_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai-proposals": {
         parameters: {
             query?: never;
@@ -2064,6 +2117,43 @@ export interface paths {
          *     inaktiv gesetzt (bereits abgerufene Mails bleiben erhalten).
          */
         post: operations["disconnect_outlook_api_v1_me_outlook_disconnect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Select My View
+         * @description Merkt die gewaehlte Ansicht serverseitig (Startansicht beim naechsten Login).
+         */
+        put: operations["select_my_view_api_v1_me_view_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get My Views */
+        get: operations["get_my_views_api_v1_me_views_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7495,6 +7585,16 @@ export interface components {
             /** Username */
             username?: string | null;
         };
+        /** MyViewsRead */
+        MyViewsRead: {
+            /**
+             * Default View
+             * @enum {string}
+             */
+            default_view: "direct" | "staffing" | "management";
+            /** Views */
+            views: ("direct" | "staffing" | "management")[];
+        };
         /** NlSearchRequest */
         NlSearchRequest: {
             /** Query */
@@ -8176,6 +8276,14 @@ export interface components {
          * @enum {string}
          */
         Rolle: "steuerfachangestellte" | "steuerfachwirt" | "bilanzbuchhalter" | "steuerberater" | "partner" | "pruefungsassistent" | "pruefungsleiter" | "wirtschaftspruefer" | "rechtsfachangestellte" | "rechtsanwalt" | "sonstige";
+        /** SelectViewUpdate */
+        SelectViewUpdate: {
+            /**
+             * View
+             * @enum {string}
+             */
+            view: "direct" | "staffing" | "management";
+        };
         /** SequenceCreate */
         SequenceCreate: {
             /**
@@ -9701,6 +9809,36 @@ export interface components {
              */
             role: string;
         };
+        /** UserViewsRead */
+        UserViewsRead: {
+            /**
+             * Default View
+             * @enum {string}
+             */
+            default_view: "direct" | "staffing" | "management";
+            /** Display Name */
+            display_name: string | null;
+            /** Email */
+            email: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Role */
+            role: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Views */
+            views: ("direct" | "staffing" | "management")[];
+        };
+        /** UserViewsUpdate */
+        UserViewsUpdate: {
+            /** Default View */
+            default_view?: ("direct" | "staffing" | "management") | null;
+            /** Views */
+            views: ("direct" | "staffing" | "management")[];
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -9723,6 +9861,16 @@ export interface components {
             challenge_id: string;
             /** Code */
             code: string;
+        };
+        /** ViewDefaultsRead */
+        ViewDefaultsRead: {
+            /** Views */
+            views: ("direct" | "staffing" | "management")[];
+        };
+        /** ViewDefaultsUpdate */
+        ViewDefaultsUpdate: {
+            /** Views */
+            views: ("direct" | "staffing" | "management")[];
         };
         /**
          * WarrantyStatus
@@ -10477,6 +10625,173 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresentationVerifyResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_user_views_api_v1_admin_users__user_id__views_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserViewsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_user_views_api_v1_admin_users__user_id__views_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserViewsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserViewsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_view_access_api_v1_admin_view_access_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserViewsRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_view_defaults_api_v1_admin_view_access_defaults_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ViewDefaultsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_view_defaults_api_v1_admin_view_access_defaults_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ViewDefaultsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ViewDefaultsRead"];
                 };
             };
             /** @description Validation Error */
@@ -14451,6 +14766,72 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    select_my_view_api_v1_me_view_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SelectViewUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyViewsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_views_api_v1_me_views_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyViewsRead"];
+                };
             };
             /** @description Validation Error */
             422: {

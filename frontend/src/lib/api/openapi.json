@@ -11770,6 +11770,37 @@
         "title": "MyMailAccountUpdate",
         "type": "object"
       },
+      "MyViewsRead": {
+        "properties": {
+          "default_view": {
+            "enum": [
+              "direct",
+              "staffing",
+              "management"
+            ],
+            "title": "Default View",
+            "type": "string"
+          },
+          "views": {
+            "items": {
+              "enum": [
+                "direct",
+                "staffing",
+                "management"
+              ],
+              "type": "string"
+            },
+            "title": "Views",
+            "type": "array"
+          }
+        },
+        "required": [
+          "views",
+          "default_view"
+        ],
+        "title": "MyViewsRead",
+        "type": "object"
+      },
       "NlSearchRequest": {
         "properties": {
           "query": {
@@ -13762,6 +13793,24 @@
         ],
         "title": "Rolle",
         "type": "string"
+      },
+      "SelectViewUpdate": {
+        "properties": {
+          "view": {
+            "enum": [
+              "direct",
+              "staffing",
+              "management"
+            ],
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "view"
+        ],
+        "title": "SelectViewUpdate",
+        "type": "object"
       },
       "SequenceCreate": {
         "properties": {
@@ -18222,6 +18271,108 @@
         "title": "UserRead",
         "type": "object"
       },
+      "UserViewsRead": {
+        "properties": {
+          "default_view": {
+            "enum": [
+              "direct",
+              "staffing",
+              "management"
+            ],
+            "title": "Default View",
+            "type": "string"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "views": {
+            "items": {
+              "enum": [
+                "direct",
+                "staffing",
+                "management"
+              ],
+              "type": "string"
+            },
+            "title": "Views",
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_id",
+          "email",
+          "display_name",
+          "role",
+          "is_active",
+          "views",
+          "default_view"
+        ],
+        "title": "UserViewsRead",
+        "type": "object"
+      },
+      "UserViewsUpdate": {
+        "properties": {
+          "default_view": {
+            "anyOf": [
+              {
+                "enum": [
+                  "direct",
+                  "staffing",
+                  "management"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default View"
+          },
+          "views": {
+            "items": {
+              "enum": [
+                "direct",
+                "staffing",
+                "management"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Views",
+            "type": "array"
+          }
+        },
+        "required": [
+          "views"
+        ],
+        "title": "UserViewsUpdate",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -18282,6 +18433,49 @@
           "code"
         ],
         "title": "VerifyLoginRequest",
+        "type": "object"
+      },
+      "ViewDefaultsRead": {
+        "properties": {
+          "views": {
+            "items": {
+              "enum": [
+                "direct",
+                "staffing",
+                "management"
+              ],
+              "type": "string"
+            },
+            "title": "Views",
+            "type": "array"
+          }
+        },
+        "required": [
+          "views"
+        ],
+        "title": "ViewDefaultsRead",
+        "type": "object"
+      },
+      "ViewDefaultsUpdate": {
+        "properties": {
+          "views": {
+            "items": {
+              "enum": [
+                "direct",
+                "staffing",
+                "management"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Views",
+            "type": "array"
+          }
+        },
+        "required": [
+          "views"
+        ],
+        "title": "ViewDefaultsUpdate",
         "type": "object"
       },
       "WarrantyStatus": {
@@ -19920,6 +20114,316 @@
         "summary": "Verify Record",
         "tags": [
           "presentation-archive"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/views": {
+      "get": {
+        "operationId": "get_user_views_api_v1_admin_users__user_id__views_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserViewsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get User Views",
+        "tags": [
+          "access-views"
+        ]
+      },
+      "put": {
+        "operationId": "put_user_views_api_v1_admin_users__user_id__views_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserViewsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserViewsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put User Views",
+        "tags": [
+          "access-views"
+        ]
+      }
+    },
+    "/api/v1/admin/view-access": {
+      "get": {
+        "operationId": "list_view_access_api_v1_admin_view_access_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserViewsRead"
+                  },
+                  "title": "Response List View Access Api V1 Admin View Access Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List View Access",
+        "tags": [
+          "access-views"
+        ]
+      }
+    },
+    "/api/v1/admin/view-access/defaults": {
+      "get": {
+        "operationId": "get_view_defaults_api_v1_admin_view_access_defaults_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewDefaultsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get View Defaults",
+        "tags": [
+          "access-views"
+        ]
+      },
+      "put": {
+        "operationId": "put_view_defaults_api_v1_admin_view_access_defaults_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewDefaultsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewDefaultsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put View Defaults",
+        "tags": [
+          "access-views"
         ]
       }
     },
@@ -28280,6 +28784,125 @@
         "summary": "Disconnect Outlook",
         "tags": [
           "outlook"
+        ]
+      }
+    },
+    "/api/v1/me/view": {
+      "put": {
+        "description": "Merkt die gewaehlte Ansicht serverseitig (Startansicht beim naechsten Login).",
+        "operationId": "select_my_view_api_v1_me_view_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectViewUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyViewsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Select My View",
+        "tags": [
+          "access-views"
+        ]
+      }
+    },
+    "/api/v1/me/views": {
+      "get": {
+        "operationId": "get_my_views_api_v1_me_views_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyViewsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get My Views",
+        "tags": [
+          "access-views"
         ]
       }
     },

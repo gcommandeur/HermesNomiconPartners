@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from cc_crm.api.dependencies import (
     AdminUser,
@@ -11,6 +11,7 @@ from cc_crm.api.dependencies import (
     PlacementAccess,
     user_owns_fee,
 )
+from cc_crm.api.view_dependencies import require_direct_view  # NOMICON
 from cc_crm.models.approval_request import ApprovalRequest
 from cc_crm.schemas.approval import (
     ApprovalDecision,
@@ -83,7 +84,7 @@ def reject_request(
 
 @router.get(
     "/placements/{placement_id}/fees",
-    dependencies=[PlacementAccess],
+    dependencies=[Depends(require_direct_view), PlacementAccess],  # NOMICON: Ansicht Direct
     response_model=list[FeeRead],
 )
 def list_placement_fees(
@@ -97,7 +98,7 @@ def list_placement_fees(
 
 @router.post(
     "/fees/{fee_id}/invoice-status",
-    dependencies=[FeeAccess],
+    dependencies=[Depends(require_direct_view), FeeAccess],  # NOMICON: Ansicht Direct
     response_model=InvoiceStatusChangeResult,
 )
 def change_invoice_status(

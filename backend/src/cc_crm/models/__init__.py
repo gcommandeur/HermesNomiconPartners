@@ -1,3 +1,4 @@
+from cc_crm.models.access_views import UserViewAccess, UserViewSettings  # NOMICON
 from cc_crm.models.activity import Activity
 from cc_crm.models.ai_proposal import AiProposal
 from cc_crm.models.api_key import ApiKey
@@ -59,6 +60,8 @@ from cc_crm.models.user import User
 from cc_crm.models.webhook import WebhookDelivery, WebhookEndpoint
 
 __all__ = [
+    "UserViewAccess",  # NOMICON
+    "UserViewSettings",  # NOMICON
     "Activity",
     "AiProposal",
     "ApiKey",

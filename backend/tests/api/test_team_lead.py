@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.core.security import hash_password
+from cc_crm.models.access_views import UserViewAccess  # NOMICON
 from cc_crm.models.user import User
 from cc_crm.services.auth import AuthService
 from tests.api.test_owner_filter import _full_process, auth_header
@@ -30,6 +31,10 @@ def _make_user(session_factory: sessionmaker[Session], email: str, role: str, na
     with session_factory() as session:
         user = User(email=email, hashed_password=hash_password("x"), role=role, display_name=name)
         session.add(user)
+        session.commit()
+        # NOMICON: Direct und Ueberlassung freigeschaltet (Tests der Module setzen das voraus)
+        for view in ("direct", "staffing"):
+            session.add(UserViewAccess(user_id=user.id, view=view))
         session.commit()
         _, token = AuthService(session).login(email, "x")
         return Person(id=str(user.id), headers=auth_header(token))

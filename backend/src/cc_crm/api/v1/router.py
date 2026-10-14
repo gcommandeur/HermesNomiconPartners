@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from cc_crm.api.dependencies import get_current_user
+from cc_crm.api.v1.access_views import router as access_views_router  # NOMICON
 from cc_crm.api.v1.activities import router as activities_router
 from cc_crm.api.v1.ai_proposals import router as ai_proposals_router
 from cc_crm.api.v1.approvals import router as approvals_router
@@ -46,6 +47,11 @@ from cc_crm.api.v1.system import router as system_router
 from cc_crm.api.v1.tasks import router as tasks_router
 from cc_crm.api.v1.users import router as users_router
 from cc_crm.api.v1.webhooks import router as webhooks_router
+from cc_crm.api.view_dependencies import (  # NOMICON
+    require_direct_view,
+    require_management_view,
+    require_staffing_view,
+)
 
 api_router = APIRouter()
 api_router.include_router(system_router, tags=["system"])
@@ -82,7 +88,9 @@ protected_router.include_router(calendar_events_router, tags=["calendar-events"]
 protected_router.include_router(candidates_router, tags=["candidates"])
 protected_router.include_router(clients_router, tags=["clients"])
 protected_router.include_router(contacts_router, tags=["contacts"])
-protected_router.include_router(jobs_router, tags=["vacancies"])
+protected_router.include_router(
+    jobs_router, tags=["vacancies"], dependencies=[Depends(require_direct_view)]
+)  # NOMICON
 protected_router.include_router(kpi_router, tags=["kpi"])
 protected_router.include_router(approvals_router, tags=["approvals"])
 protected_router.include_router(matching_router, tags=["candidate-matching"])
@@ -90,22 +98,33 @@ protected_router.include_router(profile_generator_router, tags=["profile-generat
 protected_router.include_router(nl_search_router, tags=["nl-search"])
 protected_router.include_router(geo_router, tags=["geo-mapping"])
 protected_router.include_router(imports_router, tags=["imports"])
-protected_router.include_router(sourcing_router, tags=["sourcing"])
-protected_router.include_router(submissions_router, tags=["candidate-submissions"])
+protected_router.include_router(
+    sourcing_router, tags=["sourcing"], dependencies=[Depends(require_direct_view)]
+)  # NOMICON
+protected_router.include_router(
+    submissions_router, tags=["candidate-submissions"], dependencies=[Depends(require_direct_view)]
+)  # NOMICON
 protected_router.include_router(activities_router, tags=["activities"])
 protected_router.include_router(tasks_router, tags=["tasks"])
 protected_router.include_router(mail_accounts_router, tags=["mail-accounts"])
 protected_router.include_router(mail_send_router, tags=["mail-send"])
 protected_router.include_router(notes_router, tags=["notes"])
 protected_router.include_router(operational_router, tags=["operations"])
-protected_router.include_router(recruiting_router, tags=["recruiting-process"])
+protected_router.include_router(
+    recruiting_router, tags=["recruiting-process"], dependencies=[Depends(require_direct_view)]
+)  # NOMICON
 protected_router.include_router(region_modifiers_router, tags=["region-modifiers"])
 protected_router.include_router(sequences_router, tags=["outreach-sequences"])
 protected_router.include_router(mailing_groups_router, tags=["mailing-groups"])
 protected_router.include_router(presentation_archive_router, tags=["presentation-archive"])
 protected_router.include_router(users_router, tags=["users"])
-protected_router.include_router(staffing_router, tags=["staffing"])  # NOMICON
-protected_router.include_router(commission_router, tags=["commission"])  # NOMICON
+protected_router.include_router(
+    staffing_router, tags=["staffing"], dependencies=[Depends(require_staffing_view)]
+)  # NOMICON
+protected_router.include_router(
+    commission_router, tags=["commission"], dependencies=[Depends(require_management_view)]
+)  # NOMICON
+protected_router.include_router(access_views_router, tags=["access-views"])  # NOMICON
 protected_router.include_router(audit_logs_router, tags=["audit-logs"])
 protected_router.include_router(deletion_requests_router, tags=["deletion-requests"])
 api_router.include_router(protected_router)
