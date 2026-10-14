@@ -2003,6 +2003,23 @@ export interface paths {
         patch: operations["update_mailing_group_api_v1_mailing_groups__group_id__patch"];
         trace?: never;
     };
+    "/api/v1/management/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Management Overview */
+        get: operations["get_management_overview_api_v1_management_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mcp": {
         parameters: {
             query?: never;
@@ -4313,6 +4330,24 @@ export interface components {
             owner_type: string;
             /** Uploaded By */
             uploaded_by?: string | null;
+        };
+        /** BothBusinessClientRead */
+        BothBusinessClientRead: {
+            /** Assignments */
+            assignments: number;
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Placements */
+            placements: number;
+            /** Processes */
+            processes: number;
+            /** Taken Over */
+            taken_over: number;
         };
         /** BulkSubmitRequest */
         BulkSubmitRequest: {
@@ -6642,6 +6677,23 @@ export interface components {
             received_at?: string | null;
             stage?: components["schemas"]["SubmissionStatus"] | null;
         };
+        /** ForecastRead */
+        ForecastRead: {
+            /** Direct Weighted */
+            direct_weighted: string;
+            /** Direct Without Fee */
+            direct_without_fee: number;
+            /** Direct Without Probability */
+            direct_without_probability: number;
+            /** Staffing Counted */
+            staffing_counted: number;
+            /** Staffing Excluded */
+            staffing_excluded: number;
+            /** Staffing Margin */
+            staffing_margin: string;
+            /** Total */
+            total: string;
+        };
         /**
          * GeoMappingResult
          * @description Geo Mapping ist seit der Vereinfachung eine reine Kanzleien-
@@ -6690,6 +6742,19 @@ export interface components {
             latitude: number | null;
             /** Longitude */
             longitude: number | null;
+        };
+        /** GrossProfitRead */
+        GrossProfitRead: {
+            /** Direct */
+            direct: string;
+            /** Staffing */
+            staffing: string;
+            /** Staffing Hours */
+            staffing_hours: string;
+            /** Staffing Missing Rates */
+            staffing_missing_rates: number;
+            /** Total */
+            total: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -7614,6 +7679,54 @@ export interface components {
             kind: "candidate" | "client" | "contact";
             /** Name */
             name: string;
+        };
+        /** ManagementAlertRead */
+        ManagementAlertRead: {
+            /** Count */
+            count: number;
+            /** Href */
+            href: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "deadline_red" | "deadline_yellow" | "license" | "invoices_overdue" | "processes_without_owner";
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "red" | "yellow";
+            /** Text */
+            text: string;
+        };
+        /** ManagementOverviewRead */
+        ManagementOverviewRead: {
+            /** Alerts */
+            alerts: components["schemas"]["ManagementAlertRead"][];
+            /** Assumptions */
+            assumptions: string[];
+            /** Both Business Clients */
+            both_business_clients: components["schemas"]["BothBusinessClientRead"][];
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            /** Employer Factor */
+            employer_factor: string;
+            forecast: components["schemas"]["ForecastRead"];
+            gross_profit: components["schemas"]["GrossProfitRead"];
+            /**
+             * Period
+             * @enum {string}
+             */
+            period: "week" | "month" | "quarter";
+            takeover: components["schemas"]["TakeoverRateRead"];
         };
         /**
          * MyMailAccountCreate
@@ -9782,6 +9895,15 @@ export interface components {
          * @enum {string}
          */
         SubmissionStatus: "qualification_call" | "cv_in" | "cv_out" | "interview" | "offer" | "placement" | "cancelled";
+        /** TakeoverRateRead */
+        TakeoverRateRead: {
+            /** Pairs */
+            pairs: number;
+            /** Rate */
+            rate: string | null;
+            /** Taken Over */
+            taken_over: number;
+        };
         /** TaskCreate */
         TaskCreate: {
             /** Candidate Id */
@@ -14764,6 +14886,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MailingGroupRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_management_overview_api_v1_management_overview_get: {
+        parameters: {
+            query?: {
+                period?: "week" | "month" | "quarter";
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagementOverviewRead"];
                 };
             };
             /** @description Validation Error */

@@ -1002,6 +1002,45 @@
         "title": "Body_upload_document_api_v1_documents_upload_post",
         "type": "object"
       },
+      "BothBusinessClientRead": {
+        "properties": {
+          "assignments": {
+            "title": "Assignments",
+            "type": "integer"
+          },
+          "client_id": {
+            "format": "uuid",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "client_name": {
+            "title": "Client Name",
+            "type": "string"
+          },
+          "placements": {
+            "title": "Placements",
+            "type": "integer"
+          },
+          "processes": {
+            "title": "Processes",
+            "type": "integer"
+          },
+          "taken_over": {
+            "title": "Taken Over",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "client_id",
+          "client_name",
+          "processes",
+          "assignments",
+          "placements",
+          "taken_over"
+        ],
+        "title": "BothBusinessClientRead",
+        "type": "object"
+      },
       "BulkSubmitRequest": {
         "properties": {
           "client_company_ids": {
@@ -8862,6 +8901,49 @@
         "title": "FeedbackUpdate",
         "type": "object"
       },
+      "ForecastRead": {
+        "properties": {
+          "direct_weighted": {
+            "title": "Direct Weighted",
+            "type": "string"
+          },
+          "direct_without_fee": {
+            "title": "Direct Without Fee",
+            "type": "integer"
+          },
+          "direct_without_probability": {
+            "title": "Direct Without Probability",
+            "type": "integer"
+          },
+          "staffing_counted": {
+            "title": "Staffing Counted",
+            "type": "integer"
+          },
+          "staffing_excluded": {
+            "title": "Staffing Excluded",
+            "type": "integer"
+          },
+          "staffing_margin": {
+            "title": "Staffing Margin",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "direct_weighted",
+          "direct_without_probability",
+          "direct_without_fee",
+          "staffing_margin",
+          "staffing_counted",
+          "staffing_excluded",
+          "total"
+        ],
+        "title": "ForecastRead",
+        "type": "object"
+      },
       "GeoMappingResult": {
         "description": "Geo Mapping ist seit der Vereinfachung eine reine Kanzleien-\nUmkreissuche (die kandidatenzentrierte Umkreissuche uebernimmt die neue\n\"CV Out\"-Kampagne direkt am Kandidaten) - kein `kind`-Feld mehr noetig,\njedes Ergebnis ist implizit eine Kanzlei.",
         "properties": {
@@ -9024,6 +9106,39 @@
           "longitude"
         ],
         "title": "GeocodeResult",
+        "type": "object"
+      },
+      "GrossProfitRead": {
+        "properties": {
+          "direct": {
+            "title": "Direct",
+            "type": "string"
+          },
+          "staffing": {
+            "title": "Staffing",
+            "type": "string"
+          },
+          "staffing_hours": {
+            "title": "Staffing Hours",
+            "type": "string"
+          },
+          "staffing_missing_rates": {
+            "title": "Staffing Missing Rates",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "direct",
+          "staffing",
+          "total",
+          "staffing_hours",
+          "staffing_missing_rates"
+        ],
+        "title": "GrossProfitRead",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -11583,6 +11698,121 @@
           "name"
         ],
         "title": "MailingRecipient",
+        "type": "object"
+      },
+      "ManagementAlertRead": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "href": {
+            "title": "Href",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "deadline_red",
+              "deadline_yellow",
+              "license",
+              "invoices_overdue",
+              "processes_without_owner"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "red",
+              "yellow"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "severity",
+          "count",
+          "text",
+          "href"
+        ],
+        "title": "ManagementAlertRead",
+        "type": "object"
+      },
+      "ManagementOverviewRead": {
+        "properties": {
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/ManagementAlertRead"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Assumptions",
+            "type": "array"
+          },
+          "both_business_clients": {
+            "items": {
+              "$ref": "#/components/schemas/BothBusinessClientRead"
+            },
+            "title": "Both Business Clients",
+            "type": "array"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "employer_factor": {
+            "title": "Employer Factor",
+            "type": "string"
+          },
+          "forecast": {
+            "$ref": "#/components/schemas/ForecastRead"
+          },
+          "gross_profit": {
+            "$ref": "#/components/schemas/GrossProfitRead"
+          },
+          "period": {
+            "enum": [
+              "week",
+              "month",
+              "quarter"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "takeover": {
+            "$ref": "#/components/schemas/TakeoverRateRead"
+          }
+        },
+        "required": [
+          "period",
+          "date_from",
+          "date_to",
+          "employer_factor",
+          "gross_profit",
+          "forecast",
+          "both_business_clients",
+          "takeover",
+          "alerts",
+          "assumptions"
+        ],
+        "title": "ManagementOverviewRead",
         "type": "object"
       },
       "MyMailAccountCreate": {
@@ -17900,6 +18130,36 @@
         ],
         "title": "SubmissionStatus",
         "type": "string"
+      },
+      "TakeoverRateRead": {
+        "properties": {
+          "pairs": {
+            "title": "Pairs",
+            "type": "integer"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "taken_over": {
+            "title": "Taken Over",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pairs",
+          "taken_over",
+          "rate"
+        ],
+        "title": "TakeoverRateRead",
+        "type": "object"
       },
       "TaskCreate": {
         "properties": {
@@ -28731,6 +28991,75 @@
         "summary": "Update Mailing Group",
         "tags": [
           "mailing-groups"
+        ]
+      }
+    },
+    "/api/v1/management/overview": {
+      "get": {
+        "operationId": "get_management_overview_api_v1_management_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "month",
+              "enum": [
+                "week",
+                "month",
+                "quarter"
+              ],
+              "title": "Period",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagementOverviewRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Management Overview",
+        "tags": [
+          "management"
         ]
       }
     },

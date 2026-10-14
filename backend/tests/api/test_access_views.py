@@ -35,7 +35,7 @@ DIRECT_PREFIXES = (
     "/fees",
 )
 STAFFING_PREFIXES = ("/staffing",)  # NICHT "/public/timesheets" (Token-Zugang ohne Login)
-MANAGEMENT_PREFIXES = ("/commission",)
+MANAGEMENT_PREFIXES = ("/commission", "/management")
 
 
 def _user(
@@ -92,7 +92,7 @@ def _call(client: TestClient, method: str, url: str, headers: dict[str, str]) ->
     [
         (DIRECT_PREFIXES, ("staffing",), 20),  # ohne Direct: alles Direct-Zugeordnete 403
         (STAFFING_PREFIXES, ("direct",), 25),  # ohne Ueberlassung: alles /staffing 403
-        (MANAGEMENT_PREFIXES, ("direct", "staffing"), 3),  # Gesamt: nie fuer Nicht-Admins
+        (MANAGEMENT_PREFIXES, ("direct", "staffing"), 4),  # Gesamt: nie fuer Nicht-Admins
     ],
 )
 def test_every_mapped_route_is_forbidden_without_the_view(

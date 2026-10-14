@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useCurrentUser, useTeamKpisCache, useUnownedSubmissionsCache } from "@/lib/api/hooks";
 import { PITCH_LABEL, STAGE_LABELS } from "@/lib/stage-labels";
 import { CommissionReport } from "@/components/crm/commission-report"; // NOMICON
+import { ManagementOverviewBlock } from "@/components/crm/management-overview"; // NOMICON
 import { brand } from "@/lib/brand";
 
 const STAGE_COLUMNS: { key: string; label: string }[] = [
@@ -91,6 +92,9 @@ export default function GeschaeftsfuehrungPage() {
           </div>
         }
       />
+
+      {/* NOMICON: Ansicht "Gesamt" - Rohertrag, Prognose, Alarme (nur echte Admins) */}
+      {meData?.data.is_admin && <ManagementOverviewBlock period={period} />}
 
       {unownedCount > 0 && (
         <Link
