@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bell, LogOut, Menu, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QuickActionMenu } from "@/components/crm/quick-action-menu";
+import { ViewSwitcher } from "@/components/crm/view-switcher"; // NOMICON
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { getCandidatesPage, getClientsPage, getContactsPage } from "@/lib/api/queries";
 import { useCurrentUser } from "@/lib/api/hooks";
@@ -263,6 +264,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
         )}
       </div>
       <div className="ml-auto flex items-center gap-2">
+        <ViewSwitcher className="mr-3 hidden sm:inline-flex" /> {/* NOMICON */}
         <QuickActionMenu />
         <div ref={notificationsRef} className="relative">
           <Button

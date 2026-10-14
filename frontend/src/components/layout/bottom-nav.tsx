@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { Building2, KanbanSquare, LayoutDashboard, MoreHorizontal, Users } from "lucide-react";
 import { useAiProposalSummary, useCurrentUser, usePendingApprovalCount } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
+import { useActiveView } from "@/lib/api/views-hooks"; // NOMICON
+import { HardHat } from "lucide-react"; // NOMICON
 
 /** Mobile-only Bottom-Tab-Bar (analog zum bestehenden lg:hidden-Muster von
  * Sidebar/Topbar) - ersetzt auf schmalen Viewports das reine Hamburger-Menue
@@ -21,6 +23,12 @@ const items: { href: string; label: string; icon: typeof LayoutDashboard }[] = [
 export function BottomNav({ onMenu }: { onMenu: () => void }) {
   const pathname = usePathname();
   const { data: meData } = useCurrentUser();
+  // NOMICON: Ohne Ansicht Direct statt "Prozesse" die Überlassung zeigen.
+  const { views } = useActiveView();
+  const visible = items.filter((item) => item.href !== "/prozesse" || views.length === 0 || views.includes("direct"));
+  const tabs = views.length > 0 && !views.includes("direct") && views.includes("staffing")
+    ? [...visible.slice(0, 1), { href: "/ueberlassung", label: "Überlassung", icon: HardHat }, ...visible.slice(1)]
+    : visible;
   const pendingApprovals =
     usePendingApprovalCount(meData?.data.is_admin ?? false) + useAiProposalSummary().pending;
 
@@ -29,7 +37,7 @@ export function BottomNav({ onMenu }: { onMenu: () => void }) {
       className="fixed inset-x-0 bottom-0 z-40 flex border-t border-white/10 bg-brand-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden"
       aria-label="Hauptnavigation"
     >
-      {items.map((item) => {
+      {tabs.map((item) => {
         const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         const Icon = item.icon;
         return (

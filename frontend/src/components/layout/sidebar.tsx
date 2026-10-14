@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, X } from "lucide-react";
 import {
+  inActiveView, // NOMICON
   isNavigationItemActive,
   navigationGroups,
   utilityNavigation,
@@ -21,6 +22,8 @@ import {
 import { useAiProposalSummary, useCurrentUser, usePendingApprovalCount } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
 import { brand } from "@/lib/brand";
+import { useActiveView } from "@/lib/api/views-hooks"; // NOMICON
+import { ViewSwitcher } from "@/components/crm/view-switcher"; // NOMICON
 
 export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
   collapsed: boolean;
@@ -50,11 +53,12 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
   const isTeamLead = meData?.data.role === "team_lead";
   const pendingApprovals = usePendingApprovalCount(isAdmin);
   const ai = useAiProposalSummary();
+  const { active: activeView } = useActiveView(); // NOMICON
   const visibleGroups = navigationGroups
     .filter((group) => !group.adminOnly || isAdmin)
     .map((group) => ({
       ...group,
-      items: visibleItems(group.items, isAdmin, isTeamLead).filter(
+      items: inActiveView(visibleItems(group.items, isAdmin, isTeamLead), activeView).filter( // NOMICON
         (item) => !item.requiresAi || ai.enabled,
       ),
     }))
@@ -155,6 +159,8 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
           <button className="ml-auto shrink-0 text-white/60 hover:text-white lg:hidden" onClick={onMobileClose}><X size={18} /></button>
         </div>
 
+        {/* NOMICON: Umschalter für Handy (im Kopf nur ab sm sichtbar) */}
+        <div className="px-[11.4px] pt-3 sm:hidden"><ViewSwitcher className="flex w-full [&>button]:flex-1" /></div>
         <nav className="scrollbar-subtle flex-1 space-y-[3.8px] overflow-y-auto px-[11.4px] py-[19px]">
           {visibleGroups.map((group, groupIndex) => {
             const hasActiveItem = group.items.some((item) => isNavigationItemActive(item, pathname));

@@ -6,6 +6,7 @@ import {
   Boxes,
   ClipboardList,
   KeyRound,
+  Layers, // NOMICON
   Mail,
   Send,
   Sparkles,
@@ -35,6 +36,7 @@ const GROUPS: { title: string; icon: typeof Users; tiles: Tile[] }[] = [
       { href: "/einstellungen/nutzer", label: "Nutzerverwaltung", description: "Konten, Rollen und Teamleiter-Zuordnung.", icon: Users },
       { href: "/einstellungen/postfaecher", label: "E-Mails & Konten", description: "Gemeinsame Postfächer und Outlook-Verbindungen.", icon: Mail },
       { href: "/einstellungen/kpi-punkte", label: "KPI-Punkte", description: "Punkteregeln für das Ranking.", icon: Trophy },
+      { href: "/einstellungen/ansichten", label: "Ansichten", description: "Direct, Überlassung und Gesamt je Mitarbeiter freischalten.", icon: Layers }, // NOMICON
     ],
   },
   {
