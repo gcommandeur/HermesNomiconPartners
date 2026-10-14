@@ -40,6 +40,7 @@ export function useServerSearchList<T>(
     plzOrt?: string;
     radiusKm?: number;
     rollenUnbestaetigt?: boolean;
+    engagement?: "free_direct" | "free_staffing" | "engaged"; // NOMICON
     ownerUserId?: string;
     pageSize?: number;
     sortBy?: string;
@@ -92,13 +93,14 @@ export function useServerSearchList<T>(
     debouncedPlzOrt,
     options.radiusKm,
     options.rollenUnbestaetigt,
+    options.engagement, // NOMICON
     options.ownerUserId,
     options.sortBy,
     options.sortDir,
   ]);
 
   const offset = page * pageSize;
-  const swrKey = `${cacheKeyPrefix}?search=${debouncedSearch}&status=${options.status ?? ""}&rollen=${rollenKey}&abschluesse=${abschluesseKey}&plz_ort=${radiusActive ? debouncedPlzOrt : ""}&radius_km=${radiusActive ? options.radiusKm : ""}&rollen_unbestaetigt=${options.rollenUnbestaetigt ?? ""}&owner_user_id=${options.ownerUserId ?? ""}&sort_by=${options.sortBy ?? ""}&sort_dir=${options.sortDir ?? ""}&limit=${pageSize}&offset=${offset}`;
+  const swrKey = `${cacheKeyPrefix}?search=${debouncedSearch}&status=${options.status ?? ""}&rollen=${rollenKey}&abschluesse=${abschluesseKey}&plz_ort=${radiusActive ? debouncedPlzOrt : ""}&radius_km=${radiusActive ? options.radiusKm : ""}&rollen_unbestaetigt=${options.rollenUnbestaetigt ?? ""}&engagement=${options.engagement ?? ""}&owner_user_id=${options.ownerUserId ?? ""}&sort_by=${options.sortBy ?? ""}&sort_dir=${options.sortDir ?? ""}&limit=${pageSize}&offset=${offset}`;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<DataResult<Paginated<T>>>(
     swrKey,
@@ -111,6 +113,7 @@ export function useServerSearchList<T>(
         plzOrt: radiusActive ? debouncedPlzOrt : undefined,
         radiusKm: radiusActive ? options.radiusKm : undefined,
         rollenUnbestaetigt: options.rollenUnbestaetigt,
+        engagement: options.engagement, // NOMICON
         ownerUserId: options.ownerUserId,
         sortBy: options.sortBy,
         sortDir: options.sortDir,

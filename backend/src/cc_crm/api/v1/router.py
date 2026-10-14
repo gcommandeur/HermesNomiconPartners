@@ -16,6 +16,7 @@ from cc_crm.api.v1.commission import router as commission_router  # NOMICON
 from cc_crm.api.v1.contacts import router as contacts_router
 from cc_crm.api.v1.custom_fields import router as custom_fields_router
 from cc_crm.api.v1.deletion_requests import router as deletion_requests_router
+from cc_crm.api.v1.engagement import router as engagement_router  # NOMICON
 from cc_crm.api.v1.geo import router as geo_router
 from cc_crm.api.v1.imports import router as imports_router
 from cc_crm.api.v1.jobs import router as jobs_router
@@ -125,6 +126,7 @@ protected_router.include_router(
     commission_router, tags=["commission"], dependencies=[Depends(require_management_view)]
 )  # NOMICON
 protected_router.include_router(access_views_router, tags=["access-views"])  # NOMICON
+protected_router.include_router(engagement_router, tags=["engagement"])  # NOMICON
 protected_router.include_router(audit_logs_router, tags=["audit-logs"])
 protected_router.include_router(deletion_requests_router, tags=["deletion-requests"])
 api_router.include_router(protected_router)

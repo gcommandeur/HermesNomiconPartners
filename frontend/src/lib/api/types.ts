@@ -1014,6 +1014,8 @@ export interface PageQuery {
    * geschuetzter Rolle wieder (Nutzer-Vorgabe - "sonst findet man sie nicht
    * wieder"). undefined laesst den Filter aus. */
   rollenUnbestaetigt?: boolean;
+  /** NOMICON: Kandidatenstatus-Filter (frei für Direct/AÜ, im Austausch). */
+  engagement?: "free_direct" | "free_staffing" | "engaged";
   /** Komfort-Filter "Meine..." - siehe owner_user_id auf Candidate/
    * ClientCompany/CandidateSubmission/Task oben. */
   ownerUserId?: string;

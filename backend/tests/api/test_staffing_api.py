@@ -78,7 +78,7 @@ def _worker(client: TestClient, who: Person, candidate_id: str, **extra: object)
 
 def _assignment(client: TestClient, who: Person, worker_id: str, client_id: str, **extra) -> dict:  # type: ignore[no-untyped-def]
     response = client.post(
-        f"{P}/assignments",
+        f"{P}/assignments?confirm_engagement=true",  # Test-Setup: mehrere Einsaetze je Person
         json={
             "worker_id": worker_id,
             "client_company_id": client_id,

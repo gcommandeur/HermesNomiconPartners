@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, Building2, Mail, Phone, Star } from "lucide-react";
+import { hasView, noData } from "@/lib/api/views"; // NOMICON
+import type { CandidateSubmission } from "@/lib/api/types"; // NOMICON
 import { getCandidates, getClients, getContacts, getDocumentsForOwner, getGroupLocations, getSubmissions } from "@/lib/api/queries";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,7 +19,9 @@ export const dynamic = "force-dynamic";
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [clients, submissions, candidates, contacts] = await Promise.all([getClients(), getSubmissions(), getCandidates(), getContacts()]);
+  // NOMICON: Prozesse nur mit Ansicht Direct abfragen (sonst 403)
+  const canDirect = await hasView("direct");
+  const [clients, submissions, candidates, contacts] = await Promise.all([getClients(), canDirect ? getSubmissions() : Promise.resolve(noData<CandidateSubmission[]>([])), getCandidates(), getContacts()]);
   const client = clients.data.find((item) => item.id === id) ?? clients.data[0];
   const documents = (await getDocumentsForOwner("client", client.id)).data;
   const groupLocations = (await getGroupLocations(client.id)).data;

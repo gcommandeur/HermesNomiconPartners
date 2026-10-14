@@ -11,6 +11,7 @@ import { ErrorBanner } from "@/components/crm/error-banner";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api/client";
 import { searchCandidates, searchClients } from "@/lib/api/search-select-helpers";
 import { getSubmissions } from "@/lib/api/queries";
+import type { CandidateSubmission } from "@/lib/api/types"; // NOMICON
 import { formatDate } from "@/lib/utils";
 import type { AdminUser, CalendarEvent, CalendarEventType } from "@/lib/api/types";
 
@@ -162,7 +163,7 @@ export function CalendarEventModal({
       return;
     }
     let cancelled = false;
-    getSubmissions().then((result) => {
+    getSubmissions().catch(() => ({ data: [] as CandidateSubmission[] })).then((result) => { // NOMICON: ohne Ansicht Direct (403) keine Prozessauswahl
       if (cancelled) return;
       const matches = result.data.filter(
         (submission) =>

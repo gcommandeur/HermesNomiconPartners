@@ -30,11 +30,15 @@ import { CandidateTimeline } from "@/components/crm/candidate-timeline";
 import { CandidateRollenUnbestaetigtHint } from "@/components/crm/candidate-rollen-unbestaetigt-hint";
 import { NotesPanel } from "@/components/crm/notes-panel";
 import { StaffingCandidatePanel } from "@/components/crm/staffing-candidate-panel"; // NOMICON
+import { EngagementPanel } from "@/components/crm/engagement-panel"; // NOMICON
+import { EngagementHeaderBadge } from "@/components/crm/engagement-header-badge"; // NOMICON
+import { hasView, noData } from "@/lib/api/views"; // NOMICON
 import { CustomFieldsPanel } from "@/components/crm/custom-fields-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { abschlussartLabel, formatDate, rechtsgebietLabel, rolleLabel } from "@/lib/utils";
+import type { CandidateSubmission } from "@/lib/api/types"; // NOMICON
 
 export const dynamic = "force-dynamic";
 
@@ -60,12 +64,14 @@ export default async function CandidateDetailPage({
       ? { href: "/prozesse", label: "Zurück zu Prozesse" }
       : { href: "/kandidaten", label: "Zur Kandidatenliste" };
   // Nur die Prozesse DIESES Kandidaten und danach nur die darin referenzierten
+  // NOMICON: Prozesse nur mit Ansicht Direct abfragen (sonst 403), Überlassungs-Reiter nur mit Ansicht Überlassung.
+  const [canDirect, canStaffing] = await Promise.all([hasView("direct"), hasView("staffing")]);
   // Kanzleien laden - vorher wurden hier ALLE Prozesse und ALLE Kanzleien
   // (mehrere tausend, seitenweise nacheinander) geladen, nur um ein paar
   // Kanzleinamen anzuzeigen (~10s Ladezeit).
   const [result, submissionsResult, activitiesResult, tasksResult, documentsResult, notesResult, historyResult, commentsResult, usersResult] = await Promise.all([
     getCandidate(id),
-    getSubmissionsForCandidate(id),
+    canDirect ? getSubmissionsForCandidate(id) : Promise.resolve(noData<CandidateSubmission[]>([])), // NOMICON
     getActivitiesForCandidate(id),
     getTasksForCandidate(id),
     getDocumentsForOwner("candidate", id),
@@ -95,7 +101,7 @@ export default async function CandidateDetailPage({
     `Gehaltsrahmen: ${candidate.salary_expectation ?? "nach Absprache"}.`,
     `Verfügbarkeit: ${candidate.notice_period ?? "nach Absprache"}.`,
   ].join("\n");
-  const tabs = ["Übersicht", "Anonymes Profil", "Notizen", "Matching", "CV-Outs", "Timeline", "Aufgaben", "Dokumente", "Überlassung" /* NOMICON */];
+  const tabs = ["Übersicht", "Anonymes Profil", "Notizen", "Matching", "CV-Outs", "Timeline", "Aufgaben", "Dokumente", ...(canStaffing ? ["Überlassung"] : []) /* NOMICON */];
   // Erlaubt einen direkten Link auf einen bestimmten Tab (z.B. "?tab=Dokumente"
   // nach dem Anlegen eines Kandidaten, siehe candidate-create-modal.tsx) -
   // faellt auf "Übersicht" zurueck, wenn der Wert fehlt oder ungueltig ist.
@@ -114,6 +120,7 @@ export default async function CandidateDetailPage({
           <div className="mb-3 flex items-center gap-3">
             <StatusPill status={candidate.status} />
             {candidate.has_ghosting_history && <Badge tone="red" className="gap-1"><Ghost size={12} />Ghosting-Historie</Badge>}
+            <EngagementHeaderBadge candidateId={candidate.id} /> {/* NOMICON */}
             <span className="text-xs text-brand-gray">Aktualisiert {formatDate(candidate.updated_at)}</span>
           </div>
           <h1 className="text-3xl font-semibold tracking-[-.035em]">{candidate.first_name} {candidate.last_name}</h1>
@@ -167,6 +174,7 @@ export default async function CandidateDetailPage({
 
       <CandidateProcessLog candidateId={candidate.id} />
 
+      <EngagementPanel candidateId={candidate.id} /> {/* NOMICON */}
       {submissions.length > 0 && (
         <div className="mb-6 space-y-4 border-b border-white/10 pb-6">
           <CandidateSubmissionStages submissions={submissions} clients={clients} />

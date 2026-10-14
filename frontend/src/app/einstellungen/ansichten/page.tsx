@@ -20,6 +20,9 @@ import {
 } from "@/lib/api/views";
 import { refreshViews, useViewAccess, useViewDefaults } from "@/lib/api/views-hooks";
 import { brand } from "@/lib/brand";
+import { saveConflictMode, type ConflictMode } from "@/lib/api/engagement";
+import { useConflictMode } from "@/lib/api/engagement-hooks";
+import { mutate as globalMutate } from "swr";
 
 const ORDER: ViewKey[] = ["direct", "staffing", "management"];
 const selectClass =
@@ -32,6 +35,8 @@ export default function AnsichtenPage() {
   const isAdmin = meData?.data.is_admin ?? false;
   const { data, isLoading, error, mutate: retry } = useViewAccess(isAdmin);
   const { data: defaultsData } = useViewDefaults(isAdmin);
+  const { data: conflictData } = useConflictMode(isAdmin);
+  const conflictMode: ConflictMode = conflictData?.data.conflict_mode ?? "warn";
   const users = data?.data ?? [];
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -79,6 +84,17 @@ export default function AnsichtenPage() {
     }
   }
 
+  async function changeConflictMode(mode: ConflictMode) {
+    setRowError(null);
+    try {
+      await saveConflictMode(mode);
+      await globalMutate("/admin/engagement-settings");
+      setMessage("Einstellung gespeichert.");
+    } catch (exception) {
+      setRowError(exception instanceof Error ? exception.message : "Speichern fehlgeschlagen.");
+    }
+  }
+
   if (meLoading) return <div className="h-16 animate-pulse rounded-lg bg-brand-surface" />;
 
   if (!isAdmin) {
@@ -114,6 +130,17 @@ export default function AnsichtenPage() {
             <label key={view} className="flex items-center gap-2 text-brand-soft">
               <input type="checkbox" checked={defaults.includes(view)} onChange={() => void toggleDefault(view)} />
               {VIEW_LABELS[view]}
+            </label>
+          ))}
+        </CardContent>
+      </Card>
+      <Card className="mb-5">
+        <CardContent className="flex flex-wrap items-center gap-4 text-sm">
+          <span className="font-medium text-brand-text">Kandidat bereits im Austausch, neuer Prozess oder Einsatz:</span>
+          {(["warn", "block"] as ConflictMode[]).map((mode) => (
+            <label key={mode} className="flex items-center gap-2 text-brand-soft">
+              <input type="radio" name="conflict-mode" checked={conflictMode === mode} onChange={() => void changeConflictMode(mode)} />
+              {mode === "warn" ? "Warnen, mit Bestätigung anlegen" : "Sperren"}
             </label>
           ))}
         </CardContent>

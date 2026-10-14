@@ -439,7 +439,7 @@ def test_takeover_uses_the_client_fee_by_default_and_refuses_duplicates(
     worker = client.get(f"{P}/workers/{detail['worker_id']}", headers=crew.a.headers).json()
     # Es gibt schon einen aktiven Prozess fuer Kandidat und Kunde -> Konflikt, Einsatz bleibt aktiv
     existing = client.post(
-        "/api/v1/submissions",
+        "/api/v1/submissions?confirm_engagement=true",  # Kandidat hat einen aktiven Einsatz
         json={"candidate_id": worker["candidate_id"], "client_company_id": crew.client_id},
         headers=crew.a.headers,
     )

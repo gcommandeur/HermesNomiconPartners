@@ -44,6 +44,7 @@ from cc_crm.schemas.submission import (
     UnownedSubmissionList,
 )
 from cc_crm.services.closing_score import ACTION_RECOMMENDATIONS
+from cc_crm.services.engagement_status import ensure_no_conflict  # NOMICON
 from cc_crm.services.recruiting import RecruitingProcessService
 from cc_crm.services.submission_shares import SubmissionShareService
 from cc_crm.services.submissions import CandidateSubmissionService
@@ -115,7 +116,10 @@ def create_submission(
     payload: CandidateSubmissionCreate,
     session: DatabaseSession,
     current_user: CurrentUser,
+    confirm_engagement: bool = False,  # NOMICON
 ) -> CandidateSubmissionRead:
+    # NOMICON: Kandidat schon im Austausch? (409 mit Hinweis, Bestaetigung oder Sperre)
+    ensure_no_conflict(session, current_user, payload.candidate_id, "direct", confirm_engagement)
     if payload.owner_user_id is None:
         payload = payload.model_copy(update={"owner_user_id": current_user.id})
     return CandidateSubmissionRead.model_validate(

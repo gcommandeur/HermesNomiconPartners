@@ -2137,6 +2137,60 @@
         "title": "CandidateCreate",
         "type": "object"
       },
+      "CandidateEngagementRead": {
+        "properties": {
+          "candidate_id": {
+            "format": "uuid",
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EngagementItemRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "open_for_direct": {
+            "enum": [
+              "yes",
+              "no",
+              "unknown"
+            ],
+            "title": "Open For Direct",
+            "type": "string"
+          },
+          "open_for_staffing": {
+            "enum": [
+              "yes",
+              "no",
+              "unknown"
+            ],
+            "title": "Open For Staffing",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "frei",
+              "im_direct",
+              "im_einsatz",
+              "beides",
+              "vermittelt"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "status",
+          "open_for_direct",
+          "open_for_staffing",
+          "items"
+        ],
+        "title": "CandidateEngagementRead",
+        "type": "object"
+      },
       "CandidateMatchRead": {
         "properties": {
           "candidate": {
@@ -8047,6 +8101,195 @@
           }
         },
         "title": "EmailTemplateUpdate",
+        "type": "object"
+      },
+      "EngagementItemRead": {
+        "description": "Ein Prozess oder Einsatz des Kandidaten. Ohne Zugriff auf den Datensatz nur Kanal, Stufe,\nMitarbeiter und Datum: Kanzlei und IDs bleiben leer (`details_visible=False`).",
+        "properties": {
+          "channel": {
+            "enum": [
+              "direct",
+              "staffing"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "client_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Name"
+          },
+          "details_visible": {
+            "title": "Details Visible",
+            "type": "boolean"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "kind": {
+            "enum": [
+              "process",
+              "placement",
+              "assignment"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "owner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Name"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until"
+          }
+        },
+        "required": [
+          "channel",
+          "kind",
+          "stage",
+          "owner_name",
+          "since",
+          "until",
+          "details_visible"
+        ],
+        "title": "EngagementItemRead",
+        "type": "object"
+      },
+      "EngagementPrefsUpdate": {
+        "properties": {
+          "open_for_direct": {
+            "anyOf": [
+              {
+                "enum": [
+                  "yes",
+                  "no",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open For Direct"
+          },
+          "open_for_staffing": {
+            "anyOf": [
+              {
+                "enum": [
+                  "yes",
+                  "no",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open For Staffing"
+          }
+        },
+        "title": "EngagementPrefsUpdate",
+        "type": "object"
+      },
+      "EngagementSettingsRead": {
+        "properties": {
+          "conflict_mode": {
+            "enum": [
+              "warn",
+              "block"
+            ],
+            "title": "Conflict Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "conflict_mode"
+        ],
+        "title": "EngagementSettingsRead",
+        "type": "object"
+      },
+      "EngagementSettingsUpdate": {
+        "properties": {
+          "conflict_mode": {
+            "enum": [
+              "warn",
+              "block"
+            ],
+            "title": "Conflict Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "conflict_mode"
+        ],
+        "title": "EngagementSettingsUpdate",
+        "type": "object"
+      },
+      "EngagementSummaryRequest": {
+        "properties": {
+          "candidate_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Candidate Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "candidate_ids"
+        ],
+        "title": "EngagementSummaryRequest",
         "type": "object"
       },
       "EnrollmentCreate": {
@@ -19262,6 +19505,122 @@
         ]
       }
     },
+    "/api/v1/admin/engagement-settings": {
+      "get": {
+        "operationId": "get_engagement_settings_api_v1_admin_engagement_settings_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngagementSettingsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Engagement Settings",
+        "tags": [
+          "engagement"
+        ]
+      },
+      "put": {
+        "operationId": "put_engagement_settings_api_v1_admin_engagement_settings_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EngagementSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngagementSettingsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Engagement Settings",
+        "tags": [
+          "engagement"
+        ]
+      }
+    },
     "/api/v1/admin/kpi-point-rules": {
       "get": {
         "operationId": "get_kpi_point_rules_api_v1_admin_kpi_point_rules_get",
@@ -22090,6 +22449,27 @@
           },
           {
             "in": "query",
+            "name": "engagement",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "free_direct",
+                    "free_staffing",
+                    "engaged"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Engagement"
+            }
+          },
+          {
+            "in": "query",
             "name": "sort_by",
             "required": false,
             "schema": {
@@ -23266,6 +23646,144 @@
         "summary": "Get Candidate Cv Out Targets",
         "tags": [
           "candidates"
+        ]
+      }
+    },
+    "/api/v1/candidates/{candidate_id}/engagement": {
+      "get": {
+        "operationId": "get_candidate_engagement_api_v1_candidates__candidate_id__engagement_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateEngagementRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Candidate Engagement",
+        "tags": [
+          "engagement"
+        ]
+      }
+    },
+    "/api/v1/candidates/{candidate_id}/engagement-prefs": {
+      "patch": {
+        "operationId": "update_engagement_prefs_api_v1_candidates__candidate_id__engagement_prefs_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EngagementPrefsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateEngagementRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Engagement Prefs",
+        "tags": [
+          "engagement"
         ]
       }
     },
@@ -26250,6 +26768,75 @@
         "summary": "Update Email Template",
         "tags": [
           "operations"
+        ]
+      }
+    },
+    "/api/v1/engagement/summary": {
+      "post": {
+        "description": "Sammelabfrage fuer ganze Listenseiten (eine Abfrage statt einer je Kandidat).",
+        "operationId": "engagement_summary_api_v1_engagement_summary_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EngagementSummaryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CandidateEngagementRead"
+                  },
+                  "title": "Response Engagement Summary Api V1 Engagement Summary Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Engagement Summary",
+        "tags": [
+          "engagement"
         ]
       }
     },
@@ -31428,6 +32015,16 @@
         "operationId": "create_assignment_api_v1_staffing_assignments_post",
         "parameters": [
           {
+            "in": "query",
+            "name": "confirm_engagement",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Confirm Engagement",
+              "type": "boolean"
+            }
+          },
+          {
             "in": "header",
             "name": "X-API-Key",
             "required": false,
@@ -33865,6 +34462,16 @@
       "post": {
         "operationId": "create_submission_api_v1_submissions_post",
         "parameters": [
+          {
+            "in": "query",
+            "name": "confirm_engagement",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Confirm Engagement",
+              "type": "boolean"
+            }
+          },
           {
             "in": "header",
             "name": "X-API-Key",

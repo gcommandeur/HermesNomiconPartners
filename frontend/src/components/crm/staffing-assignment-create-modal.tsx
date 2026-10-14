@@ -14,6 +14,8 @@ import { searchClients } from "@/lib/api/search-select-helpers";
 import { useAssignableUsersCache, useCurrentUser } from "@/lib/api/hooks";
 import { useStaffingContracts, useStaffingWorkers } from "@/lib/api/staffing-hooks";
 import { createStaffingAssignment, type NewAssignmentInput } from "@/lib/api/staffing";
+import { EngagementConflictNotice } from "@/components/crm/engagement-conflict-notice";
+import { isEngagementConflict } from "@/lib/api/engagement";
 import { invalidateStaffing } from "@/lib/api/staffing-hooks";
 
 export function StaffingAssignmentCreateButton({ workerId }: { workerId?: string }) {
@@ -59,6 +61,7 @@ function CreateForm({ workerId, onClose, onCreated }: { workerId?: string; onClo
   const contracts = form.client_company_id ? (contractsData?.data ?? []) : [];
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<string | null>(null);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -66,8 +69,13 @@ function CreateForm({ workerId, onClose, onCreated }: { workerId?: string; onClo
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    await send(false);
+  }
+
+  async function send(confirmEngagement: boolean) {
     setBusy(true);
     setError(null);
+    setConflict(null);
     try {
       if (!form.worker_id) throw new Error("Bitte einen Leiharbeitnehmer wählen.");
       if (!form.client_company_id) throw new Error("Bitte einen Kunden wählen.");
@@ -84,11 +92,13 @@ function CreateForm({ workerId, onClose, onCreated }: { workerId?: string; onClo
         ...(isAdmin && form.billing_rate ? { billing_rate: form.billing_rate.replace(",", ".") } : {}),
         ...(isAdmin && form.hourly_wage ? { hourly_wage: form.hourly_wage.replace(",", ".") } : {}),
       };
-      const created = await createStaffingAssignment(input);
+      const created = await createStaffingAssignment(input, confirmEngagement);
       await invalidateStaffing();
       onCreated(created.id);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Einsatz konnte nicht angelegt werden.");
+      const message = exception instanceof Error ? exception.message : "Einsatz konnte nicht angelegt werden.";
+      if (isEngagementConflict(message) && !message.includes("gesperrt")) setConflict(message);
+      else setError(message);
     } finally {
       setBusy(false);
     }
@@ -146,6 +156,7 @@ function CreateForm({ workerId, onClose, onCreated }: { workerId?: string; onClo
           </div>
         )}
         <ErrorBanner message={error} />
+        {conflict && <EngagementConflictNotice message={conflict} busy={busy} onConfirm={() => void send(true)} onCancel={() => setConflict(null)} />}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose}>Abbrechen</Button>
           <Button type="submit" disabled={busy}>{busy ? "Speichern…" : "Einsatz anlegen"}</Button>

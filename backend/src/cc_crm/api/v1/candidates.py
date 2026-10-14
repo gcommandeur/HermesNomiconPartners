@@ -22,6 +22,7 @@ from cc_crm.schemas.candidate import (
     CvPreviewResponse,
 )
 from cc_crm.schemas.cv_out import CvOutContact, CvOutTargetClient, CvOutTargetsResult
+from cc_crm.schemas.engagement import EngagementFilter  # NOMICON
 from cc_crm.schemas.note import CandidateCommentRead
 from cc_crm.schemas.pagination import Page
 from cc_crm.schemas.recruiting import AuditLogRead
@@ -46,6 +47,7 @@ from cc_crm.services.cv_extraction_jobs import (
     create_job,
     get_job_for_user,
 )
+from cc_crm.services.engagement_status import candidate_filters  # NOMICON
 from cc_crm.services.job_queue import enqueue
 from cc_crm.services.operational import DocumentService
 from cc_crm.services.recruiting import RecruitingProcessService
@@ -88,6 +90,8 @@ def list_candidates(
     rollen_unbestaetigt: bool | None = None,
     # Eigener Feld-Filter "schluessel:wert" (nur Auswahl-/Ja-Nein-/Text-/Zahlenfelder).
     custom_field: str | None = None,
+    # NOMICON: Kandidatenstatus-Filter (frei fuer Direct/AÜ, im Austausch)
+    engagement: EngagementFilter | None = None,
     sort_by: Annotated[
         Literal["candidate_number", "name", "job_title", "city", "salary_expectation", "status"]
         | None,
@@ -113,6 +117,7 @@ def list_candidates(
         created_to=created_to,
         rollen_unbestaetigt=rollen_unbestaetigt,
         custom_field=custom_field,
+        extra_filters=candidate_filters(engagement) if engagement else None,  # NOMICON
         sort_by=sort_by,
         sort_dir=sort_dir,
         offset=offset,

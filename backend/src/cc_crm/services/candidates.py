@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement  # NOMICON
 
 from cc_crm.core.config import get_settings
 from cc_crm.core.errors import BusinessRuleError, ConsentNotGrantedError
@@ -636,6 +637,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         created_to: datetime | None = None,
         rollen_unbestaetigt: bool | None = None,
         custom_field: str | None = None,
+        extra_filters: Sequence[ColumnElement[bool]] | None = None,  # NOMICON
         sort_by: str | None = None,
         sort_dir: str = "asc",
         offset: int = 0,
@@ -660,6 +662,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
                 created_to=created_to,
                 rollen_unbestaetigt=rollen_unbestaetigt,
                 custom_field_filter=custom_field_filter,
+                extra_filters=extra_filters,  # NOMICON
                 sort_by=sort_by,
                 sort_dir=sort_dir,
                 offset=offset,
@@ -678,6 +681,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             created_to=created_to,
             rollen_unbestaetigt=rollen_unbestaetigt,
             custom_field_filter=custom_field_filter,
+            extra_filters=extra_filters,  # NOMICON
             sort_by=sort_by,
             sort_dir=sort_dir,
             offset=offset,
@@ -702,6 +706,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         created_to: datetime | None,
         rollen_unbestaetigt: bool | None = None,
         custom_field_filter: tuple[str, str, str] | None = None,
+        extra_filters: Sequence[ColumnElement[bool]] | None = None,  # NOMICON
         sort_by: str | None,
         sort_dir: str,
         offset: int,
@@ -737,6 +742,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             created_to=created_to,
             rollen_unbestaetigt=rollen_unbestaetigt,
             custom_field_filter=custom_field_filter,
+            extra_filters=extra_filters,  # NOMICON
             sort_by=sort_by,
             sort_dir=sort_dir,
             offset=0,

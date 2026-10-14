@@ -65,6 +65,7 @@ function pageQueryString(query: PageQuery): string {
   if (query.rollenUnbestaetigt !== undefined) {
     params.set("rollen_unbestaetigt", String(query.rollenUnbestaetigt));
   }
+  if (query.engagement) params.set("engagement", query.engagement); // NOMICON
   if (query.ownerUserId) params.set("owner_user_id", query.ownerUserId);
   if (query.sortBy) params.set("sort_by", query.sortBy);
   if (query.sortDir) params.set("sort_dir", query.sortDir);

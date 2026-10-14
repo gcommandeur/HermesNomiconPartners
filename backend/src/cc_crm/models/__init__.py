@@ -17,6 +17,7 @@ from cc_crm.models.custom_field import CustomFieldDefinition
 from cc_crm.models.cv_extraction_job import CvExtractionJob
 from cc_crm.models.deletion_request import DeletionRequest
 from cc_crm.models.email_template import EmailTemplate
+from cc_crm.models.engagement import CandidateEngagementPrefs  # NOMICON
 from cc_crm.models.event_outbox import EventOutbox
 from cc_crm.models.job_mandate import JobMandate
 from cc_crm.models.kpi_point_rule import KpiPointRule
@@ -60,6 +61,7 @@ from cc_crm.models.user import User
 from cc_crm.models.webhook import WebhookDelivery, WebhookEndpoint
 
 __all__ = [
+    "CandidateEngagementPrefs",  # NOMICON
     "UserViewAccess",  # NOMICON
     "UserViewSettings",  # NOMICON
     "Activity",

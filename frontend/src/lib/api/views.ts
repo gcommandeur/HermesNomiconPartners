@@ -32,7 +32,7 @@ export const VIEW_HOME: Record<ViewKey, string> = {
 /** Welche Ansicht eine Seite exklusiv gehört; neutrale Seiten (Kandidaten, Kanzleien ...) gehören keiner. */
 export function viewForPath(pathname: string): ViewKey | null {
   const startsWith = (prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
-  if (["/prozesse", "/vakanzen", "/sourcing"].some(startsWith)) return "direct";
+  if (["/prozesse", "/vakanzen", "/sourcing", "/gewaehrleistung", "/prioritaet"].some(startsWith)) return "direct";
   if (startsWith("/ueberlassung")) return "staffing";
   if (startsWith("/geschaeftsfuehrung")) return "management";
   return null;
@@ -67,4 +67,16 @@ export function getViewDefaults(): Promise<DataResult<{ views: ViewKey[] }>> {
 
 export function saveViewDefaults(views: ViewKey[]): Promise<{ views: ViewKey[] }> {
   return apiPut<{ views: ViewKey[] }>("/admin/view-access/defaults", { views });
+}
+
+/** Server-Komponenten: darf der Nutzer Prozesse laden (Ansicht Direct)? Ohne Freigabe antworten
+ * die Direct-Routen mit 403 - neutrale Seiten (Kandidat, Kanzlei) fragen dann gar nicht erst an. */
+export async function hasView(view: ViewKey): Promise<boolean> {
+  const { data } = await getMyViews();
+  return data.views.includes(view);
+}
+
+/** Leeres Ergebnis für Abfragen, die mangels Freigabe nicht gestellt werden. */
+export function noData<T>(data: T): DataResult<T> {
+  return { data, source: "api" };
 }

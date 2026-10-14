@@ -221,8 +221,8 @@ export interface NewAssignmentInput {
   notes?: string | null;
 }
 
-export function createStaffingAssignment(input: NewAssignmentInput) {
-  return apiPost<StaffingAssignment>("/staffing/assignments", input);
+export function createStaffingAssignment(input: NewAssignmentInput, confirmEngagement = false) {
+  return apiPost<StaffingAssignment>(`/staffing/assignments${confirmEngagement ? "?confirm_engagement=true" : ""}`, input);
 }
 
 export function updateStaffingAssignment(id: string, input: Partial<Omit<NewAssignmentInput, "worker_id" | "client_company_id">>) {

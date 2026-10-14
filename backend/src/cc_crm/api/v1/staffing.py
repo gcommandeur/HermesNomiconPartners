@@ -19,7 +19,7 @@ from cc_crm.api.staffing_dependencies import (
     staffing_owner_scope,
 )
 from cc_crm.core.errors import EntityNotFoundError, PermissionDeniedError
-from cc_crm.models.staffing import StaffingAssignmentStatus, StaffingWorkerStatus
+from cc_crm.models.staffing import StaffingAssignmentStatus, StaffingWorker, StaffingWorkerStatus
 from cc_crm.schemas.approval import ApprovalRequestRead, InvoiceStatusChange
 from cc_crm.schemas.staffing import (
     StaffingAssignmentCreate,
@@ -53,6 +53,7 @@ from cc_crm.schemas.staffing import (
     StaffingWorkerUpdate,
 )
 from cc_crm.services.approvals import ApprovalService
+from cc_crm.services.engagement_status import ensure_no_conflict
 from cc_crm.services.staffing_activation import StaffingActivationService
 from cc_crm.services.staffing_assignments import (
     StaffingAssignmentService,
@@ -250,10 +251,18 @@ def list_assignments(
     "/assignments", response_model=StaffingAssignmentRead, status_code=status.HTTP_201_CREATED
 )
 def create_assignment(
-    payload: StaffingAssignmentCreate, session: DatabaseSession, current_user: CurrentUser
+    payload: StaffingAssignmentCreate,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+    confirm_engagement: bool = False,
 ) -> StaffingAssignmentRead:
     forbid_money_for_non_admin(payload, current_user)
     _check_owner(session, current_user, payload.owner_user_id)
+    worker = session.get(StaffingWorker, payload.worker_id)
+    if worker is not None:  # unbekannte Leiharbeitnehmer meldet der Service wie bisher
+        ensure_no_conflict(
+            session, current_user, worker.candidate_id, "staffing", confirm_engagement
+        )
     row = StaffingAssignmentService(session).create(payload, current_user)
     return redact(assignment_read(row), current_user)
 

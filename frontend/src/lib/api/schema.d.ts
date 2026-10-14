@@ -59,6 +59,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/engagement-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Engagement Settings */
+        get: operations["get_engagement_settings_api_v1_admin_engagement_settings_get"];
+        /** Put Engagement Settings */
+        put: operations["put_engagement_settings_api_v1_admin_engagement_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/kpi-point-rules": {
         parameters: {
             query?: never;
@@ -936,6 +954,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/candidates/{candidate_id}/engagement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Candidate Engagement */
+        get: operations["get_candidate_engagement_api_v1_candidates__candidate_id__engagement_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidates/{candidate_id}/engagement-prefs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Engagement Prefs */
+        patch: operations["update_engagement_prefs_api_v1_candidates__candidate_id__engagement_prefs_patch"];
+        trace?: never;
+    };
     "/api/v1/candidates/{candidate_id}/history": {
         parameters: {
             query?: never;
@@ -1496,6 +1548,26 @@ export interface paths {
         head?: never;
         /** Update Email Template */
         patch: operations["update_email_template_api_v1_email_templates__key__patch"];
+        trace?: never;
+    };
+    "/api/v1/engagement/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Engagement Summary
+         * @description Sammelabfrage fuer ganze Listenseiten (eine Abfrage statt einer je Kandidat).
+         */
+        post: operations["engagement_summary_api_v1_engagement_summary_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/feedback": {
@@ -4530,6 +4602,31 @@ export interface components {
             /** Wechselgrund */
             wechselgrund?: string | null;
         };
+        /** CandidateEngagementRead */
+        CandidateEngagementRead: {
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Items */
+            items: components["schemas"]["EngagementItemRead"][];
+            /**
+             * Open For Direct
+             * @enum {string}
+             */
+            open_for_direct: "yes" | "no" | "unknown";
+            /**
+             * Open For Staffing
+             * @enum {string}
+             */
+            open_for_staffing: "yes" | "no" | "unknown";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "frei" | "im_direct" | "im_einsatz" | "beides" | "vermittelt";
+        };
         /** CandidateMatchRead */
         CandidateMatchRead: {
             candidate: components["schemas"]["CandidateRead"];
@@ -6270,6 +6367,65 @@ export interface components {
             name?: string | null;
             /** Subject */
             subject?: string | null;
+        };
+        /**
+         * EngagementItemRead
+         * @description Ein Prozess oder Einsatz des Kandidaten. Ohne Zugriff auf den Datensatz nur Kanal, Stufe,
+         *     Mitarbeiter und Datum: Kanzlei und IDs bleiben leer (`details_visible=False`).
+         */
+        EngagementItemRead: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "direct" | "staffing";
+            /** Client Name */
+            client_name?: string | null;
+            /** Details Visible */
+            details_visible: boolean;
+            /** Entity Id */
+            entity_id?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "process" | "placement" | "assignment";
+            /** Owner Name */
+            owner_name: string | null;
+            /** Since */
+            since: string | null;
+            /** Stage */
+            stage: string;
+            /** Until */
+            until: string | null;
+        };
+        /** EngagementPrefsUpdate */
+        EngagementPrefsUpdate: {
+            /** Open For Direct */
+            open_for_direct?: ("yes" | "no" | "unknown") | null;
+            /** Open For Staffing */
+            open_for_staffing?: ("yes" | "no" | "unknown") | null;
+        };
+        /** EngagementSettingsRead */
+        EngagementSettingsRead: {
+            /**
+             * Conflict Mode
+             * @enum {string}
+             */
+            conflict_mode: "warn" | "block";
+        };
+        /** EngagementSettingsUpdate */
+        EngagementSettingsUpdate: {
+            /**
+             * Conflict Mode
+             * @enum {string}
+             */
+            conflict_mode: "warn" | "block";
+        };
+        /** EngagementSummaryRequest */
+        EngagementSummaryRequest: {
+            /** Candidate Ids */
+            candidate_ids: string[];
         };
         /** EnrollmentCreate */
         EnrollmentCreate: {
@@ -10224,6 +10380,72 @@ export interface operations {
             };
         };
     };
+    get_engagement_settings_api_v1_admin_engagement_settings_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EngagementSettingsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_engagement_settings_api_v1_admin_engagement_settings_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EngagementSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EngagementSettingsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_kpi_point_rules_api_v1_admin_kpi_point_rules_get: {
         parameters: {
             query?: never;
@@ -11549,6 +11771,7 @@ export interface operations {
                 created_to?: string | null;
                 rollen_unbestaetigt?: boolean | null;
                 custom_field?: string | null;
+                engagement?: ("free_direct" | "free_staffing" | "engaged") | null;
                 sort_by?: ("candidate_number" | "name" | "job_title" | "city" | "salary_expectation" | "status") | null;
                 sort_dir?: "asc" | "desc";
                 offset?: number;
@@ -12115,6 +12338,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CvOutTargetsResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_candidate_engagement_api_v1_candidates__candidate_id__engagement_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateEngagementRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_engagement_prefs_api_v1_candidates__candidate_id__engagement_prefs_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EngagementPrefsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateEngagementRead"];
                 };
             };
             /** @description Validation Error */
@@ -13494,6 +13787,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmailTemplateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    engagement_summary_api_v1_engagement_summary_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EngagementSummaryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateEngagementRead"][];
                 };
             };
             /** @description Validation Error */
@@ -16177,7 +16505,9 @@ export interface operations {
     };
     create_assignment_api_v1_staffing_assignments_post: {
         parameters: {
-            query?: never;
+            query?: {
+                confirm_engagement?: boolean;
+            };
             header?: {
                 "X-API-Key"?: string | null;
             };
@@ -17353,7 +17683,9 @@ export interface operations {
     };
     create_submission_api_v1_submissions_post: {
         parameters: {
-            query?: never;
+            query?: {
+                confirm_engagement?: boolean;
+            };
             header?: {
                 "X-API-Key"?: string | null;
             };
