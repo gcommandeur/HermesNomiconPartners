@@ -20,6 +20,7 @@ import {
 import { PageHeader } from "@/components/crm/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCurrentUser } from "@/lib/api/hooks";
+import { brand } from "@/lib/brand";
 
 type Tile = { href: string; label: string; description: string; icon: typeof Users };
 
@@ -81,7 +82,7 @@ export default function AdministrationPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="Administration" />
+      <PageHeader eyebrow={brand.appName} title="Administration" />
       <div className="space-y-8">
         {GROUPS.map((group) => (
           <section key={group.title}>

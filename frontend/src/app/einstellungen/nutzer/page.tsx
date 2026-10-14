@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { apiPatch, apiPost } from "@/lib/api/client";
 import { useAdminUsersCache, useCurrentUser, invalidateAdminUsersCache } from "@/lib/api/hooks";
 import type { AdminUser, UserRole } from "@/lib/api/types";
+import { brand } from "@/lib/brand";
 
 const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: "member", label: "Mitarbeiter" },
@@ -76,7 +77,7 @@ export default function NutzerverwaltungPage() {
   if (!isAdmin) {
     return (
       <>
-        <PageHeader eyebrow="Hermes" title="Nutzerverwaltung" />
+        <PageHeader eyebrow={brand.appName} title="Nutzerverwaltung" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <ShieldOff size={28} className="text-brand-muted" />
@@ -97,7 +98,7 @@ export default function NutzerverwaltungPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="Nutzerverwaltung" />
+      <PageHeader eyebrow={brand.appName} title="Nutzerverwaltung" />
       <ErrorBanner message={rowError} className="mb-3" />
       {isLoading ? (
         <div className="space-y-2">

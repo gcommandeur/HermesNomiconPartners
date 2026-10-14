@@ -17,6 +17,7 @@ import {
   useUnownedSubmissionsCache,
 } from "@/lib/api/hooks";
 import { STAGE_LABELS } from "@/lib/stage-labels";
+import { brand } from "@/lib/brand";
 
 const selectClass =
   "h-9 rounded-md border border-white/15 bg-brand-surface px-2 text-sm text-brand-platinum focus:outline-none focus:ring-2 focus:ring-brand-accent/30 disabled:opacity-50";
@@ -55,7 +56,7 @@ export default function ProzesseOhneVerantwortlichenPage() {
   if (!isAdmin) {
     return (
       <>
-        <PageHeader eyebrow="Hermes" title="Prozesse ohne Verantwortlichen" />
+        <PageHeader eyebrow={brand.appName} title="Prozesse ohne Verantwortlichen" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <ShieldOff size={28} className="text-brand-muted" />
@@ -71,7 +72,7 @@ export default function ProzesseOhneVerantwortlichenPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="Prozesse ohne Verantwortlichen" />
+      <PageHeader eyebrow={brand.appName} title="Prozesse ohne Verantwortlichen" />
       <p className="mb-4 max-w-2xl text-xs text-brand-muted">
         Diese Prozesse haben keinen Verantwortlichen (aus der Zeit vor dem Feld). Für Mitarbeiter und
         Teamleiter sind sie unsichtbar und tauchen in deren Listen und Kennzahlen nicht auf, bis du

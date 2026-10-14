@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useCurrentUser, useTeamKpisCache, useUnownedSubmissionsCache } from "@/lib/api/hooks";
 import { PITCH_LABEL, STAGE_LABELS } from "@/lib/stage-labels";
 import { CommissionReport } from "@/components/crm/commission-report"; // NOMICON
+import { brand } from "@/lib/brand";
 
 const STAGE_COLUMNS: { key: string; label: string }[] = [
   { key: "pitch", label: PITCH_LABEL },
@@ -51,7 +52,7 @@ export default function GeschaeftsfuehrungPage() {
   if (!isAdmin) {
     return (
       <>
-        <PageHeader eyebrow="Hermes" title="Geschäftsführung" />
+        <PageHeader eyebrow={brand.appName} title="Geschäftsführung" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <ShieldOff size={28} className="text-brand-muted" />
@@ -73,7 +74,7 @@ export default function GeschaeftsfuehrungPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Hermes"
+        eyebrow={brand.appName}
         title="Geschäftsführung"
         action={
           <div className="flex gap-1.5">

@@ -394,7 +394,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
           "cursor-pointer rounded-lg border p-2 shadow-[0_1px_1px_rgba(0,0,0,.03)]",
           !mobile && "active:cursor-grabbing",
           dueFollowUp
-            ? "border-red-400/50 bg-red-950/20 hover:border-red-400/70"
+            ? "border-brand-danger/40 border-l-4 border-l-brand-danger bg-brand-danger-soft hover:border-brand-danger/70" // NOMICON: Nachfassen fällig klar erkennbar
             : "border-white/10 bg-brand-panel hover:border-brand-accent/50",
         )}
       >

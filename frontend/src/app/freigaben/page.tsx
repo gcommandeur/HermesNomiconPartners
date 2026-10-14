@@ -14,6 +14,7 @@ import { useCurrentUser } from "@/lib/api/hooks";
 import { approveApprovalRequest, getApprovalRequests, rejectApprovalRequest } from "@/lib/api/queries";
 import { formatDate } from "@/lib/utils";
 import type { ApprovalKind, ApprovalRequest } from "@/lib/api/types";
+import { brand } from "@/lib/brand";
 
 const KIND_LABELS: Record<ApprovalKind, string> = {
   new_client: "Neue Kanzlei",
@@ -114,7 +115,7 @@ export default function FreigabenPage() {
   if (!isAdmin) {
     return (
       <>
-        <PageHeader eyebrow="Hermes" title="Freigaben" />
+        <PageHeader eyebrow={brand.appName} title="Freigaben" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <ShieldOff size={28} className="text-brand-muted" />
@@ -133,7 +134,7 @@ export default function FreigabenPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="Freigaben" />
+      <PageHeader eyebrow={brand.appName} title="Freigaben" />
       <ErrorBanner message={actionError} className="mb-3" />
       {isLoading && <div className="h-24 animate-pulse rounded-lg bg-brand-surface" />}
       {!isLoading && requests.length === 0 && (

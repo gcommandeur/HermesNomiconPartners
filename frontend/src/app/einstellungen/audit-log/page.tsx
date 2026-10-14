@@ -6,6 +6,7 @@ import { ErrorState } from "@/components/crm/error-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuditLogsCache, useCurrentUser } from "@/lib/api/hooks";
 import { formatDateTime } from "@/lib/utils";
+import { brand } from "@/lib/brand";
 
 const ACTION_LABELS: Record<string, string> = {
   admin_fields_changed: "Admin-Recht/Status geändert",
@@ -47,7 +48,7 @@ export default function AuditLogPage() {
   if (!isAdmin) {
     return (
       <>
-        <PageHeader eyebrow="Hermes" title="Audit-Log" />
+        <PageHeader eyebrow={brand.appName} title="Audit-Log" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <ShieldOff size={28} className="text-brand-muted" />
@@ -68,7 +69,7 @@ export default function AuditLogPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="Audit-Log" />
+      <PageHeader eyebrow={brand.appName} title="Audit-Log" />
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 8 }).map((_, index) => (

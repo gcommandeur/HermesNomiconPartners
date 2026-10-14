@@ -14,6 +14,7 @@ import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { Button } from "@/components/ui/button";
 import { apiBaseUrl, apiPost } from "@/lib/api/client";
 import { useCurrentUser } from "@/lib/api/hooks";
+import { brand } from "@/lib/brand";
 
 export default function EinstellungenPage() {
   const { data, isLoading, error, mutate: retry } = useCurrentUser();
@@ -66,7 +67,7 @@ export default function EinstellungenPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="Einstellungen" />
+      <PageHeader eyebrow={brand.appName} title="Einstellungen" />
       <OutlookConnectionCard />
       <MyMailAccountCard />
       <ClaudeConnectionCard />
@@ -74,7 +75,7 @@ export default function EinstellungenPage() {
       <div className="space-y-5">
         <CollapsibleSection
           title="Kalender mit Outlook synchronisieren"
-          description="Persönlicher, schreibgeschützter Kalender-Feed - zeigt nur deine eigenen Termine aus Hermes CRM (Interviews, Quali Calls, sonstige Termine)."
+          description="Persönlicher, schreibgeschützter Kalender-Feed - zeigt nur deine eigenen Termine aus dem CRM (Interviews, Quali Calls, sonstige Termine)."
           icon={<CalendarDays size={16} className="mt-0.5 text-brand-accent-light" />}
           defaultOpen
         >

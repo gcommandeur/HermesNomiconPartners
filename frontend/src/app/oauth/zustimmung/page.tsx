@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/crm/page-header";
 import { decideClaudeConsent, getClaudeConsentInfo } from "@/lib/api/queries";
 import type { ClaudeConsentInfo } from "@/lib/api/types";
+import { brand } from "@/lib/brand";
 
-/** Zustimmung zur Verbindung von Claude mit Hermes. Die Anfrage-ID kommt aus
+/** Zustimmung zur Verbindung von Claude mit dem CRM. Die Anfrage-ID kommt aus
  * /api/v1/oauth/authorize; ohne Hermes-Login führt die Middleware zuerst zur Anmeldung
  * und danach hierher zurück. */
 export default function ClaudeZustimmungPage() {
@@ -45,7 +46,7 @@ export default function ClaudeZustimmungPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="Claude verbinden" />
+      <PageHeader eyebrow={brand.appName} title="Claude verbinden" />
       <Card className="max-w-2xl">
         <CardContent className="space-y-4">
           {info ? (
@@ -53,10 +54,10 @@ export default function ClaudeZustimmungPage() {
               <p className="text-sm text-brand-text">
                 <strong>{info.client_name}</strong>{" "}
                 <span className="text-xs text-brand-warning">(Name vom Client gemeldet, ungeprüft)</span> möchte sich mit
-                deinem Hermes-Konto verbinden (<span className="text-brand-muted">{info.user_email}</span>).
+                deinem Konto verbinden (<span className="text-brand-muted">{info.user_email}</span>).
               </p>
               <ul className="list-disc space-y-1 pl-5 text-sm text-brand-soft">
-                <li>Claude sieht nur, was du in Hermes sehen darfst – ohne Kontaktdaten und Gehälter.</li>
+                <li>Claude sieht nur, was du im CRM sehen darfst – ohne Kontaktdaten und Gehälter.</li>
                 <li>Claude kann Notizen, Aufgaben und Mail-Entwürfe nur <strong>vorschlagen</strong>. Angelegt wird
                   erst, wenn du unter „Claude-Vorschläge“ freigibst; Mails sendest du immer selbst.</li>
                 <li>Jeder Aufruf steht im Audit-Log. Du kannst die Verbindung jederzeit unter Einstellungen trennen.</li>

@@ -30,6 +30,7 @@ import {
   useMailAccountsCache,
 } from "@/lib/api/hooks";
 import type { MailAccount, MailMatchStatus, MailMessageListItem, MailSyncResult } from "@/lib/api/types";
+import { brand } from "@/lib/brand";
 
 const MESSAGES_PAGE_SIZE = 50;
 
@@ -441,7 +442,7 @@ export default function PostfaecherPage() {
   if (!isAdmin) {
     return (
       <>
-        <PageHeader eyebrow="Hermes" title="E-Mails & Konten" />
+        <PageHeader eyebrow={brand.appName} title="E-Mails & Konten" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <ShieldOff size={28} className="text-brand-dim" />
@@ -458,7 +459,7 @@ export default function PostfaecherPage() {
   if (error) {
     return (
       <>
-        <PageHeader eyebrow="Hermes" title="E-Mails & Konten" />
+        <PageHeader eyebrow={brand.appName} title="E-Mails & Konten" />
         <ErrorState onRetry={() => void retry()} />
       </>
     );
@@ -466,7 +467,7 @@ export default function PostfaecherPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="E-Mails & Konten" />
+      <PageHeader eyebrow={brand.appName} title="E-Mails & Konten" />
 
       <div className="space-y-5">
         <Card>
