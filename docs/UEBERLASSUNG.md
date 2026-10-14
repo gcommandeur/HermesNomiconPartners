@@ -238,3 +238,12 @@ müssten folgende Stellen konfigurierbar werden — bisher fest im Code:
 * **Fachlogik:** Garantiezeit (`services/warranty.py`), Closing-Score, KPI-Punkte je Pipeline-Stufe.
 * **Überlassung selbst** ist branchenneutral; nur die Checkliste (sechs feste Punkte) und die Branche je
   Vertrag (Freitext) wären je Branche anzupassen.
+
+## Ergänzungen vom 2026-10-14 (Details in `docs/ANSICHTEN.md`)
+
+- **Disposition** (`GET /staffing/disposition`): Kennzahlen, Bench, Stundenzettel-Eingang; Einsatz-Board auf `/ueberlassung`.
+- **Übernahme-Fee nach Einsatzdauer:** einstellbare Staffel (Platzhalter-Startwerte, Admin, Compliance-Seite);
+  `GET/PUT /staffing/takeover-fee-tiers`, Vorschau `GET /staffing/assignments/{id}/takeover-preview`.
+- **Als Einsatz anbieten** (`POST /staffing/offer-from-candidate`): Profil als Anwärter, optional geplanter Einsatz.
+- Alle `/staffing/**`-Routen verlangen die Ansicht **Überlassung**; der Kandidatenstatus warnt (oder sperrt), wenn
+  für einen bereits im Austausch befindlichen Kandidaten ein Einsatz angelegt wird.

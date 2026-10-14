@@ -176,7 +176,6 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
   };
   const clientName = (id: string | null) => clients.find((client) => client.id === id)?.name ?? "Kanzlei offen";
   const contactPersonName = (id: string | null) => formatContactName(contacts.find((contact) => contact.id === id));
-  const expectedFee = (item: CandidateSubmission) => item.expected_fee ?? Math.round(Number(candidates.find((candidate) => candidate.id === item.candidate_id)?.salary_expectation?.replace(/\D/g, "") ?? 80000) * 0.27);
   // NOMICON: Anzeige der Fee ohne erfundenen Wert - ab Interview "Fee offen", davor die alte
   // Schätzung aus dem Gehaltswunsch, ausdrücklich als Schätzung (~) gekennzeichnet.
   const feeText = (item: CandidateSubmission) => {
@@ -185,6 +184,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
     if (feeIsOpen(item)) return "Fee offen";
     return `~${formatEuro(Number(expectedFee(item)))}`;
   };
+  const expectedFee = (item: CandidateSubmission) => item.expected_fee ?? Math.round(Number(candidates.find((candidate) => candidate.id === item.candidate_id)?.salary_expectation?.replace(/\D/g, "") ?? 80000) * 0.27);
 
   // Nach submission_id gruppiert (aufsteigend nach scheduled_at sortiert,
   // "R1"/"R2"/... entspricht dieser Reihenfolge) - einmalig ueber die
@@ -684,9 +684,10 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
         </div>
       )}
 
+      <PipelineKpiStrip items={items} /> {/* NOMICON */}
+
       {view === "kanban" ? (
         <div className="pb-4">
-      <PipelineKpiStrip items={items} /> {/* NOMICON */}
           {/* Mobile (<lg): Stufen-Auswahl + nur die Prozesse DIESER EINEN
            * Stufe darunter, statt sechs (meist leerer) Spalten/Bloecke
            * uebereinander - Nutzer-Vorgabe "Mobile". Ab lg identisches
@@ -745,9 +746,6 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                     <h2 className="truncate text-xs font-semibold text-brand-text">{column.title}</h2>
                     <span className="grid size-5 shrink-0 place-items-center rounded-full border border-white/10 bg-brand-panel text-[9.5px] text-brand-soft">{columnItems.length}</span>
                   </header>
-                  <div className="scrollbar-subtle max-h-[calc(100vh-360px)] space-y-2 overflow-y-auto">
-                    {columnItems.map((item) => renderCard(item, { mobile: false }))}
-                    {columnItems.length === 0 && <div className="rounded-lg border border-dashed border-white/10 p-5 text-center text-[10.45px] text-brand-muted">Keine Prozesse</div>}
                   {/* NOMICON: Summe der erwarteten Fees der Spalte (gewichtet, wo eine Abschlusswahrscheinlichkeit vorliegt) */}
                   {(() => {
                     const sums = summarizeItems(columnItems);
@@ -759,6 +757,9 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                       </p>
                     );
                   })()}
+                  <div className="scrollbar-subtle max-h-[calc(100vh-360px)] space-y-2 overflow-y-auto">
+                    {columnItems.map((item) => renderCard(item, { mobile: false }))}
+                    {columnItems.length === 0 && <div className="rounded-lg border border-dashed border-white/10 p-5 text-center text-[10.45px] text-brand-muted">Keine Prozesse</div>}
                   </div>
                 </section>
               );

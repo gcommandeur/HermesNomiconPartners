@@ -54,7 +54,7 @@ neu erzeugen. Migrationen aus Hermes nicht kopieren, sondern als neue Revision i
 
 **Bauweise:** Nomicon-Code steht in NEUEN Dateien, die es in Hermes nicht gibt. Aenderungen an
 gemeinsamen Dateien sind minimal und mit `NOMICON` markiert (`grep -rn NOMICON backend frontend`).
-Tabellen tragen das Praefix `staffing_`, die Migration den Dateinamen-Praefix `nomicon_`.
+Tabellen tragen das Praefix `staffing_` (Ansichten/Kandidatenstatus: `user_view_*`, `candidate_engagement_prefs`), die Migrationen den Dateinamen-Praefix `nomicon_`.
 
 **Neue Dateien (Backend):**
 - `models/staffing.py`, `schemas/staffing.py`, `repositories/staffing.py`
@@ -105,6 +105,25 @@ Tabellen tragen das Praefix `staffing_`, die Migration den Dateinamen-Praefix `n
 - `frontend/src/lib/api/openapi.json` und `schema.d.ts` sind ERZEUGT: nach jedem Merge aus Hermes neu
   erzeugen (`cd backend && python scripts/export_openapi.py && cd ../frontend && pnpm gen:api`),
   Konflikte dort nie von Hand loesen.
+
+**Ansichten, Kandidatenstatus, Gesamt, Demo-Login (2026-10-14, Doku: `docs/ANSICHTEN.md`):**
+- Backend neu: `models/access_views.py`, `models/engagement.py`, `schemas/{access_views,engagement,management,client_business,staffing_disposition}.py`,
+  `services/{access_views,engagement_status,management_calc,management_report,client_business,staffing_disposition,staffing_takeover_fee,demo_login}.py`,
+  `api/view_dependencies.py`, `api/v1/{access_views,engagement,management,client_business,demo_login}.py`,
+  `scripts/seed_demo.py`, Migrationen `nomicon_04_views.py` (`nomicon04views`) und `nomicon_05_engagement.py`
+  (`nomicon05engagement`, aktueller Head); Tests `tests/api/test_{access_views,engagement,demo_login,management_overview,staffing_disposition,staffing_bridges,takeover_fee_tiers}.py`,
+  `tests/services/test_management_calc.py`
+- Frontend neu: `lib/api/{views,views-hooks,engagement,engagement-hooks,management}.ts`, `lib/fee-forecast.ts`,
+  `components/crm/{view-switcher,no-access,view-guard,engagement-*,pipeline-kpi-strip,staffing-disposition-view,staffing-assignment-board,staffing-takeover-tiers,staffing-offer-modal,client-business-panel,management-overview,demo-login-buttons}.tsx`,
+  `app/einstellungen/ansichten/page.tsx`, `app/api/login/demo/route.ts`, Layouts `app/{prozesse,vakanzen,sourcing,gewaehrleistung,prioritaet,ueberlassung}/layout.tsx`
+- **Markierte Aenderungen an gemeinsamen Dateien (Konfliktrisiko bei Hermes-Aenderungen):** `api/v1/router.py` (Router-Abhaengigkeiten je Ansicht, 8 Zeilen),
+  `api/v1/approvals.py` (2 Routen mit `require_direct_view`), `api/v1/candidates.py` + `services/candidates.py` + `repositories/candidates.py`
+  (`engagement`-Filter als `extra_filters`), `api/v1/submissions.py` (`confirm_engagement` beim Anlegen), `core/config.py` (`demo_login`),
+  `main.py` (Start-Pruefung Demo-Login), `scripts/seed_data.py` (`--demo`, Seed-Prozesse mit Verantwortlichem), `models/__init__.py`,
+  Frontend: `lib/brand.ts` (Nomicon-Standardwerte), `components/layout/{navigation.ts,sidebar.tsx,topbar.tsx,bottom-nav.tsx}`,
+  `components/crm/{submission-views,candidates-table,submission-create-modal,calendar-event-modal}.tsx`,
+  `app/kandidaten/[id]/page.tsx`, `app/kanzleien/[id]/page.tsx`, `app/login/page.tsx`, `lib/api/{queries,types,use-server-search}.ts`,
+  alle Seiten mit `eyebrow={brand.appName}`
 
 **Alembic-Heads:** Bekommt Hermes spaeter eine eigene Migration, entstehen nach dem Merge zwei
 Heads (Hermes-Kopf und `nomicon01staff`). Dann eine Merge-Migration anlegen

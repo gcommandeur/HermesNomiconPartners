@@ -38,8 +38,8 @@ import { CustomFieldsPanel } from "@/components/crm/custom-fields-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { abschlussartLabel, formatDate, rechtsgebietLabel, rolleLabel } from "@/lib/utils";
 import type { CandidateSubmission } from "@/lib/api/types"; // NOMICON
+import { abschlussartLabel, formatDate, rechtsgebietLabel, rolleLabel } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -64,9 +64,9 @@ export default async function CandidateDetailPage({
     : from === "prozesse"
       ? { href: "/prozesse", label: "Zurück zu Prozesse" }
       : { href: "/kandidaten", label: "Zur Kandidatenliste" };
-  // Nur die Prozesse DIESES Kandidaten und danach nur die darin referenzierten
   // NOMICON: Prozesse nur mit Ansicht Direct abfragen (sonst 403), Überlassungs-Reiter nur mit Ansicht Überlassung.
   const [canDirect, canStaffing] = await Promise.all([hasView("direct"), hasView("staffing")]);
+  // Nur die Prozesse DIESES Kandidaten und danach nur die darin referenzierten
   // Kanzleien laden - vorher wurden hier ALLE Prozesse und ALLE Kanzleien
   // (mehrere tausend, seitenweise nacheinander) geladen, nur um ein paar
   // Kanzleinamen anzuzeigen (~10s Ladezeit).
@@ -120,8 +120,8 @@ export default async function CandidateDetailPage({
         <div>
           <div className="mb-3 flex items-center gap-3">
             <StatusPill status={candidate.status} />
-            {candidate.has_ghosting_history && <Badge tone="red" className="gap-1"><Ghost size={12} />Ghosting-Historie</Badge>}
             <EngagementHeaderBadge candidateId={candidate.id} /> {/* NOMICON */}
+            {candidate.has_ghosting_history && <Badge tone="red" className="gap-1"><Ghost size={12} />Ghosting-Historie</Badge>}
             <span className="text-xs text-brand-gray">Aktualisiert {formatDate(candidate.updated_at)}</span>
           </div>
           <h1 className="text-3xl font-semibold tracking-[-.035em]">{candidate.first_name} {candidate.last_name}</h1>
@@ -174,9 +174,10 @@ export default async function CandidateDetailPage({
         </div>
       </div>
 
+      <EngagementPanel candidateId={candidate.id} /> {/* NOMICON */}
+
       <CandidateProcessLog candidateId={candidate.id} />
 
-      <EngagementPanel candidateId={candidate.id} /> {/* NOMICON */}
       {submissions.length > 0 && (
         <div className="mb-6 space-y-4 border-b border-white/10 pb-6">
           <CandidateSubmissionStages submissions={submissions} clients={clients} />

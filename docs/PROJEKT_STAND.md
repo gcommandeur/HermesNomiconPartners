@@ -63,6 +63,8 @@ Stand: `entwicklung` = Commits `a7907d9` bis `e48bb33` plus Dokumentations-Commi
 
 ## Entscheidungen (Kurzfassung, Details in `ENTSCHEIDUNGEN.md`)
 
+- **2026-10-14 (Auftrag Nutzer):** Ansichten Direct/Ueberlassung/Gesamt, gemeinsamer Kandidatenstatus, zwei lokale Demo-Logins - siehe `docs/ANSICHTEN.md` (Regeln, Route-zu-Ansicht, Schutzmassnahmen). Offene Rueckfragen dort (Kanzleiname bei fremden Prozessen, Uebernahme-Fee-Staffel, Lohnkosten-Annahme, Standardansichten, Einwilligung AÜ).
+
 - **2026-10-12 (Nutzer):** Hermes und Nomicon sind gleichberechtigt und getrennt gebaut, nicht Kopie/Nachzuegler; es wird immer verglichen (`scripts/vergleich.py`, `docs/VERGLEICH.md`). Offen: Wasserzeichen VERTRAULICH im DOCX-Export (V-002).
 
 - **2026-10-05 (Nutzer):** `short_profile` bleibt aus der MCP-Ausgabe, zuschaltbar per `CC_CRM_AI_INCLUDE_PROFILE` (Standard aus). DSGVO-Umfang: Anonymisierung leert zusaetzlich `cv_extraction_raw`, Stationen, aktuellen Arbeitgeber, Examensnoten, Gehalt und Kuendigungsfrist; Einwilligungsnachweis (Datum, Quelle, Pseudonym `candidate_number`, `anonymized_at`) bleibt, das Flag `consent_received` faellt auf false; Lebenslauf-Bytes endgueltig fehlgeschlagener Scan-Jobs werden sofort geloescht.
