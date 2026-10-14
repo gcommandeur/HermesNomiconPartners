@@ -9,6 +9,8 @@ import {
   getStaffingAssignments,
   getStaffingContracts,
   getStaffingDeadlines,
+  getTakeoverFeeTiers,
+  getTakeoverPreview,
   getStaffingDisposition,
   getStaffingInvoice,
   getStaffingInvoices,
@@ -94,4 +96,12 @@ export function useStaffingInvoice(id: string) {
 /** Nach jeder Änderung aufrufen: lädt alle Überlassungs-Listen und -Details neu. */
 export function invalidateStaffing() {
   return mutate((key) => typeof key === "string" && key.startsWith("/staffing"));
+}
+
+export function useTakeoverFeeTiers() {
+  return useSWR("/staffing/takeover-fee-tiers", getTakeoverFeeTiers, config);
+}
+
+export function useTakeoverPreview(assignmentId: string, takeoverDate: string) {
+  return useSWR(takeoverDate ? `/staffing/assignments/${assignmentId}/takeover-preview?${takeoverDate}` : null, () => getTakeoverPreview(assignmentId, takeoverDate), config);
 }

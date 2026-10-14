@@ -26,6 +26,7 @@ import {
 } from "@/lib/api/staffing";
 import { formatDate } from "@/lib/utils";
 import { DeadlineRow } from "./staffing-overview-view";
+import { StaffingTakeoverTiers } from "./staffing-takeover-tiers";
 import { EmptyHint, LEGAL_NOTICE, LoadError, LoadingRows, TrafficBadge, labelClass } from "./staffing-ui";
 
 export function StaffingComplianceView() {
@@ -36,6 +37,7 @@ export function StaffingComplianceView() {
       <LicenseSection isAdmin={isAdmin} />
       <DeadlineSection />
       <SettingsSection isAdmin={isAdmin} />
+      <StaffingTakeoverTiers isAdmin={isAdmin} /> {/* NOMICON: Übernahme-Fee-Staffel */}
     </div>
   );
 }

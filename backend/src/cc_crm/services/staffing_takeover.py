@@ -26,6 +26,7 @@ from cc_crm.schemas.submission import CandidateSubmissionCreate
 from cc_crm.services import staffing_audit as audit
 from cc_crm.services.staffing_activation import StaffingActivationService
 from cc_crm.services.staffing_assignments import StaffingAssignmentService
+from cc_crm.services.staffing_takeover_fee import load_tiers, months_between, tier_percent
 from cc_crm.services.submissions import CandidateSubmissionService
 
 
@@ -52,9 +53,18 @@ class StaffingTakeoverService:
         if worker is None or client is None:
             raise EntityNotFoundError("Leiharbeitnehmer oder Kunde nicht gefunden")
 
-        percentage = (
-            payload.fee_percentage if payload.fee_percentage is not None else client.fee_percentage
-        )
+        # NOMICON: ohne eigenen Prozentsatz = Honorarsatz des Kunden x Staffel nach Einsatzdauer
+        months = months_between(assignment.start_date, day)
+        tier = None
+        if payload.fee_percentage is not None:
+            percentage = payload.fee_percentage
+        elif client.fee_percentage is not None:
+            tier = tier_percent(months, load_tiers(self.session))
+            percentage = (client.fee_percentage * tier / Decimal("100")).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+        else:
+            percentage = None
         expected_fee = None
         if payload.annual_salary is not None and percentage is not None:
             expected_fee = (payload.annual_salary * percentage / Decimal("100")).quantize(
@@ -100,5 +110,9 @@ class StaffingTakeoverService:
         )
         self.session.commit()
         return StaffingTakeoverResult(
-            assignment=assignments.detail(assignment_id, day), submission_id=submission.id
+            assignment=assignments.detail(assignment_id, day),
+            submission_id=submission.id,
+            months_worked=months,
+            tier_percent=tier,
+            applied_fee_percentage=percentage,
         )

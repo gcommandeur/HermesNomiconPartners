@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, Building2, Mail, Phone, Star } from "lucide-react";
 import { hasView, noData } from "@/lib/api/views"; // NOMICON
+import { ClientBusinessPanel } from "@/components/crm/client-business-panel"; // NOMICON
 import type { CandidateSubmission } from "@/lib/api/types"; // NOMICON
 import { getCandidates, getClients, getContacts, getDocumentsForOwner, getGroupLocations, getSubmissions } from "@/lib/api/queries";
 import { Card, CardContent } from "@/components/ui/card";
@@ -99,6 +100,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           <DocumentPanel ownerType="client" ownerId={client.id} documentType="vertrag" documents={documents} />
         </TabsContent>
       </Tabs>
+      <ClientBusinessPanel clientId={client.id} /> {/* NOMICON: Geschäft mit dieser Kanzlei */}
     </>
   );
 }

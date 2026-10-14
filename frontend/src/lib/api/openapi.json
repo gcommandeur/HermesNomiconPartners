@@ -4287,6 +4287,126 @@
         "title": "CandidateUpdate",
         "type": "object"
       },
+      "ClientAssignmentRead": {
+        "properties": {
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "owner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Name"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "worker_name": {
+            "title": "Worker Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "worker_name",
+          "status",
+          "start_date",
+          "end_date",
+          "owner_name"
+        ],
+        "title": "ClientAssignmentRead",
+        "type": "object"
+      },
+      "ClientBusinessRead": {
+        "description": "Jeder Abschnitt ist `None`, wenn dem Nutzer die zugehoerige Ansicht fehlt (processes: Direct,\nassignments/deadlines: Ueberlassung, revenue: Admin). Prozesse und Einsaetze nur im eigenen\nSichtbereich (Owner-Scope).",
+        "properties": {
+          "assignments": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ClientAssignmentRead"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignments"
+          },
+          "deadlines": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/StaffingPairDeadlineRead"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadlines"
+          },
+          "processes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ClientProcessRead"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processes"
+          },
+          "revenue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientRevenueRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "processes",
+          "assignments",
+          "deadlines",
+          "revenue"
+        ],
+        "title": "ClientBusinessRead",
+        "type": "object"
+      },
       "ClientCompanyCreate": {
         "properties": {
           "agb_version": {
@@ -5329,6 +5449,73 @@
           "already_submitted"
         ],
         "title": "ClientMatchRead",
+        "type": "object"
+      },
+      "ClientProcessRead": {
+        "properties": {
+          "candidate_name": {
+            "title": "Candidate Name",
+            "type": "string"
+          },
+          "expected_fee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Fee"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "owner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Name"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "candidate_name",
+          "status",
+          "owner_name",
+          "expected_fee"
+        ],
+        "title": "ClientProcessRead",
+        "type": "object"
+      },
+      "ClientRevenueRead": {
+        "description": "Nur fuer Admins.",
+        "properties": {
+          "placement_fees_paid": {
+            "title": "Placement Fees Paid",
+            "type": "string"
+          },
+          "staffing_invoiced": {
+            "title": "Staffing Invoiced",
+            "type": "string"
+          }
+        },
+        "required": [
+          "placement_fees_paid",
+          "staffing_invoiced"
+        ],
+        "title": "ClientRevenueRead",
         "type": "object"
       },
       "ClientStatus": {
@@ -17036,6 +17223,101 @@
         "title": "StaffingLicenseUpdate",
         "type": "object"
       },
+      "StaffingOfferInput": {
+        "description": "\"Als Einsatz anbieten\" (Direct -> Ueberlassung): legt (falls noetig) das Leiharbeitnehmer-\nProfil als Anwaerter an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz.",
+        "properties": {
+          "candidate_id": {
+            "format": "uuid",
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "client_company_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Company Id"
+          },
+          "owner_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner User Id"
+          },
+          "planned_end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned End Date"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          }
+        },
+        "required": [
+          "candidate_id"
+        ],
+        "title": "StaffingOfferInput",
+        "type": "object"
+      },
+      "StaffingOfferResult": {
+        "properties": {
+          "assignment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment Id"
+          },
+          "worker_created": {
+            "title": "Worker Created",
+            "type": "boolean"
+          },
+          "worker_id": {
+            "format": "uuid",
+            "title": "Worker Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "worker_id",
+          "worker_created",
+          "assignment_id"
+        ],
+        "title": "StaffingOfferResult",
+        "type": "object"
+      },
       "StaffingOverviewRead": {
         "properties": {
           "active_assignments": {
@@ -17331,15 +17613,85 @@
         "title": "StaffingTakeoverInput",
         "type": "object"
       },
+      "StaffingTakeoverPreview": {
+        "description": "Vorschau fuer die Maske: wie sich die Staffel auf diese Uebernahme auswirkt.",
+        "properties": {
+          "base_fee_percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Fee Percentage"
+          },
+          "effective_fee_percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Fee Percentage"
+          },
+          "months_worked": {
+            "title": "Months Worked",
+            "type": "integer"
+          },
+          "tier_percent": {
+            "title": "Tier Percent",
+            "type": "string"
+          }
+        },
+        "required": [
+          "months_worked",
+          "tier_percent",
+          "base_fee_percentage",
+          "effective_fee_percentage"
+        ],
+        "title": "StaffingTakeoverPreview",
+        "type": "object"
+      },
       "StaffingTakeoverResult": {
         "properties": {
+          "applied_fee_percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied Fee Percentage"
+          },
           "assignment": {
             "$ref": "#/components/schemas/StaffingAssignmentDetail"
+          },
+          "months_worked": {
+            "default": 0,
+            "title": "Months Worked",
+            "type": "integer"
           },
           "submission_id": {
             "format": "uuid",
             "title": "Submission Id",
             "type": "string"
+          },
+          "tier_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier Percent"
           }
         },
         "required": [
@@ -18130,6 +18482,105 @@
         ],
         "title": "SubmissionStatus",
         "type": "string"
+      },
+      "TakeoverFeeTierInput": {
+        "properties": {
+          "percent_of_fee": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Percent Of Fee"
+          },
+          "up_to_months": {
+            "anyOf": [
+              {
+                "maximum": 240.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Up To Months"
+          }
+        },
+        "required": [
+          "percent_of_fee"
+        ],
+        "title": "TakeoverFeeTierInput",
+        "type": "object"
+      },
+      "TakeoverFeeTierRead": {
+        "properties": {
+          "percent_of_fee": {
+            "title": "Percent Of Fee",
+            "type": "string"
+          },
+          "up_to_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Up To Months"
+          }
+        },
+        "required": [
+          "up_to_months",
+          "percent_of_fee"
+        ],
+        "title": "TakeoverFeeTierRead",
+        "type": "object"
+      },
+      "TakeoverFeeTiersRead": {
+        "properties": {
+          "notice": {
+            "title": "Notice",
+            "type": "string"
+          },
+          "tiers": {
+            "items": {
+              "$ref": "#/components/schemas/TakeoverFeeTierRead"
+            },
+            "title": "Tiers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tiers",
+          "notice"
+        ],
+        "title": "TakeoverFeeTiersRead",
+        "type": "object"
+      },
+      "TakeoverFeeTiersUpdate": {
+        "properties": {
+          "tiers": {
+            "items": {
+              "$ref": "#/components/schemas/TakeoverFeeTierInput"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Tiers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tiers"
+        ],
+        "title": "TakeoverFeeTiersUpdate",
+        "type": "object"
       },
       "TakeoverRateRead": {
         "properties": {
@@ -25443,6 +25894,70 @@
         "summary": "Update Client",
         "tags": [
           "clients"
+        ]
+      }
+    },
+    "/api/v1/clients/{client_id}/business": {
+      "get": {
+        "operationId": "get_client_business_api_v1_clients__client_id__business_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBusinessRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Client Business",
+        "tags": [
+          "client-business"
         ]
       }
     },
@@ -32936,6 +33451,88 @@
         ]
       }
     },
+    "/api/v1/staffing/assignments/{assignment_id}/takeover-preview": {
+      "get": {
+        "description": "Wie wirkt die Staffel der Uebernahme-Fee bei diesem Einsatz (Monate, Anteil, Honorarsatz).",
+        "operationId": "preview_takeover_api_v1_staffing_assignments__assignment_id__takeover_preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "takeover_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Takeover Date"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingTakeoverPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Takeover",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
     "/api/v1/staffing/assignments/{assignment_id}/timesheets": {
       "get": {
         "operationId": "list_timesheets_api_v1_staffing_assignments__assignment_id__timesheets_get",
@@ -34070,6 +34667,81 @@
         ]
       }
     },
+    "/api/v1/staffing/offer-from-candidate": {
+      "post": {
+        "description": "Legt das Leiharbeitnehmer-Profil (Anwaerter) und optional einen geplanten Einsatz an. Ist der\nKandidat schon im Austausch, greift der Hinweis (409, mit Bestaetigung) bzw. die Sperre.",
+        "operationId": "offer_candidate_as_assignment_api_v1_staffing_offer_from_candidate_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "confirm_engagement",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Confirm Engagement",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffingOfferInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingOfferResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Offer Candidate As Assignment",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
     "/api/v1/staffing/overview": {
       "get": {
         "operationId": "get_overview_api_v1_staffing_overview_get",
@@ -34235,6 +34907,122 @@
           }
         ],
         "summary": "Put Settings",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/takeover-fee-tiers": {
+      "get": {
+        "operationId": "get_takeover_fee_tiers_api_v1_staffing_takeover_fee_tiers_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeoverFeeTiersRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Takeover Fee Tiers",
+        "tags": [
+          "staffing"
+        ]
+      },
+      "put": {
+        "operationId": "put_takeover_fee_tiers_api_v1_staffing_takeover_fee_tiers_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TakeoverFeeTiersUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeoverFeeTiersRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Takeover Fee Tiers",
         "tags": [
           "staffing"
         ]

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { useCurrentUser } from "@/lib/api/hooks";
-import { invalidateStaffing, useStaffingAssignment } from "@/lib/api/staffing-hooks";
+import { invalidateStaffing, useStaffingAssignment, useTakeoverPreview } from "@/lib/api/staffing-hooks";
 import {
   CHECKLIST_LABELS,
   changeStaffingAssignmentStatus,
@@ -280,6 +280,7 @@ function EditModal({ assignment, isAdmin, onClose }: { assignment: StaffingAssig
 function TakeoverModal({ assignmentId, workerId, clientName, onClose }: { assignmentId: string; workerId: string; clientName: string; onClose: () => void }) {
   const router = useRouter();
   const [form, setForm] = useState({ takeover_date: today(), annual_salary: "", fee_percentage: "" });
+  const { data: preview } = useTakeoverPreview(assignmentId, form.takeover_date); // NOMICON
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -311,9 +312,18 @@ function TakeoverModal({ assignmentId, workerId, clientName, onClose }: { assign
           (Status „Quali-Call“ – die weiteren Stufen durchläuft ihr wie gewohnt).
         </p>
         <div><label className={labelClass} htmlFor="to-date">Übernahme am</label><Input id="to-date" type="date" required value={form.takeover_date} onChange={(e) => set("takeover_date", e.target.value)} /></div>
+        {/* NOMICON: gestaffelte Übernahme-Fee nach Einsatzdauer (einstellbar unter Compliance) */}
+        {preview?.data && (
+          <p className="rounded-lg border border-white/10 bg-brand-surface p-3 text-xs text-brand-soft" role="status">
+            Einsatz bis dahin: {preview.data.months_worked} {preview.data.months_worked === 1 ? "Monat" : "Monate"} → Anteil am Honorar laut Staffel: <strong>{Number(preview.data.tier_percent)} %</strong>
+            {preview.data.base_fee_percentage && preview.data.effective_fee_percentage
+              ? <> (Honorarsatz des Kunden {Number(preview.data.base_fee_percentage)} % → <strong>{Number(preview.data.effective_fee_percentage)} %</strong>)</>
+              : <> (für diesen Kunden ist kein Honorarsatz hinterlegt)</>}. Ein eigener Prozentsatz unten überschreibt die Staffel.
+          </p>
+        )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelClass} htmlFor="to-salary">Jahresgehalt € (für das erwartete Honorar)</label><Input id="to-salary" inputMode="decimal" value={form.annual_salary} onChange={(e) => set("annual_salary", e.target.value)} /></div>
-          <div><label className={labelClass} htmlFor="to-fee">Honorar % (leer = Standard des Kunden)</label><Input id="to-fee" inputMode="decimal" value={form.fee_percentage} onChange={(e) => set("fee_percentage", e.target.value)} /></div>
+          <div><label className={labelClass} htmlFor="to-fee">Honorar % (leer = Staffel des Kunden)</label><Input id="to-fee" inputMode="decimal" value={form.fee_percentage} onChange={(e) => set("fee_percentage", e.target.value)} /></div>
         </div>
         <ErrorBanner message={error} />
         <div className="flex justify-end gap-2">

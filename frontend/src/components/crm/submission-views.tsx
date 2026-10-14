@@ -29,6 +29,7 @@ import { allowedTransitions } from "@/lib/submission-transitions";
 import { cn, contactName as formatContactName, formatDate } from "@/lib/utils";
 import { feeAmount, feeIsOpen, formatEuro, summarizeItems } from "@/lib/fee-forecast"; // NOMICON
 import { PipelineKpiStrip } from "@/components/crm/pipeline-kpi-strip"; // NOMICON
+import { OfferAsAssignmentButton } from "@/components/crm/staffing-offer-modal"; // NOMICON
 import { CandidateQuickViewDrawer } from "./candidate-quickview-drawer";
 import { ClosingScoreForm } from "./closing-score-form";
 
@@ -438,6 +439,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
             >
               <Building2 size={iconSize} />
             </button>
+            <OfferAsAssignmentButton iconOnly candidateId={item.candidate_id} clientId={item.client_company_id} className={iconBtnClass} iconSize={iconSize} /> {/* NOMICON */}
             <button
               type="button"
               title="Kandidat seitlich anzeigen (Prozesse bleibt offen)"

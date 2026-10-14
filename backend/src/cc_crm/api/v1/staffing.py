@@ -7,9 +7,11 @@ Admins (services/staffing_visibility.py); Erlaubnis und Einstellungen aendern nu
 
 import uuid
 from datetime import date
+from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Response, status
+from sqlalchemy.orm import Session
 
 from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
 from cc_crm.api.staffing_dependencies import (
@@ -19,7 +21,9 @@ from cc_crm.api.staffing_dependencies import (
     staffing_owner_scope,
 )
 from cc_crm.core.errors import EntityNotFoundError, PermissionDeniedError
+from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.staffing import StaffingAssignmentStatus, StaffingWorker, StaffingWorkerStatus
+from cc_crm.repositories.staffing import StaffingWorkerRepository
 from cc_crm.schemas.approval import ApprovalRequestRead, InvoiceStatusChange
 from cc_crm.schemas.staffing import (
     StaffingAssignmentCreate,
@@ -38,11 +42,14 @@ from cc_crm.schemas.staffing import (
     StaffingLicenseCreate,
     StaffingLicenseRead,
     StaffingLicenseUpdate,
+    StaffingOfferInput,
+    StaffingOfferResult,
     StaffingOverviewRead,
     StaffingPairDeadlineRead,
     StaffingSettingsRead,
     StaffingSettingsUpdate,
     StaffingTakeoverInput,
+    StaffingTakeoverPreview,
     StaffingTakeoverResult,
     StaffingTimesheetCreate,
     StaffingTimesheetEntriesUpdate,
@@ -51,6 +58,9 @@ from cc_crm.schemas.staffing import (
     StaffingWorkerCreate,
     StaffingWorkerRead,
     StaffingWorkerUpdate,
+    TakeoverFeeTierRead,
+    TakeoverFeeTiersRead,
+    TakeoverFeeTiersUpdate,
 )
 from cc_crm.schemas.staffing_disposition import StaffingDispositionRead
 from cc_crm.services.approvals import ApprovalService
@@ -69,6 +79,13 @@ from cc_crm.services.staffing_licenses import StaffingLicenseService
 from cc_crm.services.staffing_overview import DISCLAIMER, overview, pair_deadlines
 from cc_crm.services.staffing_settings import load_config, save_config
 from cc_crm.services.staffing_takeover import StaffingTakeoverService
+from cc_crm.services.staffing_takeover_fee import (
+    FeeTier,
+    load_tiers,
+    months_between,
+    save_tiers,
+    tier_percent,
+)
 from cc_crm.services.staffing_timesheets import StaffingTimesheetService
 from cc_crm.services.staffing_visibility import (
     forbid_money_for_non_admin,
@@ -440,6 +457,47 @@ def submit_timesheet(
     return StaffingTimesheetService(session).submit(timesheet_id, current_user)
 
 
+# --- Direct -> Ueberlassung: als Einsatz anbieten -------------------------------------------
+
+
+@router.post("/offer-from-candidate", response_model=StaffingOfferResult)
+def offer_candidate_as_assignment(
+    payload: StaffingOfferInput,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+    confirm_engagement: bool = False,
+) -> StaffingOfferResult:
+    """Legt das Leiharbeitnehmer-Profil (Anwaerter) und optional einen geplanten Einsatz an. Ist der
+    Kandidat schon im Austausch, greift der Hinweis (409, mit Bestaetigung) bzw. die Sperre."""
+    _check_owner(session, current_user, payload.owner_user_id)
+    ensure_no_conflict(session, current_user, payload.candidate_id, "staffing", confirm_engagement)
+    workers = StaffingWorkerService(session)
+    existing = StaffingWorkerRepository(session).by_candidate(payload.candidate_id)
+    created = existing is None
+    if existing is None:
+        worker_id = workers.create(
+            StaffingWorkerCreate(candidate_id=payload.candidate_id), current_user
+        ).worker.id
+    else:
+        worker_id = existing.id
+    assignment_id = None
+    if payload.client_company_id is not None and payload.start_date is not None:
+        row = StaffingAssignmentService(session).create(
+            StaffingAssignmentCreate(
+                worker_id=worker_id,
+                client_company_id=payload.client_company_id,
+                owner_user_id=payload.owner_user_id,
+                start_date=payload.start_date,
+                planned_end_date=payload.planned_end_date,
+            ),
+            current_user,
+        )
+        assignment_id = row.assignment.id
+    return StaffingOfferResult(
+        worker_id=worker_id, worker_created=created, assignment_id=assignment_id
+    )
+
+
 # --- Uebernahme durch den Kunden ----------------------------------------------------------------
 
 
@@ -458,6 +516,61 @@ def take_over_assignment(
     services/staffing_takeover.py)."""
     result = StaffingTakeoverService(session).take_over(assignment_id, payload, current_user)
     return result.model_copy(update={"assignment": redact(result.assignment, current_user)})
+
+
+@router.get(
+    "/assignments/{assignment_id}/takeover-preview",
+    dependencies=[AssignmentAccess],
+    response_model=StaffingTakeoverPreview,
+)
+def preview_takeover(
+    assignment_id: uuid.UUID, session: DatabaseSession, takeover_date: date | None = None
+) -> StaffingTakeoverPreview:
+    """Wie wirkt die Staffel der Uebernahme-Fee bei diesem Einsatz (Monate, Anteil, Honorarsatz)."""
+    assignment = StaffingAssignmentService(session).get_row(assignment_id).assignment
+    client = session.get(ClientCompany, assignment.client_company_id)
+    months = months_between(assignment.start_date, takeover_date or date.today())
+    tier = tier_percent(months, load_tiers(session))
+    base = client.fee_percentage if client is not None else None
+    return StaffingTakeoverPreview(
+        months_worked=months,
+        tier_percent=tier,
+        base_fee_percentage=base,
+        effective_fee_percentage=(
+            None if base is None else (base * tier / Decimal("100")).quantize(Decimal("0.01"))
+        ),
+    )
+
+
+def _tiers_read(session: Session) -> TakeoverFeeTiersRead:
+    return TakeoverFeeTiersRead(
+        tiers=[
+            TakeoverFeeTierRead(up_to_months=t.up_to_months, percent_of_fee=t.percent_of_fee)
+            for t in load_tiers(session)
+        ],
+        notice=(
+            "Platzhalter-Staffel, nicht abgestimmt: mit der vertraglich vereinbarten Staffel "
+            "abgleichen. Kein Rechtsrat."
+        ),
+    )
+
+
+@router.get("/takeover-fee-tiers", response_model=TakeoverFeeTiersRead)
+def get_takeover_fee_tiers(session: DatabaseSession, _user: CurrentUser) -> TakeoverFeeTiersRead:
+    return _tiers_read(session)
+
+
+@router.put("/takeover-fee-tiers", response_model=TakeoverFeeTiersRead)
+def put_takeover_fee_tiers(
+    payload: TakeoverFeeTiersUpdate, session: DatabaseSession, admin: AdminUser
+) -> TakeoverFeeTiersRead:
+    save_tiers(
+        session,
+        [FeeTier(t.up_to_months, t.percent_of_fee) for t in payload.tiers],
+        admin.email,
+        admin.id,
+    )
+    return _tiers_read(session)
 
 
 # --- Abrechnung und Export -----------------------------------------------------------------------

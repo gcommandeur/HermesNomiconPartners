@@ -1222,6 +1222,23 @@ export interface paths {
         patch: operations["update_client_api_v1_clients__client_id__patch"];
         trace?: never;
     };
+    "/api/v1/clients/{client_id}/business": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Client Business */
+        get: operations["get_client_business_api_v1_clients__client_id__business_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/clients/{client_id}/group-locations": {
         parameters: {
             query?: never;
@@ -2930,6 +2947,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staffing/assignments/{assignment_id}/takeover-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Takeover
+         * @description Wie wirkt die Staffel der Uebernahme-Fee bei diesem Einsatz (Monate, Anteil, Honorarsatz).
+         */
+        get: operations["preview_takeover_api_v1_staffing_assignments__assignment_id__takeover_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staffing/assignments/{assignment_id}/timesheets": {
         parameters: {
             query?: never;
@@ -3154,6 +3191,27 @@ export interface paths {
         patch: operations["update_license_api_v1_staffing_licenses__license_id__patch"];
         trace?: never;
     };
+    "/api/v1/staffing/offer-from-candidate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Offer Candidate As Assignment
+         * @description Legt das Leiharbeitnehmer-Profil (Anwaerter) und optional einen geplanten Einsatz an. Ist der
+         *     Kandidat schon im Austausch, greift der Hinweis (409, mit Bestaetigung) bzw. die Sperre.
+         */
+        post: operations["offer_candidate_as_assignment_api_v1_staffing_offer_from_candidate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staffing/overview": {
         parameters: {
             query?: never;
@@ -3182,6 +3240,24 @@ export interface paths {
         get: operations["get_settings_api_v1_staffing_settings_get"];
         /** Put Settings */
         put: operations["put_settings_api_v1_staffing_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/takeover-fee-tiers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Takeover Fee Tiers */
+        get: operations["get_takeover_fee_tiers_api_v1_staffing_takeover_fee_tiers_get"];
+        /** Put Takeover Fee Tiers */
+        put: operations["put_takeover_fee_tiers_api_v1_staffing_takeover_fee_tiers_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -5222,6 +5298,42 @@ export interface components {
             /** Wechselgrund */
             wechselgrund?: string | null;
         };
+        /** ClientAssignmentRead */
+        ClientAssignmentRead: {
+            /** End Date */
+            end_date: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Owner Name */
+            owner_name: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Status */
+            status: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /**
+         * ClientBusinessRead
+         * @description Jeder Abschnitt ist `None`, wenn dem Nutzer die zugehoerige Ansicht fehlt (processes: Direct,
+         *     assignments/deadlines: Ueberlassung, revenue: Admin). Prozesse und Einsaetze nur im eigenen
+         *     Sichtbereich (Owner-Scope).
+         */
+        ClientBusinessRead: {
+            /** Assignments */
+            assignments: components["schemas"]["ClientAssignmentRead"][] | null;
+            /** Deadlines */
+            deadlines: components["schemas"]["StaffingPairDeadlineRead"][] | null;
+            /** Processes */
+            processes: components["schemas"]["ClientProcessRead"][] | null;
+            revenue: components["schemas"]["ClientRevenueRead"] | null;
+        };
         /** ClientCompanyCreate */
         ClientCompanyCreate: {
             /** Agb Version */
@@ -5494,6 +5606,32 @@ export interface components {
             reasons: string[];
             /** Score */
             score: number;
+        };
+        /** ClientProcessRead */
+        ClientProcessRead: {
+            /** Candidate Name */
+            candidate_name: string;
+            /** Expected Fee */
+            expected_fee: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Owner Name */
+            owner_name: string | null;
+            /** Status */
+            status: string;
+        };
+        /**
+         * ClientRevenueRead
+         * @description Nur fuer Admins.
+         */
+        ClientRevenueRead: {
+            /** Placement Fees Paid */
+            placement_fees_paid: string;
+            /** Staffing Invoiced */
+            staffing_invoiced: string;
         };
         /**
          * ClientStatus
@@ -9506,6 +9644,38 @@ export interface components {
             /** Valid To */
             valid_to?: string | null;
         };
+        /**
+         * StaffingOfferInput
+         * @description "Als Einsatz anbieten" (Direct -> Ueberlassung): legt (falls noetig) das Leiharbeitnehmer-
+         *     Profil als Anwaerter an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz.
+         */
+        StaffingOfferInput: {
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Client Company Id */
+            client_company_id?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Planned End Date */
+            planned_end_date?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+        };
+        /** StaffingOfferResult */
+        StaffingOfferResult: {
+            /** Assignment Id */
+            assignment_id: string | null;
+            /** Worker Created */
+            worker_created: boolean;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+        };
         /** StaffingOverviewRead */
         StaffingOverviewRead: {
             /** Active Assignments */
@@ -9598,14 +9768,37 @@ export interface components {
             /** Takeover Date */
             takeover_date?: string | null;
         };
+        /**
+         * StaffingTakeoverPreview
+         * @description Vorschau fuer die Maske: wie sich die Staffel auf diese Uebernahme auswirkt.
+         */
+        StaffingTakeoverPreview: {
+            /** Base Fee Percentage */
+            base_fee_percentage: string | null;
+            /** Effective Fee Percentage */
+            effective_fee_percentage: string | null;
+            /** Months Worked */
+            months_worked: number;
+            /** Tier Percent */
+            tier_percent: string;
+        };
         /** StaffingTakeoverResult */
         StaffingTakeoverResult: {
+            /** Applied Fee Percentage */
+            applied_fee_percentage?: string | null;
             assignment: components["schemas"]["StaffingAssignmentDetail"];
+            /**
+             * Months Worked
+             * @default 0
+             */
+            months_worked: number;
             /**
              * Submission Id
              * Format: uuid
              */
             submission_id: string;
+            /** Tier Percent */
+            tier_percent?: string | null;
         };
         /** StaffingTimesheetCreate */
         StaffingTimesheetCreate: {
@@ -9895,6 +10088,32 @@ export interface components {
          * @enum {string}
          */
         SubmissionStatus: "qualification_call" | "cv_in" | "cv_out" | "interview" | "offer" | "placement" | "cancelled";
+        /** TakeoverFeeTierInput */
+        TakeoverFeeTierInput: {
+            /** Percent Of Fee */
+            percent_of_fee: number | string;
+            /** Up To Months */
+            up_to_months?: number | null;
+        };
+        /** TakeoverFeeTierRead */
+        TakeoverFeeTierRead: {
+            /** Percent Of Fee */
+            percent_of_fee: string;
+            /** Up To Months */
+            up_to_months: number | null;
+        };
+        /** TakeoverFeeTiersRead */
+        TakeoverFeeTiersRead: {
+            /** Notice */
+            notice: string;
+            /** Tiers */
+            tiers: components["schemas"]["TakeoverFeeTierRead"][];
+        };
+        /** TakeoverFeeTiersUpdate */
+        TakeoverFeeTiersUpdate: {
+            /** Tiers */
+            tiers: components["schemas"]["TakeoverFeeTierInput"][];
+        };
         /** TakeoverRateRead */
         TakeoverRateRead: {
             /** Pairs */
@@ -13131,6 +13350,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClientCompanyRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_client_business_api_v1_clients__client_id__business_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientBusinessRead"];
                 };
             };
             /** @description Validation Error */
@@ -16952,6 +17204,41 @@ export interface operations {
             };
         };
     };
+    preview_takeover_api_v1_staffing_assignments__assignment_id__takeover_preview_get: {
+        parameters: {
+            query?: {
+                takeover_date?: string | null;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTakeoverPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_timesheets_api_v1_staffing_assignments__assignment_id__timesheets_get: {
         parameters: {
             query?: never;
@@ -17528,6 +17815,43 @@ export interface operations {
             };
         };
     };
+    offer_candidate_as_assignment_api_v1_staffing_offer_from_candidate_post: {
+        parameters: {
+            query?: {
+                confirm_engagement?: boolean;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingOfferInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingOfferResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_overview_api_v1_staffing_overview_get: {
         parameters: {
             query?: never;
@@ -17612,6 +17936,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaffingSettingsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_takeover_fee_tiers_api_v1_staffing_takeover_fee_tiers_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeoverFeeTiersRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_takeover_fee_tiers_api_v1_staffing_takeover_fee_tiers_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TakeoverFeeTiersUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeoverFeeTiersRead"];
                 };
             };
             /** @description Validation Error */

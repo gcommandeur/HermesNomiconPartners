@@ -11,6 +11,7 @@ from cc_crm.api.v1.background_jobs import router as background_jobs_router
 from cc_crm.api.v1.calendar_events import router as calendar_events_router
 from cc_crm.api.v1.calendar_feed import router as calendar_feed_router
 from cc_crm.api.v1.candidates import router as candidates_router
+from cc_crm.api.v1.client_business import router as client_business_router  # NOMICON
 from cc_crm.api.v1.clients import router as clients_router
 from cc_crm.api.v1.commission import router as commission_router  # NOMICON
 from cc_crm.api.v1.contacts import router as contacts_router
@@ -127,6 +128,7 @@ protected_router.include_router(
     commission_router, tags=["commission"], dependencies=[Depends(require_management_view)]
 )  # NOMICON
 protected_router.include_router(access_views_router, tags=["access-views"])  # NOMICON
+protected_router.include_router(client_business_router, tags=["client-business"])  # NOMICON
 protected_router.include_router(
     management_router, tags=["management"], dependencies=[Depends(require_management_view)]
 )  # NOMICON

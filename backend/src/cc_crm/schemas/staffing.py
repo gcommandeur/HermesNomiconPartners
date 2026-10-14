@@ -447,3 +447,61 @@ class StaffingTakeoverInput(BaseModel):
 class StaffingTakeoverResult(BaseModel):
     assignment: StaffingAssignmentDetail
     submission_id: uuid.UUID  # der angelegte Vermittlungsprozess
+    # Gestaffelte Uebernahme-Fee (siehe services/staffing_takeover_fee.py)
+    months_worked: int = 0
+    tier_percent: Decimal | None = None  # Anteil am vollen Honorar, None bei eigenem Prozentsatz
+    applied_fee_percentage: Decimal | None = None
+
+
+class TakeoverFeeTierRead(BaseModel):
+    up_to_months: int | None
+    percent_of_fee: Decimal
+
+
+class TakeoverFeeTiersRead(BaseModel):
+    tiers: list[TakeoverFeeTierRead]
+    notice: str
+
+
+class TakeoverFeeTierInput(BaseModel):
+    up_to_months: int | None = Field(default=None, ge=1, le=240)
+    percent_of_fee: Decimal = Field(ge=0, le=100)
+
+
+class TakeoverFeeTiersUpdate(BaseModel):
+    tiers: list[TakeoverFeeTierInput] = Field(min_length=1, max_length=10)
+
+
+class StaffingTakeoverPreview(BaseModel):
+    """Vorschau fuer die Maske: wie sich die Staffel auf diese Uebernahme auswirkt."""
+
+    months_worked: int
+    tier_percent: Decimal
+    base_fee_percentage: Decimal | None  # Honorarsatz der Kanzlei/des Kunden
+    effective_fee_percentage: Decimal | None
+
+
+class StaffingOfferInput(BaseModel):
+    """ "Als Einsatz anbieten" (Direct -> Ueberlassung): legt (falls noetig) das Leiharbeitnehmer-
+    Profil als Anwaerter an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz."""
+
+    candidate_id: uuid.UUID
+    client_company_id: uuid.UUID | None = None
+    start_date: date | None = None
+    planned_end_date: date | None = None
+    owner_user_id: uuid.UUID | None = None  # leer = der anlegende Nutzer
+
+    @model_validator(mode="after")
+    def _both_or_none(self) -> "StaffingOfferInput":
+        if (self.client_company_id is None) != (self.start_date is None):
+            raise ValueError(
+                "Für einen Einsatz sind Kunde und Beginn nötig - oder beides leer lassen."
+            )
+        _check_range(self.start_date, self.planned_end_date, "Geplantes Ende liegt vor dem Start.")
+        return self
+
+
+class StaffingOfferResult(BaseModel):
+    worker_id: uuid.UUID
+    worker_created: bool
+    assignment_id: uuid.UUID | None

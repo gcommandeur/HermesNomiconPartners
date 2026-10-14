@@ -31,6 +31,7 @@ import { CandidateRollenUnbestaetigtHint } from "@/components/crm/candidate-roll
 import { NotesPanel } from "@/components/crm/notes-panel";
 import { StaffingCandidatePanel } from "@/components/crm/staffing-candidate-panel"; // NOMICON
 import { EngagementPanel } from "@/components/crm/engagement-panel"; // NOMICON
+import { OfferAsAssignmentButton } from "@/components/crm/staffing-offer-modal"; // NOMICON
 import { EngagementHeaderBadge } from "@/components/crm/engagement-header-badge"; // NOMICON
 import { hasView, noData } from "@/lib/api/views"; // NOMICON
 import { CustomFieldsPanel } from "@/components/crm/custom-fields-panel";
@@ -168,6 +169,7 @@ export default async function CandidateDetailPage({
             candidateId={candidate.id}
             candidateName={`${candidate.first_name} ${candidate.last_name}`}
           />
+          <OfferAsAssignmentButton candidateId={candidate.id} /> {/* NOMICON */}
           <CandidateEditModal candidate={candidate} />
         </div>
       </div>

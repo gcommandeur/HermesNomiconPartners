@@ -344,6 +344,40 @@ export function downloadHoursCsv(periodStart: string, periodEnd: string) {
   return apiDownload(`/staffing/export/hours.csv?period_start=${periodStart}&period_end=${periodEnd}`, `stunden_${periodStart}_${periodEnd}.csv`);
 }
 
+export type TakeoverFeeTier = Schemas["TakeoverFeeTierInput"];
+export type TakeoverFeeTiers = Schemas["TakeoverFeeTiersRead"];
+export type TakeoverPreview = Schemas["StaffingTakeoverPreview"];
+export type StaffingOfferResult = Schemas["StaffingOfferResult"];
+
+export function getTakeoverPreview(id: string, takeoverDate: string): Promise<DataResult<TakeoverPreview | null>> {
+  return apiGet<TakeoverPreview | null>(`/staffing/assignments/${id}/takeover-preview?takeover_date=${takeoverDate}`, null);
+}
+
+export function getTakeoverFeeTiers(): Promise<DataResult<TakeoverFeeTiers>> {
+  return apiGet<TakeoverFeeTiers>("/staffing/takeover-fee-tiers", {
+    tiers: [
+      { up_to_months: 3, percent_of_fee: "100" },
+      { up_to_months: 6, percent_of_fee: "75" },
+      { up_to_months: 9, percent_of_fee: "50" },
+      { up_to_months: 12, percent_of_fee: "25" },
+      { up_to_months: null, percent_of_fee: "0" },
+    ],
+    notice: "Platzhalter-Staffel, nicht abgestimmt: mit der vertraglich vereinbarten Staffel abgleichen. Kein Rechtsrat.",
+  });
+}
+
+export function saveTakeoverFeeTiers(tiers: TakeoverFeeTier[]) {
+  return apiPut<TakeoverFeeTiers>("/staffing/takeover-fee-tiers", { tiers });
+}
+
+/** "Als Einsatz anbieten" (Direct -> Überlassung). 409 mit Hinweistext, wenn der Kandidat schon im Austausch ist. */
+export function offerCandidateAsAssignment(
+  input: { candidate_id: string; client_company_id?: string | null; start_date?: string | null; planned_end_date?: string | null },
+  confirmEngagement = false,
+) {
+  return apiPost<StaffingOfferResult>(`/staffing/offer-from-candidate${confirmEngagement ? "?confirm_engagement=true" : ""}`, input);
+}
+
 export function takeOverStaffingAssignment(
   id: string,
   input: { takeover_date?: string | null; annual_salary?: string | null; fee_percentage?: string | null },
