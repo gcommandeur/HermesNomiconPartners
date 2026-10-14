@@ -52,6 +52,7 @@ from cc_crm.schemas.staffing import (
     StaffingWorkerRead,
     StaffingWorkerUpdate,
 )
+from cc_crm.schemas.staffing_disposition import StaffingDispositionRead
 from cc_crm.services.approvals import ApprovalService
 from cc_crm.services.engagement_status import ensure_no_conflict
 from cc_crm.services.staffing_activation import StaffingActivationService
@@ -62,6 +63,7 @@ from cc_crm.services.staffing_assignments import (
     contract_read,
 )
 from cc_crm.services.staffing_deadlines import DeadlineConfig
+from cc_crm.services.staffing_disposition import disposition
 from cc_crm.services.staffing_invoices import StaffingInvoiceService
 from cc_crm.services.staffing_licenses import StaffingLicenseService
 from cc_crm.services.staffing_overview import DISCLAIMER, overview, pair_deadlines
@@ -94,6 +96,13 @@ def _check_owner(
 @router.get("/overview", response_model=StaffingOverviewRead)
 def get_overview(session: DatabaseSession, current_user: CurrentUser) -> StaffingOverviewRead:
     return overview(session, staffing_owner_scope(current_user, session), date.today())
+
+
+@router.get("/disposition", response_model=StaffingDispositionRead)
+def get_disposition(session: DatabaseSession, current_user: CurrentUser) -> StaffingDispositionRead:
+    """Disposition: Kennzahlen, Bench ("frei seit"), Stundenzettel-Eingang. Einsaetze im
+    Sichtbereich des Nutzers; kein Lohn, keine Marge."""
+    return disposition(session, staffing_owner_scope(current_user, session), date.today())
 
 
 @router.get("/deadlines", response_model=list[StaffingPairDeadlineRead])

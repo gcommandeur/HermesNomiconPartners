@@ -15542,6 +15542,76 @@
         "title": "StaffingAssignmentUpdate",
         "type": "object"
       },
+      "StaffingBenchWorkerRead": {
+        "description": "Leiharbeitnehmer ohne aktiven oder geplanten Einsatz (\"Bench\").",
+        "properties": {
+          "days_free": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Free"
+          },
+          "free_since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Since"
+          },
+          "pay_grade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pay Grade"
+          },
+          "work_permit_valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Permit Valid Until"
+          },
+          "worker_id": {
+            "format": "uuid",
+            "title": "Worker Id",
+            "type": "string"
+          },
+          "worker_name": {
+            "title": "Worker Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "worker_id",
+          "worker_name",
+          "free_since",
+          "days_free",
+          "pay_grade",
+          "work_permit_valid_until"
+        ],
+        "title": "StaffingBenchWorkerRead",
+        "type": "object"
+      },
       "StaffingBillableTimesheetRead": {
         "description": "Freigegebener, noch nicht abgerechneter Stundenzettel.",
         "properties": {
@@ -16094,6 +16164,55 @@
           "traffic"
         ],
         "title": "StaffingDeadlineRead",
+        "type": "object"
+      },
+      "StaffingDispositionRead": {
+        "properties": {
+          "active_assignments": {
+            "title": "Active Assignments",
+            "type": "integer"
+          },
+          "bench": {
+            "items": {
+              "$ref": "#/components/schemas/StaffingBenchWorkerRead"
+            },
+            "title": "Bench",
+            "type": "array"
+          },
+          "bench_count": {
+            "title": "Bench Count",
+            "type": "integer"
+          },
+          "inbox": {
+            "$ref": "#/components/schemas/StaffingTimesheetInboxRead"
+          },
+          "license": {
+            "$ref": "#/components/schemas/StaffingLicenseStatus"
+          },
+          "open_checklist_assignments": {
+            "title": "Open Checklist Assignments",
+            "type": "integer"
+          },
+          "planned_assignments": {
+            "title": "Planned Assignments",
+            "type": "integer"
+          },
+          "timesheet_backlog": {
+            "title": "Timesheet Backlog",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "active_assignments",
+          "planned_assignments",
+          "open_checklist_assignments",
+          "bench_count",
+          "timesheet_backlog",
+          "license",
+          "inbox",
+          "bench"
+        ],
+        "title": "StaffingDispositionRead",
         "type": "object"
       },
       "StaffingInvoiceCreate": {
@@ -17095,6 +17214,40 @@
           "break_minutes"
         ],
         "title": "StaffingTimesheetEntryRead",
+        "type": "object"
+      },
+      "StaffingTimesheetInboxRead": {
+        "description": "Stundenzettel nach Stand (nur Einsaetze im Sichtbereich des Nutzers).",
+        "properties": {
+          "approved_unbilled": {
+            "title": "Approved Unbilled",
+            "type": "integer"
+          },
+          "open": {
+            "title": "Open",
+            "type": "integer"
+          },
+          "open_overdue": {
+            "title": "Open Overdue",
+            "type": "integer"
+          },
+          "rejected": {
+            "title": "Rejected",
+            "type": "integer"
+          },
+          "submitted": {
+            "title": "Submitted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "open",
+          "open_overdue",
+          "submitted",
+          "approved_unbilled",
+          "rejected"
+        ],
+        "title": "StaffingTimesheetInboxRead",
         "type": "object"
       },
       "StaffingTimesheetRead": {
@@ -33002,6 +33155,61 @@
           }
         ],
         "summary": "List Deadlines",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/disposition": {
+      "get": {
+        "description": "Disposition: Kennzahlen, Bench (\"frei seit\"), Stundenzettel-Eingang. Einsaetze im\nSichtbereich des Nutzers; kein Lohn, keine Marge.",
+        "operationId": "get_disposition_api_v1_staffing_disposition_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingDispositionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Disposition",
         "tags": [
           "staffing"
         ]

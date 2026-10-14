@@ -30,6 +30,8 @@ export type StaffingPairDeadline = Schemas["StaffingPairDeadlineRead"];
 export type StaffingLicense = Schemas["StaffingLicenseRead"];
 export type StaffingOverview = Schemas["StaffingOverviewRead"];
 export type StaffingSettings = Schemas["StaffingSettingsRead"];
+export type StaffingDisposition = Schemas["StaffingDispositionRead"];
+export type StaffingBenchWorker = Schemas["StaffingBenchWorkerRead"];
 export type StaffingSettingsInput = Schemas["StaffingSettingsUpdate"];
 export type Traffic = Schemas["Traffic"];
 export type StaffingTimesheet = Schemas["StaffingTimesheetRead"];
@@ -120,6 +122,19 @@ export function formatRemaining(daysRemaining: number | null): string {
 
 export async function getStaffingOverview(): Promise<DataResult<StaffingOverview>> {
   return apiGet<StaffingOverview>("/staffing/overview", DEMO_OVERVIEW);
+}
+
+export async function getStaffingDisposition(): Promise<DataResult<StaffingDisposition>> {
+  return apiGet<StaffingDisposition>("/staffing/disposition", {
+    active_assignments: DEMO_OVERVIEW.active_assignments,
+    planned_assignments: DEMO_OVERVIEW.planned_assignments,
+    open_checklist_assignments: DEMO_OVERVIEW.open_checklist_assignments,
+    bench_count: 0,
+    timesheet_backlog: 0,
+    license: DEMO_OVERVIEW.license,
+    inbox: { open: 0, open_overdue: 0, submitted: 0, approved_unbilled: 0, rejected: 0 },
+    bench: [],
+  });
 }
 
 export async function getStaffingDeadlines(): Promise<DataResult<StaffingPairDeadline[]>> {

@@ -1,12 +1,12 @@
-// NOMICON: Arbeitnehmerüberlassung - Übersicht.
+// NOMICON: Arbeitnehmerüberlassung - Disposition (Übersicht).
 import { PageHeader } from "@/components/crm/page-header";
-import { StaffingOverviewView } from "@/components/crm/staffing-overview-view";
+import { StaffingDispositionView } from "@/components/crm/staffing-disposition-view";
 
 export default function StaffingOverviewPage() {
   return (
     <>
-      <PageHeader eyebrow="Überlassung" title="Übersicht" />
-      <StaffingOverviewView />
+      <PageHeader eyebrow="Überlassung" title="Disposition" />
+      <StaffingDispositionView />
     </>
   );
 }

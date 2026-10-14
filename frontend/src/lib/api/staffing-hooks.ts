@@ -9,6 +9,7 @@ import {
   getStaffingAssignments,
   getStaffingContracts,
   getStaffingDeadlines,
+  getStaffingDisposition,
   getStaffingInvoice,
   getStaffingInvoices,
   getStaffingLicenses,
@@ -28,6 +29,10 @@ const config = { revalidateOnFocus: true, dedupingInterval: 5_000 } as const;
 
 export function useStaffingOverview() {
   return useSWR("/staffing/overview", getStaffingOverview, config);
+}
+
+export function useStaffingDisposition() {
+  return useSWR("/staffing/disposition", getStaffingDisposition, config);
 }
 
 export function useStaffingDeadlines() {

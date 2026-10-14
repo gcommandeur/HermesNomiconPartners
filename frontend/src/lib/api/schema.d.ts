@@ -3004,6 +3004,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staffing/disposition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Disposition
+         * @description Disposition: Kennzahlen, Bench ("frei seit"), Stundenzettel-Eingang. Einsaetze im
+         *     Sichtbereich des Nutzers; kein Lohn, keine Marge.
+         */
+        get: operations["get_disposition_api_v1_staffing_disposition_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staffing/export/hours.csv": {
         parameters: {
             query?: never;
@@ -8972,6 +8993,27 @@ export interface components {
             start_date?: string | null;
         };
         /**
+         * StaffingBenchWorkerRead
+         * @description Leiharbeitnehmer ohne aktiven oder geplanten Einsatz ("Bench").
+         */
+        StaffingBenchWorkerRead: {
+            /** Days Free */
+            days_free: number | null;
+            /** Free Since */
+            free_since: string | null;
+            /** Pay Grade */
+            pay_grade: string | null;
+            /** Work Permit Valid Until */
+            work_permit_valid_until: string | null;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /**
          * StaffingBillableTimesheetRead
          * @description Freigegebener, noch nicht abgerechneter Stundenzettel.
          */
@@ -9147,6 +9189,23 @@ export interface components {
             /** Max End Date */
             max_end_date: string | null;
             traffic: components["schemas"]["Traffic"];
+        };
+        /** StaffingDispositionRead */
+        StaffingDispositionRead: {
+            /** Active Assignments */
+            active_assignments: number;
+            /** Bench */
+            bench: components["schemas"]["StaffingBenchWorkerRead"][];
+            /** Bench Count */
+            bench_count: number;
+            inbox: components["schemas"]["StaffingTimesheetInboxRead"];
+            license: components["schemas"]["StaffingLicenseStatus"];
+            /** Open Checklist Assignments */
+            open_checklist_assignments: number;
+            /** Planned Assignments */
+            planned_assignments: number;
+            /** Timesheet Backlog */
+            timesheet_backlog: number;
         };
         /** StaffingInvoiceCreate */
         StaffingInvoiceCreate: {
@@ -9482,6 +9541,22 @@ export interface components {
              * Format: date
              */
             work_date: string;
+        };
+        /**
+         * StaffingTimesheetInboxRead
+         * @description Stundenzettel nach Stand (nur Einsaetze im Sichtbereich des Nutzers).
+         */
+        StaffingTimesheetInboxRead: {
+            /** Approved Unbilled */
+            approved_unbilled: number;
+            /** Open */
+            open: number;
+            /** Open Overdue */
+            open_overdue: number;
+            /** Rejected */
+            rejected: number;
+            /** Submitted */
+            submitted: number;
         };
         /** StaffingTimesheetRead */
         StaffingTimesheetRead: {
@@ -16981,6 +17056,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaffingPairDeadlineRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_disposition_api_v1_staffing_disposition_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingDispositionRead"];
                 };
             };
             /** @description Validation Error */
