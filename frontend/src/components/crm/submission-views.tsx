@@ -27,6 +27,8 @@ import { useInterviewMutations } from "@/lib/use-interview-mutations";
 import { formatTimeFromIso, toLocalIsoString } from "@/lib/calendar-utils";
 import { allowedTransitions } from "@/lib/submission-transitions";
 import { cn, contactName as formatContactName, formatDate } from "@/lib/utils";
+import { feeAmount, feeIsOpen, formatEuro, summarizeItems } from "@/lib/fee-forecast"; // NOMICON
+import { PipelineKpiStrip } from "@/components/crm/pipeline-kpi-strip"; // NOMICON
 import { CandidateQuickViewDrawer } from "./candidate-quickview-drawer";
 import { ClosingScoreForm } from "./closing-score-form";
 
@@ -174,6 +176,14 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
   const clientName = (id: string | null) => clients.find((client) => client.id === id)?.name ?? "Kanzlei offen";
   const contactPersonName = (id: string | null) => formatContactName(contacts.find((contact) => contact.id === id));
   const expectedFee = (item: CandidateSubmission) => item.expected_fee ?? Math.round(Number(candidates.find((candidate) => candidate.id === item.candidate_id)?.salary_expectation?.replace(/\D/g, "") ?? 80000) * 0.27);
+  // NOMICON: Anzeige der Fee ohne erfundenen Wert - ab Interview "Fee offen", davor die alte
+  // Schätzung aus dem Gehaltswunsch, ausdrücklich als Schätzung (~) gekennzeichnet.
+  const feeText = (item: CandidateSubmission) => {
+    const fee = feeAmount(item);
+    if (fee !== null) return formatEuro(fee);
+    if (feeIsOpen(item)) return "Fee offen";
+    return `~${formatEuro(Number(expectedFee(item)))}`;
+  };
 
   // Nach submission_id gruppiert (aufsteigend nach scheduled_at sortiert,
   // "R1"/"R2"/... entspricht dieser Reihenfolge) - einmalig ueber die
@@ -534,7 +544,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
               ) : (
                 <span>Follow-up {formatDate(item.follow_up_at)}</span>
               )}
-              <span>{expectedFee(item).toLocaleString("de-DE")} €</span>
+              <span className={feeIsOpen(item) ? "text-brand-warning" : undefined} title={feeIsOpen(item) ? "Erwartete Fee fehlt (Pflicht ab Interview)" : undefined}>{feeText(item)}</span>
             </div>
             {item.client_company_id ? null : (
               <button
@@ -674,6 +684,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
 
       {view === "kanban" ? (
         <div className="pb-4">
+      <PipelineKpiStrip items={items} /> {/* NOMICON */}
           {/* Mobile (<lg): Stufen-Auswahl + nur die Prozesse DIESER EINEN
            * Stufe darunter, statt sechs (meist leerer) Spalten/Bloecke
            * uebereinander - Nutzer-Vorgabe "Mobile". Ab lg identisches
@@ -735,6 +746,17 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                   <div className="scrollbar-subtle max-h-[calc(100vh-360px)] space-y-2 overflow-y-auto">
                     {columnItems.map((item) => renderCard(item, { mobile: false }))}
                     {columnItems.length === 0 && <div className="rounded-lg border border-dashed border-white/10 p-5 text-center text-[10.45px] text-brand-muted">Keine Prozesse</div>}
+                  {/* NOMICON: Summe der erwarteten Fees der Spalte (gewichtet, wo eine Abschlusswahrscheinlichkeit vorliegt) */}
+                  {(() => {
+                    const sums = summarizeItems(columnItems);
+                    if (sums.sum === 0 && sums.open === 0) return null;
+                    return (
+                      <p className="px-2 pb-1.5 text-[9.5px] text-brand-muted" title="Summe der erwarteten Fees; gewichtet = Fee × Abschlusswahrscheinlichkeit (nur wo vorhanden)">
+                        Σ {formatEuro(sums.sum)}{sums.weighted > 0 && ` · gew. ${formatEuro(sums.weighted)}`}
+                        {sums.open > 0 && <span className="text-brand-warning"> · {sums.open}× Fee offen</span>}
+                      </p>
+                    );
+                  })()}
                   </div>
                 </section>
               );
@@ -762,7 +784,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
               <p className="mt-0.5 truncate text-xs text-brand-muted">{clientName(item.client_company_id)}</p>
               <div className="mt-2 flex items-center justify-between text-[10.45px] text-brand-gray">
                 <span>Follow-up {formatDate(item.follow_up_at)}</span>
-                <span>{expectedFee(item).toLocaleString("de-DE")} €</span>
+                <span className={feeIsOpen(item) ? "text-brand-warning" : undefined} title={feeIsOpen(item) ? "Erwartete Fee fehlt (Pflicht ab Interview)" : undefined}>{feeText(item)}</span>
               </div>
               <p className="mt-1 truncate text-[10.45px] text-brand-gray">{item.next_step ?? "Nächster Schritt offen"}</p>
               <div className="mt-2 flex items-center gap-1" onClick={(event) => event.stopPropagation()}>
@@ -801,7 +823,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
               <td className="px-4 py-3.5">{formatDate(item.submitted_at)}</td>
               <td className="px-4 py-3.5">{formatDate(item.follow_up_at)}</td>
               <td className="px-4 py-3.5">{item.next_step ?? "—"}</td>
-              <td className="px-4 py-3.5">{expectedFee(item).toLocaleString("de-DE")} €</td>
+              <td className={cn("px-4 py-3.5", feeIsOpen(item) && "text-brand-warning")}>{feeText(item)}</td>
               <td className="px-4 py-3.5">
                 <div className="flex items-center gap-2">
                   <button
