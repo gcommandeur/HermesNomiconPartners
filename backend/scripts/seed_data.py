@@ -585,6 +585,14 @@ def cmd_seed(args: argparse.Namespace) -> None:
                 f"Ueberlassung: {staffing.workers} Leiharbeitnehmer, "
                 f"{staffing.contracts} Vertraege, {staffing.assignments} Einsaetze."
             )
+        if args.demo:  # NOMICON: zwei Demo-Konten und ein Kandidatenstand mit allen Zustaenden
+            from seed_demo import seed_demo
+
+            demo = seed_demo(session)
+            print(
+                f"Demo: {demo.users} Konten, {demo.candidates} Kandidaten, "
+                f"{demo.processes} Prozesse, {demo.assignments} Einsaetze."
+            )
     print(
         f"Seed abgeschlossen: {args.clients} Kanzleien, "
         f"{args.candidates} Kandidaten, {args.submissions} Prozesse."
@@ -624,6 +632,8 @@ def main() -> None:
     seed_parser.add_argument("--random-seed", type=int, default=None)
     # NOMICON: Anzahl Leiharbeitnehmer (Arbeitnehmerueberlassung), 0 = keine
     seed_parser.add_argument("--staffing", type=int, default=0)
+    # NOMICON: Demo-Konten (Admin, Vermittler) und Kandidatenstand fuer die Ansichten
+    seed_parser.add_argument("--demo", action="store_true")
     seed_parser.set_defaults(func=cmd_seed)
 
     clear_parser = subparsers.add_parser("clear", help="Alle Geschaeftsdaten entfernen")

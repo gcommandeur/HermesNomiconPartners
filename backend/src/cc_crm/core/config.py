@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     )
 
     environment: str = "local"
+    # NOMICON: Demo-Login ohne Passwort/2FA, NUR lokal (siehe services/demo_login.py). Standard aus.
+    demo_login: bool = False
     # Firmenschicht (siehe docs/PROJEKT_STAND.md > Zweite Firma): alles
     # Firmenspezifische liegt in Konfiguration, nicht im Code - dann lassen sich
     # Aenderungen aus Hermes ohne Konflikte in eine Kopie fuer eine andere Firma

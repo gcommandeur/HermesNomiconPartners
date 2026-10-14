@@ -7863,6 +7863,53 @@
         "title": "DeletionRequestRead",
         "type": "object"
       },
+      "DemoLoginRequest": {
+        "properties": {
+          "persona": {
+            "enum": [
+              "admin",
+              "vermittler"
+            ],
+            "title": "Persona",
+            "type": "string"
+          }
+        },
+        "required": [
+          "persona"
+        ],
+        "title": "DemoLoginRequest",
+        "type": "object"
+      },
+      "DemoLoginResponse": {
+        "properties": {
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserRead"
+          }
+        },
+        "required": [
+          "token",
+          "user"
+        ],
+        "title": "DemoLoginResponse",
+        "type": "object"
+      },
+      "DemoLoginStatus": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "DemoLoginStatus",
+        "type": "object"
+      },
       "DocumentCreate": {
         "properties": {
           "content_type": {
@@ -22321,6 +22368,69 @@
         "summary": "List Audit Logs",
         "tags": [
           "audit-logs"
+        ]
+      }
+    },
+    "/api/v1/auth/demo-login": {
+      "post": {
+        "operationId": "demo_login_api_v1_auth_demo_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoLoginResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Demo Login",
+        "tags": [
+          "demo-login"
+        ]
+      }
+    },
+    "/api/v1/auth/demo-login/status": {
+      "get": {
+        "description": "Oeffentlich (Login-Seite): zeigt nur, ob die Demo-Schaltflaechen erscheinen sollen.",
+        "operationId": "demo_login_status_api_v1_auth_demo_login_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoLoginStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Demo Login Status",
+        "tags": [
+          "demo-login"
         ]
       }
     },

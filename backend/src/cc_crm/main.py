@@ -16,6 +16,10 @@ from cc_crm.core.observability import RequestLoggingMiddleware, configure_loggin
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
+    # NOMICON: Demo-Login in unsicherer Umgebung = App startet nicht
+    from cc_crm.services.demo_login import assert_demo_login_safe
+
+    assert_demo_login_safe(settings)
     from cc_crm.integrations.microsoft_graph.auth import login_tenant_problem
 
     tenant_problem = login_tenant_problem(settings)

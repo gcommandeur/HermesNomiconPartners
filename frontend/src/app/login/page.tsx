@@ -9,6 +9,7 @@ import { apiBaseUrl } from "@/lib/api/client";
 import { resetClientSession } from "@/lib/reset-client-session";
 import { brand } from "@/lib/brand";
 import { rememberPostLoginTarget, takePostLoginTarget } from "@/lib/post-login";
+import { DemoLoginButtons } from "@/components/crm/demo-login-buttons"; // NOMICON
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -187,6 +188,15 @@ export default function LoginPage() {
             >
               Mit Microsoft anmelden
             </a>
+            {/* NOMICON: nur lokal mit Schalter, sonst nichts */}
+            <DemoLoginButtons
+              onError={setError}
+              onLoggedIn={async () => {
+                await resetClientSession();
+                router.replace(takePostLoginTarget());
+                router.refresh();
+              }}
+            />
           </form>
         ) : (
           <form className="space-y-4" onSubmit={handleCodeSubmit}>

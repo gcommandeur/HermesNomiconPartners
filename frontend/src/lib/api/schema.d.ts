@@ -489,6 +489,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/demo-login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Demo Login */
+        post: operations["demo_login_api_v1_auth_demo_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/demo-login/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Demo Login Status
+         * @description Oeffentlich (Login-Seite): zeigt nur, ob die Demo-Schaltflaechen erscheinen sollen.
+         */
+        get: operations["demo_login_status_api_v1_auth_demo_login_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -6410,6 +6447,25 @@ export interface components {
             /** Requested Via */
             requested_via: string;
         };
+        /** DemoLoginRequest */
+        DemoLoginRequest: {
+            /**
+             * Persona
+             * @enum {string}
+             */
+            persona: "admin" | "vermittler";
+        };
+        /** DemoLoginResponse */
+        DemoLoginResponse: {
+            /** Token */
+            token: string;
+            user: components["schemas"]["UserRead"];
+        };
+        /** DemoLoginStatus */
+        DemoLoginStatus: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /** DocumentCreate */
         DocumentCreate: {
             /** Content Type */
@@ -11749,6 +11805,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    demo_login_api_v1_auth_demo_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoLoginResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    demo_login_status_api_v1_auth_demo_login_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoLoginStatus"];
                 };
             };
         };

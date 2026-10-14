@@ -17,6 +17,7 @@ from cc_crm.api.v1.commission import router as commission_router  # NOMICON
 from cc_crm.api.v1.contacts import router as contacts_router
 from cc_crm.api.v1.custom_fields import router as custom_fields_router
 from cc_crm.api.v1.deletion_requests import router as deletion_requests_router
+from cc_crm.api.v1.demo_login import router as demo_login_router  # NOMICON
 from cc_crm.api.v1.engagement import router as engagement_router  # NOMICON
 from cc_crm.api.v1.geo import router as geo_router
 from cc_crm.api.v1.imports import router as imports_router
@@ -59,6 +60,8 @@ from cc_crm.api.view_dependencies import (  # NOMICON
 api_router = APIRouter()
 api_router.include_router(system_router, tags=["system"])
 api_router.include_router(auth_router, tags=["auth"])
+# NOMICON: Demo-Login (404 ohne Schalter und ausserhalb von lokal/test/demo, siehe Modul)
+api_router.include_router(demo_login_router, tags=["demo-login"])
 # Kein Bearer-Auth moeglich (Outlook-Abo einer Internet-URL) - eigener,
 # token-basierter Schutz direkt im Endpunkt (siehe calendar_feed.py).
 api_router.include_router(calendar_feed_router, tags=["calendar-feed"])
