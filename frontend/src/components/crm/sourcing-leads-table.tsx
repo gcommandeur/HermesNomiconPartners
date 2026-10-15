@@ -19,7 +19,7 @@ const SOURCE_LABELS: Record<SourcingSourceType, string> = {
   steuerberaterverzeichnis: "StB-Verzeichnis",
   wpk_berufsregister: "WPK-Register",
   brak_anwaltsverzeichnis: "BRAK-Verzeichnis",
-  kanzlei_team_page: "Kanzlei-Team-Seite",
+  kanzlei_team_page: "Kunden-Team-Seite",
 };
 
 export function SourcingLeadsTable() {

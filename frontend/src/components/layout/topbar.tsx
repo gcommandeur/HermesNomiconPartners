@@ -59,7 +59,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
     router.refresh();
   }
 
-  // Globale Live-Suche ueber Kandidaten/Kanzleien/Kontakte (Prozesse/Vakanzen
+  // Globale Live-Suche ueber Kandidaten/Kunden/Kontakte (Prozesse/Vakanzen
   // bewusst ausgeschlossen - CandidateSubmission hat serverseitig keinen
   // Namens-Suchparameter). Request-ID verwirft veraltete Antworten, falls der
   // Suchtext sich aendert, waehrend ein aelterer Request noch laeuft.
@@ -196,7 +196,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             "h-9 w-full rounded-md border border-white/10 bg-brand-bg/70 pr-3 text-sm text-white outline-none placeholder:text-brand-dim focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20",
             mobileSearchOpen ? "pl-12 sm:pl-9" : "pl-9",
           )}
-          placeholder="Kandidaten, Kanzleien oder Kontakte suchen"
+          placeholder="Kandidaten, Kunden oder Kontakte suchen"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => {
@@ -229,13 +229,13 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             )}
             {!loading && results.clients.length > 0 && (
               <div className="py-1">
-                <p className="px-3 py-1 text-[9.5px] font-semibold uppercase tracking-wider text-brand-dim">Kanzleien</p>
+                <p className="px-3 py-1 text-[9.5px] font-semibold uppercase tracking-wider text-brand-dim">Kunden</p>
                 {results.clients.map((client) => (
                   <button
                     key={client.id}
                     type="button"
                     className="block w-full px-3 py-2 text-left text-sm text-brand-text hover:bg-brand-accent/15"
-                    onClick={() => goTo(`/kanzleien/${client.id}`)}
+                    onClick={() => goTo(`/kunden/${client.id}`)}
                   >
                     {client.name}
                   </button>
@@ -250,7 +250,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
                     key={contact.id}
                     type="button"
                     className="block w-full px-3 py-2 text-left text-sm text-brand-text hover:bg-brand-accent/15"
-                    onClick={() => goTo(`/kanzleien/${contact.client_company_id}`)}
+                    onClick={() => goTo(`/kunden/${contact.client_company_id}`)}
                   >
                     {contact.first_name} {contact.last_name}
                     {contact.client_company_name && (

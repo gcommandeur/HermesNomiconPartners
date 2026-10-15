@@ -31,7 +31,7 @@ function formatSize(bytes: number): string {
   return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
 }
 
-/** Vorstellungs-Archiv (Administration): Nachweis, was bei einer Vorstellung an die Kanzlei
+/** Vorstellungs-Archiv (Administration): Nachweis, was bei einer Vorstellung an der Kunde
  * gegangen ist. Nur fuer Admins; das Backend antwortet Nicht-Admins mit 404. */
 export default function PresentationArchivePage() {
   const { data: meData, isLoading: meLoading } = useCurrentUser();
@@ -110,7 +110,7 @@ export default function PresentationArchivePage() {
     <>
       <PageHeader eyebrow="Administration" title="Vorstellungs-Archiv" />
       <p className="mb-5 max-w-3xl text-sm text-brand-muted">
-        Nachweis für Honorar-Streitfälle: Bei jeder Vorstellung an eine Kanzlei wird beim Versand festgehalten, was
+        Nachweis für Honorar-Streitfälle: Bei jeder Vorstellung an einen Kunden wird beim Versand festgehalten, was
         hinausgegangen ist (Empfänger, Text, Anhänge mit Prüfsumme). Die Einträge sind unveränderlich und nur für Admins
         sichtbar. Entfernen geht erst nach Ablauf der Aufbewahrungsfrist, mit Begründung und Freigabe durch einen
         zweiten Admin. Für Vorstellungen vor Einführung des Archivs gibt es keinen Eintrag.
@@ -126,7 +126,7 @@ export default function PresentationArchivePage() {
                 <div key={request.id} className="flex flex-wrap items-start justify-between gap-3 border-t border-white/10 pt-3">
                   <div className="min-w-0 text-xs text-brand-soft">
                     <p>
-                      {request.client_name ?? "Kanzlei"} · Nr. {request.candidate_number ?? "—"} · beantragt von{" "}
+                      {request.client_name ?? "Kunde"} · Nr. {request.candidate_number ?? "—"} · beantragt von{" "}
                       {request.requested_by} am {formatDateTime(request.created_at)}
                     </p>
                     <p className="mt-1 text-brand-muted">Begründung: {request.reason}</p>
@@ -187,7 +187,7 @@ export default function PresentationArchivePage() {
                 <div className="min-w-0">
                   <p className="font-medium">
                     <Archive size={14} className="mr-1.5 inline text-brand-muted" />
-                    {item.client_name ?? "Kanzlei unbekannt"} · Nr. {item.candidate_number ?? "—"}
+                    {item.client_name ?? "Kunde unbekannt"} · Nr. {item.candidate_number ?? "—"}
                     {item.candidate_name ? ` (${item.candidate_name})` : ""}
                   </p>
                   <p className="text-xs text-brand-muted">

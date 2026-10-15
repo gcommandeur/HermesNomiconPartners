@@ -5,7 +5,7 @@ const labels: Record<string, string> = {
   acquisition: "In Verhandlung", prospect: "Noch kein Kontakt",
   qualification_call: "Quali Call", cv_in: "CV IN", cv_out: "CV OUT", interview: "Interview",
   offer: "Offer", placement: "Placement", cancelled: "Abgebrochen",
-  candidate_rejected: "Absage Kandidat", client_rejected: "Absage Kanzlei",
+  candidate_rejected: "Absage Kandidat", client_rejected: "Absage Kunde",
   candidate_ghosting: "Ghosting Kandidat",
   open: "Offen", on_hold: "Pausiert", filled: "Besetzt", closed: "Geschlossen", draft: "Entwurf",
   low: "Niedrig", normal: "Normal", high: "Hoch", urgent: "Dringend",

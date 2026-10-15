@@ -16,7 +16,7 @@ export function invalidatePendingApprovals(entityType: EntityType, entityId: str
 }
 
 function describe(request: ApprovalRequest): string {
-  if (request.kind === "new_client") return "Neue Kanzlei – wartet auf Freigabe durch die Geschäftsführung";
+  if (request.kind === "new_client") return "Neuen Kunden – wartet auf Freigabe durch die Geschäftsführung";
   if (request.kind === "invoice_issue") return "Rechnung stellen – wartet auf Freigabe durch die Geschäftsführung";
   const changes = Object.entries(request.proposed_values ?? {})
     .map(([key, value]) => `${key === "fee_percentage" ? "Honorar" : key}: ${String(request.old_values?.[key] ?? "—")} → ${String(value ?? "—")}`)

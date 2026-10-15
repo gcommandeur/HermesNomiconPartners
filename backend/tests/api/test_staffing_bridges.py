@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from cc_crm.core.security import hash_password
 from cc_crm.models.access_views import UserViewAccess
 from cc_crm.models.candidate import Candidate
+from cc_crm.models.engagement import CandidateEngagementPrefs
 from cc_crm.models.enums import InvoiceStatus, SubmissionStatus
 from cc_crm.models.recruiting import Fee, Placement
 from cc_crm.models.staffing import (
@@ -34,6 +35,8 @@ def _candidate(session_factory: sessionmaker[Session], first: str = "Olga") -> s
     with session_factory() as session:
         row = Candidate(first_name=first, last_name="Angebot")
         session.add(row)
+        session.flush()
+        session.add(CandidateEngagementPrefs(candidate_id=row.id, open_for_staffing="yes"))
         session.commit()
         return str(row.id)
 

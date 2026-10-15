@@ -32,6 +32,7 @@ from cc_crm.services.base import CrudService
 from cc_crm.services.candidates import CandidateService
 from cc_crm.services.clients import ClientCompanyService
 from cc_crm.services.closing_score import ClosingScoreService
+from cc_crm.services.engagement_status import require_channel_open  # NOMICON
 
 CLOSED_STATUSES = {
     SubmissionStatus.PLACEMENT,
@@ -217,6 +218,7 @@ class CandidateSubmissionService(
         if payload.status != SubmissionStatus.QUALIFICATION_CALL:
             raise BusinessRuleError("New submissions must start in qualification_call status")
         self.candidates.get(payload.candidate_id)
+        require_channel_open(self.session, payload.candidate_id, "direct")  # NOMICON
         if payload.client_company_id is not None:
             self.clients.get(payload.client_company_id)
         self._validate_related_entities(
@@ -389,7 +391,7 @@ class CandidateSubmissionService(
             client_company_id = payload.client_company_id
         if payload.status in STATUSES_REQUIRING_CLIENT and client_company_id is None:
             raise BusinessRuleError(
-                "Ab Interview muss der Prozess mit einer Kanzlei verknuepft sein"
+                "Ab Interview muss der Prozess mit einem Kunden verknuepft sein"
             )
 
         now = datetime.now(UTC)

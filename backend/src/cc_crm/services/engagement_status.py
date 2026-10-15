@@ -140,7 +140,7 @@ def summarize(
                 else submission.last_activity_at.date(),
                 until=None,
                 details_visible=sees,
-                client_name=client_name if sees else None,
+                client_name=client_name,
                 entity_id=submission.id if sees else None,
             )
         )
@@ -157,7 +157,7 @@ def summarize(
                 since=assignment.start_date,
                 until=assignment.actual_end_date or assignment.planned_end_date,
                 details_visible=sees,
-                client_name=client_name if sees else None,
+                client_name=client_name,
                 entity_id=assignment.id if sees else None,
             )
         )
@@ -178,12 +178,13 @@ def summarize(
 
 
 def describe(item: EngagementItemRead) -> str:
-    """Kurztext mit den fuer alle sichtbaren Angaben (kein Kanzleiname)."""
+    """Kurztext mit den fuer alle sichtbaren Angaben (Kanal, Stufe, Kunde, Mitarbeiter, Datum)."""
     channel = "Direct" if item.channel == "direct" else "AÜ"
     stage = STAGE_LABELS.get(item.stage, item.stage)
     who = f" ({item.owner_name})" if item.owner_name else ""
     since = f" seit {item.since.strftime('%d.%m.%Y')}" if isinstance(item.since, date) else ""
-    return f"{channel}: {stage}{who}{since}"
+    client = f" bei {item.client_name}" if item.client_name else ""
+    return f"{channel}: {stage}{client}{who}{since}"
 
 
 # --- Praeferenz ---------------------------------------------------------------------------------
@@ -323,3 +324,26 @@ def ensure_no_conflict(
         raise BusinessRuleError(text + " Anlegen ist gesperrt (Einstellung der Geschäftsführung).")
     if not confirmed:
         raise ConflictError(text + " Trotzdem anlegen?")
+
+
+def require_channel_open(session: Session, candidate_id: uuid.UUID, channel: str) -> None:
+    """Der Kandidat muss fuer den Kanal freigegeben sein (beim Kandidaten angekreuzt).
+
+    Ueberlassung braucht ein ausdrueckliches "ja" (Einwilligung); Direct ist nur bei "nein"
+    gesperrt, "nicht geklaert" reicht, damit bestehende Kandidaten vermittelt werden koennen."""
+    row = session.scalar(
+        select(CandidateEngagementPrefs).where(
+            CandidateEngagementPrefs.candidate_id == candidate_id
+        )
+    )
+    if channel == "staffing":
+        if row is None or row.open_for_staffing != "yes":
+            raise BusinessRuleError(
+                "Dieser Kandidat ist nicht für Überlassung freigegeben. "
+                "Bitte beim Kandidaten „Überlassung“ ankreuzen."
+            )
+    elif row is not None and row.open_for_direct == "no":
+        raise BusinessRuleError(
+            "Dieser Kandidat ist nicht für Direct freigegeben. "
+            "Bitte beim Kandidaten „Direct“ ankreuzen."
+        )

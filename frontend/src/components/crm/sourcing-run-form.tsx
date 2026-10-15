@@ -38,11 +38,11 @@ const SOURCE_OPTIONS: { value: RunSource; label: string; hint: string }[] = [
   },
   {
     value: "kanzlei_team_page",
-    label: "Kanzlei-Team-Seiten",
+    label: "Kunden-Team-Seiten",
     hint:
-      "Durchsucht die Websites der im CRM erfassten Kanzleien nach Team-/Mitarbeiter-Seiten und " +
-      "extrahiert die dort genannten Personen (KI-Extraktion) – ohne Umkreis alle Kanzleien, mit " +
-      "Umkreis nur die Kanzleien rund um die PLZ/den Ort.",
+      "Durchsucht die Websites der im CRM erfassten Kunden nach Team-/Mitarbeiter-Seiten und " +
+      "extrahiert die dort genannten Personen (KI-Extraktion) – ohne Umkreis alle Kunden, mit " +
+      "Umkreis nur die Kunden rund um die PLZ/den Ort.",
   },
 ];
 
@@ -61,7 +61,7 @@ export function SourcingRunForm() {
   const [result, setResult] = useState<SourcingRunResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Pollt den Hintergrund-Lauf ("alle Kanzleien scannen") alle 4s, solange
+  // Pollt den Hintergrund-Lauf ("alle Kunden scannen") alle 4s, solange
   // er laeuft - das ist der einzige Sourcing-Pfad, der lange genug laeuft,
   // um eine Fortschrittsanzeige + Stop-Button zu brauchen (siehe Backend
   // GET /sourcing/status). Stoppt automatisch, sobald der Lauf beendet ist.
@@ -83,7 +83,7 @@ export function SourcingRunForm() {
     : isTeamScrape || (areas.length > 0 && areas.length <= 20);
   const canRun = !running && !activeRun && inputValid;
   const selectedOption = SOURCE_OPTIONS.find((option) => option.value === source);
-  const runUnit = activeRun?.source_type === "kanzlei_team_page" ? "Kanzleien" : "PLZ";
+  const runUnit = activeRun?.source_type === "kanzlei_team_page" ? "Kunden" : "PLZ";
 
   async function handleStop() {
     setStopping(true);
@@ -177,7 +177,7 @@ export function SourcingRunForm() {
           }}
           className="h-9 rounded-md border border-white/15 bg-brand-surface px-2 text-sm text-brand-platinum focus:outline-none focus:ring-2 focus:ring-brand-accent/30 disabled:opacity-50"
         >
-          <option value="">{isTeamScrape ? "Alle Kanzleien" : "Kein Umkreis"}</option>
+          <option value="">{isTeamScrape ? "Alle Kunden" : "Kein Umkreis"}</option>
           {RADIUS_OPTIONS.map((km) => (
             <option key={km} value={km}>
               Umkreis {km} km
@@ -202,7 +202,7 @@ export function SourcingRunForm() {
               : isRadius
                 ? "Umkreissuche starten"
                 : isTeamScrape
-                  ? "Alle Kanzleien scannen"
+                  ? "Alle Kunden scannen"
                   : "Lauf starten"}
           </Button>
         )}
@@ -219,7 +219,7 @@ export function SourcingRunForm() {
           {result.background_started > 0 ? (
             <>
               {isTeamScrape
-                ? `Team-Scan für ${result.background_started} Kanzleien mit Website`
+                ? `Team-Scan für ${result.background_started} Kunden mit Website`
                 : `Umkreissuche über ${result.background_started} PLZ`}{" "}
               im Hintergrund gestartet – gefundene Leads erscheinen nach und nach in der Liste
               unten (Seite später neu laden).

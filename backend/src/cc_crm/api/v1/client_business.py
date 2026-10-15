@@ -19,5 +19,5 @@ def get_client_business(
     client_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
 ) -> ClientBusinessRead:
     if session.get(ClientCompany, client_id) is None:
-        raise EntityNotFoundError("Kanzlei nicht gefunden")
+        raise EntityNotFoundError("Kunde nicht gefunden")
     return client_business(session, current_user, client_id, date.today())

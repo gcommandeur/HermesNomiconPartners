@@ -196,7 +196,7 @@ export interface AdminUser {
 }
 
 /** Minimale Nutzerliste (GET /users/assignable) fuer Owner-Dropdowns beim
- * Anlegen von Kandidat/Kanzlei/Prozess/Aufgabe - anders als AdminUser fuer
+ * Anlegen von Kandidat/Kunde/Prozess/Aufgabe - anders als AdminUser fuer
  * JEDEN eingeloggten Nutzer zugaenglich, siehe Backend schemas/user.py::
  * UserBriefRead. */
 export interface UserBrief {
@@ -312,7 +312,7 @@ export interface ClientCompany extends Entity {
   special_terms?: string | null;
   commercial_notes?: string | null;
   notes: string | null;
-  /** Zustaendiger Mitarbeiter (Komfort-Filter "Meine Kanzleien", KEINE
+  /** Zustaendiger Mitarbeiter (Komfort-Filter "Meine Kunden", KEINE
    * Sichtbarkeitsgrenze - siehe Backend models/client_company.py::owner_user_id). */
   owner_user_id?: string | null;
   /** Eigene Felder (Admin-definiert), Schlüssel -> Wert. */
@@ -376,8 +376,8 @@ export interface Contact extends Entity {
   phone: string | null;
   is_primary: boolean;
   /** Vom Backend denormalisiert mitgeliefert (Join gegen client_companies),
-   * damit die Kontakte-Liste den Kanzleinamen zeigen kann, ohne selbst den
-   * kompletten Kanzlei-Bestand laden zu muessen. */
+   * damit die Kontakte-Liste den Kundennamen zeigen kann, ohne selbst den
+   * kompletten Kunden-Bestand laden zu muessen. */
   client_company_name?: string | null;
 }
 
@@ -406,9 +406,9 @@ export interface CandidateMatch {
   in_radius: boolean | null;
 }
 
-/** Geo Mapping ist eine reine Kanzleien-Umkreissuche (die kandidatenzentrierte
+/** Geo Mapping ist eine reine Kunden-Umkreissuche (die kandidatenzentrierte
  * Umkreissuche uebernimmt die "CV Out"-Kampagne direkt am Kandidaten) - kein
- * `kind`-Feld mehr, jedes Ergebnis ist implizit eine Kanzlei. */
+ * `kind`-Feld mehr, jedes Ergebnis ist implizit einen Kunden. */
 export interface GeoMappingResult {
   id: string;
   name: string;
@@ -559,7 +559,7 @@ export interface FeedbackCreateResult {
 
 /** Stufen, die ueber das Notiz-Status-Feld (FeedbackPanel/CandidateProcessLog)
  * gesetzt werden koennen - Interview/Offer/Placement brauchen eine
- * verknuepfte Kanzlei und haben eigene Panels (siehe stage-edit-modal.tsx). */
+ * verknuepften Kunden und haben eigene Panels (siehe stage-edit-modal.tsx). */
 export type FeedbackTargetStatus = "qualification_call" | "cv_in" | "cv_out";
 
 /** Payload fuer POST /candidates/{id}/quick-log - legt bei Bedarf automatisch
@@ -582,7 +582,7 @@ export interface CandidateQuickLogResult {
 export interface CandidateStageSummary {
   // KEIN SubmissionStatus-Feld wie die uebrigen sechs - Pitch/InMail ist
   // keine Kanban-Stufe (Nutzer-Entscheidung: kein eigener Prozess-Status,
-  // keine Kanzlei-Bindung wie bei CV-Outs), sondern zaehlt unabhaengige
+  // keine Kunden-Bindung wie bei CV-Outs), sondern zaehlt unabhaengige
   // CandidatePitchLog-Eintraege direkt am Kandidaten (siehe
   // candidate-process-log.tsx/POST /candidates/{id}/pitch-log).
   pitch: number;
@@ -987,7 +987,7 @@ export interface Paginated<T> {
   offset: number;
 }
 
-/** Serverseitige Such-/Pagination-Anfrage fuer Kandidaten/Kanzleien/Kontakte
+/** Serverseitige Such-/Pagination-Anfrage fuer Kandidaten/Kunden/Kontakte
  * (siehe lib/api/use-server-search.ts) - loest fetchAllPages() ab, das
  * bislang immer den kompletten Bestand lud. */
 export interface PageQuery {
@@ -1103,7 +1103,7 @@ export interface SourcingLead {
 
 export type SourcingRunStatusValue = "running" | "completed" | "stopped";
 
-/** Stand des Hintergrund-Sourcing-Laufs "alle Kanzleien scannen" (siehe
+/** Stand des Hintergrund-Sourcing-Laufs "alle Kunden scannen" (siehe
  * Backend models/sourcing_run.py) - Basis fuer Lauf-Anzeige + Stop-Button. */
 export interface SourcingRunStatus {
   id: string;
@@ -1176,7 +1176,7 @@ export type MailMatchStatus = "matched" | "pending_review" | "unmatched";
 /** Eine Zeile in der Liste der eingelesenen Mails (Postfaecher-Seite,
  * GET /mail-accounts/{id}/messages) - siehe backend/schemas/mail.py::
  * MailMessageRead. Kontaktpersonen haben keine eigene Detailseite, deshalb
- * traegt matched_contact_person_client_company_id die Kanzlei-ID, zu der
+ * traegt matched_contact_person_client_company_id die Kunden-ID, zu der
  * stattdessen verlinkt wird. */
 export interface MailMessageListItem {
   id: string;

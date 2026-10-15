@@ -85,7 +85,7 @@ export function StaffingAssignmentDetailView({ id }: { id: string }) {
           <h2 className="text-xl font-semibold tracking-[-.02em]">
             <Link href={`/ueberlassung/leiharbeitnehmer/${assignment.worker_id}`} className="hover:underline">{assignment.worker_name}</Link>
             <span className="text-brand-muted"> bei </span>
-            <Link href={`/kanzleien/${assignment.client_company_id}`} className="hover:underline">{assignment.client_name}</Link>
+            <Link href={`/kunden/${assignment.client_company_id}`} className="hover:underline">{assignment.client_name}</Link>
           </h2>
         </div>
         <div className="flex flex-wrap gap-2">

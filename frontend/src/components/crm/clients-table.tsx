@@ -30,7 +30,7 @@ type ClientRow =
   | { kind: "single"; client: ClientCompany }
   | { kind: "group"; groupKey: string; locations: ClientCompany[] };
 
-/** Fasst Kanzleien mit identischem, nicht-leerem kanzleigruppe-Wert (z.B.
+/** Fasst Kunden mit identischem, nicht-leerem kanzleigruppe-Wert (z.B.
  * "ECOVIS") zu einer Zeile zusammen - reine Darstellungsaenderung, die
  * einzelnen ClientCompany-Datensaetze (eigene Adresse/Kontakte je Standort)
  * bleiben unveraendert eigenstaendig (siehe models/client_company.py).
@@ -56,7 +56,7 @@ function groupByKanzleigruppe(clients: ClientCompany[]): ClientRow[] {
 
 export function ClientsTable() {
   const [status, setStatus] = useState("");
-  // "Meine Kanzleien" - reiner Komfort-Filter nach owner_user_id, KEINE
+  // "Meine Kunden" - reiner Komfort-Filter nach owner_user_id, KEINE
   // Sichtbarkeitsgrenze (Default "Alle" bleibt unveraendert).
   const [mineOnly, setMineOnly] = useState(false);
   const { data: currentUserData } = useCurrentUser();
@@ -76,7 +76,7 @@ export function ClientsTable() {
   // Serverseitige Suche + Pagination + Sortierung (siehe
   // lib/api/use-server-search.ts) - laedt nur die aktuell sichtbare Seite +
   // Suchtreffer statt (wie vorher via fetchAllPages) immer den kompletten
-  // Kanzlei-Bestand. Sortierung laeuft ueber ORDER BY im Backend (siehe
+  // Kunden-Bestand. Sortierung laeuft ueber ORDER BY im Backend (siehe
   // repositories/clients.py::_order_by_clauses) und damit ueber den
   // GESAMTEN Bestand, nicht mehr nur die aktuell geladene Seite.
   const {
@@ -104,7 +104,7 @@ export function ClientsTable() {
   const rows = useMemo(() => groupByKanzleigruppe(sorted), [sorted]);
 
   const exportRows = useMemo(() => sorted.map((client) => ({
-    Kanzlei: client.name,
+    Kunde: client.name,
     Status: client.status,
     Region: client.region ?? client.city ?? client.postal_code,
     Fokus: client.focus,
@@ -125,10 +125,10 @@ export function ClientsTable() {
 
   return (
     <>
-      <div className="mb-4 flex justify-end"><ExportActions filename="kanzleien" rows={exportRows} /></div>
+      <div className="mb-4 flex justify-end"><ExportActions filename="kunden" rows={exportRows} /></div>
       <DemoNotice source={source ?? "api"} error={demoError} />
       <FilterBar
-        placeholder="Nach Kanzlei, Region oder Fokus suchen"
+        placeholder="Nach Kunde, Region oder Fokus suchen"
         value={search}
         onChange={setSearch}
         statusOptions={STATUS_OPTIONS}
@@ -147,7 +147,7 @@ export function ClientsTable() {
             return (
               <Link
                 key={client.id}
-                href={`/kanzleien/${client.id}`}
+                href={`/kunden/${client.id}`}
                 className="block rounded-lg border border-white/10 bg-brand-panel p-3 active:bg-brand-hover/35"
               >
                 <div className="flex items-start justify-between gap-2">
@@ -187,7 +187,7 @@ export function ClientsTable() {
                   {locations.map((client) => (
                     <Link
                       key={client.id}
-                      href={`/kanzleien/${client.id}`}
+                      href={`/kunden/${client.id}`}
                       className="block rounded-lg border border-white/10 bg-brand-surface/60 p-3 active:bg-brand-hover/35"
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -208,13 +208,13 @@ export function ClientsTable() {
           );
         })}
         {rows.length === 0 && (
-          <p className="py-8 text-center text-xs text-brand-muted">Keine Kanzleien gefunden.</p>
+          <p className="py-8 text-center text-xs text-brand-muted">Keine Kunden gefunden.</p>
         )}
       </div>
       <div className="hidden lg:block">
       <DataTable
         headers={[
-          { label: "Kanzlei", key: "name" },
+          { label: "Kunde", key: "name" },
           { label: "Region", key: "region" },
           { label: "Größe", key: "company_size" },
           { label: "Fokus", key: "focus" },
@@ -231,7 +231,7 @@ export function ClientsTable() {
             const client = row.client;
             return (
               <tr key={client.id} className="hover:bg-brand-hover/35">
-                <td className="px-4 py-3.5"><Link href={`/kanzleien/${client.id}`} className="font-semibold text-brand-platinum hover:text-white hover:underline">{client.name}</Link><div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusPill status={client.status} />{client.approval_pending && <Badge tone="amber">Freigabe ausstehend</Badge>}</div></td>
+                <td className="px-4 py-3.5"><Link href={`/kunden/${client.id}`} className="font-semibold text-brand-platinum hover:text-white hover:underline">{client.name}</Link><div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusPill status={client.status} />{client.approval_pending && <Badge tone="amber">Freigabe ausstehend</Badge>}</div></td>
                 <td className="px-4 py-3.5">{client.region ?? client.city ?? client.postal_code ?? "—"}</td>
                 <td className="px-4 py-3.5 text-brand-soft">{client.company_size ?? "—"}</td>
                 <td className="px-4 py-3.5">{client.focus ?? "—"}</td>
@@ -282,7 +282,7 @@ export function ClientsTable() {
               {isExpanded &&
                 locations.map((client) => (
                   <tr key={client.id} className="bg-brand-surface/40 hover:bg-brand-hover/35">
-                    <td className="px-4 py-3.5 pl-9"><Link href={`/kanzleien/${client.id}`} className="font-semibold text-brand-platinum hover:text-white hover:underline">{client.name}</Link><div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusPill status={client.status} />{client.approval_pending && <Badge tone="amber">Freigabe ausstehend</Badge>}</div></td>
+                    <td className="px-4 py-3.5 pl-9"><Link href={`/kunden/${client.id}`} className="font-semibold text-brand-platinum hover:text-white hover:underline">{client.name}</Link><div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusPill status={client.status} />{client.approval_pending && <Badge tone="amber">Freigabe ausstehend</Badge>}</div></td>
                     <td className="px-4 py-3.5">{client.region ?? client.city ?? client.postal_code ?? "—"}</td>
                     <td className="px-4 py-3.5 text-brand-soft">{client.company_size ?? "—"}</td>
                     <td className="px-4 py-3.5">{client.focus ?? "—"}</td>
@@ -297,7 +297,7 @@ export function ClientsTable() {
       </DataTable>
       </div>
       <PaginationControls page={page} pageCount={pageCount} onChange={setPage} />
-      <p className="mt-3 text-xs text-brand-gray">{sorted.length} von {totalCount} Kanzleien</p>
+      <p className="mt-3 text-xs text-brand-gray">{sorted.length} von {totalCount} Kunden</p>
     </>
   );
 }

@@ -17,7 +17,7 @@ import type { ApprovalKind, ApprovalRequest } from "@/lib/api/types";
 import { brand } from "@/lib/brand";
 
 const KIND_LABELS: Record<ApprovalKind, string> = {
-  new_client: "Neue Kanzlei",
+  new_client: "Neuen Kunden",
   honorar_change: "Honorar-Änderung",
   invoice_issue: "Rechnung stellen",
 };
@@ -121,7 +121,7 @@ export default function FreigabenPage() {
             <ShieldOff size={28} className="text-brand-muted" />
             <p className="text-sm font-semibold text-brand-text">Nur für Admins zugänglich</p>
             <p className="max-w-sm text-xs text-brand-muted">
-              Hier entscheidet die Geschäftsführung über neue Kanzleien, Honorar-Änderungen und
+              Hier entscheidet die Geschäftsführung über neue Kunden, Honorar-Änderungen und
               das Stellen von Rechnungen.
             </p>
           </CardContent>
@@ -153,8 +153,8 @@ export default function FreigabenPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone="amber">{KIND_LABELS[request.kind] ?? request.kind}</Badge>
                     {request.entity_type === "client_company" ? (
-                      <Link href={`/kanzleien/${request.entity_id}`} className="text-sm font-semibold text-brand-text hover:underline">
-                        {request.entity_label ?? "Kanzlei"}
+                      <Link href={`/kunden/${request.entity_id}`} className="text-sm font-semibold text-brand-text hover:underline">
+                        {request.entity_label ?? "Kunde"}
                       </Link>
                     ) : (
                       <span className="text-sm font-semibold text-brand-text">{request.entity_label ?? "Rechnung"}</span>
@@ -197,7 +197,7 @@ export default function FreigabenPage() {
               )}
               {request.kind === "new_client" && rejectingId === request.id && (
                 <p className="mt-2 text-[10.45px] text-brand-muted">
-                  Eine abgelehnte neue Kanzlei wird nicht gelöscht, sondern als „Gesperrt“ markiert.
+                  Ein abgelehnter neuer Kunde wird nicht gelöscht, sondern als „Gesperrt“ markiert.
                 </p>
               )}
             </CardContent>

@@ -12,6 +12,7 @@ from cc_crm.core.errors import BusinessRuleError, ConflictError, EntityNotFoundE
 from cc_crm.core.security import hash_password
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
+from cc_crm.models.engagement import CandidateEngagementPrefs
 from cc_crm.models.recruiting import AuditLog
 from cc_crm.models.staffing import CHECKLIST_KEYS, StaffingWorkerStatus
 from cc_crm.models.user import User
@@ -50,6 +51,8 @@ def actor(session: Session) -> User:
 def candidate(session: Session) -> Candidate:
     c = Candidate(first_name="Mira", last_name="Muster")
     session.add(c)
+    session.flush()
+    session.add(CandidateEngagementPrefs(candidate_id=c.id, open_for_staffing="yes"))
     session.commit()
     return c
 

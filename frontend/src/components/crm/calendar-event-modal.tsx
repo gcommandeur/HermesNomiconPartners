@@ -153,8 +153,8 @@ export function CalendarEventModal({
   }
 
   // Prozess-Auswahl: nur Prozesse des gewaehlten Kandidaten (optional
-  // zusaetzlich auf die gewaehlte Kanzlei eingegrenzt) - eine serverseitige
-  // Suche wie bei Kandidat/Kanzlei lohnt sich hier nicht (Prozesse sind ein
+  // zusaetzlich auf die gewaehlte Kunde eingegrenzt) - eine serverseitige
+  // Suche wie bei Kandidat/Kunde lohnt sich hier nicht (Prozesse sind ein
   // kleiner, bereits komplett geladener Bestand, siehe fetchAllPages-Hinweis
   // in lib/api/queries.ts), daher client-seitige Filterung der vollen Liste.
   useEffect(() => {
@@ -361,7 +361,7 @@ export function CalendarEventModal({
             />
           </div>
           <div>
-            <label className={labelClass}>Kanzlei (optional)</label>
+            <label className={labelClass}>Kunde (optional)</label>
             <SearchSelect
               onSearch={searchClients}
               value={form.client_company_id}
@@ -369,9 +369,9 @@ export function CalendarEventModal({
                 set("client_company_id", value);
                 set("candidate_submission_id", "");
               }}
-              placeholder="Kanzlei suchen…"
-              emptyLabel="Keine Kanzlei gefunden"
-              clearLabel="Keine Kanzlei"
+              placeholder="Kunde suchen…"
+              emptyLabel="Keinen Kunden gefunden"
+              clearLabel="Keinen Kunden"
             />
           </div>
         </div>

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
+from cc_crm.models.engagement import CandidateEngagementPrefs
 from tests.api.test_team_lead import Person, _make_user
 
 P = "/api/v1/staffing"
@@ -49,6 +50,10 @@ def make_candidate(session_factory: sessionmaker[Session]):  # type: ignore[no-u
         with session_factory() as session:
             candidate = Candidate(first_name=first, last_name="Muster")
             session.add(candidate)
+            session.flush()
+            # NOMICON: Überlassung beim Kandidaten freigegeben (Voraussetzung für Leiharbeitnehmer)
+            prefs = CandidateEngagementPrefs(candidate_id=candidate.id, open_for_staffing="yes")
+            session.add(prefs)
             session.commit()
             return str(candidate.id)
 

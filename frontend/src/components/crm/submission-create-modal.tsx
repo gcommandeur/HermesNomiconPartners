@@ -80,13 +80,13 @@ export function SubmissionCreateForm({
         />
       </div>
       <div>
-        <label className={labelClass}>Kanzlei (optional)</label>
+        <label className={labelClass}>Kunde (optional)</label>
         <SearchSelect
           onSearch={searchClients}
           value={clientId}
           onChange={setClientId}
-          placeholder="Kanzlei suchen…"
-          emptyLabel="Keine Kanzlei gefunden"
+          placeholder="Kunde suchen…"
+          emptyLabel="Keinen Kunden gefunden"
           clearLabel="Noch offen"
         />
       </div>
@@ -121,7 +121,7 @@ export function SubmissionCreateModal({
         <Modal
           title="Prozess erstellen"
           eyebrow="Recruiting-Prozesse"
-          description="Ein Prozess beginnt beim Quali Call. Die Kanzlei kann optional sofort verknüpft oder erst ab Interview ergänzt werden."
+          description="Ein Prozess beginnt beim Quali Call. Der Kunde kann optional sofort verknüpft oder erst ab Interview ergänzt werden."
           onClose={() => setOpen(false)}
         >
           <SubmissionCreateForm onDone={(submission) => { setOpen(false); onCreated?.(submission); }} />

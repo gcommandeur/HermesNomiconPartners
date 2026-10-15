@@ -155,24 +155,28 @@ def test_admin_persona_gets_a_session_without_password_or_code(
     }
 
 
-def test_broker_persona_is_a_member_with_direct_only(
+def test_broker_persona_is_a_member_with_direct_and_staffing(
     client: TestClient, seeded: None, demo_on: None
 ) -> None:
     body = _login(client, "vermittler")
     headers = {"Authorization": f"Bearer {body['token']}"}  # type: ignore[index]
     assert body["user"]["role"] == "member"  # type: ignore[index]
-    assert client.get(f"{API}/me/views", headers=headers).json()["views"] == ["direct"]
-    assert client.get(f"{API}/staffing/overview", headers=headers).status_code == 403
+    assert client.get(f"{API}/me/views", headers=headers).json()["views"] == ["direct", "staffing"]
+    assert client.get(f"{API}/staffing/overview", headers=headers).status_code == 200
     assert client.get(f"{API}/commission/report", headers=headers).status_code == 403
-    # Der Demo-Admin schaltet live frei und entzieht wieder
+    # Der Demo-Admin kann die Ueberlassung live entziehen und wieder freischalten
     admin = {"Authorization": f"Bearer {_login(client, 'admin')['token']}"}  # type: ignore[index]
     broker_id = body["user"]["id"]  # type: ignore[index]
-    granted = client.put(
+    revoked = client.put(
+        f"{API}/admin/users/{broker_id}/views", json={"views": ["direct"]}, headers=admin
+    )
+    assert revoked.status_code == 200
+    assert client.get(f"{API}/staffing/overview", headers=headers).status_code == 403
+    client.put(
         f"{API}/admin/users/{broker_id}/views",
         json={"views": ["direct", "staffing"]},
         headers=admin,
     )
-    assert granted.status_code == 200
     assert client.get(f"{API}/staffing/overview", headers=headers).status_code == 200
     client.put(f"{API}/admin/users/{broker_id}/views", json={"views": ["direct"]}, headers=admin)
     assert client.get(f"{API}/staffing/overview", headers=headers).status_code == 403
@@ -250,7 +254,7 @@ def test_seed_is_idempotent_and_covers_every_status(
         summary = summarize(session, broker, demo_ids)
         statuses = {row.status for row in summary.values()}
         assert statuses == {"frei", "im_direct", "im_einsatz", "beides", "vermittelt"}
-        # fremder Prozess (Kollegin): fuer den Demo-Vermittler ohne Kanzleiname
+        # fremder Prozess (Kollegin): Details/IDs verborgen, Kundenname sichtbar
         foreign = [
             item
             for row in summary.values()
@@ -258,7 +262,7 @@ def test_seed_is_idempotent_and_covers_every_status(
             if item.owner_name == "Demo Kollegin"
         ]
         assert foreign and all(
-            not item.details_visible and item.client_name is None for item in foreign
+            not item.details_visible and item.entity_id is None for item in foreign
         )
         # ...eigener Prozess: mit Kanzlei
         own = [

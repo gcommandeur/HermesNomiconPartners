@@ -116,7 +116,7 @@ function VacancyForm({
       <div><label className={labelClass}>Titel *</label><Input required value={form.title} onChange={(e) => set("title", e.target.value)} /></div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label className={labelClass}>Kanzlei</label>
+          <label className={labelClass}>Kunde</label>
           <select className={selectClass} value={form.client_company_id} onChange={(e) => set("client_company_id", e.target.value)}>
             <option value="">Optional / offen</option>
             {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

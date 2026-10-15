@@ -63,7 +63,7 @@ export function StaffingTakeoverTiers({ isAdmin }: { isAdmin: boolean }) {
       <Card>
         <CardContent>
           <p className="mb-4 text-xs text-brand-muted">
-            Anteil des Vermittlungshonorars (in Prozent des Honorarsatzes der Kanzlei), wenn der Kunde einen Leiharbeitnehmer nach der genannten Einsatzdauer übernimmt. {data.data.notice}
+            Anteil des Vermittlungshonorars (in Prozent des Honorarsatzes des Kunden), wenn der Kunde einen Leiharbeitnehmer nach der genannten Einsatzdauer übernimmt. {data.data.notice}
           </p>
           <form className="space-y-2" onSubmit={save}>
             {rows.map((row, index) => {

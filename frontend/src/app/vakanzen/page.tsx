@@ -16,10 +16,10 @@ export const dynamic = "force-dynamic";
 
 export default async function VacanciesPage() {
   const [vacancies, clients] = await Promise.all([getVacancies(), getClients()]);
-  const clientName = (id: string | null) => id ? clients.data.find((client) => client.id === id)?.name ?? "Kanzlei" : "Optional / offen";
+  const clientName = (id: string | null) => id ? clients.data.find((client) => client.id === id)?.name ?? "Kunde" : "Optional / offen";
   const exportRows = vacancies.data.map((vacancy) => ({
     Titel: vacancy.title,
-    Kanzlei: clientName(vacancy.client_company_id),
+    Kunde: clientName(vacancy.client_company_id),
     Standort: vacancy.location,
     Status: vacancy.status,
     Prioritaet: vacancy.priority,

@@ -67,9 +67,9 @@ export default async function CandidateDetailPage({
   // NOMICON: Prozesse nur mit Ansicht Direct abfragen (sonst 403), Überlassungs-Reiter nur mit Ansicht Überlassung.
   const [canDirect, canStaffing] = await Promise.all([hasView("direct"), hasView("staffing")]);
   // Nur die Prozesse DIESES Kandidaten und danach nur die darin referenzierten
-  // Kanzleien laden - vorher wurden hier ALLE Prozesse und ALLE Kanzleien
+  // Kunden laden - vorher wurden hier ALLE Prozesse und ALLE Kunden
   // (mehrere tausend, seitenweise nacheinander) geladen, nur um ein paar
-  // Kanzleinamen anzuzeigen (~10s Ladezeit).
+  // Kundennamen anzuzeigen (~10s Ladezeit).
   const [result, submissionsResult, activitiesResult, tasksResult, documentsResult, notesResult, historyResult, commentsResult, usersResult] = await Promise.all([
     getCandidate(id),
     canDirect ? getSubmissionsForCandidate(id) : Promise.resolve(noData<CandidateSubmission[]>([])), // NOMICON
@@ -95,7 +95,7 @@ export default async function CandidateDetailPage({
   const history = historyResult.data;
   const comments = commentsResult.data;
   const users = usersResult.data;
-  const clientName = (clientId: string | null) => clientId ? (clients.find((client) => client.id === clientId)?.name ?? "Kanzlei") : "Kanzlei offen";
+  const clientName = (clientId: string | null) => clientId ? (clients.find((client) => client.id === clientId)?.name ?? "Kunde") : "Kunde offen";
   const anonymousProfile = candidate.short_profile ?? [
     `${candidate.job_title ?? "Kandidat/in"} mit Schwerpunkt ${candidate.summary ?? "Steuern / Beratung"}.`,
     `Region: ${candidate.city ?? candidate.postal_code ?? "offen"}.`,
@@ -199,7 +199,7 @@ export default async function CandidateDetailPage({
                 {[["Rolle", candidate.job_title], ["Gehaltswunsch", candidate.salary_expectation], ["Kündigungsfrist", candidate.notice_period], ["Region", `${candidate.postal_code ?? ""} ${candidate.city ?? ""}`.trim()], ["Anrede", candidate.anrede === "frau" ? "Frau" : candidate.anrede === "herr" ? "Herr" : candidate.anrede === "divers" ? "Divers" : null], ["Empfohlen von", candidate.referred_by]].map(([label, value]) => <div key={label}><p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
               </div>
               <div className="mt-6 grid grid-cols-1 gap-5 border-t border-white/10 pt-5 sm:grid-cols-2">
-                {[["Ausbildung / Weiterbildung", candidate.ausbildung_titel], ["Aktuelles Umfeld", [candidate.aktuelles_umfeld_kanzleityp, candidate.aktuelles_umfeld_kanzleigroesse].filter(Boolean).join(" · ")], ["Remote-/Teilzeit-Wünsche", candidate.remote_teilzeit_wuensche], ["Passender Kanzleityp", candidate.passender_kanzleityp]].map(([label, value]) => <div key={label}><p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
+                {[["Ausbildung / Weiterbildung", candidate.ausbildung_titel], ["Aktuelles Umfeld", [candidate.aktuelles_umfeld_kanzleityp, candidate.aktuelles_umfeld_kanzleigroesse].filter(Boolean).join(" · ")], ["Remote-/Teilzeit-Wünsche", candidate.remote_teilzeit_wuensche], ["Passender Kundentyp", candidate.passender_kanzleityp]].map(([label, value]) => <div key={label}><p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
                 {/* Nur bei rechtsanwalt relevant, siehe models/candidate.py::
                  * examensnoten - wird nur angezeigt, wenn tatsaechlich gesetzt. */}
                 {candidate.examensnoten && (

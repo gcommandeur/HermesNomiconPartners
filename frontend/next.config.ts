@@ -11,6 +11,14 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_CC_CRM_DEMO_LOGIN: process.env.NEXT_PUBLIC_CC_CRM_DEMO_LOGIN === "true" ? "true" : "false",
   },
 
+  // NOMICON: Umbenennung Kanzleien -> Kunden: alte Lesezeichen weiterleiten.
+  async redirects() {
+    return [
+      { source: "/kanzleien", destination: "/kunden", permanent: true },
+      { source: "/kanzleien/:path*", destination: "/kunden/:path*", permanent: true },
+    ];
+  },
+
   async headers() {
     return [
       {

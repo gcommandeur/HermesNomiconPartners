@@ -195,7 +195,7 @@ def test_every_overall_status(
     assert _status(client, world.admin, ghost)["status"] == "frei"
 
 
-def test_foreign_processes_show_channel_stage_owner_and_date_but_no_client(
+def test_foreign_processes_show_channel_stage_client_owner_and_date_but_no_ids(
     client: TestClient, world: World, session_factory: sessionmaker[Session]
 ) -> None:
     cid = _candidate(session_factory)
@@ -222,7 +222,7 @@ def test_foreign_processes_show_channel_stage_owner_and_date_but_no_client(
         "since": "2026-10-03",
         "until": None,
         "details_visible": False,
-        "client_name": None,
+        "client_name": SECRET_CLIENT,
         "entity_id": None,
     }
     # ...und Annas Sicht auf Bens Einsatz ebenfalls (Sammelabfrage)
@@ -317,7 +317,7 @@ def test_warn_confirm_and_block_modes_when_creating_a_process(
     assert warned.status_code == 409, warned.text
     assert "bereits im Austausch" in warned.json()["detail"]
     assert "Ben S." in warned.json()["detail"]
-    assert SECRET_CLIENT not in warned.text  # Kanzlei fremder Prozesse bleibt verborgen
+    assert SECRET_CLIENT in warned.json()["detail"]  # Kunde sichtbar
     confirmed = client.post(
         f"{API}/submissions?confirm_engagement=true", json=body, headers=world.anna.headers
     )
@@ -398,8 +398,7 @@ def test_creating_an_assignment_for_a_candidate_in_a_direct_process_warns(
     }
     warned = client.post(f"{API}/staffing/assignments", json=body, headers=world.ben.headers)
     assert warned.status_code == 409, warned.text
-    assert "Direct: Interview (Anna K.)" in warned.json()["detail"]
-    assert SECRET_CLIENT not in warned.text
+    assert f"Direct: Interview bei {SECRET_CLIENT} (Anna K.)" in warned.json()["detail"]
     ok = client.post(
         f"{API}/staffing/assignments?confirm_engagement=true", json=body, headers=world.ben.headers
     )
@@ -418,7 +417,7 @@ def test_requires_login(client: TestClient) -> None:
     )
 
 
-def test_client_name_of_foreign_processes_stays_out_of_history_and_comments(
+def test_client_name_of_foreign_processes_stays_out_of_history_and_comments_only(
     client: TestClient, world: World, session_factory: sessionmaker[Session]
 ) -> None:
     cid = _candidate(session_factory)
@@ -432,5 +431,27 @@ def test_client_name_of_foreign_processes_stays_out_of_history_and_comments(
         response = client.get(f"{API}/candidates/{cid}/{path}", headers=world.ben.headers)
         assert response.status_code == 200, (path, response.text)
         assert SECRET_CLIENT not in response.text, path
+    # im Kandidatenstatus ist der Kunde dagegen bewusst fuer alle sichtbar (Nutzerentscheid)
     status = client.get(f"{API}/candidates/{cid}/engagement", headers=world.ben.headers)
-    assert SECRET_CLIENT not in status.text
+    assert SECRET_CLIENT in status.text
+
+
+def test_channel_must_be_ticked_at_the_candidate(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
+    """Überlassung braucht ein ausdrückliches Ja, Direct ist nur bei Nein gesperrt."""
+    from cc_crm.core.errors import BusinessRuleError
+    from cc_crm.services.engagement_status import require_channel_open
+
+    with session_factory() as session:
+        candidate = Candidate(first_name="Kai", last_name="Kanal")
+        session.add(candidate)
+        session.commit()
+        cid = candidate.id
+        require_channel_open(session, cid, "direct")  # nicht geklärt: erlaubt
+        with pytest.raises(BusinessRuleError, match="Überlassung"):
+            require_channel_open(session, cid, "staffing")
+        session.add(CandidateEngagementPrefs(candidate_id=cid, open_for_direct="no"))
+        session.commit()
+        with pytest.raises(BusinessRuleError, match="Direct"):
+            require_channel_open(session, cid, "direct")

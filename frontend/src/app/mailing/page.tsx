@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 // Empfaenger kommen nicht mehr aus einer hartcodierten "alle Hauptkontakte"-
 // Regel, sondern aus gespeicherten Mailing-Gruppen (Punkt 6: Geo-Mapping-
-// Auswahl / "Fuer Mailing nutzen" auf Kandidaten-/Kanzlei-/Kontaktprofilen).
+// Auswahl / "Fuer Mailing nutzen" auf Kandidaten-/Kunden-/Kontaktprofilen).
 // Vorlagen liegen seit "Mailvorlagen editierbar machen" in der DB und werden
 // client-seitig per SWR gecached (siehe useEmailTemplatesCache) statt als
 // statischer Prop durchgereicht - dieser Server-Fetch dient nur noch dazu,

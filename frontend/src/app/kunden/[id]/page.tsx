@@ -37,7 +37,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   return (
     <>
-      <Link href="/kanzleien" className="mb-5 inline-flex items-center gap-2 text-xs text-brand-muted hover:text-brand-platinum"><ArrowLeft size={14} />Zur Kanzleiliste</Link>
+      <Link href="/kunden" className="mb-5 inline-flex items-center gap-2 text-xs text-brand-muted hover:text-brand-platinum"><ArrowLeft size={14} />Zur Kundenliste</Link>
       <div className="mb-6 flex flex-col justify-between gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-end">
         <div>
           <div className="mb-3 flex items-center gap-2">
@@ -75,10 +75,10 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           {groupLocations.length > 0 && (
             <Card className="mt-4">
               <CardContent>
-                <div className="flex items-center gap-2"><Building2 size={15} className="text-brand-platinum" /><h2 className="font-semibold">Weitere Standorte der Kanzleigruppe &quot;{client.kanzleigruppe}&quot;</h2></div>
+                <div className="flex items-center gap-2"><Building2 size={15} className="text-brand-platinum" /><h2 className="font-semibold">Weitere Standorte der Kundengruppe &quot;{client.kanzleigruppe}&quot;</h2></div>
                 <div className="mt-4 space-y-2">
                   {groupLocations.map((location) => (
-                    <Link key={location.id} href={`/kanzleien/${location.id}`} className="flex items-center justify-between rounded-lg border border-white/10 bg-brand-surface/75 p-3 text-sm hover:border-brand-accent/50">
+                    <Link key={location.id} href={`/kunden/${location.id}`} className="flex items-center justify-between rounded-lg border border-white/10 bg-brand-surface/75 p-3 text-sm hover:border-brand-accent/50">
                       <span className="font-medium">{location.name}</span>
                       <span className="text-xs text-brand-muted">{[location.street, location.postal_code, location.city].filter(Boolean).join(", ") || "Adresse offen"}</span>
                     </Link>
@@ -100,7 +100,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           <DocumentPanel ownerType="client" ownerId={client.id} documentType="vertrag" documents={documents} />
         </TabsContent>
       </Tabs>
-      <ClientBusinessPanel clientId={client.id} /> {/* NOMICON: Geschäft mit dieser Kanzlei */}
+      <ClientBusinessPanel clientId={client.id} /> {/* NOMICON: Geschäft mit diesem Kunden */}
     </>
   );
 }

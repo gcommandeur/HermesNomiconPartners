@@ -230,7 +230,7 @@ export function MailingGroupsPanel({
 
       {groups.length === 0 && (
         <Card><CardContent className="py-12 text-center text-sm text-brand-gray">
-          Noch keine Mailing-Gruppen gespeichert — auf Kandidaten-/Kanzlei-/Kontaktprofilen oder im Geo Mapping über &quot;Für Mailing nutzen&quot; anlegen.
+          Noch keine Mailing-Gruppen gespeichert — auf Kandidaten-/Kunden-/Kontaktprofilen oder im Geo Mapping über &quot;Für Mailing nutzen&quot; anlegen.
         </CardContent></Card>
       )}
 

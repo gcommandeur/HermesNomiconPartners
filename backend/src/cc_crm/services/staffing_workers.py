@@ -17,6 +17,7 @@ from cc_crm.schemas.staffing import (
     StaffingWorkerUpdate,
 )
 from cc_crm.services import staffing_audit as audit
+from cc_crm.services.engagement_status import require_channel_open  # NOMICON
 
 
 def worker_read(row: WorkerRow) -> StaffingWorkerRead:
@@ -62,6 +63,8 @@ class StaffingWorkerService:
             raise BusinessRuleError("Ein anonymisierter Kandidat kann kein Leiharbeitnehmer sein.")
         if self.workers.by_candidate(candidate.id) is not None:
             raise ConflictError("Dieser Kandidat ist bereits als Leiharbeitnehmer angelegt.")
+        # NOMICON: Kanal-Freigabe beim Kandidaten (Einwilligung Überlassung)
+        require_channel_open(self.session, candidate.id, "staffing")
         values = payload.model_dump()
         try:
             worker = self.workers.create(values)

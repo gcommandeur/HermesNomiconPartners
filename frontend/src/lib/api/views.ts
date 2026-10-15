@@ -29,7 +29,7 @@ export const VIEW_HOME: Record<ViewKey, string> = {
   management: "/geschaeftsfuehrung",
 };
 
-/** Welche Ansicht eine Seite exklusiv gehört; neutrale Seiten (Kandidaten, Kanzleien ...) gehören keiner. */
+/** Welche Ansicht eine Seite exklusiv gehört; neutrale Seiten (Kandidaten, Kunden ...) gehören keiner. */
 export function viewForPath(pathname: string): ViewKey | null {
   const startsWith = (prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
   if (["/prozesse", "/vakanzen", "/sourcing", "/gewaehrleistung", "/prioritaet"].some(startsWith)) return "direct";
@@ -70,7 +70,7 @@ export function saveViewDefaults(views: ViewKey[]): Promise<{ views: ViewKey[] }
 }
 
 /** Server-Komponenten: darf der Nutzer Prozesse laden (Ansicht Direct)? Ohne Freigabe antworten
- * die Direct-Routen mit 403 - neutrale Seiten (Kandidat, Kanzlei) fragen dann gar nicht erst an. */
+ * die Direct-Routen mit 403 - neutrale Seiten (Kandidat, Kunde) fragen dann gar nicht erst an. */
 export async function hasView(view: ViewKey): Promise<boolean> {
   const { data } = await getMyViews();
   return data.views.includes(view);

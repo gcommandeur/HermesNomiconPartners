@@ -594,7 +594,7 @@ def cmd_seed(args: argparse.Namespace) -> None:
                 f"{demo.processes} Prozesse, {demo.assignments} Einsaetze."
             )
     print(
-        f"Seed abgeschlossen: {args.clients} Kanzleien, "
+        f"Seed abgeschlossen: {args.clients} Kunden, "
         f"{args.candidates} Kandidaten, {args.submissions} Prozesse."
     )
 

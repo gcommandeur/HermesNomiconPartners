@@ -50,7 +50,7 @@ DEMO_PERSONAS: dict[str, DemoPersona] = {
         "demo-vermittler@nomicon.local",
         "Demo Vermittler",
         "member",
-        ("direct",),
+        ("direct", "staffing"),  # fuer den Test beides sichtbar; der Admin kann es entziehen
         "direct",
     ),
 }

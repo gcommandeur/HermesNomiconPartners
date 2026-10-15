@@ -1,7 +1,7 @@
 import type { SearchSelectOption } from "@/components/ui/search-select";
 import { getCandidatesPage, getClientsPage } from "./queries";
 
-/** Serverseitige Suche fuer SearchSelect-Dropdowns (Kandidat/Kanzlei) - laedt
+/** Serverseitige Suche fuer SearchSelect-Dropdowns (Kandidat/Kunde) - laedt
  * NICHT den kompletten Bestand vor (siehe use-server-search.ts), sondern
  * jeweils nur die Top-50-Treffer fuer den aktuellen Suchbegriff. Geteilt
  * zwischen submission-create-modal.tsx und calendar-event-modal.tsx. */

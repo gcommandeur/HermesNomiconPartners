@@ -24,7 +24,7 @@ const labelClass = "mb-1 block text-xs text-brand-muted";
 function targetHref(proposal: AiProposal): string | null {
   if (!proposal.target_id) return null;
   if (proposal.target_type === "candidate") return `/kandidaten/${proposal.target_id}`;
-  if (proposal.target_type === "client") return `/kanzleien/${proposal.target_id}`;
+  if (proposal.target_type === "client") return `/kunden/${proposal.target_id}`;
   return null;
 }
 

@@ -6,11 +6,11 @@ import { ClientCreateModal } from "@/components/crm/client-create-modal";
 // Kein serverseitiger Datenfetch mehr - gleiches Muster wie /kandidaten
 // (siehe lib/api/hooks.ts): ClientsTable laedt komplett client-seitig per
 // SWR, damit wiederholte Navigation aus dem Cache bedient wird statt bei
-// jedem Besuch alle Kanzleien neu vom Backend zu holen.
+// jedem Besuch alle Kunden neu vom Backend zu holen.
 export default function ClientsPage() {
   return (
     <>
-      <PageHeader eyebrow="Client Intelligence" title="Kanzleien" action={<div className="flex flex-wrap gap-2"><ImportWizard entity="clients" label="Kanzleien" /><ClientCreateModal /></div>} />
+      <PageHeader eyebrow="Client Intelligence" title="Kunden" action={<div className="flex flex-wrap gap-2"><ImportWizard entity="clients" label="Kunden" /><ClientCreateModal /></div>} />
       <ClientsTable />
     </>
   );

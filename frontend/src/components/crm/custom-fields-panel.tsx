@@ -11,7 +11,7 @@ const selectClass =
   "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 /** Eigene Felder (vom Admin unter Einstellungen → Eigene Felder angelegt) an
- * Kandidat bzw. Kanzlei: zeigt alle aktiven Felder und speichert die Werte. Ohne
+ * Kandidat bzw. Kunde: zeigt alle aktiven Felder und speichert die Werte. Ohne
  * definierte Felder wird nichts angezeigt. */
 export function CustomFieldsPanel({
   entityType,

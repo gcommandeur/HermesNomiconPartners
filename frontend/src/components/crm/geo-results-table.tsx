@@ -51,11 +51,11 @@ function distinctValues(results: GeoMappingResult[], pick: (item: GeoMappingResu
   return Array.from(values).sort((a, b) => a.localeCompare(b, "de"));
 }
 
-/** Geo Mapping ist eine reine Kanzleien-Umkreissuche (Auftrag "Geo Mapping
- * auf reine Kanzleien-Suche reduzieren") - die frueher kandidatenzentrierte
+/** Geo Mapping ist eine reine Kunden-Umkreissuche (Auftrag "Geo Mapping
+ * auf reine Kunden-Suche reduzieren") - die frueher kandidatenzentrierte
  * Umkreissuche (zweite Spalte, eigene Kandidaten-Filter) uebernimmt jetzt die
  * "CV Out"-Kampagne direkt am Kandidaten. `results` enthaelt deshalb nur noch
- * Kanzleien (siehe GeoMappingResult-Typ, kein `kind`-Feld mehr). */
+ * Kunden (siehe GeoMappingResult-Typ, kein `kind`-Feld mehr). */
 export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
@@ -261,7 +261,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
 
       <Card className="mb-3">
         <CardContent>
-          <div className="mb-3 flex items-center gap-2"><SlidersHorizontal size={15} className="text-brand-platinum" /><h2 className="text-sm font-semibold">Kanzleien-Filter</h2></div>
+          <div className="mb-3 flex items-center gap-2"><SlidersHorizontal size={15} className="text-brand-platinum" /><h2 className="text-sm font-semibold">Kunden-Filter</h2></div>
           <div className="space-y-3">
             <FilterBar placeholder="Name oder Tag suchen" value={clientSearch} onChange={setClientSearch} />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -290,7 +290,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
         </CardContent>
       </Card>
 
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-muted">Kanzleien ({clientResults.length})</h3>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-muted">Kunden ({clientResults.length})</h3>
       {/* Mobile (<lg): Karten statt der 7-spaltigen Tabelle, siehe
        * candidates-table.tsx fuer denselben Fix + Begruendung (Nutzer-
        * Feedback "mobile Version nicht passend") - Checkbox-Auswahl fuer

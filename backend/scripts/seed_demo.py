@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session  # noqa: E402
 
 from cc_crm.core.security import hash_password  # noqa: E402
 from cc_crm.models.access_views import UserViewAccess, UserViewSettings  # noqa: E402
+from cc_crm.models.app_setting import AppSetting  # noqa: E402
 from cc_crm.models.candidate import Candidate  # noqa: E402
 from cc_crm.models.client_company import ClientCompany  # noqa: E402
 from cc_crm.models.engagement import CandidateEngagementPrefs  # noqa: E402
@@ -58,7 +59,8 @@ def _colleague(session: Session) -> User:
         )
         session.add(user)
         session.flush()
-        session.add(UserViewAccess(user_id=user.id, view="direct"))
+        for view in ("direct", "staffing"):
+            session.add(UserViewAccess(user_id=user.id, view=view))
         session.add(UserViewSettings(user_id=user.id, default_view="direct"))
     return user
 
@@ -150,7 +152,7 @@ def seed_demo(session: Session) -> DemoSeedResult:
     )
     if len(clients) < 3:
         session.commit()
-        print("Demo: zu wenige Kanzleien - bitte zuerst 'seed' mit --clients 12 ausfuehren.")
+        print("Demo: zu wenige Kunden - bitte zuerst 'seed' mit --clients 12 ausfuehren.")
         return result
 
     def prefs(candidate: Candidate, direct: str, staffing: str) -> None:
@@ -230,5 +232,10 @@ def seed_demo(session: Session) -> DemoSeedResult:
             _process(session, c, clients[len(key) % 3], owner, status, fee, days)
             result.candidates += 1
             result.processes += 1
+    # Fuer den Test sind beide Ansichten sichtbar (neue Mitarbeiter: Direct + Ueberlassung); der
+    # Admin legt unter Einstellungen -> Administration -> Ansichten jederzeit eine Ansicht fest.
+    key = "views_default_for_new_users"
+    if session.scalar(select(AppSetting).where(AppSetting.key == key)) is None:
+        session.add(AppSetting(key=key, value=["direct", "staffing"]))
     session.commit()
     return result

@@ -88,7 +88,7 @@ export default function ProzesseOhneVerantwortlichenPage() {
           </CardContent>
         </Card>
       ) : (
-        <DataTable headers={["Kandidat", "Kanzlei", "Status", "Angelegt", "Verantwortlicher"]}>
+        <DataTable headers={["Kandidat", "Kunde", "Status", "Angelegt", "Verantwortlicher"]}>
           {items.map((item) => (
             <tr key={item.id} className="hover:bg-brand-hover/25">
               <td className="px-4 py-3.5 font-medium text-brand-text">

@@ -13,19 +13,19 @@ export default async function GeoMappingPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Kanzleien-Umkreissuche"
+        eyebrow="Kunden-Umkreissuche"
         title="Geo Mapping"
         action={<ExportActions filename="geo-mapping-ergebnisse" rows={rows} />}
       />
       <DemoNotice source={result.source} />
       {/* Karte und Tabelle teilen sich denselben Filterzustand (Ort/PLZ,
-       * Umkreissuche, Kanzleien-Filter - siehe GeoResultsTable) - die Karte
+       * Umkreissuche, Kunden-Filter - siehe GeoResultsTable) - die Karte
        * lebt deshalb in GeoResultsTable selbst statt hier als getrennte
        * Komponente mit dem ungefilterten result.data, sonst zeigt sie
        * weiterhin ausnahmslos alle Datensaetze an, waehrend die Tabelle
        * darunter schon gefiltert ist ("beim Eintippen wird trotzdem alles
-       * angezeigt"-Bug). Reine Kanzleien-Umkreissuche (Auftrag "Geo Mapping
-       * auf reine Kanzleien-Suche reduzieren") - die kandidatenzentrierte
+       * angezeigt"-Bug). Reine Kunden-Umkreissuche (Auftrag "Geo Mapping
+       * auf reine Kunden-Suche reduzieren") - die kandidatenzentrierte
        * Umkreissuche uebernimmt die "CV Out"-Kampagne direkt am Kandidaten. */}
       <GeoResultsTable results={result.data} />
     </>

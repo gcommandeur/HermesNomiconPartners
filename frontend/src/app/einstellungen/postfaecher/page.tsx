@@ -63,7 +63,7 @@ function formatMessageDate(value: string): string {
 }
 
 /** Ziel-Link fuer eine zugeordnete Mail - Kontaktpersonen haben keine eigene
- * Detailseite, deshalb geht der Link dort zur Kanzlei (siehe
+ * Detailseite, deshalb geht der Link dort zum Kunden (siehe
  * MailMessageListItem-Docstring im Backend). */
 function messageLink(message: MailMessageListItem): { href: string; label: string } | null {
   if (message.matched_candidate_id) {
@@ -71,12 +71,12 @@ function messageLink(message: MailMessageListItem): { href: string; label: strin
   }
   if (message.matched_contact_person_id && message.matched_contact_person_client_company_id) {
     return {
-      href: `/kanzleien/${message.matched_contact_person_client_company_id}`,
+      href: `/kunden/${message.matched_contact_person_client_company_id}`,
       label: message.matched_contact_person_name ?? "Kontaktperson",
     };
   }
   if (message.matched_client_company_id) {
-    return { href: `/kanzleien/${message.matched_client_company_id}`, label: message.matched_client_company_name ?? "Kanzlei" };
+    return { href: `/kunden/${message.matched_client_company_id}`, label: message.matched_client_company_name ?? "Kunde" };
   }
   return null;
 }
@@ -476,7 +476,7 @@ export default function PostfaecherPage() {
               <div>
                 <h2 className="font-semibold">Verbundene Postfächer</h2>
                 <p className="mt-1 text-xs text-brand-muted">
-                  Eingehende Mails werden Kandidat:innen und Kanzlei-Kontakten zugeordnet und in
+                  Eingehende Mails werden Kandidat:innen und Kunden-Kontakten zugeordnet und in
                   der Timeline abgelegt. Passwörter werden verschlüsselt gespeichert und nie
                   wieder angezeigt.
                 </p>

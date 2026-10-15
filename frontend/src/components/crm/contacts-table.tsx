@@ -19,9 +19,9 @@ import type { Contact } from "@/lib/api/types";
 
 export function ContactsTable() {
   // Serverseitige Suche + Pagination (siehe lib/api/use-server-search.ts) -
-  // der Kanzleiname kommt bereits vom Backend denormalisiert mit
+  // der Kundenname kommt bereits vom Backend denormalisiert mit
   // (client_company_name, Join gegen client_companies) - das Frontend muss
-  // dafuer nicht mehr den kompletten Kanzlei-Bestand separat laden.
+  // dafuer nicht mehr den kompletten Kunden-Bestand separat laden.
   const {
     search,
     setSearch,
@@ -40,7 +40,7 @@ export function ContactsTable() {
 
   const exportRows = useMemo(() => contacts.map((contact) => ({
     Name: contactName(contact),
-    Kanzlei: contact.client_company_name ?? "Kanzlei",
+    Kunde: contact.client_company_name ?? "Kunde",
     Rolle: contact.role_title,
     Email: contact.email,
     Telefon: contact.phone,
@@ -63,7 +63,7 @@ export function ContactsTable() {
       <div className="mb-4 flex justify-end"><ExportActions filename="kontakte" rows={exportRows} /></div>
       <DemoNotice source={source ?? "api"} error={demoError} />
       <FilterBar
-        placeholder="Nach Name, Kanzlei oder Rolle suchen"
+        placeholder="Nach Name, Kunde oder Rolle suchen"
         value={search}
         onChange={setSearch}
         loading={isValidating}
@@ -83,7 +83,7 @@ export function ContactsTable() {
               )}
             </div>
             <p className="mt-0.5 truncate text-xs text-brand-muted">
-              {contact.client_company_name ?? "Kanzlei"}{contact.role_title ? ` · ${contact.role_title}` : ""}
+              {contact.client_company_name ?? "Kunde"}{contact.role_title ? ` · ${contact.role_title}` : ""}
             </p>
             <div className="mt-2 flex items-center justify-between gap-2 text-[10.45px] text-brand-gray">
               <span className="min-w-0 truncate">{contact.email ?? "—"} {contact.phone ? `· ${contact.phone}` : ""}</span>
@@ -108,11 +108,11 @@ export function ContactsTable() {
         )}
       </div>
       <div className="hidden lg:block">
-      <DataTable headers={["Kontakt", "Kanzlei", "Rolle", "E-Mail", "Telefon", "Hauptkontakt", "Mailing"]}>
+      <DataTable headers={["Kontakt", "Kunde", "Rolle", "E-Mail", "Telefon", "Hauptkontakt", "Mailing"]}>
         {contacts.map((contact) => (
           <tr key={contact.id} className="hover:bg-brand-hover/35">
             <td className="px-4 py-3.5 font-semibold text-brand-platinum">{contactName(contact)}</td>
-            <td className="px-4 py-3.5">{contact.client_company_name ?? "Kanzlei"}</td>
+            <td className="px-4 py-3.5">{contact.client_company_name ?? "Kunde"}</td>
             <td className="px-4 py-3.5">{contact.role_title ?? "—"}</td>
             <td className="px-4 py-3.5">{contact.email ?? "—"}</td>
             <td className="px-4 py-3.5">{contact.phone ?? "—"}</td>

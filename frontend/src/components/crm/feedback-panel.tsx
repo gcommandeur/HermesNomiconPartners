@@ -23,7 +23,7 @@ const textareaClass = "min-h-16 w-full rounded-md border border-white/10 bg-bran
 const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 // Nur diese drei Stufen sind gueltige Ziele fuer das Status-Feld einer Notiz -
-// Interview/Offer/Placement brauchen eine verknuepfte Kanzlei und haben eigene
+// Interview/Offer/Placement brauchen eine verknuepften Kunden und haben eigene
 // Panels (siehe backend services/recruiting.py::FEEDBACK_TARGET_STATUSES).
 const FEEDBACK_STAGES: FeedbackTargetStatus[] = ["qualification_call", "cv_in", "cv_out"];
 

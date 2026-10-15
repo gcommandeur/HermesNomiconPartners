@@ -475,7 +475,7 @@ class SourcingService:
         result = SourcingRunResult()
         client = self.session.get(ClientCompany, client_company_id)
         if client is None:
-            result.errors.append(f"{client_company_id}: Kanzlei nicht gefunden")
+            result.errors.append(f"{client_company_id}: Kunde nicht gefunden")
             return result
         if not client.website:
             result.errors.append(f"{client.name}: keine Website hinterlegt")
@@ -579,7 +579,7 @@ class SourcingService:
                 in_radius.append((distance, company.id))
         if not in_radius:
             raise BusinessRuleError(
-                f"Keine Kanzlei mit Website im Umkreis von {radius_km} km um '{center}'."
+                f"Kein Kunde mit Website im Umkreis von {radius_km} km um '{center}'."
             )
         return [company_id for _, company_id in sorted(in_radius)]
 

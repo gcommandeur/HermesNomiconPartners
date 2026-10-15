@@ -17,7 +17,7 @@ const items: { href: string; label: string; icon: typeof LayoutDashboard }[] = [
   { href: "/", label: "Übersicht", icon: LayoutDashboard },
   { href: "/prozesse", label: "Prozesse", icon: KanbanSquare },
   { href: "/kandidaten", label: "Kandidaten", icon: Users },
-  { href: "/kanzleien", label: "Kanzleien", icon: Building2 },
+  { href: "/kunden", label: "Kunden", icon: Building2 },
 ];
 
 export function BottomNav({ onMenu }: { onMenu: () => void }) {

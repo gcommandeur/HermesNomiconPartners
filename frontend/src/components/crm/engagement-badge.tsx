@@ -21,11 +21,11 @@ function itemText(item: EngagementItem): string {
   return `${channel}: ${stageLabel(item.stage)}${who}`;
 }
 
-/** Zeile je Prozess/Einsatz für Tooltip und Zeitlinie; Kanzlei nur, wenn sie sichtbar ist. */
+/** Zeile je Prozess/Einsatz für Tooltip und Zeitlinie; Kunde für alle sichtbar. */
 export function itemDetail(item: EngagementItem): string {
   const since = item.since ? ` seit ${formatDate(item.since)}` : "";
   const until = item.until ? `, bis ${formatDate(item.until)}` : "";
-  const client = item.details_visible && item.client_name ? ` · ${item.client_name}` : "";
+  const client = item.client_name ? ` · ${item.client_name}` : "";
   return `${itemText(item)}${since}${until}${client}`;
 }
 

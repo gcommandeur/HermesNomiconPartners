@@ -52,11 +52,11 @@ const GROUPS: { title: string; icon: typeof Users; tiles: Tile[] }[] = [
     title: "Daten und Compliance",
     icon: SlidersHorizontal,
     tiles: [
-      { href: "/einstellungen/felder", label: "Eigene Felder", description: "Zusatzfelder für Kandidaten, Kanzleien und Kontakte.", icon: SlidersHorizontal },
+      { href: "/einstellungen/felder", label: "Eigene Felder", description: "Zusatzfelder für Kandidaten, Kunden und Kontakte.", icon: SlidersHorizontal },
       { href: "/claude-vorschlaege", label: "Claude-Vorschläge", description: "Vorschläge der Claude-Schnittstelle prüfen und freigeben.", icon: Sparkles },
       { href: "/einstellungen/audit-log", label: "Audit-Log", description: "Wer hat wann was geändert.", icon: ClipboardList },
       { href: "/einstellungen/loeschanfragen", label: "Löschanfragen", description: "Datenschutz: Löschungen prüfen und ausführen.", icon: Trash2 },
-      { href: "/einstellungen/vorstellungs-archiv", label: "Vorstellungs-Archiv", description: "Nachweis für Honorar-Streitfälle: was an die Kanzlei ging.", icon: Archive },
+      { href: "/einstellungen/vorstellungs-archiv", label: "Vorstellungs-Archiv", description: "Nachweis für Honorar-Streitfälle: was an der Kunde ging.", icon: Archive },
     ],
   },
 ];

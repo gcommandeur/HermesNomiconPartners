@@ -82,9 +82,9 @@ export function useReactivationCandidatesCache(enabled: boolean) {
   );
 }
 
-/** Client-seitiges SWR-Caching des kompletten Kanzlei-Bestands - genutzt fuer
+/** Client-seitiges SWR-Caching des kompletten Kunden-Bestands - genutzt fuer
  * kleinere Auswahl-Dropdowns (z.B. contact-create-modal.tsx), NICHT mehr fuer
- * die Kanzleien-Liste selbst (die nutzt seit der Server-Side-Suche
+ * die Kunden-Liste selbst (die nutzt seit der Server-Side-Suche
  * useServerSearchList, siehe lib/api/use-server-search.ts). */
 export function useClientsCache() {
   return useSWR<DataResult<ClientCompany[]>>("/clients", getClients, swrConfig);
@@ -207,7 +207,7 @@ export function invalidateAdminUsersCache() {
 
 /** Fuer JEDEN eingeloggten Nutzer zugaenglich (anders als useAdminUsersCache/
  * GET /users, admin-only) - kleine, selten wechselnde Liste fuer die
- * Owner-Auswahl (owner_user_id) beim Anlegen von Kandidat/Kanzlei/Prozess/
+ * Owner-Auswahl (owner_user_id) beim Anlegen von Kandidat/Kunde/Prozess/
  * Aufgabe (siehe candidate-/client-/submission-create-modal.tsx). */
 export function useAssignableUsersCache() {
   return useSWR<DataResult<UserBrief[]>>("/users/assignable", getAssignableUsers, swrConfig);

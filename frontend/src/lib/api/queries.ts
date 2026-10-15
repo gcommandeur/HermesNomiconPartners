@@ -96,7 +96,7 @@ export async function getClients() {
   return fetchAllPages<ClientCompany>("/clients", demoClients);
 }
 
-/** Seitenweise Kanzlei-Suche, s. getCandidatesPage(). */
+/** Seitenweise Kunden-Suche, s. getCandidatesPage(). */
 export async function getClientsPage(query: PageQuery) {
   return apiGet<Paginated<ClientCompany>>(`/clients?${pageQueryString(query)}`, {
     items: [],
@@ -106,7 +106,7 @@ export async function getClientsPage(query: PageQuery) {
   });
 }
 
-/** Warnt vor wahrscheinlich schon vorhandenen Kanzleien mit ähnlichem Namen
+/** Warnt vor wahrscheinlich schon vorhandenen Kunden mit ähnlichem Namen
  * (Marke, nicht Rechtsform) - blockiert nichts, da mehrere Standorte
  * derselben Marke (Ecovis, Afileon, PWC, ...) ausdrücklich erwünscht sind. */
 export async function checkClientDuplicate(name: string, postalCode?: string, excludeId?: string) {
@@ -134,7 +134,7 @@ export async function getSubmissionsForCandidate(candidateId: string) {
   );
 }
 
-/** Laedt gezielt die angegebenen Kanzleien einzeln statt des kompletten
+/** Laedt gezielt die angegebenen Kunden einzeln statt des kompletten
  * Kanzleibestands (vorher mehrere tausend Datensaetze nur fuer ein paar
  * Namen auf der Kandidatendetailseite). */
 export async function getClientsByIds(clientIds: string[]): Promise<ClientCompany[]> {
@@ -272,7 +272,7 @@ export async function getContacts() {
 /** Seitenweise Kontakte-Suche, s. getCandidatesPage(). Der Endpoint gibt seit
  * der Server-Side-Suche eine Page (mit total_count) statt einer flachen
  * Liste zurueck und liefert client_company_name bereits denormalisiert mit -
- * das Frontend muss dafuer nicht mehr den kompletten Kanzlei-Bestand laden. */
+ * das Frontend muss dafuer nicht mehr den kompletten Kunden-Bestand laden. */
 export async function getContactsPage(query: PageQuery) {
   return apiGet<Paginated<Contact>>(`/contacts?${pageQueryString(query)}`, {
     items: [],
@@ -420,7 +420,7 @@ export interface CalendarEventQuery {
 
 /** Kalender-Termine im Zeitraum [startFrom, startTo] - kein Pagination noetig
  * (ein Monat/eine Woche an Terminen ist eine ueberschaubare Anzahl, anders
- * als der Kandidaten-/Kanzlei-Bestand). Serverseitige Sichtbarkeitsregeln
+ * als der Kandidaten-/Kunden-Bestand). Serverseitige Sichtbarkeitsregeln
  * (eigene vs. alle Termine) greifen unabhaengig von diesen Query-Parametern
  * (siehe Backend services/calendar_events.py::list_visible). */
 export async function getCalendarEvents(query: CalendarEventQuery = {}) {
@@ -498,7 +498,7 @@ export async function getAdminUsers() {
 
 /** Fuer JEDEN eingeloggten Nutzer zugaenglich (anders als getAdminUsers/
  * GET /users, admin-only) - Grundlage der Owner-Auswahl beim Anlegen von
- * Kandidat/Kanzlei/Prozess/Aufgabe. */
+ * Kandidat/Kunde/Prozess/Aufgabe. */
 export async function getAssignableUsers() {
   return apiGet<UserBrief[]>("/users/assignable", []);
 }

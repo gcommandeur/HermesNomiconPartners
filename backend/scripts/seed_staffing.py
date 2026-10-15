@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session  # noqa: E402
 from cc_crm.core.security import hash_password  # noqa: E402
 from cc_crm.models.candidate import Candidate  # noqa: E402
 from cc_crm.models.client_company import ClientCompany  # noqa: E402
+from cc_crm.models.engagement import CandidateEngagementPrefs  # noqa: E402
 from cc_crm.models.enums import ClientStatus  # noqa: E402
 from cc_crm.models.staffing import (  # noqa: E402
     StaffingAssignmentStatus,
@@ -160,6 +161,8 @@ def seed_staffing(
     activation = StaffingActivationService(session)
     for index, candidate in enumerate(candidates):
         plans = SCENARIOS[index % len(SCENARIOS)]
+        session.add(CandidateEngagementPrefs(candidate_id=candidate.id, open_for_staffing="yes"))
+        session.flush()
         worker = worker_service.create(
             StaffingWorkerCreate(
                 candidate_id=candidate.id,

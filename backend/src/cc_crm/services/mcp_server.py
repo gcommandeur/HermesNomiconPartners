@@ -151,7 +151,7 @@ def _get_client(session: Session, user: User, arguments: dict[str, Any]) -> Any:
     client_id = _uuid(arguments, "client_id")
     item = session.get(ClientCompany, client_id)
     if item is None:
-        raise CcCrmError("Kanzlei nicht gefunden")
+        raise CcCrmError("Kunde nicht gefunden")
     return {
         "id": str(item.id),
         "name": item.name,
@@ -334,13 +334,13 @@ TOOLS: tuple[Tool, ...] = (
     ),
     Tool(
         "search_clients",
-        "Kanzleien suchen (Name, Website, Ort).",
+        "Kunden suchen (Name, Website, Ort).",
         {"type": "object", "properties": {"query": {"type": "string"}, "limit": _LIMIT_SCHEMA}},
         _search_clients,
     ),
     Tool(
         "get_client",
-        "Eine Kanzlei per ID oeffnen.",
+        "Einen Kunden per ID oeffnen.",
         {
             "type": "object",
             "properties": {"client_id": {"type": "string"}},
@@ -362,7 +362,7 @@ TOOLS: tuple[Tool, ...] = (
     ),
     Tool(
         "propose_note",
-        "Schlaegt eine Notiz zu einem Kandidaten (candidate_id) oder einer Kanzlei (client_id) "
+        "Schlaegt eine Notiz zu einem Kandidaten (candidate_id) oder einem Kunden (client_id) "
         "vor. Es wird NICHTS angelegt: ein Mensch gibt den Vorschlag in Hermes frei.",
         {
             "type": "object",
@@ -395,7 +395,7 @@ TOOLS: tuple[Tool, ...] = (
     Tool(
         "propose_mail_draft",
         "Schlaegt einen Mail-ENTWURF an einen Kandidaten (candidate_id), Kontakt (contact_id) "
-        "oder eine Kanzlei (client_id) vor. Der Empfaenger stammt aus dem Datensatz. Es wird "
+        "oder einen Kunden (client_id) vor. Der Empfaenger stammt aus dem Datensatz. Es wird "
         "NICHTS gesendet: ein Mensch prueft, bearbeitet und sendet selbst.",
         {
             "type": "object",

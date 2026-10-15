@@ -37,7 +37,7 @@ export function VacanciesView({ vacancies, clients }: {
   const [status, setStatus] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const clientName = (id: string | null) => id ? clients.find((client) => client.id === id)?.name ?? "Kanzlei" : "Optional / offen";
+  const clientName = (id: string | null) => id ? clients.find((client) => client.id === id)?.name ?? "Kunde" : "Optional / offen";
 
   async function handleDelete(vacancy: Vacancy) {
     if (!window.confirm(`Vakanz "${vacancy.title}" wirklich löschen?`)) return;
@@ -67,7 +67,7 @@ export function VacanciesView({ vacancies, clients }: {
   return (
     <>
       <FilterBar
-        placeholder="Nach Rolle, Kanzlei, Standort, Gehalt oder Arbeitsmodell suchen"
+        placeholder="Nach Rolle, Kunde, Standort, Gehalt oder Arbeitsmodell suchen"
         value={search}
         onChange={setSearch}
         statusOptions={STATUS_OPTIONS}
@@ -112,7 +112,7 @@ export function VacanciesView({ vacancies, clients }: {
        * einem Telefon nur horizontal scrollbar erreichbar (Nutzer-Feedback
        * "mobile Version nicht passend"). */}
       <div className="hidden lg:block">
-      <DataTable headers={["Vakanz", "Kanzlei", "Standort", "Umkreis", "Qualifikation", "Gehalt", "Arbeitsmodell", "Status", "Priorität"]}>
+      <DataTable headers={["Vakanz", "Kunde", "Standort", "Umkreis", "Qualifikation", "Gehalt", "Arbeitsmodell", "Status", "Priorität"]}>
         {filtered.map((vacancy) => (
           <tr key={vacancy.id} className="hover:bg-brand-hover/35">
             <td className="px-4 py-3.5 font-semibold text-brand-platinum">{vacancy.title}</td>

@@ -7,7 +7,7 @@ import type { Abschlussart, DataResult, PageQuery, Paginated, Rolle } from "./ty
 
 const DEBOUNCE_MS = 300;
 
-/** Serverseitige Suche + Pagination fuer grosse Listen (Kandidaten, Kanzleien,
+/** Serverseitige Suche + Pagination fuer grosse Listen (Kandidaten, Kunden,
  * Kontakte) - loest fetchAllPages() ab, das bislang IMMER den kompletten
  * Bestand lud und danach clientseitig filterte/paginierte. Das brach
  * stillschweigend ab 25.000 Datensaetzen (PAGE_SIZE * MAX_PAGES) und waere

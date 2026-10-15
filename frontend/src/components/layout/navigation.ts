@@ -99,7 +99,7 @@ export const navigationGroups: NavigationGroup[] = [
     id: "kunden",
     label: "Kunden",
     items: [
-      { label: "Kanzleien", href: "/kanzleien", icon: Building2 },
+      { label: "Kunden", href: "/kunden", icon: Building2 },
       { label: "Kontakte", href: "/kontakte", icon: ContactRound },
       { label: "Geo Mapping", href: "/geo-mapping", icon: Map },
     ],

@@ -15,8 +15,8 @@ const labelClass = "mb-1 block text-xs text-brand-dim";
 const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 const honorarStufeOptions: { value: HonorarStufe; label: string }[] = [
-  { value: "standard", label: "Standard (27 %) — größere/etablierte Kanzleien" },
-  { value: "nachlass_1", label: "Nachlass 1 (25 %) — kleinere Kanzlei, begrenztes Budget" },
+  { value: "standard", label: "Standard (27 %) — größere/etablierte Kunden" },
+  { value: "nachlass_1", label: "Nachlass 1 (25 %) — kleinere Kunde, begrenztes Budget" },
   { value: "nachlass_2", label: "Nachlass 2 (23 %) — sehr kleine/Einzelkanzlei" },
   { value: "individuell", label: "Individuell" },
 ];
@@ -102,7 +102,7 @@ export function ClientHonorarEditor({ client }: { client: ClientCompany }) {
           </div>
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div><label className={labelClass}>Nachlass-Begründung</label><Input placeholder="z.B. kleine Kanzlei, begrenztes Budget" value={form.nachlass_begruendung} onChange={(e) => setForm((current) => ({ ...current, nachlass_begruendung: e.target.value }))} /></div>
+          <div><label className={labelClass}>Nachlass-Begründung</label><Input placeholder="z.B. kleiner Kunde, begrenztes Budget" value={form.nachlass_begruendung} onChange={(e) => setForm((current) => ({ ...current, nachlass_begruendung: e.target.value }))} /></div>
           <div><label className={labelClass}>AGB-Version</label><Input value={form.agb_version} onChange={(e) => setForm((current) => ({ ...current, agb_version: e.target.value }))} /></div>
         </div>
         <ErrorBanner message={error} className="mt-3" />

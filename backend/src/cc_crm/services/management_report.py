@@ -226,7 +226,7 @@ def _business_overlap(
     clients = [
         BothBusinessClientRead(
             client_id=client_id,
-            client_name=names.get(client_id, "Kanzlei"),
+            client_name=names.get(client_id, "Kunde"),
             processes=processes[client_id],
             assignments=assignments[client_id],
             placements=placed[client_id],

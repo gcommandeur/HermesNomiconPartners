@@ -55,7 +55,7 @@ Zählt als „im Austausch“: Prozess in Quali Call bis Offer (nicht archiviert
 Vermittlung (Placement, auch archiviert), Einsatz geplant oder aktiv.
 
 - **Sichtbarkeit (Standard, Rückfrage an den Nutzer):** Kanal, Stufe, zuständiger Mitarbeiter und
-  Datum sieht jeder Angemeldete. Kanzleiname und IDs nur, wer Zugriff auf den Prozess/Einsatz hat
+  Datum sieht jeder Angemeldete. Kundenname sieht jeder Angemeldete (Nutzerentscheid 2026-10-15), IDs nur, wer Zugriff auf den Prozess/Einsatz hat
   (Owner-Scope, Freigabe, Admin); sonst `details_visible=false`, Kanzlei und ID leer. Lohn/Marge nie.
 - **Offen für Direct / AÜ:** ja / nein / nicht geklärt (Standard), Tabelle `candidate_engagement_prefs`,
   jede Änderung im Audit-Log. Für AÜ kann eine eigene Einwilligung des Kandidaten nötig sein (Zweck der
@@ -149,16 +149,25 @@ Start lokal: `cd backend && CC_CRM_DATABASE_URL=sqlite:///./cc_crm_nomicon.db al
 Anmeldeseite erscheinen **Demo: Admin** und **Demo: Vermittler**.
 
 Der Demo-Seed legt Kandidaten für alle Zustände an: frei für alles, nur AÜ offen, nur Direct offen, im Prozess des
-Demo-Vermittlers, im Prozess der Kollegin (für den Demo-Vermittler ohne Kanzleiname), im AÜ-Einsatz, Direct und
+Demo-Vermittlers, im Prozess der Kollegin (für den Demo-Vermittler mit Kundenname, ohne Details), im AÜ-Einsatz, Direct und
 AÜ gleichzeitig, vermittelt - plus Prozesse mit erwarteter Fee ab Interview.
 
 ## Offene Fragen
 
 - Teamleiter sehen weiter die Team-Kennzahlen (`/team-kpis`, `/kpi-ranking`; Team-begrenzt). Die neue
   Ansicht „Gesamt“ ist nur für Admins. Soll die Geschäftsführungs-Seite für Teamleiter bleiben?
-- Kanzleiname bei fremden Prozessen im Kandidatenstatus: Standard „nicht sichtbar“. Soll er für alle sichtbar sein?
+- ~~Kundenname bei fremden Prozessen im Kandidatenstatus~~ → entschieden: sichtbar für alle.
 - Konflikt-Definition (siehe oben) und Standardmodus „warnen“ passen so?
 - Übernahme-Fee-Staffel: die Startwerte sind Platzhalter. Welche Staffel ist vertraglich vereinbart?
 - Lohnkosten-Annahme für den Rohertrag der Überlassung (Arbeitgeber-Faktor des Provisionsmodells, Standard 1,23): passt das?
 - Standardansichten für neue Mitarbeiter: bisher nur Direct (einstellbar).
 - Einwilligung des Kandidaten für Überlassung (Zweck der Verarbeitung): rechtlich zu klären, nicht entschieden.
+
+## Nachtrag 2026-10-15: Antworten auf die offenen Fragen
+
+- Der Kunde (frueher "Kanzlei") ist ueberall so benannt; der Kundenname ist bei fremden Prozessen im Kandidatenstatus und in der Konflikt-Meldung sichtbar (Details und IDs bleiben verborgen).
+- **Kanal am Kandidaten:** beim Anlegen wird Direct und/oder Ueberlassung angekreuzt. Ueberlassung (Leiharbeitnehmer anlegen,
+  Einsatzangebot) braucht ein ausdrueckliches Ja; Direct-Prozesse sind nur bei Nein gesperrt.
+- Uebernahme-Fee-Staffel und Lohnfaktor bleiben einstellbar.
+- **Test:** Demo-Admin und Demo-Vermittler sehen Direct + Ueberlassung; im Demo-Seed ist auch der Standard fuer neue
+  Mitarbeiter "beides". Der Admin kann die Ansicht je Mitarbeiter fest vergeben (Einstellungen -> Administration -> Ansichten).

@@ -62,7 +62,7 @@ export function EngagementPanel({ candidateId }: { candidateId: string }) {
           {summary.items.map((item, index) => (
             <li key={`${item.channel}-${item.entity_id ?? index}`}>
               {itemDetail(item)}
-              {!item.details_visible && <span className="ml-2 text-[10.45px] text-brand-muted">(Details nur für Betreuer und Admins)</span>}
+              {!item.details_visible && <span className="ml-2 text-[10.45px] text-brand-muted">(Prozess-Details nur für Betreuer und Admins)</span>}
             </li>
           ))}
         </ul>

@@ -182,7 +182,7 @@ class ApprovalService:
     def _client(self, approval: ApprovalRequest) -> ClientCompany:
         client = self.session.get(ClientCompany, approval.entity_id)
         if client is None:
-            raise EntityNotFoundError("Kanzlei nicht gefunden")
+            raise EntityNotFoundError("Kunde nicht gefunden")
         return client
 
     def _decide(

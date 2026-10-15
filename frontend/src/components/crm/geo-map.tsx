@@ -37,7 +37,7 @@ export function GeoMap({ results }: { results: GeoMappingResult[] }) {
           <Popup>
             <strong>{item.name}</strong>
             <br />
-            Kanzlei · {item.location}
+            Kunde · {item.location}
           </Popup>
         </CircleMarker>
       ))}

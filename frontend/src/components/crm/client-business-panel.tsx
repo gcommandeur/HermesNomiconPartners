@@ -1,6 +1,6 @@
 "use client";
 
-// NOMICON: Block "Geschäft mit dieser Kanzlei" auf der Kanzleiseite - Prozesse, Einsätze, Fristen und
+// NOMICON: Block "Geschäft mit diesem Kunden" auf der Kundenseite - Prozesse, Einsätze, Fristen und
 // Umsatz. Abschnitte erscheinen nur mit der jeweiligen Ansicht; Beträge nur für Admins.
 import Link from "next/link";
 import useSWR from "swr";
@@ -18,13 +18,13 @@ export function ClientBusinessPanel({ clientId }: { clientId: string }) {
   const { data, error } = useSWR(`/clients/${clientId}/business`, () =>
     apiGet<ClientBusiness>(`/clients/${clientId}/business`, { processes: null, assignments: null, deadlines: null, revenue: null }),
   );
-  if (error) return null; // der Block ist eine Ergänzung: kein Fehler-Banner auf der Kanzleiseite
+  if (error) return null; // der Block ist eine Ergänzung: kein Fehler-Banner auf der Kundenseite
   if (!data) return <div className="mt-6 h-24 animate-pulse rounded-lg bg-brand-surface" />;
   const b = data.data;
   if (!b.processes && !b.assignments && !b.revenue) return null;
   return (
-    <section className="mt-6" aria-label="Geschäft mit dieser Kanzlei">
-      <h2 className="mb-3 font-semibold">Geschäft mit dieser Kanzlei</h2>
+    <section className="mt-6" aria-label="Geschäft mit diesem Kunden">
+      <h2 className="mb-3 font-semibold">Geschäft mit diesem Kunden</h2>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {b.processes && (
           <Card>

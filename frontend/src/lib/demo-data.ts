@@ -21,7 +21,7 @@ export const demoSubmissions: CandidateSubmission[] = [
   { id: "s-1", candidate_id: "c-1", client_company_id: "cl-1", job_mandate_id: "m-1", contact_person_id: null, status: "interview", submitted_at: date(8), summary: "Interview mit Partnerkreis.", last_activity_at: date(1), closed_at: null, created_at: date(10), updated_at: date(1) },
   { id: "s-2", candidate_id: "c-3", client_company_id: "cl-3", job_mandate_id: "m-2", contact_person_id: null, status: "offer", submitted_at: date(12), summary: "Finales Feedback steht aus.", last_activity_at: date(2), closed_at: null, created_at: date(14), updated_at: date(2) },
   { id: "s-3", candidate_id: "c-2", client_company_id: "cl-2", job_mandate_id: null, contact_person_id: null, status: "cv_out", submitted_at: date(3), summary: "Profil an Fachbereich weitergegeben.", last_activity_at: date(3), closed_at: null, created_at: date(4), updated_at: date(3) },
-  { id: "s-4", candidate_id: "c-5", client_company_id: null, job_mandate_id: null, contact_person_id: null, status: "cv_in", submitted_at: date(0), summary: "CV liegt vor, Kanzlei noch offen.", last_activity_at: date(0), closed_at: null, created_at: date(0), updated_at: date(0) },
+  { id: "s-4", candidate_id: "c-5", client_company_id: null, job_mandate_id: null, contact_person_id: null, status: "cv_in", submitted_at: date(0), summary: "CV liegt vor, Kunde noch offen.", last_activity_at: date(0), closed_at: null, created_at: date(0), updated_at: date(0) },
   { id: "s-5", candidate_id: "c-4", client_company_id: "cl-3", job_mandate_id: "m-4", contact_person_id: null, status: "placement", submitted_at: date(50), summary: "Start zum Monatsbeginn.", last_activity_at: date(8), closed_at: date(8), created_at: date(52), updated_at: date(8) },
 ];
 

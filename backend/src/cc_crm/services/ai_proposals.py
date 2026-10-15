@@ -79,10 +79,10 @@ class AiProposalService:
             raise BusinessRuleError("Dieser Vorschlag braucht ein Bezugsobjekt.")
         if kind == "mail_draft" and target_type not in ("candidate", "client", "contact"):
             raise BusinessRuleError(
-                "Mail-Entwuerfe gehen an einen Kandidaten, eine Kanzlei oder einen Kontakt."
+                "Mail-Entwuerfe gehen an einen Kandidaten, einen Kunden oder einen Kontakt."
             )
         if kind == "note" and target_type not in ("candidate", "client"):
-            raise BusinessRuleError("Notizen gibt es nur zu Kandidaten und Kanzleien.")
+            raise BusinessRuleError("Notizen gibt es nur zu Kandidaten und Kunden.")
         if target_type is not None:
             model = _TARGET_MODELS.get(target_type)
             if model is None or target_id is None or self.session.get(model, target_id) is None:

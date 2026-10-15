@@ -19,7 +19,7 @@ const ACTION_LABELS: Record<string, string> = {
 const ENTITY_LABELS: Record<string, string> = {
   user: "Nutzer",
   candidate: "Kandidat",
-  client_company: "Kanzlei",
+  client_company: "Kunde",
   candidate_submission: "Prozess",
 };
 

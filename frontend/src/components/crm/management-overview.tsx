@@ -92,7 +92,7 @@ export function ManagementOverviewBlock({ period }: { period: ManagementPeriod }
                 <tbody>
                   {m.both_business_clients.map((c) => (
                     <tr key={c.client_id} className="border-b border-white/5">
-                      <td className="py-2.5 pr-3 font-medium"><Link href={`/kanzleien/${c.client_id}`} className="hover:underline">{c.client_name}</Link></td>
+                      <td className="py-2.5 pr-3 font-medium"><Link href={`/kunden/${c.client_id}`} className="hover:underline">{c.client_name}</Link></td>
                       <td className="px-3 py-2.5 text-right">{c.processes}</td>
                       <td className="px-3 py-2.5 text-right">{c.placements}</td>
                       <td className="px-3 py-2.5 text-right">{c.assignments}</td>

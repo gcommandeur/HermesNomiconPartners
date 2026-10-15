@@ -24,7 +24,7 @@ function renderTemplate(text: string, values: Record<string, string>): string {
  * Absender-Postfach + Vorlage (25 aus email_templates) + Betreff/Text
  * (editierbar) + Anhänge (CV-Dokumente ausgeblendet, siehe
  * project_submission_workflow_cv_attachment_guard) -> POST /mail/send.
- * Aufrufbar von Kandidaten-/Kanzlei-Detailseite, Kontakte-Tabelle,
+ * Aufrufbar von Kandidaten-/Kunden-Detailseite, Kontakte-Tabelle,
  * Mailing-Gruppen-Panel - jeweils mit dem dort verfügbaren Kontext
  * (Empfänger, Platzhalterwerte, Zuordnung) vorbefüllt. */
 export function MailComposeModal({
@@ -46,7 +46,7 @@ export function MailComposeModal({
   toAddress: string;
   toName?: string;
   /** Fuer den Anhang-Picker - z.B. "candidate"/candidateId, damit nur die
-   * Dokumente dieser Person/Kanzlei zur Auswahl stehen. */
+   * Dokumente dieser Person/Kunde zur Auswahl stehen. */
   documentOwnerType?: "candidate" | "client";
   documentOwnerId?: string;
   candidateId?: string;

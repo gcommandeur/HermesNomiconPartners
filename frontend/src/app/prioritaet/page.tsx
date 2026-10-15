@@ -23,7 +23,7 @@ export default async function PriorityViewPage() {
     const candidate = candidatesResult.data.find((item) => item.id === id);
     return candidate ? `${candidate.first_name} ${candidate.last_name}` : "Kandidat";
   };
-  const clientName = (id: string | null) => clientsResult.data.find((item) => item.id === id)?.name ?? "Kanzlei offen";
+  const clientName = (id: string | null) => clientsResult.data.find((item) => item.id === id)?.name ?? "Kunde offen";
 
   return (
     <>
