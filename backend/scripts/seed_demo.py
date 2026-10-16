@@ -192,6 +192,18 @@ def _complete_process_data(session: Session, owners: list[User]) -> None:
     session.flush()
 
 
+def _repair_worker_status(session: Session) -> None:
+    """Statusregel (docs/UEBERLASSUNG.md): aktiv nie in der Zukunft. Aeltere Demo-Datenbanken haben
+    Leiharbeitnehmer "aktiv" mit Eintritt in der Zukunft und nur einem geplanten Einsatz."""
+    today = datetime.now(UTC).date()
+    for worker in session.scalars(
+        select(StaffingWorker).where(StaffingWorker.status == StaffingWorkerStatus.ACTIVE)
+    ).all():
+        if worker.entry_date is not None and worker.entry_date > today:
+            worker.status = StaffingWorkerStatus.APPLICANT
+    session.flush()
+
+
 def seed_demo(session: Session) -> DemoSeedResult:
     result = DemoSeedResult()
     demo_users = {user.email: user for user in ensure_demo_users(session)}
@@ -285,6 +297,7 @@ def seed_demo(session: Session) -> DemoSeedResult:
             result.candidates += 1
             result.processes += 1
     _complete_process_data(session, [admin, broker, colleague])
+    _repair_worker_status(session)
     # Fuer den Test sind beide Ansichten sichtbar (neue Mitarbeiter: Direct + Ueberlassung); der
     # Admin legt unter Einstellungen -> Administration -> Ansichten jederzeit eine Ansicht fest.
     key = "views_default_for_new_users"

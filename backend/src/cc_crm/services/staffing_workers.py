@@ -2,6 +2,7 @@
 """Leiharbeitnehmer: ein bestehender Kandidat mit zusaetzlichem AÜG-Profil (1:1)."""
 
 import uuid
+from datetime import date
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -40,6 +41,16 @@ def worker_read(row: WorkerRow) -> StaffingWorkerRead:
     )
 
 
+def check_status_rule(status: StaffingWorkerStatus, entry_date: date | None, today: date) -> None:
+    """Statusregel: Aktiv gibt es erst ab Eintritt/Einsatzbeginn, nie in der Zukunft. Vorher ist die
+    Person Anwärter (siehe docs/UEBERLASSUNG.md, Abschnitt "Status eines Leiharbeitnehmers")."""
+    if status == StaffingWorkerStatus.ACTIVE and entry_date is not None and entry_date > today:
+        raise BusinessRuleError(
+            "Ein aktiver Leiharbeitnehmer kann nicht in der Zukunft beginnen. "
+            "Bis zum ersten Einsatz bleibt die Person Anwärter."
+        )
+
+
 class StaffingWorkerService:
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -66,6 +77,11 @@ class StaffingWorkerService:
         # NOMICON: Kanal-Freigabe beim Kandidaten (Einwilligung Überlassung)
         require_channel_open(self.session, candidate.id, "staffing")
         values = payload.model_dump()
+        check_status_rule(
+            values.get("status") or StaffingWorkerStatus.APPLICANT,
+            values.get("entry_date"),
+            date.today(),
+        )
         try:
             worker = self.workers.create(values)
             audit.log_created(self.session, audit.ENTITY_WORKER, worker.id, values, actor.email)
@@ -84,6 +100,7 @@ class StaffingWorkerService:
             raise BusinessRuleError("Austritt liegt vor dem Eintritt.")
         if values.get("status") is None:
             values.pop("status", None)
+        check_status_rule(values.get("status", worker.status), merged_entry, date.today())
         audit.log_updated(self.session, audit.ENTITY_WORKER, worker, worker.id, values, actor.email)
         self.workers.update(worker, values)
         self.session.commit()

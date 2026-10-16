@@ -263,3 +263,66 @@ def test_candidate_history_never_contains_staffing_entries(
     )
     history = AuditLogRepository(session).list_for_candidate(candidate.id, [])
     assert list(history) == []
+
+
+def test_status_rule_active_never_in_the_future(
+    session: Session, actor: User, candidate: Candidate
+) -> None:
+    """Statusregel: Aktiv erst ab Eintritt/Einsatzbeginn, vorher bleibt die Person Anwärter."""
+    from datetime import timedelta
+
+    service = StaffingWorkerService(session)
+    future = date.today() + timedelta(days=20)
+    with pytest.raises(BusinessRuleError, match="Anwärter"):
+        service.create(
+            StaffingWorkerCreate(
+                candidate_id=candidate.id,
+                status=StaffingWorkerStatus.ACTIVE,
+                entry_date=future,
+            ),
+            actor,
+        )
+    # Anwärter mit künftigem Eintritt ist erlaubt ...
+    row = service.create(StaffingWorkerCreate(candidate_id=candidate.id, entry_date=future), actor)
+    assert row.worker.status == StaffingWorkerStatus.APPLICANT
+    # ... aber nicht als "aktiv" umstellbar, solange der Eintritt in der Zukunft liegt
+    with pytest.raises(BusinessRuleError, match="Anwärter"):
+        service.update(
+            row.worker.id, StaffingWorkerUpdate(status=StaffingWorkerStatus.ACTIVE), actor
+        )
+    past = date.today() - timedelta(days=5)
+    updated = service.update(
+        row.worker.id,
+        StaffingWorkerUpdate(status=StaffingWorkerStatus.ACTIVE, entry_date=past),
+        actor,
+    )
+    assert updated.worker.status == StaffingWorkerStatus.ACTIVE
+
+
+def test_assignment_cannot_be_activated_before_its_start(
+    session: Session, actor: User, candidate: Candidate, client_company: ClientCompany
+) -> None:
+    from datetime import timedelta
+
+    from cc_crm.services.staffing_activation import StaffingActivationService
+
+    worker = StaffingWorkerService(session).create(
+        StaffingWorkerCreate(candidate_id=candidate.id), actor
+    ).worker
+    start = date.today() + timedelta(days=10)
+    row = StaffingAssignmentService(session).create(
+        StaffingAssignmentCreate(
+            worker_id=worker.id, client_company_id=client_company.id, start_date=start
+        ),
+        actor,
+    )
+    problems = StaffingActivationService(session).activation_problems(
+        row.assignment.id, date.today()
+    )
+    assert any("beginnt erst am" in problem for problem in problems)
+    assert not any(
+        "beginnt erst am" in problem
+        for problem in StaffingActivationService(session).activation_problems(
+            row.assignment.id, start
+        )
+    )

@@ -62,7 +62,7 @@ export function StaffingWorkersView() {
               <Link href={`/ueberlassung/leiharbeitnehmer/${w.id}`} className="flex flex-col gap-2 rounded-lg border border-white/10 p-3 transition-colors hover:bg-brand-hover/40 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{w.candidate_name}{w.candidate_number ? <span className="text-brand-muted"> · Nr. {w.candidate_number}</span> : null}</p>
-                  <p className="truncate text-xs text-brand-muted">{[w.pay_grade, w.weekly_hours ? `${w.weekly_hours} Std./Woche` : null, w.entry_date ? `seit ${formatDate(w.entry_date)}` : null].filter(Boolean).join(" · ") || "Keine Angaben"}</p>
+                  <p className="truncate text-xs text-brand-muted">{[w.pay_grade, w.weekly_hours ? `${w.weekly_hours} Std./Woche` : null, w.entry_date ? `${w.status === "applicant" ? "Eintritt ab" : "seit"} ${formatDate(w.entry_date)}` : null].filter(Boolean).join(" · ") || "Keine Angaben"}</p>
                 </div>
                 <WorkerStatusBadge status={w.status} />
               </Link>

@@ -86,12 +86,31 @@ endgültig und nicht mehr änderbar. Ein Einsatz wird nur **aktiv**, wenn
 
 1. eine gültige AÜG-Erlaubnis den Zeitraum abdeckt (Beginn bis geplantes Ende; ohne geplantes Ende bis
    heute — eine später ablaufende Erlaubnis meldet der tägliche Job) **und**
-2. die Pflicht-Checkliste vollständig ist.
+2. die Pflicht-Checkliste vollständig ist **und**
+3. der Einsatz begonnen hat (Beginn ≤ heute, seit 2026-10-16; ein Einsatz in der Zukunft bleibt „geplant“).
 
 Die Fehlermeldung nennt beide Probleme, z. B. „Keine gültige AÜG-Erlaubnis für den Zeitraum … Pflicht-Checkliste
 unvollständig (offen: Merkblatt …)“. Mit der ersten Aktivierung wird ein Anwärter automatisch zum
 aktiven Leiharbeitnehmer. **Annahme:** Eine überschrittene Höchstdauer blockiert die Aktivierung
 nicht; sie wird als rote Frist angezeigt und als Aufgabe gemeldet.
+
+## Status eines Leiharbeitnehmers (eine Regel für Liste, Board, Fristen, Kennzahlen)
+
+Festgelegt am 2026-10-16 nach einem Klick-Test (Person „aktiv seit“ in der Zukunft, aber im Board „Anwärter“):
+
+| Status | Bedeutung | Wie er entsteht |
+|---|---|---|
+| **Anwärter** | angelegt, noch kein Einsatz hat tatsächlich begonnen (auch mit geplantem Einsatz oder künftigem Eintritt) | Standard beim Anlegen; bleibt bis zur ersten Aktivierung eines Einsatzes |
+| **Aktiv** | ab Eintritt bzw. Beginn des ersten Einsatzes, **nie in der Zukunft** | automatisch bei der ersten Einsatz-Aktivierung (Beginn ≤ heute); bleibt auch zwischen Einsätzen (dann „Bench“) |
+| **Ruhend** | vorübergehend nicht einsetzbar | manuell |
+| **Ausgeschieden** | Arbeitsverhältnis beendet | manuell (Austrittsdatum) |
+
+Durchgesetzt in `services/staffing_workers.check_status_rule` (aktiv + Eintritt in der Zukunft → Fehler) und
+`StaffingActivationService.activation_problems` (kein Aktivieren vor Beginn). Das **Einsatz-Board**
+zeigt Anwärter ohne geplanten/aktiven Einsatz als Personenkarte in der Spalte „Anwärter / Onboarding“, Anwärter mit
+geplantem Einsatz stehen über den Einsatz im Board (keine Doppelung). **Bench** = Aktive ohne geplanten/aktiven Einsatz
+(Anwärter gehören nicht dazu). Die Liste zeigt bei Anwärtern „Eintritt ab …“, bei allen anderen „seit …“.
+Demo-Seed und `seed_demo` (zieht ältere Demo-Datenbanken nach) halten sich an die Regel.
 
 ## Rechte
 

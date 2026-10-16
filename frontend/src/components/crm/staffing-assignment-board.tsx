@@ -1,17 +1,16 @@
 "use client";
 
-// NOMICON: Einsatz-Board der Disposition. Spalten: Anwärter/Onboarding (geplant, Checkliste offen),
+// NOMICON: Einsatz-Board der Disposition. Spalten: Anwärter/Onboarding (Anwärter ohne Einsatz sowie geplant mit offener Checkliste),
 // Geplant, Aktiv, Läuft aus (aktiv mit gelber/roter Frist oder Ende in den nächsten Tagen),
 // Beendet (letzte 30 Tage). Lohn und Verrechnungssatz zeigt der Server nur Admins.
 import { useMemo } from "react";
 import Link from "next/link";
 import { useCurrentUser } from "@/lib/api/hooks";
-import { useStaffingAssignments, useStaffingOverview } from "@/lib/api/staffing-hooks";
+import { useStaffingAssignments, useStaffingOverview, useStaffingWorkers } from "@/lib/api/staffing-hooks";
+import { applicantsWithoutAssignment, classifyAssignment, type ColumnKey } from "@/lib/staffing-board";
 import { formatMoney, type StaffingAssignment, type Traffic } from "@/lib/api/staffing";
 import { formatDate } from "@/lib/utils";
 import { EmptyHint, LoadError, LoadingRows, TrafficBadge } from "./staffing-ui";
-
-type ColumnKey = "onboarding" | "planned" | "active" | "ending" | "ended";
 
 const COLUMNS: { key: ColumnKey; title: string }[] = [
   { key: "onboarding", title: "Anwärter / Onboarding" },
@@ -20,27 +19,11 @@ const COLUMNS: { key: ColumnKey; title: string }[] = [
   { key: "ending", title: "Läuft aus" },
   { key: "ended", title: "Beendet" },
 ];
-const ENDING_SOON_DAYS = 30;
-const ENDED_VISIBLE_DAYS = 30;
-
-function daysBetween(from: Date, to: Date): number {
-  return Math.round((to.getTime() - from.getTime()) / 86_400_000);
-}
-
-export function classifyAssignment(a: StaffingAssignment, traffic: Traffic | undefined, today: Date): ColumnKey | null {
-  if (a.status === "aborted") return null;
-  if (a.status === "ended") {
-    const end = a.actual_end_date ?? a.planned_end_date;
-    return end && daysBetween(new Date(end), today) <= ENDED_VISIBLE_DAYS ? "ended" : null;
-  }
-  if (a.status === "planned") return a.checklist_done < a.checklist_total ? "onboarding" : "planned";
-  const endsSoon = a.planned_end_date !== null && daysBetween(today, new Date(a.planned_end_date)) <= ENDING_SOON_DAYS;
-  return traffic === "yellow" || traffic === "red" || endsSoon ? "ending" : "active";
-}
 
 export function StaffingAssignmentBoard() {
   const { data, error, isLoading, mutate } = useStaffingAssignments({});
   const { data: overview } = useStaffingOverview();
+  const { data: applicantData } = useStaffingWorkers("applicant");
   const { data: me } = useCurrentUser();
   const isAdmin = me?.data.is_admin ?? false;
   const columns = useMemo(() => {
@@ -56,9 +39,14 @@ export function StaffingAssignmentBoard() {
     return grouped;
   }, [data, overview]);
 
+  const applicants = useMemo(() => {
+    const ids = new Set(applicantsWithoutAssignment(applicantData?.data ?? [], data?.data ?? []));
+    return (applicantData?.data ?? []).filter((worker) => ids.has(worker.id));
+  }, [applicantData, data]);
+
   if (error) return <LoadError onRetry={() => void mutate()} />;
   if (isLoading || !data) return <LoadingRows />;
-  if (data.data.length === 0) return <EmptyHint>Noch keine Einsätze angelegt.</EmptyHint>;
+  if (data.data.length === 0 && applicants.length === 0) return <EmptyHint>Noch keine Einsätze angelegt.</EmptyHint>;
 
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
@@ -66,9 +54,18 @@ export function StaffingAssignmentBoard() {
         <section key={column.key} aria-label={column.title} className="min-w-0 rounded-xl border border-white/10 bg-brand-surface p-2">
           <header className="flex items-center justify-between px-2 py-2">
             <h3 className="truncate text-xs font-semibold text-brand-text">{column.title}</h3>
-            <span className="grid size-5 shrink-0 place-items-center rounded-full border border-white/10 bg-brand-panel text-[9.5px] text-brand-soft">{columns[column.key].length}</span>
+            <span className="grid size-5 shrink-0 place-items-center rounded-full border border-white/10 bg-brand-panel text-[9.5px] text-brand-soft">{columns[column.key].length + (column.key === "onboarding" ? applicants.length : 0)}</span>
           </header>
           <ul className="space-y-2">
+            {column.key === "onboarding" && applicants.map((worker) => (
+              <li key={worker.id}>
+                <Link href={`/ueberlassung/leiharbeitnehmer/${worker.id}`} className="block rounded-lg border border-dashed border-white/20 bg-brand-panel p-2.5 transition-colors hover:border-brand-accent/50">
+                  <p className="truncate text-xs font-semibold">{worker.candidate_name}</p>
+                  <p className="mt-0.5 text-[10.45px] text-brand-muted">Anwärter · noch kein Einsatz</p>
+                  {worker.entry_date && <p className="mt-1 text-[10.45px] text-brand-muted">Eintritt ab {formatDate(worker.entry_date)}</p>}
+                </Link>
+              </li>
+            ))}
             {columns[column.key].map(({ assignment: a, traffic }) => (
               <li key={a.id}>
                 <Link href={`/ueberlassung/einsaetze/${a.id}`} className="block rounded-lg border border-white/10 bg-brand-panel p-2.5 transition-colors hover:border-brand-accent/50">
@@ -87,7 +84,7 @@ export function StaffingAssignmentBoard() {
                 </Link>
               </li>
             ))}
-            {columns[column.key].length === 0 && <li className="rounded-lg border border-dashed border-white/10 p-4 text-center text-[10.45px] text-brand-muted">Keine Einsätze</li>}
+            {columns[column.key].length === 0 && !(column.key === "onboarding" && applicants.length > 0) && <li className="rounded-lg border border-dashed border-white/10 p-4 text-center text-[10.45px] text-brand-muted">Keine Einsätze</li>}
           </ul>
         </section>
       ))}

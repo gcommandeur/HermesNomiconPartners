@@ -64,6 +64,11 @@ class StaffingActivationService:
     def activation_problems(self, assignment_id: uuid.UUID, today: date) -> list[str]:
         assignment = self.assignments.get_row(assignment_id).assignment
         problems: list[str] = []
+        if assignment.start_date > today:  # Aktiv erst ab Einsatzbeginn, nie in der Zukunft
+            problems.append(
+                f"Der Einsatz beginnt erst am {_fmt(assignment.start_date)} und kann vorher "
+                "nicht aktiviert werden."
+            )
         # Zeitraum der Pruefung: Start bis geplantes Ende; ohne Plan bis heute (die taegliche
         # Fristenpruefung meldet eine spaeter ablaufende Erlaubnis).
         period_end = assignment.planned_end_date or max(assignment.start_date, today)

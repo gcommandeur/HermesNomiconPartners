@@ -166,8 +166,17 @@ def seed_staffing(
         worker = worker_service.create(
             StaffingWorkerCreate(
                 candidate_id=candidate.id,
-                status=StaffingWorkerStatus.ACTIVE if plans else StaffingWorkerStatus.APPLICANT,
-                entry_date=day - timedelta(days=plans[0].start_days_ago) if plans else None,
+                # Statusregel: Aktiv erst ab begonnenem Einsatz; geplante Einsaetze -> Anwaerter
+                status=(
+                    StaffingWorkerStatus.ACTIVE
+                    if plans and plans[0].status != StaffingAssignmentStatus.PLANNED
+                    else StaffingWorkerStatus.APPLICANT
+                ),
+                entry_date=(
+                    day - timedelta(days=plans[0].start_days_ago)
+                    if plans and plans[0].status != StaffingAssignmentStatus.PLANNED
+                    else None
+                ),
                 hourly_wage=Decimal(rand.choice(["13.80", "14.50", "15.20", "16.75", "18.10"])),
                 pay_grade=rand.choice(PAY_GRADES),
                 weekly_hours=Decimal(rand.choice(["35", "38.5", "40"])),
