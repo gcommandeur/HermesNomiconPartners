@@ -7,6 +7,7 @@ die Demo-Schaltflaechen, siehe docs/ANSICHTEN.md)."""
 
 from __future__ import annotations
 
+import re
 import secrets
 import sys
 from dataclasses import dataclass
@@ -140,6 +141,57 @@ def _assignment(
     return row
 
 
+# Abschlusswahrscheinlichkeit je Stufe (Demo): damit "erwartete Fees (gewichtet)" nicht 0 ist.
+STAGE_PROBABILITY = {
+    SubmissionStatus.QUALIFICATION_CALL: 0.10,
+    SubmissionStatus.CV_IN: 0.15,
+    SubmissionStatus.CV_OUT: 0.20,
+    SubmissionStatus.INTERVIEW: 0.35,
+    SubmissionStatus.OFFER: 0.65,
+    SubmissionStatus.PLACEMENT: 1.0,
+}
+FEE_OPEN_EXAMPLES = 2  # so viele Prozesse ab Interview bleiben bewusst ohne Fee ("Fee offen")
+
+
+def _salary(candidate: Candidate | None) -> Decimal:
+    digits = re.sub(r"\D", "", candidate.salary_expectation or "") if candidate else ""
+    return Decimal(digits) if len(digits) >= 4 else Decimal("80000")
+
+
+def _complete_process_data(session: Session, owners: list[User]) -> None:
+    """Macht Demo-Prozesse vollstaendig: Verantwortlicher, Honorar (Gehalt x Honorarsatz des Kunden)
+    und Abschlusswahrscheinlichkeit. Idempotent; aeltere Demo-Datenbanken ohne diese Felder
+    werden damit nachgezogen (sonst 0 EUR Pipeline und "Prozesse ohne Verantwortlichen")."""
+    rows = session.scalars(
+        select(CandidateSubmission).order_by(CandidateSubmission.created_at)
+    ).all()
+    open_examples = 0
+    for index, row in enumerate(rows):
+        if row.status == SubmissionStatus.CANCELLED:
+            continue
+        if row.owner_user_id is None:
+            owner = owners[index % len(owners)]
+            row.owner_user_id = owner.id
+            row.owner = owner.display_name
+        if row.closing_probability is None and row.status in STAGE_PROBABILITY:
+            row.closing_probability = STAGE_PROBABILITY[row.status]
+        needs_fee = row.status in (
+            SubmissionStatus.INTERVIEW,
+            SubmissionStatus.OFFER,
+            SubmissionStatus.PLACEMENT,
+        )
+        if needs_fee and row.expected_fee is None:
+            if row.status == SubmissionStatus.INTERVIEW and open_examples < FEE_OPEN_EXAMPLES:
+                open_examples += 1
+                continue
+            client = session.get(ClientCompany, row.client_company_id)
+            percent = client.fee_percentage if client is not None else Decimal("25")
+            candidate = session.get(Candidate, row.candidate_id)
+            row.fee_percentage = percent
+            row.expected_fee = (_salary(candidate) * percent / Decimal(100)).quantize(Decimal("1"))
+    session.flush()
+
+
 def seed_demo(session: Session) -> DemoSeedResult:
     result = DemoSeedResult()
     demo_users = {user.email: user for user in ensure_demo_users(session)}
@@ -232,6 +284,7 @@ def seed_demo(session: Session) -> DemoSeedResult:
             _process(session, c, clients[len(key) % 3], owner, status, fee, days)
             result.candidates += 1
             result.processes += 1
+    _complete_process_data(session, [admin, broker, colleague])
     # Fuer den Test sind beide Ansichten sichtbar (neue Mitarbeiter: Direct + Ueberlassung); der
     # Admin legt unter Einstellungen -> Administration -> Ansichten jederzeit eine Ansicht fest.
     key = "views_default_for_new_users"

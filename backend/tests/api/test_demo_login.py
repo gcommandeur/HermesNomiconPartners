@@ -272,3 +272,34 @@ def test_seed_is_idempotent_and_covers_every_status(
             if item.owner_name == "Demo Vermittler" and item.channel == "direct"
         ]
         assert own and all(item.details_visible for item in own)
+
+
+def test_seed_completes_owner_fee_and_probability_even_on_old_demo_data(
+    session_factory: sessionmaker[Session],
+) -> None:
+    """Pipeline-Wert und gewichtete Fees sind > 0, kein Prozess ohne Verantwortlichen - auch wenn
+    die Prozesse aus einer älteren Demo-Datenbank ohne diese Felder stammen."""
+    from seed_demo import seed_demo  # type: ignore[import-not-found]
+
+    from cc_crm.models.submission import CandidateSubmission
+
+    with session_factory() as session:
+        for index in range(4):
+            session.add(ClientCompany(name=f"Demo-Kunde {index}"))
+        session.commit()
+        seed_demo(session)
+        # alter Stand: alles ohne Verantwortlichen, Fee und Wahrscheinlichkeit
+        for row in session.scalars(select(CandidateSubmission)).all():
+            row.owner_user_id = None
+            row.expected_fee = None
+            row.closing_probability = None
+        session.commit()
+        seed_demo(session)
+        everything = session.scalars(select(CandidateSubmission)).all()
+        rows = [r for r in everything if r.status.value != "cancelled"]
+        assert rows and all(r.owner_user_id is not None for r in rows)
+        assert sum(float(r.expected_fee or 0) for r in rows) > 0
+        weighted = sum(float(r.expected_fee or 0) * (r.closing_probability or 0) for r in rows)
+        assert weighted > 0
+        open_fees = [r for r in rows if r.status.value == "interview" and r.expected_fee is None]
+        assert len(open_fees) == 2  # bewusst "Fee offen"
