@@ -3039,6 +3039,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staffing/candidate-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staffing Candidate Summary
+         * @description Sammelabfrage für die Spalte "Überlassung" der Kandidatenliste (eine Abfrage je Baustein,
+         *     nicht je Kandidat): Status, aktueller Kunde, dringendste Frist. Kein Lohn, keine Marge.
+         */
+        post: operations["staffing_candidate_summary_api_v1_staffing_candidate_summary_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staffing/contracts": {
         parameters: {
             query?: never;
@@ -3429,6 +3450,26 @@ export interface paths {
         head?: never;
         /** Update Worker */
         patch: operations["update_worker_api_v1_staffing_workers__worker_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/staffing/workers/{worker_id}/timesheet-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Worker Timesheet Summary
+         * @description Stundenzettel einer Person nach Status (nur Einsätze im Besitzbereich des Nutzers).
+         */
+        get: operations["get_worker_timesheet_summary_api_v1_staffing_workers__worker_id__timesheet_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/submissions": {
@@ -9380,6 +9421,42 @@ export interface components {
             /** Worker Name */
             worker_name: string;
         };
+        /**
+         * StaffingCandidateSummaryRead
+         * @description Zeile der Spalte "Überlassung" in der Kandidatenliste. Kein Lohn, keine Marge.
+         */
+        StaffingCandidateSummaryRead: {
+            /** Assignment Status */
+            assignment_status?: ("planned" | "active") | null;
+            /**
+             * Bench
+             * @default false
+             */
+            bench: boolean;
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Client Name */
+            client_name?: string | null;
+            /** Days Remaining */
+            days_remaining?: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "none" | "applicant" | "active" | "dormant" | "left";
+            /** Traffic */
+            traffic?: ("green" | "yellow" | "red") | null;
+            /** Worker Id */
+            worker_id?: string | null;
+        };
+        /** StaffingCandidateSummaryRequest */
+        StaffingCandidateSummaryRequest: {
+            /** Candidate Ids */
+            candidate_ids: string[];
+        };
         /** StaffingChecklistItemRead */
         StaffingChecklistItemRead: {
             /** Document Id */
@@ -10117,6 +10194,27 @@ export interface components {
          * @enum {string}
          */
         StaffingWorkerStatus: "applicant" | "active" | "dormant" | "left";
+        /**
+         * StaffingWorkerTimesheetSummary
+         * @description Stundenzettel einer Person nach Status (nur Einsätze im Besitzbereich des Nutzers).
+         */
+        StaffingWorkerTimesheetSummary: {
+            /** Approved */
+            approved: number;
+            /** Approved Unbilled */
+            approved_unbilled: number;
+            /** Open */
+            open: number;
+            /** Rejected */
+            rejected: number;
+            /** Submitted */
+            submitted: number;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+        };
         /** StaffingWorkerUpdate */
         StaffingWorkerUpdate: {
             /** Entry Date */
@@ -12355,6 +12453,7 @@ export interface operations {
                 rollen_unbestaetigt?: boolean | null;
                 custom_field?: string | null;
                 engagement?: ("free_direct" | "free_staffing" | "engaged") | null;
+                staffing?: ("workers" | "bench" | "critical" | "applicants") | null;
                 sort_by?: ("candidate_number" | "name" | "job_title" | "city" | "salary_expectation" | "status") | null;
                 sort_dir?: "asc" | "desc";
                 offset?: number;
@@ -17507,6 +17606,41 @@ export interface operations {
             };
         };
     };
+    staffing_candidate_summary_api_v1_staffing_candidate_summary_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingCandidateSummaryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingCandidateSummaryRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_contracts_api_v1_staffing_contracts_get: {
         parameters: {
             query?: {
@@ -18476,6 +18610,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaffingWorkerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_worker_timesheet_summary_api_v1_staffing_workers__worker_id__timesheet_summary_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingWorkerTimesheetSummary"];
                 };
             };
             /** @description Validation Error */

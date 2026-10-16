@@ -41,6 +41,7 @@ export function useServerSearchList<T>(
     radiusKm?: number;
     rollenUnbestaetigt?: boolean;
     engagement?: "free_direct" | "free_staffing" | "engaged"; // NOMICON
+    staffing?: "workers" | "bench" | "critical" | "applicants"; // NOMICON
     ownerUserId?: string;
     pageSize?: number;
     sortBy?: string;
@@ -94,13 +95,14 @@ export function useServerSearchList<T>(
     options.radiusKm,
     options.rollenUnbestaetigt,
     options.engagement, // NOMICON
+    options.staffing, // NOMICON
     options.ownerUserId,
     options.sortBy,
     options.sortDir,
   ]);
 
   const offset = page * pageSize;
-  const swrKey = `${cacheKeyPrefix}?search=${debouncedSearch}&status=${options.status ?? ""}&rollen=${rollenKey}&abschluesse=${abschluesseKey}&plz_ort=${radiusActive ? debouncedPlzOrt : ""}&radius_km=${radiusActive ? options.radiusKm : ""}&rollen_unbestaetigt=${options.rollenUnbestaetigt ?? ""}&engagement=${options.engagement ?? ""}&owner_user_id=${options.ownerUserId ?? ""}&sort_by=${options.sortBy ?? ""}&sort_dir=${options.sortDir ?? ""}&limit=${pageSize}&offset=${offset}`;
+  const swrKey = `${cacheKeyPrefix}?search=${debouncedSearch}&status=${options.status ?? ""}&rollen=${rollenKey}&abschluesse=${abschluesseKey}&plz_ort=${radiusActive ? debouncedPlzOrt : ""}&radius_km=${radiusActive ? options.radiusKm : ""}&rollen_unbestaetigt=${options.rollenUnbestaetigt ?? ""}&engagement=${options.engagement ?? ""}&staffing=${options.staffing ?? ""}&owner_user_id=${options.ownerUserId ?? ""}&sort_by=${options.sortBy ?? ""}&sort_dir=${options.sortDir ?? ""}&limit=${pageSize}&offset=${offset}`;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<DataResult<Paginated<T>>>(
     swrKey,
@@ -114,6 +116,7 @@ export function useServerSearchList<T>(
         radiusKm: radiusActive ? options.radiusKm : undefined,
         rollenUnbestaetigt: options.rollenUnbestaetigt,
         engagement: options.engagement, // NOMICON
+        staffing: options.staffing, // NOMICON
         ownerUserId: options.ownerUserId,
         sortBy: options.sortBy,
         sortDir: options.sortDir,

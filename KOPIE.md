@@ -131,3 +131,14 @@ Heads (Hermes-Kopf und `nomicon01staff`). Dann eine Merge-Migration anlegen
 (`tests/test_alembic_heads.py` erzwingt genau einen Head). Alternativ die Nomicon-Migration auf den
 neuen Hermes-Kopf umhaengen (`down_revision`), solange sie noch nirgends ausgerollt ist.
 
+
+## Gemeinsame Hermes-Dateien, geändert am 2026-10-16 (Feinschliff-Pakete 1-7, markiert mit `NOMICON`)
+
+- `components/crm/submission-views.tsx` (Kanban-Karte "Nachfassen fällig": Klasse aus `lib/follow-up.ts`), `components/crm/error-state.tsx`
+  (brand-Tokens statt `red-*`), `components/crm/dashboard-cockpit.tsx` (Ansicht Überlassung zeigt `StaffingHome`),
+  `components/crm/outlook-connection.tsx` (Sichtbarkeitsregel `lib/outlook-banner.ts`), `components/crm/clients-table.tsx`,
+  `client-honorar-editor.tsx`, `commission-report.tsx`, `interview-rounds-panel.tsx` (Zahlenformat bzw. Umlaut),
+  `components/crm/candidates-table.tsx`, `lib/api/types.ts`, `lib/api/queries.ts`, `lib/api/use-server-search.ts`
+  (Überlassungs-Filter und -Spalte), `backend/src/cc_crm/api/v1/candidates.py` (Parameter `staffing`),
+  `backend/src/cc_crm/services/submissions.py` (Kanal-Prüfung), `frontend/package.json`, `pnpm-lock.yaml`,
+  `pnpm-workspace.yaml` und `.github/workflows/ci.yml` (Vitest, `pnpm test`), `backend/scripts/seed_data.py`.

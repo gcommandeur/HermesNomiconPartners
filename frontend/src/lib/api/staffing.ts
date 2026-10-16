@@ -390,3 +390,42 @@ export function takeOverStaffingAssignment(
 ) {
   return apiPost<StaffingTakeoverResult>(`/staffing/assignments/${id}/takeover`, input);
 }
+
+// --- Überlassung am Kandidaten (Liste und Detail) ---------------------------------------------
+
+export type StaffingCandidateSummary = Schemas["StaffingCandidateSummaryRead"];
+export type StaffingWorkerTimesheetSummary = Schemas["StaffingWorkerTimesheetSummary"];
+export type StaffingListFilter = "workers" | "bench" | "critical" | "applicants";
+
+export const STAFFING_FILTER_LABELS: Record<StaffingListFilter, string> = {
+  workers: "Nur Leiharbeitnehmer",
+  bench: "Bench",
+  critical: "Frist kritisch",
+  applicants: "Anwärter",
+};
+
+export const CANDIDATE_STAFFING_STATUS_LABELS: Record<StaffingCandidateSummary["status"], string> = {
+  none: "Kein Leiharbeitnehmer",
+  applicant: "Anwärter",
+  active: "Aktiv",
+  dormant: "Ruhend",
+  left: "Ausgeschieden",
+};
+
+/** Sammelabfrage für die Spalte "Überlassung" einer Kandidatenseite (eine Abfrage statt einer je Zeile). */
+export async function getStaffingCandidateSummaries(candidateIds: string[]): Promise<Record<string, StaffingCandidateSummary>> {
+  if (candidateIds.length === 0 || process.env.NEXT_PUBLIC_CC_CRM_DEMO_MODE === "true") return {};
+  const rows = await apiPost<StaffingCandidateSummary[]>("/staffing/candidate-summary", { candidate_ids: candidateIds });
+  return Object.fromEntries(rows.map((row) => [row.candidate_id, row]));
+}
+
+export async function getWorkerTimesheetSummary(workerId: string): Promise<DataResult<StaffingWorkerTimesheetSummary>> {
+  return apiGet<StaffingWorkerTimesheetSummary>(`/staffing/workers/${workerId}/timesheet-summary`, {
+    worker_id: workerId,
+    open: 0,
+    submitted: 0,
+    approved: 0,
+    rejected: 0,
+    approved_unbilled: 0,
+  });
+}

@@ -89,6 +89,15 @@ für die Startseite „Übersicht“ in der Ansicht Überlassung - rote/gelbe Fr
 abgelehnte Stundenzettel, fehlender Stundenzettel für den Vormonat, offene Checklisten, Bench ab 14 Tagen, AÜG-Erlaubnis.
 Ampel und Schwellen kommen aus den Compliance-Einstellungen (`yellow_days`/`red_days`), Direct-To-dos bleiben in Direct und Gesamt.
 
+**Überlassung am Kandidaten (neu 2026-10-16):** `POST /staffing/candidate-summary` (Sammelabfrage für die Spalte
+„Überlassung“ der Kandidatenliste: Status, aktueller Kunde, dringendste Frist, Bench; konstante Abfragezahl, auch bei
+2.900 Kandidaten; kein Lohn, keine Marge) und `GET /staffing/workers/{id}/timesheet-summary` (Stundenzettel der Person
+nach Status, nur Einsätze im Besitzbereich) liegen unter `/staffing/**` und sind damit automatisch hinter der Ansicht.
+`GET /candidates?staffing=workers|bench|critical|applicants` (Liste filtern) verlangt die Ansicht Überlassung (sonst 403
+„Diese Ansicht ist für dein Konto nicht freigeschaltet.“), die normale Liste bleibt für alle unverändert. Die Fristen-Ampel
+je Person wird in einer einzigen Abfrage aus allen gezählten Einsätzen berechnet (agenturweit wie die gesetzliche
+Zählung), ohne Datenbankzugriff je Paar. Der Kunde im Einsatz ist für alle sichtbar (Nutzerentscheid vom 2026-10-15).
+
 `GET /staffing/disposition` (Sichtbereich wie überall, kein Lohn, keine Marge): aktive/geplante Einsätze,
 offene Checklisten, **Bench** (aktive Leiharbeitnehmer ohne geplanten/aktiven Einsatz, „frei seit“ = Ende des
 letzten Einsatzes, ersatzweise Eintritt), Stundenzettel-Eingang (offen, überfällig, beim Kunden,

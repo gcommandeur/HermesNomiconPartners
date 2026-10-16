@@ -112,6 +112,17 @@ geplantem Einsatz stehen über den Einsatz im Board (keine Doppelung). **Bench**
 (Anwärter gehören nicht dazu). Die Liste zeigt bei Anwärtern „Eintritt ab …“, bei allen anderen „seit …“.
 Demo-Seed und `seed_demo` (zieht ältere Demo-Datenbanken nach) halten sich an die Regel.
 
+## Überlassung am Kandidaten (seit 2026-10-16)
+
+Alle Überlassungsinformationen zu einer Person stehen zusätzlich am Kandidaten (zweite Zugangsstufe zu denselben Daten,
+keine zweite Datenhaltung): **Liste** `/kandidaten` mit Spalte „Überlassung“ (Status, bei Aktiv der Kunde, Warnsymbol mit
+Resttagen bei gelber/roter Frist), Filter „Überlassung“ (nur Leiharbeitnehmer, Bench, Frist kritisch, Anwärter) und einer
+CSV-Spalte - alles nur mit der Ansicht Überlassung. **Detail** Reiter „Überlassung“: Stammdaten mit Bearbeiten (dasselbe
+Formular wie unter Leiharbeitnehmer), „Als Leiharbeitnehmer anlegen“ (verknüpft den bestehenden Kandidaten; ein zweites
+Profil gibt es nicht, 409), Einsätze mit „Neuer Einsatz“ (Leiharbeitnehmer vorausgefüllt), Fristen je Kunde mit Rechtshinweis,
+Stundenzettel-Status mit Link zur Abrechnung, Bench-Hinweis „frei seit …“; Direct und Überlassung nebeneinander zeigt der
+Kopfbereich der Kandidatenseite (gemeinsamer Kandidatenstatus mit Konflikt-Hinweis). Lohn und Marge sieht nur der Admin.
+
 ## Rechte
 
 | | Mitarbeiter | Teamleiter | Admin |

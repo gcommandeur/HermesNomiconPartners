@@ -62,6 +62,11 @@ from cc_crm.schemas.staffing import (
     TakeoverFeeTiersRead,
     TakeoverFeeTiersUpdate,
 )
+from cc_crm.schemas.staffing_candidates import (
+    StaffingCandidateSummaryRead,
+    StaffingCandidateSummaryRequest,
+    StaffingWorkerTimesheetSummary,
+)
 from cc_crm.schemas.staffing_disposition import StaffingDispositionRead
 from cc_crm.schemas.staffing_tasks import StaffingTasksRead
 from cc_crm.services.approvals import ApprovalService
@@ -73,6 +78,7 @@ from cc_crm.services.staffing_assignments import (
     assignment_read,
     contract_read,
 )
+from cc_crm.services.staffing_candidates import candidate_summaries, worker_timesheet_summary
 from cc_crm.services.staffing_deadlines import DeadlineConfig
 from cc_crm.services.staffing_disposition import disposition
 from cc_crm.services.staffing_invoices import StaffingInvoiceService
@@ -122,6 +128,26 @@ def get_disposition(session: DatabaseSession, current_user: CurrentUser) -> Staf
     """Disposition: Kennzahlen, Bench ("frei seit"), Stundenzettel-Eingang. Einsätze im
     Sichtbereich des Nutzers; kein Lohn, keine Marge."""
     return disposition(session, staffing_owner_scope(current_user, session), date.today())
+
+
+@router.post("/candidate-summary", response_model=list[StaffingCandidateSummaryRead])
+def staffing_candidate_summary(
+    payload: StaffingCandidateSummaryRequest, session: DatabaseSession, current_user: CurrentUser
+) -> list[StaffingCandidateSummaryRead]:
+    """Sammelabfrage für die Spalte "Überlassung" der Kandidatenliste (eine Abfrage je Baustein,
+    nicht je Kandidat): Status, aktueller Kunde, dringendste Frist. Kein Lohn, keine Marge."""
+    summaries = candidate_summaries(session, payload.candidate_ids, date.today())
+    return [summaries[cid] for cid in payload.candidate_ids]
+
+
+@router.get("/workers/{worker_id}/timesheet-summary", response_model=StaffingWorkerTimesheetSummary)
+def get_worker_timesheet_summary(
+    worker_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> StaffingWorkerTimesheetSummary:
+    """Stundenzettel einer Person nach Status (nur Einsätze im Besitzbereich des Nutzers)."""
+    if StaffingWorkerRepository(session).get(worker_id) is None:
+        raise EntityNotFoundError("Leiharbeitnehmer nicht gefunden")
+    return worker_timesheet_summary(session, worker_id, staffing_owner_scope(current_user, session))
 
 
 @router.get("/tasks", response_model=StaffingTasksRead)

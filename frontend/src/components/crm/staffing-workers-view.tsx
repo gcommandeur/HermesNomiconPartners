@@ -214,7 +214,7 @@ export function StaffingWorkerDetailView({ id }: { id: string }) {
   );
 }
 
-function WorkerEditModal({ worker, isAdmin, onClose }: { worker: StaffingWorker; isAdmin: boolean; onClose: () => void }) {
+export function WorkerEditModal({ worker, isAdmin, onClose }: { worker: StaffingWorker; isAdmin: boolean; onClose: () => void }) {
   const [form, setForm] = useState({
     status: worker.status,
     entry_date: worker.entry_date ?? "",

@@ -16135,6 +16135,121 @@
         "title": "StaffingBillableTimesheetRead",
         "type": "object"
       },
+      "StaffingCandidateSummaryRead": {
+        "description": "Zeile der Spalte \"Überlassung\" in der Kandidatenliste. Kein Lohn, keine Marge.",
+        "properties": {
+          "assignment_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "planned",
+                  "active"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment Status"
+          },
+          "bench": {
+            "default": false,
+            "title": "Bench",
+            "type": "boolean"
+          },
+          "candidate_id": {
+            "format": "uuid",
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "client_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Name"
+          },
+          "days_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Remaining"
+          },
+          "status": {
+            "enum": [
+              "none",
+              "applicant",
+              "active",
+              "dormant",
+              "left"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "traffic": {
+            "anyOf": [
+              {
+                "enum": [
+                  "green",
+                  "yellow",
+                  "red"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Traffic"
+          },
+          "worker_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worker Id"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "status"
+        ],
+        "title": "StaffingCandidateSummaryRead",
+        "type": "object"
+      },
+      "StaffingCandidateSummaryRequest": {
+        "properties": {
+          "candidate_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Candidate Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "candidate_ids"
+        ],
+        "title": "StaffingCandidateSummaryRequest",
+        "type": "object"
+      },
       "StaffingChecklistItemRead": {
         "properties": {
           "document_id": {
@@ -18417,6 +18532,46 @@
         ],
         "title": "StaffingWorkerStatus",
         "type": "string"
+      },
+      "StaffingWorkerTimesheetSummary": {
+        "description": "Stundenzettel einer Person nach Status (nur Einsätze im Besitzbereich des Nutzers).",
+        "properties": {
+          "approved": {
+            "title": "Approved",
+            "type": "integer"
+          },
+          "approved_unbilled": {
+            "title": "Approved Unbilled",
+            "type": "integer"
+          },
+          "open": {
+            "title": "Open",
+            "type": "integer"
+          },
+          "rejected": {
+            "title": "Rejected",
+            "type": "integer"
+          },
+          "submitted": {
+            "title": "Submitted",
+            "type": "integer"
+          },
+          "worker_id": {
+            "format": "uuid",
+            "title": "Worker Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "worker_id",
+          "open",
+          "submitted",
+          "approved",
+          "rejected",
+          "approved_unbilled"
+        ],
+        "title": "StaffingWorkerTimesheetSummary",
+        "type": "object"
       },
       "StaffingWorkerUpdate": {
         "properties": {
@@ -23554,6 +23709,28 @@
                 }
               ],
               "title": "Engagement"
+            }
+          },
+          {
+            "in": "query",
+            "name": "staffing",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "workers",
+                    "bench",
+                    "critical",
+                    "applicants"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Staffing"
             }
           },
           {
@@ -33955,6 +34132,75 @@
         ]
       }
     },
+    "/api/v1/staffing/candidate-summary": {
+      "post": {
+        "description": "Sammelabfrage für die Spalte \"Überlassung\" der Kandidatenliste (eine Abfrage je Baustein,\nnicht je Kandidat): Status, aktueller Kunde, dringendste Frist. Kein Lohn, keine Marge.",
+        "operationId": "staffing_candidate_summary_api_v1_staffing_candidate_summary_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffingCandidateSummaryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffingCandidateSummaryRead"
+                  },
+                  "title": "Response Staffing Candidate Summary Api V1 Staffing Candidate Summary Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Staffing Candidate Summary",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
     "/api/v1/staffing/contracts": {
       "get": {
         "operationId": "list_contracts_api_v1_staffing_contracts_get",
@@ -35864,6 +36110,71 @@
           }
         ],
         "summary": "Update Worker",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/workers/{worker_id}/timesheet-summary": {
+      "get": {
+        "description": "Stundenzettel einer Person nach Status (nur Einsätze im Besitzbereich des Nutzers).",
+        "operationId": "get_worker_timesheet_summary_api_v1_staffing_workers__worker_id__timesheet_summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "worker_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Worker Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingWorkerTimesheetSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Worker Timesheet Summary",
         "tags": [
           "staffing"
         ]

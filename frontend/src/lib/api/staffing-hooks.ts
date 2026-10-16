@@ -6,6 +6,8 @@ import {
   assignmentsPath,
   getBillableTimesheets,
   getStaffingAssignment,
+  getStaffingCandidateSummaries,
+  getWorkerTimesheetSummary,
   getStaffingAssignments,
   getStaffingContracts,
   getStaffingDeadlines,
@@ -36,6 +38,16 @@ export function useStaffingOverview() {
 
 export function useStaffingDisposition() {
   return useSWR("/staffing/disposition", getStaffingDisposition, config);
+}
+
+/** Sammelabfrage für die Spalte "Überlassung" der Kandidatenliste; nur mit Ansicht Überlassung. */
+export function useStaffingCandidateSummaries(candidateIds: string[], enabled: boolean) {
+  const key = enabled && candidateIds.length > 0 ? `/staffing/candidate-summary?${candidateIds.join(",")}` : null;
+  return useSWR(key, () => getStaffingCandidateSummaries(candidateIds), { revalidateOnFocus: false, dedupingInterval: 10_000, keepPreviousData: true });
+}
+
+export function useWorkerTimesheetSummary(workerId: string | null) {
+  return useSWR(workerId ? `/staffing/workers/${workerId}/timesheet-summary` : null, () => getWorkerTimesheetSummary(workerId as string), config);
 }
 
 export function useStaffingTasks(enabled = true) {

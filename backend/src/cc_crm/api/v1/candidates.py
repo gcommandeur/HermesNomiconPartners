@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, File, Query, Response, UploadFile, status
@@ -11,6 +11,7 @@ from cc_crm.api.v1.operational import (
     _validate_upload_type,
 )
 from cc_crm.core.config import get_settings
+from cc_crm.core.errors import PermissionDeniedError  # NOMICON
 from cc_crm.models.enums import Abschlussart, CandidateStatus, CvExtractionJobStatus, Rolle
 from cc_crm.repositories.candidates import compute_search_match_fields
 from cc_crm.schemas.candidate import (
@@ -26,6 +27,7 @@ from cc_crm.schemas.engagement import EngagementFilter  # NOMICON
 from cc_crm.schemas.note import CandidateCommentRead
 from cc_crm.schemas.pagination import Page
 from cc_crm.schemas.recruiting import AuditLogRead
+from cc_crm.schemas.staffing_candidates import StaffingListFilter  # NOMICON
 from cc_crm.schemas.submission import (
     CandidatePitchLogCreate,
     CandidatePitchLogRead,
@@ -34,6 +36,7 @@ from cc_crm.schemas.submission import (
     CandidateStageSummary,
     CandidateSubmissionRead,
 )
+from cc_crm.services.access_views import NOT_ALLOWED, VIEW_STAFFING, has_view  # NOMICON
 from cc_crm.services.candidates import CandidateService
 from cc_crm.services.cv_extraction import (
     CV_STRUCTURED_FIELDS,
@@ -51,6 +54,7 @@ from cc_crm.services.engagement_status import candidate_filters  # NOMICON
 from cc_crm.services.job_queue import enqueue
 from cc_crm.services.operational import DocumentService
 from cc_crm.services.recruiting import RecruitingProcessService
+from cc_crm.services.staffing_candidates import list_filter as staffing_list_filter  # NOMICON
 from cc_crm.services.storage import read_document_bytes
 from cc_crm.services.submissions import CandidateSubmissionService
 
@@ -60,6 +64,7 @@ router = APIRouter(prefix="/candidates")
 @router.get("", response_model=Page[CandidateRead])
 def list_candidates(
     session: DatabaseSession,
+    current_user: CurrentUser,  # NOMICON: Filter "Überlassung" verlangt die Ansicht Überlassung
     candidate_status: Annotated[CandidateStatus | None, Query(alias="status")] = None,
     role: str | None = None,
     # Mehrfach angebbar (?rollen=steuerberater&rollen=partner) - ODER-
@@ -92,6 +97,8 @@ def list_candidates(
     custom_field: str | None = None,
     # NOMICON: Kandidatenstatus-Filter (frei fuer Direct/AÜ, im Austausch)
     engagement: EngagementFilter | None = None,
+    # NOMICON: Überlassungs-Filter (nur Leiharbeitnehmer, Bench, Frist kritisch, Anwärter)
+    staffing: StaffingListFilter | None = None,
     sort_by: Annotated[
         Literal["candidate_number", "name", "job_title", "city", "salary_expectation", "status"]
         | None,
@@ -101,6 +108,11 @@ def list_candidates(
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> Page[CandidateRead]:
+    extra_filters = candidate_filters(engagement) if engagement else []  # NOMICON
+    if staffing:  # NOMICON
+        if not has_view(session, current_user, VIEW_STAFFING):
+            raise PermissionDeniedError(NOT_ALLOWED)
+        extra_filters = [*extra_filters, *staffing_list_filter(session, staffing, date.today())]
     # owner_user_id ist ein reiner Komfort-Filter ("Meine Kandidaten") - ohne
     # ihn sehen weiterhin alle Nutzer alle Kandidaten, keine Sichtbarkeitsgrenze.
     entities, total = CandidateService(session).list_filtered(
@@ -117,7 +129,7 @@ def list_candidates(
         created_to=created_to,
         rollen_unbestaetigt=rollen_unbestaetigt,
         custom_field=custom_field,
-        extra_filters=candidate_filters(engagement) if engagement else None,  # NOMICON
+        extra_filters=extra_filters or None,  # NOMICON
         sort_by=sort_by,
         sort_dir=sort_dir,
         offset=offset,
