@@ -1,5 +1,5 @@
-# NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
-"""Erlaubnis zur Arbeitnehmerueberlassung (Bundesagentur fuer Arbeit)."""
+# NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
+"""Erlaubnis zur Arbeitnehmerüberlassung (Bundesagentur für Arbeit)."""
 
 import uuid
 
@@ -45,7 +45,7 @@ class StaffingLicenseService:
         start = values.get("valid_from", found.valid_from)
         end = values.get("valid_to", found.valid_to)
         if end is not None and end < start:
-            raise BusinessRuleError("Gueltig-bis liegt vor Gueltig-ab.")
+            raise BusinessRuleError("Gültig-bis liegt vor Gültig-ab.")
         audit.log_updated(self.session, audit.ENTITY_LICENSE, found, found.id, values, actor.email)
         self.licenses.update(found, values)
         self.session.commit()

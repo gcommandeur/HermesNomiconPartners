@@ -1,5 +1,5 @@
 # NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
-"""Einstellungen und taeglicher Job der Ueberlassungsfristen (mit Datenbank)."""
+"""Einstellungen und taeglicher Job der Überlassungsfristen (mit Datenbank)."""
 
 from datetime import date
 from decimal import Decimal
@@ -165,9 +165,9 @@ def test_job_creates_one_task_per_threshold_for_the_owner(session: Session) -> N
     assert first.tasks_created == len(tasks) == 2
     assert {t.owner_user_id for t in tasks} == {owner.id}
     titles = " | ".join(t.title for t in tasks)
-    assert "Ueberlassungsfrist: Mira Muster bei Logistik GmbH" in titles
+    assert "Überlassungsfrist: Mira Muster bei Logistik GmbH" in titles
     assert "Equal Pay ab jetzt" in titles
-    red = next(t for t in tasks if t.title.startswith("Ueberlassungsfrist"))
+    red = next(t for t in tasks if t.title.startswith("Überlassungsfrist"))
     assert "30.06.2026" in (red.description or "")
     assert "kein Rechtsrat" in (red.description or "")
 
@@ -178,8 +178,8 @@ def test_job_creates_one_task_per_threshold_for_the_owner(session: Session) -> N
     # Ueberschritten ist eine neue Stufe -> genau eine weitere Aufgabe
     after = run_deadline_job(session, D(2026, 7, 5))
     assert after.tasks_created == 1
-    assert "ueberschritten" in (_tasks(session)[-1].description or "") or any(
-        "ueberschritten" in (t.description or "") for t in _tasks(session)
+    assert "überschritten" in (_tasks(session)[-1].description or "") or any(
+        "überschritten" in (t.description or "") for t in _tasks(session)
     )
 
 
@@ -233,7 +233,7 @@ def test_job_uses_configured_values(session: Session) -> None:
         session, DeadlineConfig(max_months=12, equal_pay_months=6, yellow_days=60, red_days=30)
     )
     run_deadline_job(session, D(2025, 11, 15))  # Frist 31.12.2025: 46 Tage -> gelb (+ Equal Pay)
-    assert any("Ueberlassungsfrist" in t.title for t in _tasks(session))
+    assert any("Überlassungsfrist" in t.title for t in _tasks(session))
 
 
 def test_job_license_reminders(session: Session) -> None:
@@ -257,7 +257,7 @@ def test_job_license_reminders(session: Session) -> None:
     tasks = _tasks(session)
     assert len(tasks) == 1
     assert tasks[0].owner_user_id == admin.id
-    assert "laeuft ab" in tasks[0].title
+    assert "läuft ab" in tasks[0].title
     assert "AÜG-123" in (tasks[0].description or "")
     assert run_deadline_job(session, D(2026, 10, 3)).tasks_created == 0  # keine Dublette
     # Verlaengerung (neues valid_to) -> bei Annaeherung wieder eine neue Aufgabe

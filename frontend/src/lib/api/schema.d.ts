@@ -515,7 +515,7 @@ export interface paths {
         };
         /**
          * Demo Login Status
-         * @description Oeffentlich (Login-Seite): zeigt nur, ob die Demo-Schaltflaechen erscheinen sollen.
+         * @description Öffentlich (Login-Seite): zeigt nur, ob die Demo-Schaltflaechen erscheinen sollen.
          */
         get: operations["demo_login_status_api_v1_auth_demo_login_status_get"];
         put?: never;
@@ -1615,7 +1615,7 @@ export interface paths {
         put?: never;
         /**
          * Engagement Summary
-         * @description Sammelabfrage fuer ganze Listenseiten (eine Abfrage statt einer je Kandidat).
+         * @description Sammelabfrage für ganze Listenseiten (eine Abfrage statt einer je Kandidat).
          */
         post: operations["engagement_summary_api_v1_engagement_summary_post"];
         delete?: never;
@@ -2276,7 +2276,7 @@ export interface paths {
         get?: never;
         /**
          * Select My View
-         * @description Merkt die gewaehlte Ansicht serverseitig (Startansicht beim naechsten Login).
+         * @description Merkt die gewählte Ansicht serverseitig (Startansicht beim nächsten Login).
          */
         put: operations["select_my_view_api_v1_me_view_put"];
         post?: never;
@@ -2954,7 +2954,7 @@ export interface paths {
         put?: never;
         /**
          * Change Assignment Status
-         * @description Aktivierung nur mit gueltiger AÜG-Erlaubnis und vollstaendiger Pflicht-Checkliste.
+         * @description Aktivierung nur mit gültiger AÜG-Erlaubnis und vollständiger Pflicht-Checkliste.
          */
         post: operations["change_assignment_status_api_v1_staffing_assignments__assignment_id__status_post"];
         delete?: never;
@@ -2993,7 +2993,7 @@ export interface paths {
         };
         /**
          * Preview Takeover
-         * @description Wie wirkt die Staffel der Uebernahme-Fee bei diesem Einsatz (Monate, Anteil, Honorarsatz).
+         * @description Wie wirkt die Staffel der Übernahme-Fee bei diesem Einsatz (Monate, Anteil, Honorarsatz).
          */
         get: operations["preview_takeover_api_v1_staffing_assignments__assignment_id__takeover_preview_get"];
         put?: never;
@@ -3104,7 +3104,7 @@ export interface paths {
         };
         /**
          * Get Disposition
-         * @description Disposition: Kennzahlen, Bench ("frei seit"), Stundenzettel-Eingang. Einsaetze im
+         * @description Disposition: Kennzahlen, Bench ("frei seit"), Stundenzettel-Eingang. Einsätze im
          *     Sichtbereich des Nutzers; kein Lohn, keine Marge.
          */
         get: operations["get_disposition_api_v1_staffing_disposition_get"];
@@ -3125,7 +3125,7 @@ export interface paths {
         };
         /**
          * Export Hours Csv
-         * @description Stunden je Leiharbeitnehmer und Kunde fuer die Lohnabrechnung (nur Admins - enthaelt den
+         * @description Stunden je Leiharbeitnehmer und Kunde für die Lohnabrechnung (nur Admins - enthält den
          *     Stundenlohn). Nur vom Kunden freigegebene Stunden. Format: docs/UEBERLASSUNG.md.
          */
         get: operations["export_hours_csv_api_v1_staffing_export_hours_csv_get"];
@@ -3239,8 +3239,8 @@ export interface paths {
         put?: never;
         /**
          * Offer Candidate As Assignment
-         * @description Legt das Leiharbeitnehmer-Profil (Anwaerter) und optional einen geplanten Einsatz an. Ist der
-         *     Kandidat schon im Austausch, greift der Hinweis (409, mit Bestaetigung) bzw. die Sperre.
+         * @description Legt das Leiharbeitnehmer-Profil (Anwärter) und optional einen geplanten Einsatz an. Ist der
+         *     Kandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) bzw. die Sperre.
          */
         post: operations["offer_candidate_as_assignment_api_v1_staffing_offer_from_candidate_post"];
         delete?: never;
@@ -3347,8 +3347,8 @@ export interface paths {
         put?: never;
         /**
          * Submit Timesheet
-         * @description Einreichen und den Freigabelink fuer den Kunden erzeugen (erneuter Aufruf = neuer Link,
-         *     der alte wird ungueltig). Der Link steht nur in dieser Antwort.
+         * @description Einreichen und den Freigabelink für den Kunden erzeugen (erneuter Aufruf = neuer Link,
+         *     der alte wird ungültig). Der Link steht nur in dieser Antwort.
          */
         post: operations["submit_timesheet_api_v1_staffing_timesheets__timesheet_id__submit_post"];
         delete?: never;
@@ -5358,8 +5358,8 @@ export interface components {
         };
         /**
          * ClientBusinessRead
-         * @description Jeder Abschnitt ist `None`, wenn dem Nutzer die zugehoerige Ansicht fehlt (processes: Direct,
-         *     assignments/deadlines: Ueberlassung, revenue: Admin). Prozesse und Einsaetze nur im eigenen
+         * @description Jeder Abschnitt ist `None`, wenn dem Nutzer die zugehörige Ansicht fehlt (processes: Direct,
+         *     assignments/deadlines: Überlassung, revenue: Admin). Prozesse und Einsätze nur im eigenen
          *     Sichtbereich (Owner-Scope).
          */
         ClientBusinessRead: {
@@ -5662,7 +5662,7 @@ export interface components {
         };
         /**
          * ClientRevenueRead
-         * @description Nur fuer Admins.
+         * @description Nur für Admins.
          */
         ClientRevenueRead: {
             /** Placement Fees Paid */
@@ -8568,7 +8568,7 @@ export interface components {
         };
         /**
          * PublicTimesheetRead
-         * @description Alles, was der Kunde ueber den Freigabelink sieht - keine IDs, keine Lohn- oder
+         * @description Alles, was der Kunde über den Freigabelink sieht - keine IDs, keine Lohn- oder
          *     Verrechnungsdaten.
          */
         PublicTimesheetRead: {
@@ -9702,8 +9702,8 @@ export interface components {
         };
         /**
          * StaffingOfferInput
-         * @description "Als Einsatz anbieten" (Direct -> Ueberlassung): legt (falls noetig) das Leiharbeitnehmer-
-         *     Profil als Anwaerter an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz.
+         * @description "Als Einsatz anbieten" (Direct -> Überlassung): legt (falls nötig) das Leiharbeitnehmer-
+         *     Profil als Anwärter an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz.
          */
         StaffingOfferInput: {
             /**
@@ -9814,7 +9814,7 @@ export interface components {
         };
         /**
          * StaffingTakeoverInput
-         * @description Uebernahme durch den Kunden: der Leiharbeitnehmer wird beim Kunden fest angestellt.
+         * @description Übernahme durch den Kunden: der Leiharbeitnehmer wird beim Kunden fest angestellt.
          */
         StaffingTakeoverInput: {
             /** Annual Salary */
@@ -9826,7 +9826,7 @@ export interface components {
         };
         /**
          * StaffingTakeoverPreview
-         * @description Vorschau fuer die Maske: wie sich die Staffel auf diese Uebernahme auswirkt.
+         * @description Vorschau für die Maske: wie sich die Staffel auf diese Übernahme auswirkt.
          */
         StaffingTakeoverPreview: {
             /** Base Fee Percentage */
@@ -9871,7 +9871,7 @@ export interface components {
         };
         /**
          * StaffingTimesheetEntriesUpdate
-         * @description Ersetzt ALLE Eintraege des Stundenzettels (idempotent). Leere Liste = alles loeschen.
+         * @description Ersetzt ALLE Einträge des Stundenzettels (idempotent). Leere Liste = alles löschen.
          */
         StaffingTimesheetEntriesUpdate: {
             /** Entries */
@@ -9906,7 +9906,7 @@ export interface components {
         };
         /**
          * StaffingTimesheetInboxRead
-         * @description Stundenzettel nach Stand (nur Einsaetze im Sichtbereich des Nutzers).
+         * @description Stundenzettel nach Stand (nur Einsätze im Sichtbereich des Nutzers).
          */
         StaffingTimesheetInboxRead: {
             /** Approved Unbilled */

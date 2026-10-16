@@ -126,8 +126,8 @@ def test_full_flow_and_activation_rules(client: TestClient, crew: Crew, make_can
     assert blocked.status_code == 422
     detail = blocked.json()["detail"]
     assert "nicht aktiviert werden" in detail
-    assert "Keine gueltige AÜG-Erlaubnis" in detail
-    assert "Pflicht-Checkliste unvollstaendig" in detail
+    assert "Keine gültige AÜG-Erlaubnis" in detail
+    assert "Pflicht-Checkliste unvollständig" in detail
     assert "Merkblatt" in detail
 
     shown = client.get(f"{P}/assignments/{assignment['id']}", headers=crew.a.headers).json()

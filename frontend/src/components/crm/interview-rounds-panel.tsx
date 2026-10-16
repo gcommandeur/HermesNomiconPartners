@@ -89,7 +89,7 @@ export function InterviewRoundsPanel({
         <p className="rounded-lg border border-dashed border-white/10 p-4 text-center text-xs text-brand-muted">
           {canPlanNew
             ? "Noch keine Interview-Runde geplant."
-            : "Interviews koennen erst geplant werden, sobald der Prozess im Status „Interview“ ist."}
+            : "Interviews können erst geplant werden, sobald der Prozess im Status „Interview“ ist."}
         </p>
       ) : (
         <div className="space-y-2">

@@ -1,5 +1,5 @@
 # NOMICON: gemeinsamer Kandidatenstatus - nur in der Nomicon-Kopie.
-"""Status "wo ist der Kandidat bereits im Austausch", Praeferenzen und Konflikt-Einstellung."""
+"""Status "wo ist der Kandidat bereits im Austausch", Präferenzen und Konflikt-Einstellung."""
 
 import uuid
 
@@ -46,7 +46,7 @@ def update_engagement_prefs(
 def engagement_summary(
     payload: EngagementSummaryRequest, session: DatabaseSession, current_user: CurrentUser
 ) -> list[CandidateEngagementRead]:
-    """Sammelabfrage fuer ganze Listenseiten (eine Abfrage statt einer je Kandidat)."""
+    """Sammelabfrage für ganze Listenseiten (eine Abfrage statt einer je Kandidat)."""
     summaries = service.summarize(session, current_user, payload.candidate_ids)
     return list(summaries.values())
 

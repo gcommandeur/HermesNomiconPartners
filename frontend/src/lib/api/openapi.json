@@ -4343,7 +4343,7 @@
         "type": "object"
       },
       "ClientBusinessRead": {
-        "description": "Jeder Abschnitt ist `None`, wenn dem Nutzer die zugehoerige Ansicht fehlt (processes: Direct,\nassignments/deadlines: Ueberlassung, revenue: Admin). Prozesse und Einsaetze nur im eigenen\nSichtbereich (Owner-Scope).",
+        "description": "Jeder Abschnitt ist `None`, wenn dem Nutzer die zugehörige Ansicht fehlt (processes: Direct,\nassignments/deadlines: Überlassung, revenue: Admin). Prozesse und Einsätze nur im eigenen\nSichtbereich (Owner-Scope).",
         "properties": {
           "assignments": {
             "anyOf": [
@@ -5500,7 +5500,7 @@
         "type": "object"
       },
       "ClientRevenueRead": {
-        "description": "Nur fuer Admins.",
+        "description": "Nur für Admins.",
         "properties": {
           "placement_fees_paid": {
             "title": "Placement Fees Paid",
@@ -13987,7 +13987,7 @@
         "type": "object"
       },
       "PublicTimesheetRead": {
-        "description": "Alles, was der Kunde ueber den Freigabelink sieht - keine IDs, keine Lohn- oder\nVerrechnungsdaten.",
+        "description": "Alles, was der Kunde über den Freigabelink sieht - keine IDs, keine Lohn- oder\nVerrechnungsdaten.",
         "properties": {
           "client_name": {
             "title": "Client Name",
@@ -17271,7 +17271,7 @@
         "type": "object"
       },
       "StaffingOfferInput": {
-        "description": "\"Als Einsatz anbieten\" (Direct -> Ueberlassung): legt (falls noetig) das Leiharbeitnehmer-\nProfil als Anwaerter an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz.",
+        "description": "\"Als Einsatz anbieten\" (Direct -> Überlassung): legt (falls nötig) das Leiharbeitnehmer-\nProfil als Anwärter an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz.",
         "properties": {
           "candidate_id": {
             "format": "uuid",
@@ -17610,7 +17610,7 @@
         "type": "object"
       },
       "StaffingTakeoverInput": {
-        "description": "Uebernahme durch den Kunden: der Leiharbeitnehmer wird beim Kunden fest angestellt.",
+        "description": "Übernahme durch den Kunden: der Leiharbeitnehmer wird beim Kunden fest angestellt.",
         "properties": {
           "annual_salary": {
             "anyOf": [
@@ -17661,7 +17661,7 @@
         "type": "object"
       },
       "StaffingTakeoverPreview": {
-        "description": "Vorschau fuer die Maske: wie sich die Staffel auf diese Uebernahme auswirkt.",
+        "description": "Vorschau für die Maske: wie sich die Staffel auf diese Übernahme auswirkt.",
         "properties": {
           "base_fee_percentage": {
             "anyOf": [
@@ -17769,7 +17769,7 @@
         "type": "object"
       },
       "StaffingTimesheetEntriesUpdate": {
-        "description": "Ersetzt ALLE Eintraege des Stundenzettels (idempotent). Leere Liste = alles loeschen.",
+        "description": "Ersetzt ALLE Einträge des Stundenzettels (idempotent). Leere Liste = alles löschen.",
         "properties": {
           "entries": {
             "items": {
@@ -17846,7 +17846,7 @@
         "type": "object"
       },
       "StaffingTimesheetInboxRead": {
-        "description": "Stundenzettel nach Stand (nur Einsaetze im Sichtbereich des Nutzers).",
+        "description": "Stundenzettel nach Stand (nur Einsätze im Sichtbereich des Nutzers).",
         "properties": {
           "approved_unbilled": {
             "title": "Approved Unbilled",
@@ -22414,7 +22414,7 @@
     },
     "/api/v1/auth/demo-login/status": {
       "get": {
-        "description": "Oeffentlich (Login-Seite): zeigt nur, ob die Demo-Schaltflaechen erscheinen sollen.",
+        "description": "Öffentlich (Login-Seite): zeigt nur, ob die Demo-Schaltflaechen erscheinen sollen.",
         "operationId": "demo_login_status_api_v1_auth_demo_login_status_get",
         "responses": {
           "200": {
@@ -27811,7 +27811,7 @@
     },
     "/api/v1/engagement/summary": {
       "post": {
-        "description": "Sammelabfrage fuer ganze Listenseiten (eine Abfrage statt einer je Kandidat).",
+        "description": "Sammelabfrage für ganze Listenseiten (eine Abfrage statt einer je Kandidat).",
         "operationId": "engagement_summary_api_v1_engagement_summary_post",
         "parameters": [
           {
@@ -30483,7 +30483,7 @@
     },
     "/api/v1/me/view": {
       "put": {
-        "description": "Merkt die gewaehlte Ansicht serverseitig (Startansicht beim naechsten Login).",
+        "description": "Merkt die gewählte Ansicht serverseitig (Startansicht beim nächsten Login).",
         "operationId": "select_my_view_api_v1_me_view_put",
         "parameters": [
           {
@@ -33413,7 +33413,7 @@
     },
     "/api/v1/staffing/assignments/{assignment_id}/status": {
       "post": {
-        "description": "Aktivierung nur mit gueltiger AÜG-Erlaubnis und vollstaendiger Pflicht-Checkliste.",
+        "description": "Aktivierung nur mit gültiger AÜG-Erlaubnis und vollständiger Pflicht-Checkliste.",
         "operationId": "change_assignment_status_api_v1_staffing_assignments__assignment_id__status_post",
         "parameters": [
           {
@@ -33563,7 +33563,7 @@
     },
     "/api/v1/staffing/assignments/{assignment_id}/takeover-preview": {
       "get": {
-        "description": "Wie wirkt die Staffel der Uebernahme-Fee bei diesem Einsatz (Monate, Anteil, Honorarsatz).",
+        "description": "Wie wirkt die Staffel der Übernahme-Fee bei diesem Einsatz (Monate, Anteil, Honorarsatz).",
         "operationId": "preview_takeover_api_v1_staffing_assignments__assignment_id__takeover_preview_get",
         "parameters": [
           {
@@ -34198,7 +34198,7 @@
     },
     "/api/v1/staffing/disposition": {
       "get": {
-        "description": "Disposition: Kennzahlen, Bench (\"frei seit\"), Stundenzettel-Eingang. Einsaetze im\nSichtbereich des Nutzers; kein Lohn, keine Marge.",
+        "description": "Disposition: Kennzahlen, Bench (\"frei seit\"), Stundenzettel-Eingang. Einsätze im\nSichtbereich des Nutzers; kein Lohn, keine Marge.",
         "operationId": "get_disposition_api_v1_staffing_disposition_get",
         "parameters": [
           {
@@ -34253,7 +34253,7 @@
     },
     "/api/v1/staffing/export/hours.csv": {
       "get": {
-        "description": "Stunden je Leiharbeitnehmer und Kunde fuer die Lohnabrechnung (nur Admins - enthaelt den\nStundenlohn). Nur vom Kunden freigegebene Stunden. Format: docs/UEBERLASSUNG.md.",
+        "description": "Stunden je Leiharbeitnehmer und Kunde für die Lohnabrechnung (nur Admins - enthält den\nStundenlohn). Nur vom Kunden freigegebene Stunden. Format: docs/UEBERLASSUNG.md.",
         "operationId": "export_hours_csv_api_v1_staffing_export_hours_csv_get",
         "parameters": [
           {
@@ -34779,7 +34779,7 @@
     },
     "/api/v1/staffing/offer-from-candidate": {
       "post": {
-        "description": "Legt das Leiharbeitnehmer-Profil (Anwaerter) und optional einen geplanten Einsatz an. Ist der\nKandidat schon im Austausch, greift der Hinweis (409, mit Bestaetigung) bzw. die Sperre.",
+        "description": "Legt das Leiharbeitnehmer-Profil (Anwärter) und optional einen geplanten Einsatz an. Ist der\nKandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) bzw. die Sperre.",
         "operationId": "offer_candidate_as_assignment_api_v1_staffing_offer_from_candidate_post",
         "parameters": [
           {
@@ -35278,7 +35278,7 @@
     },
     "/api/v1/staffing/timesheets/{timesheet_id}/submit": {
       "post": {
-        "description": "Einreichen und den Freigabelink fuer den Kunden erzeugen (erneuter Aufruf = neuer Link,\nder alte wird ungueltig). Der Link steht nur in dieser Antwort.",
+        "description": "Einreichen und den Freigabelink für den Kunden erzeugen (erneuter Aufruf = neuer Link,\nder alte wird ungültig). Der Link steht nur in dieser Antwort.",
         "operationId": "submit_timesheet_api_v1_staffing_timesheets__timesheet_id__submit_post",
         "parameters": [
           {

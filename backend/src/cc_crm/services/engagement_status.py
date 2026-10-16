@@ -1,6 +1,6 @@
 # NOMICON: gemeinsamer Kandidatenstatus - nur in der Nomicon-Kopie.
-"""Wo ist ein Kandidat bereits im Austausch? Abgeleitet aus Prozessen (Direct) und Einsaetzen
-(Ueberlassung), nichts doppelt gespeichert.
+"""Wo ist ein Kandidat bereits im Austausch? Abgeleitet aus Prozessen (Direct) und Einsätzen
+(Überlassung), nichts doppelt gespeichert.
 
 Sichtbarkeit (Standardentscheidung, siehe docs/ANSICHTEN.md): Kanal, Stufe, zustaendiger Mitarbeiter
 und Datum sieht jeder Angemeldete; Kanzleiname und IDs nur, wer Zugriff auf den Prozess bzw. Einsatz
@@ -83,7 +83,7 @@ def derive_status(items: Sequence[EngagementItemRead]) -> str:
 def summarize(
     session: Session, user: User, candidate_ids: Iterable[uuid.UUID]
 ) -> dict[uuid.UUID, CandidateEngagementRead]:
-    """Zusammenfassung fuer viele Kandidaten per Sammelabfrage (keine Abfrage je Kandidat)."""
+    """Zusammenfassung für viele Kandidaten per Sammelabfrage (keine Abfrage je Kandidat)."""
     ids = list(dict.fromkeys(candidate_ids))
     result: dict[uuid.UUID, CandidateEngagementRead] = {}
     if not ids:
@@ -120,7 +120,7 @@ def summarize(
         for owner in session.scalars(select(User).where(User.id.in_(owner_ids))).all():
             names[owner.id] = owner.display_name or owner.email
 
-    scope = process_owner_scope(user, session)  # Prozesse und Einsaetze: gleiche Regel
+    scope = process_owner_scope(user, session)  # Prozesse und Einsätze: gleiche Regel
     shared = set(shared_submission_ids(user, session))
 
     items: dict[uuid.UUID, list[EngagementItemRead]] = defaultdict(list)
@@ -178,7 +178,7 @@ def summarize(
 
 
 def describe(item: EngagementItemRead) -> str:
-    """Kurztext mit den fuer alle sichtbaren Angaben (Kanal, Stufe, Kunde, Mitarbeiter, Datum)."""
+    """Kurztext mit den für alle sichtbaren Angaben (Kanal, Stufe, Kunde, Mitarbeiter, Datum)."""
     channel = "Direct" if item.channel == "direct" else "AÜ"
     stage = STAGE_LABELS.get(item.stage, item.stage)
     who = f" ({item.owner_name})" if item.owner_name else ""
@@ -232,11 +232,11 @@ def update_prefs(
     session.commit()
 
 
-# --- Filter fuer die Kandidatenliste -------------------------------------------------------------
+# --- Filter für die Kandidatenliste -------------------------------------------------------------
 
 
 def candidate_filters(kind: str) -> list[ColumnElement[bool]]:
-    """Zusatzbedingungen fuer die Kandidatenliste. "Frei" heisst: nicht ausdruecklich "nein" und
+    """Zusatzbedingungen für die Kandidatenliste. "Frei" heisst: nicht ausdrücklich "nein" und
     aktuell nicht im Prozess/Einsatz des Kanals; "Im Austausch": irgendein aktiver Prozess,
     eine Vermittlung oder ein geplanter/aktiver Einsatz."""
     in_direct = exists().where(
@@ -299,7 +299,7 @@ def _conflicting(
     items: Sequence[EngagementItemRead], channel: str, user: User
 ) -> list[EngagementItemRead]:
     """Gebunden heisst: Vermittlung, anderer Kanal oder (gleicher Kanal) von einem Kollegen
-    betreut. Eigene parallele Prozesse bei anderen Kanzleien sind Alltag und loesen nichts aus."""
+    betreut. Eigene parallele Prozesse bei anderen Kanzleien sind Alltag und lösen nichts aus."""
     own_name = user.display_name or user.email
     result = []
     for item in items:
@@ -312,7 +312,7 @@ def ensure_no_conflict(
     session: Session, user: User, candidate_id: uuid.UUID, channel: str, confirmed: bool
 ) -> None:
     """Vor dem Anlegen eines Prozesses (`direct`) oder Einsatzes (`staffing`). Modus "warn":
-    409 mit Hinweistext, ein zweiter Aufruf mit Bestaetigung geht durch. Modus "block": 422."""
+    409 mit Hinweistext, ein zweiter Aufruf mit Bestätigung geht durch. Modus "block": 422."""
     summary = summarize(session, user, [candidate_id])[candidate_id]
     items = _conflicting(summary.items, channel, user)
     if not items:
@@ -327,10 +327,10 @@ def ensure_no_conflict(
 
 
 def require_channel_open(session: Session, candidate_id: uuid.UUID, channel: str) -> None:
-    """Der Kandidat muss fuer den Kanal freigegeben sein (beim Kandidaten angekreuzt).
+    """Der Kandidat muss für den Kanal freigegeben sein (beim Kandidaten angekreuzt).
 
-    Ueberlassung braucht ein ausdrueckliches "ja" (Einwilligung); Direct ist nur bei "nein"
-    gesperrt, "nicht geklaert" reicht, damit bestehende Kandidaten vermittelt werden koennen."""
+    Überlassung braucht ein ausdrückliches "ja" (Einwilligung); Direct ist nur bei "nein"
+    gesperrt, "nicht geklärt" reicht, damit bestehende Kandidaten vermittelt werden können."""
     row = session.scalar(
         select(CandidateEngagementPrefs).where(
             CandidateEngagementPrefs.candidate_id == candidate_id

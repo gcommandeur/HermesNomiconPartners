@@ -1,8 +1,8 @@
-# NOMICON: Demo-Zustaende fuer Ansichten und Kandidatenstatus - nur Dummy-Daten, nur lokal.
+# NOMICON: Demo-Zustaende für Ansichten und Kandidatenstatus - nur Dummy-Daten, nur lokal.
 """Legt die zwei Demo-Konten (Admin, Vermittler) und einen Kandidatenstand an, an dem man alle
 Zustaende des gemeinsamen Kandidatenstatus sieht. Wird von `seed_data.py seed --demo` aufgerufen und
-ist idempotent (mehrfaches Ausfuehren legt nichts doppelt an). Alle Namen, Betraege und Adressen
-sind erfunden; die Konten bekommen ein zufaelliges, nie ausgegebenes Passwort (Anmeldung nur ueber
+ist idempotent (mehrfaches Ausführen legt nichts doppelt an). Alle Namen, Beträge und Adressen
+sind erfunden; die Konten bekommen ein zufaelliges, nie ausgegebenes Passwort (Anmeldung nur über
 die Demo-Schaltflaechen, siehe docs/ANSICHTEN.md)."""
 
 from __future__ import annotations
@@ -31,6 +31,7 @@ from cc_crm.models.recruiting import Placement  # noqa: E402
 from cc_crm.models.staffing import (  # noqa: E402
     StaffingAssignment,
     StaffingAssignmentStatus,
+    StaffingLicense,
     StaffingWorker,
     StaffingWorkerStatus,
 )
@@ -159,7 +160,7 @@ def _salary(candidate: Candidate | None) -> Decimal:
 
 
 def _complete_process_data(session: Session, owners: list[User]) -> None:
-    """Macht Demo-Prozesse vollstaendig: Verantwortlicher, Honorar (Gehalt x Honorarsatz des Kunden)
+    """Macht Demo-Prozesse vollständig: Verantwortlicher, Honorar (Gehalt x Honorarsatz des Kunden)
     und Abschlusswahrscheinlichkeit. Idempotent; aeltere Demo-Datenbanken ohne diese Felder
     werden damit nachgezogen (sonst 0 EUR Pipeline und "Prozesse ohne Verantwortlichen")."""
     rows = session.scalars(
@@ -193,7 +194,7 @@ def _complete_process_data(session: Session, owners: list[User]) -> None:
 
 
 def _repair_worker_status(session: Session) -> None:
-    """Statusregel (docs/UEBERLASSUNG.md): aktiv nie in der Zukunft. Aeltere Demo-Datenbanken haben
+    """Statusregel (docs/UEBERLASSUNG.md): aktiv nie in der Zukunft. Ältere Demo-Datenbanken haben
     Leiharbeitnehmer "aktiv" mit Eintritt in der Zukunft und nur einem geplanten Einsatz."""
     today = datetime.now(UTC).date()
     for worker in session.scalars(
@@ -201,6 +202,10 @@ def _repair_worker_status(session: Session) -> None:
     ).all():
         if worker.entry_date is not None and worker.entry_date > today:
             worker.status = StaffingWorkerStatus.APPLICANT
+    # sichtbare Texte aus älteren Seeds: Umlaute statt Umschreibung
+    for license_row in session.scalars(select(StaffingLicense)).all():
+        if "fuer Arbeit" in license_row.authority:
+            license_row.authority = license_row.authority.replace("fuer Arbeit", "für Arbeit")
     session.flush()
 
 
@@ -216,7 +221,7 @@ def seed_demo(session: Session) -> DemoSeedResult:
     )
     if len(clients) < 3:
         session.commit()
-        print("Demo: zu wenige Kunden - bitte zuerst 'seed' mit --clients 12 ausfuehren.")
+        print("Demo: zu wenige Kunden - bitte zuerst 'seed' mit --clients 12 ausführen.")
         return result
 
     def prefs(candidate: Candidate, direct: str, staffing: str) -> None:
@@ -229,7 +234,7 @@ def seed_demo(session: Session) -> DemoSeedResult:
             )
         )
 
-    # 1-3: frei fuer alles / nur AÜ offen / nur Direct offen
+    # 1-3: frei für alles / nur AÜ offen / nur Direct offen
     if (
         c := _candidate(session, "frei", "Frieda", "Demo-Frei", "Steuerfachangestellte")
     ) is not None:
@@ -247,7 +252,7 @@ def seed_demo(session: Session) -> DemoSeedResult:
         prefs(c, "yes", "unknown")
         result.candidates += 1
         result.processes += 1
-    # 5: im Direct-Prozess der Kollegin (fuer den Demo-Vermittler fremd, also ohne Kanzleiname)
+    # 5: im Direct-Prozess der Kollegin (für den Demo-Vermittler fremd, also ohne Kanzleiname)
     if (c := _candidate(session, "fremd", "Kolja", "Demo-Fremd", "Steuerberater")) is not None:
         _process(session, c, clients[1], colleague, SubmissionStatus.OFFER, Decimal("21000"), 2)
         result.candidates += 1
@@ -298,7 +303,7 @@ def seed_demo(session: Session) -> DemoSeedResult:
             result.processes += 1
     _complete_process_data(session, [admin, broker, colleague])
     _repair_worker_status(session)
-    # Fuer den Test sind beide Ansichten sichtbar (neue Mitarbeiter: Direct + Ueberlassung); der
+    # Für den Test sind beide Ansichten sichtbar (neue Mitarbeiter: Direct + Überlassung); der
     # Admin legt unter Einstellungen -> Administration -> Ansichten jederzeit eine Ansicht fest.
     key = "views_default_for_new_users"
     if session.scalar(select(AppSetting).where(AppSetting.key == key)) is None:

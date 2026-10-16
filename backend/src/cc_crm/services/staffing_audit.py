@@ -1,7 +1,7 @@
-# NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
-"""Audit-Log-Eintraege der Arbeitnehmerueberlassung (gleiche Tabelle `audit_logs` wie bei
-Prozessen, `entity_type` mit Praefix `staffing_`). Diese Eintraege enthalten Lohn- und
-Margenwerte; sie sind nur ueber `/audit-logs` (Admin) lesbar und tauchen NICHT in der
+# NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
+"""Audit-Log-Eintraege der Arbeitnehmerüberlassung (gleiche Tabelle `audit_logs` wie bei
+Prozessen, `entity_type` mit Praefix `staffing_`). Diese Einträge enthalten Lohn- und
+Margenwerte; sie sind nur über `/audit-logs` (Admin) lesbar und tauchen NICHT in der
 Kandidaten-Historie auf (die filtert auf `candidate` und `candidate_submission`)."""
 
 import uuid
@@ -48,7 +48,7 @@ def log_updated(
     *,
     action: str = "updated",
 ) -> bool:
-    """Schreibt nur dann einen Eintrag, wenn sich wirklich ein Feld aendert; Rueckgabe: ob."""
+    """Schreibt nur dann einen Eintrag, wenn sich wirklich ein Feld ändert; Rückgabe: ob."""
     old, new = changed_values(entity, values)
     if not new:
         return False

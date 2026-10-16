@@ -21,6 +21,7 @@ import {
 } from "@/lib/api/staffing";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { EmptyHint, LoadError, LoadingRows, labelClass } from "./staffing-ui";
+import { formatHours } from "@/lib/format"; // NOMICON
 
 const STATUS_TONE: Record<StaffingTimesheetStatus, "gray" | "blue" | "green" | "red"> = {
   open: "gray",
@@ -103,7 +104,7 @@ export function StaffingTimesheetsPanel({ assignmentId, enabled }: { assignmentI
                     <div className="min-w-0">
                       <p className="text-sm font-medium">{formatDate(sheet.period_start)} – {formatDate(sheet.period_end)}</p>
                       <p className="text-xs text-brand-muted">
-                        {Number(sheet.total_hours).toLocaleString("de-DE")} Std. an {sheet.entries.length} Tag(en)
+                        {formatHours(sheet.total_hours)} an {sheet.entries.length} Tag(en)
                         {sheet.status === "approved" && sheet.decided_by_name ? ` · freigegeben von ${sheet.decided_by_name}, ${formatDateTime(sheet.decided_at)}` : ""}
                         {sheet.status === "submitted" && sheet.approval_link_expires_at ? ` · Link gültig bis ${formatDate(sheet.approval_link_expires_at)}` : ""}
                       </p>
@@ -230,7 +231,7 @@ function EntriesModal({ sheet, onClose }: { sheet: StaffingTimesheet; onClose: (
             </div>
           ))}
         </div>
-        <p className="mt-3 text-sm font-medium">Summe: {total.toLocaleString("de-DE", { maximumFractionDigits: 2 })} Std.</p>
+        <p className="mt-3 text-sm font-medium">Summe: {formatHours(total)}</p>
         <ErrorBanner message={error} className="mt-3" />
         <div className="mt-4 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose}>Abbrechen</Button>

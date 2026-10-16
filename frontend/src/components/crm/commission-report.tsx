@@ -24,6 +24,7 @@ import {
   type CommissionRow,
 } from "@/lib/api/commission";
 import { formatDate } from "@/lib/utils";
+import { formatPercent } from "@/lib/format"; // NOMICON
 
 const TRAFFIC_TONE = { green: "green", yellow: "amber", red: "red" } as const;
 const TRAFFIC_LABEL = { green: "Ziel erreicht", yellow: "Über Break-even", red: "Unter Break-even" } as const;
@@ -31,7 +32,7 @@ const labelClass = "mb-1 block text-xs text-brand-muted";
 const selectClass = "h-9 rounded-md border border-white/10 bg-brand-surface px-2 text-sm text-brand-text outline-none focus:border-brand-accent";
 
 function percent(value: string | null): string {
-  return value === null ? "–" : `${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} %`;
+  return value === null ? "–" : formatPercent(value);
 }
 
 export function CommissionReport() {

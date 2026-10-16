@@ -1,5 +1,5 @@
-# NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
-"""Statuswechsel eines Einsatzes. Aktivierung nur mit gueltiger Erlaubnis UND vollstaendiger
+# NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
+"""Statuswechsel eines Einsatzes. Aktivierung nur mit gültiger Erlaubnis UND vollständiger
 Pflicht-Checkliste (klare deutsche Fehlermeldung, beide Probleme gemeinsam)."""
 
 import uuid
@@ -23,11 +23,11 @@ from cc_crm.services.staffing_assignments import StaffingAssignmentService
 
 CHECKLIST_LABELS: dict[StaffingChecklistKey, str] = {
     StaffingChecklistKey.EMPLOYMENT_CONTRACT: "Arbeitsvertrag / Nachweis (§ 11 AÜG)",
-    StaffingChecklistKey.INFO_LEAFLET: "Merkblatt fuer Leiharbeitnehmer",
-    StaffingChecklistKey.SUPPLY_CONTRACT: "Ueberlassungsvertrag (§ 12 AÜG)",
+    StaffingChecklistKey.INFO_LEAFLET: "Merkblatt für Leiharbeitnehmer",
+    StaffingChecklistKey.SUPPLY_CONTRACT: "Überlassungsvertrag (§ 12 AÜG)",
     StaffingChecklistKey.SPECIFICATION: "Konkretisierung der Person",
     StaffingChecklistKey.SAFETY_BRIEFING: "Sicherheitsunterweisung",
-    StaffingChecklistKey.PPE_PROTOCOL: "PSA-Uebergabeprotokoll",
+    StaffingChecklistKey.PPE_PROTOCOL: "PSA-Übergabeprotokoll",
 }
 
 _ALLOWED: dict[StaffingAssignmentStatus, set[StaffingAssignmentStatus]] = {
@@ -69,12 +69,12 @@ class StaffingActivationService:
                 f"Der Einsatz beginnt erst am {_fmt(assignment.start_date)} und kann vorher "
                 "nicht aktiviert werden."
             )
-        # Zeitraum der Pruefung: Start bis geplantes Ende; ohne Plan bis heute (die taegliche
-        # Fristenpruefung meldet eine spaeter ablaufende Erlaubnis).
+        # Zeitraum der Pruefung: Start bis geplantes Ende; ohne Plan bis heute (die tägliche
+        # Fristenpruefung meldet eine später ablaufende Erlaubnis).
         period_end = assignment.planned_end_date or max(assignment.start_date, today)
         if self.licenses.covering(assignment.start_date, period_end) is None:
             problems.append(
-                "Keine gueltige AÜG-Erlaubnis fuer den Zeitraum "
+                "Keine gültige AÜG-Erlaubnis für den Zeitraum "
                 f"{_fmt(assignment.start_date)} bis {_fmt(period_end)} hinterlegt."
             )
         done = {
@@ -85,7 +85,7 @@ class StaffingActivationService:
         missing = [CHECKLIST_LABELS[key] for key in CHECKLIST_KEYS if key not in done]
         if missing:
             problems.append(
-                "Pflicht-Checkliste unvollstaendig (offen: " + ", ".join(missing) + ")."
+                "Pflicht-Checkliste unvollständig (offen: " + ", ".join(missing) + ")."
             )
         return problems
 
@@ -125,7 +125,7 @@ class StaffingActivationService:
         elif old_status == StaffingAssignmentStatus.ACTIVE:
             end = payload.actual_end_date or day
             if end < assignment.start_date:
-                raise BusinessRuleError("Das tatsaechliche Ende liegt vor dem Start.")
+                raise BusinessRuleError("Das tatsächliche Ende liegt vor dem Start.")
             assignment.actual_end_date = end
         audit.log_event(
             self.session,

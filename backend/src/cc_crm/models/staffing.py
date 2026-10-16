@@ -1,10 +1,10 @@
-# NOMICON: Arbeitnehmerueberlassung (AÜG) - nur in der Nomicon-Kopie, nicht in Hermes.
+# NOMICON: Arbeitnehmerüberlassung (AÜG) - nur in der Nomicon-Kopie, nicht in Hermes.
 # Alle Tabellen tragen das Praefix `staffing_`, damit spaetere Hermes-Tabellen nicht kollidieren.
-"""Datenmodell der Arbeitnehmerueberlassung.
+"""Datenmodell der Arbeitnehmerüberlassung.
 
-Ein Leiharbeitnehmer ist ein bestehender `Candidate` mit zusaetzlichem Profil
-(`StaffingWorker`, 1:1). Einsaetze (`StaffingAssignment`) verbinden Leiharbeitnehmer, Kunde
-(`ClientCompany`) und optional einen Ueberlassungs-/Rahmenvertrag. Lohn und Verrechnungssatz
+Ein Leiharbeitnehmer ist ein bestehender `Candidate` mit zusätzlichem Profil
+(`StaffingWorker`, 1:1). Einsätze (`StaffingAssignment`) verbinden Leiharbeitnehmer, Kunde
+(`ClientCompany`) und optional einen Überlassungs-/Rahmenvertrag. Lohn und Verrechnungssatz
 sind Margendaten und werden nur Admins ausgeliefert (Schicht api/services, nicht hier).
 Die Lohnabrechnung selbst bleibt extern - hier steht nur der Stundenlohn als Stammdatum."""
 
@@ -32,7 +32,7 @@ from cc_crm.models.enums import InvoiceStatus
 
 
 class StaffingWorkerStatus(StrEnum):
-    APPLICANT = "applicant"  # Anwaerter
+    APPLICANT = "applicant"  # Anwärter
     ACTIVE = "active"
     DORMANT = "dormant"  # ruhend
     LEFT = "left"  # ausgeschieden
@@ -63,11 +63,11 @@ class StaffingChecklistKey(StrEnum):
     """Pflichtpunkte je Einsatz (Reihenfolge = Anzeigereihenfolge)."""
 
     EMPLOYMENT_CONTRACT = "employment_contract"  # Arbeitsvertrag / Nachweis nach Par. 11 AÜG
-    INFO_LEAFLET = "info_leaflet"  # Merkblatt fuer Leiharbeitnehmer
-    SUPPLY_CONTRACT = "supply_contract"  # Ueberlassungsvertrag, Par. 12 AÜG
-    SPECIFICATION = "specification"  # Konkretisierung der Person im Ueberlassungsvertrag
+    INFO_LEAFLET = "info_leaflet"  # Merkblatt für Leiharbeitnehmer
+    SUPPLY_CONTRACT = "supply_contract"  # Überlassungsvertrag, Par. 12 AÜG
+    SPECIFICATION = "specification"  # Konkretisierung der Person im Überlassungsvertrag
     SAFETY_BRIEFING = "safety_briefing"  # Sicherheitsunterweisung
-    PPE_PROTOCOL = "ppe_protocol"  # Uebergabeprotokoll persoenliche Schutzausruestung
+    PPE_PROTOCOL = "ppe_protocol"  # Übergabeprotokoll persönliche Schutzausrüstung
 
 
 CHECKLIST_KEYS: tuple[StaffingChecklistKey, ...] = tuple(StaffingChecklistKey)
@@ -97,7 +97,7 @@ class StaffingWorker(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 
 class StaffingContract(UUIDPrimaryKeyMixin, TimestampMixin, Base):
-    """Ueberlassungs- bzw. Rahmenvertrag mit einem Kunden."""
+    """Überlassungs- bzw. Rahmenvertrag mit einem Kunden."""
 
     __tablename__ = "staffing_contracts"
 
@@ -107,7 +107,7 @@ class StaffingContract(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     contract_number: Mapped[str | None] = mapped_column(String(80))
     valid_from: Mapped[date | None] = mapped_column(Date)
     valid_to: Mapped[date | None] = mapped_column(Date)
-    industry_sector: Mapped[str | None] = mapped_column(String(120))  # fuer Branchenzuschlag
+    industry_sector: Mapped[str | None] = mapped_column(String(120))  # für Branchenzuschlag
     document_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("documents.id", ondelete="SET NULL")
     )
@@ -172,7 +172,7 @@ class StaffingChecklistItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 
 class StaffingLicense(UUIDPrimaryKeyMixin, TimestampMixin, Base):
-    """Erlaubnis zur Arbeitnehmerueberlassung nach AÜG."""
+    """Erlaubnis zur Arbeitnehmerüberlassung nach AÜG."""
 
     __tablename__ = "staffing_licenses"
 
@@ -188,7 +188,7 @@ class StaffingLicense(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 
 class StaffingTimesheet(UUIDPrimaryKeyMixin, TimestampMixin, Base):
-    """Stundenzettel je Einsatz und Zeitraum. Der Freigabe-Token fuer den Kunden wird nur als
+    """Stundenzettel je Einsatz und Zeitraum. Der Freigabe-Token für den Kunden wird nur als
     SHA-256-Hash gespeichert (der Klartext existiert nur in dem einen Link)."""
 
     __tablename__ = "staffing_timesheets"
@@ -227,10 +227,10 @@ class StaffingTimesheetEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 
 class StaffingInvoice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
-    """Rechnung ueber freigegebene Stundenzettel. Folgt dem Rechnungsmodell der Vermittlung
+    """Rechnung über freigegebene Stundenzettel. Folgt dem Rechnungsmodell der Vermittlung
     (`Fee`): gleiche Betragsfelder, derselbe Status (`InvoiceStatus`) und dieselbe Freigabe-Inbox
     ("Rechnung stellen" durch Nicht-Admins braucht einen Admin), aber an Kunde und Stundenzettel
-    statt an ein Placement gehaengt."""
+    statt an ein Placement gehängt."""
 
     __tablename__ = "staffing_invoices"
 

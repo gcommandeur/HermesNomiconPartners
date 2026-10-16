@@ -10,6 +10,7 @@ import { apiPatch } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { invalidatePendingApprovals } from "@/components/crm/approval-pending-notice";
 import type { ClientCompany, HonorarStufe } from "@/lib/api/types";
+import { formatPercent } from "@/lib/format"; // NOMICON
 
 const labelClass = "mb-1 block text-xs text-brand-dim";
 const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
@@ -73,7 +74,7 @@ export function ClientHonorarEditor({ client }: { client: ClientCompany }) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs text-brand-dim">Honorarsatz</p>
-              <p className="mt-2 font-medium">{client.fee_percentage ?? 27} %</p>
+              <p className="mt-2 font-medium">{formatPercent(client.fee_percentage ?? 27)}</p>
             </div>
             <Button size="sm" variant="outline" onClick={() => { reset(); setEditing(true); }}><Pencil size={13} />Bearbeiten</Button>
           </div>

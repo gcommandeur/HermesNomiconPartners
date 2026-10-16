@@ -27,6 +27,7 @@ import { StaffingAssignmentCreateButton } from "./staffing-assignment-create-mod
 import { StaffingAssignmentsView } from "./staffing-assignments-view";
 import { DeadlineRow } from "./staffing-overview-view";
 import { EmptyHint, Fact, LoadError, LoadingRows, WorkerStatusBadge, labelClass, selectClass } from "./staffing-ui";
+import { formatHours } from "@/lib/format"; // NOMICON
 
 // --- Liste -------------------------------------------------------------------------------------
 
@@ -62,7 +63,7 @@ export function StaffingWorkersView() {
               <Link href={`/ueberlassung/leiharbeitnehmer/${w.id}`} className="flex flex-col gap-2 rounded-lg border border-white/10 p-3 transition-colors hover:bg-brand-hover/40 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{w.candidate_name}{w.candidate_number ? <span className="text-brand-muted"> · Nr. {w.candidate_number}</span> : null}</p>
-                  <p className="truncate text-xs text-brand-muted">{[w.pay_grade, w.weekly_hours ? `${w.weekly_hours} Std./Woche` : null, w.entry_date ? `${w.status === "applicant" ? "Eintritt ab" : "seit"} ${formatDate(w.entry_date)}` : null].filter(Boolean).join(" · ") || "Keine Angaben"}</p>
+                  <p className="truncate text-xs text-brand-muted">{[w.pay_grade, w.weekly_hours ? `${formatHours(w.weekly_hours, { unit: "Std./Woche" })}` : null, w.entry_date ? `${w.status === "applicant" ? "Eintritt ab" : "seit"} ${formatDate(w.entry_date)}` : null].filter(Boolean).join(" · ") || "Keine Angaben"}</p>
                 </div>
                 <WorkerStatusBadge status={w.status} />
               </Link>
@@ -191,7 +192,7 @@ export function StaffingWorkerDetailView({ id }: { id: string }) {
             <Fact label="Eintritt">{worker.entry_date ? formatDate(worker.entry_date) : null}</Fact>
             <Fact label="Austritt">{worker.exit_date ? formatDate(worker.exit_date) : null}</Fact>
             <Fact label="Tarif-/Entgeltgruppe">{worker.pay_grade}</Fact>
-            <Fact label="Wochenstunden">{worker.weekly_hours}</Fact>
+            <Fact label="Wochenstunden">{worker.weekly_hours ? formatHours(worker.weekly_hours) : null}</Fact>
             <Fact label="Arbeitserlaubnis gültig bis">{worker.work_permit_valid_until ? formatDate(worker.work_permit_valid_until) : null}</Fact>
             {isAdmin && <Fact label="Stundenlohn">{formatMoney(worker.hourly_wage)}</Fact>}
           </div>

@@ -2,11 +2,11 @@
 """Kundenfreigabe von Stundenzetteln per Link - OHNE Login (wie der ICS-Feed in calendar_feed.py).
 
 Der Link-Token ist der einzige Zugangsschutz: 256 Bit Zufall, in der Datenbank nur als Hash,
-begrenzt gueltig, nur einmal nutzbar, gilt nur fuer genau einen Stundenzettel. Der Kunde sieht nur
-die noetigen Daten (Name, Zeitraum, Stunden), nie Lohn- oder Verrechnungsdaten und keine IDs.
+begrenzt gueltig, nur einmal nutzbar, gilt nur für genau einen Stundenzettel. Der Kunde sieht nur
+die nötigen Daten (Name, Zeitraum, Stunden), nie Lohn- oder Verrechnungsdaten und keine IDs.
 
 Schutz vor Raten: Fehlversuche (unbekannter, abgelaufener oder verbrauchter Token) werden pro
-Client-IP gezaehlt (gleiche Technik wie beim Login, core/rate_limit.py); ueber dem Limit antwortet
+Client-IP gezählt (gleiche Technik wie beim Login, core/rate_limit.py); über dem Limit antwortet
 der Server mit 429, BEVOR der Token ueberhaupt nachgeschlagen wird.
 - unbekannter Token: 404 (nicht von "gab es nie" unterscheidbar)
 - abgelaufen, verbraucht oder ersetzt: 410 mit allgemeiner Meldung"""
@@ -46,7 +46,7 @@ _EXPIRED = (
     "Dieser Link ist abgelaufen oder wurde bereits verwendet. "
     "Bitte beim Dienstleister einen neuen Link anfordern."
 )
-_UNKNOWN = "Dieser Link ist ungueltig."
+_UNKNOWN = "Dieser Link ist ungültig."
 
 
 def _ip(request: Request) -> str:
@@ -62,7 +62,7 @@ def _guard(request: Request) -> str:
     if timesheet_link_rate_limiter.is_blocked(ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Zu viele ungueltige Versuche. Bitte in ein paar Minuten erneut versuchen.",
+            detail="Zu viele ungültige Versuche. Bitte in ein paar Minuten erneut versuchen.",
         )
     return ip
 

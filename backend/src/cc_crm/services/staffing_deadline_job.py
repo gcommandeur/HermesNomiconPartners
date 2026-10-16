@@ -1,10 +1,10 @@
-# NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
-"""Fristen je Paar (Leiharbeitnehmer, Kunde) aus der Datenbank und der taegliche Job.
+# NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
+"""Fristen je Paar (Leiharbeitnehmer, Kunde) aus der Datenbank und der tägliche Job.
 
-Der Job legt Aufgaben (`tasks`) fuer Disponenten an - sie erscheinen in der Aufgabenliste und
+Der Job legt Aufgaben (`tasks`) für Disponenten an - sie erscheinen in der Aufgabenliste und
 in der taeglichen Faelligkeits-Mail (services/due_reminders.py). Gegen Dubletten traegt jede
 Aufgabe eine Kennung in der Beschreibung; es gibt je Paar und Schwelle genau EINE Aufgabe,
-auch wenn sie inzwischen erledigt ist (sie kommt erst wieder, wenn sich die Kette aendert)."""
+auch wenn sie inzwischen erledigt ist (sie kommt erst wieder, wenn sich die Kette ändert)."""
 
 import uuid
 from dataclasses import dataclass
@@ -43,7 +43,7 @@ _COUNTED = (
 
 
 def assignment_span(assignment: StaffingAssignment) -> Span:
-    """Beendete Einsaetze zaehlen bis zum tatsaechlichen Ende, laufende bis zum geplanten Ende
+    """Beendete Einsätze zählen bis zum tatsächlichen Ende, laufende bis zum geplanten Ende
     (ohne Plan: offen)."""
     if assignment.status == StaffingAssignmentStatus.ENDED:
         return Span(
@@ -115,7 +115,7 @@ def _active_admin_ids(session: Session) -> list[uuid.UUID]:
 
 
 def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJobResult:
-    """Taeglich ausfuehren (scripts/run_staffing_deadlines.py). Idempotent."""
+    """Täglich ausführen (scripts/run_staffing_deadlines.py). Idempotent."""
     day = today or datetime.now(_BERLIN).date()
     config = load_config(session)
     result = DeadlineJobResult()
@@ -156,15 +156,15 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
             levels.append(
                 (
                     level,
-                    f"Ueberlassungsfrist: {worker_name} bei {client_name}",
-                    "Hoechstueberlassungsdauer "
+                    f"Überlassungsfrist: {worker_name} bei {client_name}",
+                    "Höchstüberlassungsdauer "
                     + (
-                        f"seit {-(deadline.days_remaining or 0)} Tag(en) ueberschritten"
+                        f"seit {-(deadline.days_remaining or 0)} Tag(en) überschritten"
                         if deadline.exceeded
                         else f"endet am {deadline.max_end_date:%d.%m.%Y} "
                         f"(noch {deadline.days_remaining} Tage)"
                     )
-                    + ". Einsatz beenden oder Uebernahme/Neubesetzung planen. "
+                    + ". Einsatz beenden oder Übernahme/Neubesetzung planen. "
                     "Hinweis: kein Rechtsrat.",
                     TaskPriority.URGENT if deadline.traffic == Traffic.RED else TaskPriority.HIGH,
                 )
@@ -175,8 +175,8 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
                     "equal_pay",
                     f"Equal Pay ab jetzt: {worker_name} bei {client_name}",
                     f"Seit {deadline.equal_pay_from:%d.%m.%Y} gilt Equal Pay (gleiches Entgelt wie "
-                    "die Stammbelegschaft). Lohn und Verrechnungssatz pruefen. Hinweis: kein "
-                    "Rechtsrat, Tarifvertraege koennen abweichen.",
+                    "die Stammbelegschaft). Lohn und Verrechnungssatz prüfen. Hinweis: kein "
+                    "Rechtsrat, Tarifverträge können abweichen.",
                     TaskPriority.HIGH,
                 )
             )
@@ -210,18 +210,18 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
                     f"[staffing-license:{lic.id}:{lic.valid_to.isoformat()}:"
                     f"{'expired' if remaining < 0 else 'expiring'}:{user_id}]"
                 ),
-                title=f"AÜG-Erlaubnis {'abgelaufen' if remaining < 0 else 'laeuft ab'}: "
+                title=f"AÜG-Erlaubnis {'abgelaufen' if remaining < 0 else 'läuft ab'}: "
                 f"{lic.authority}",
                 body=(
-                    f"Die Erlaubnis zur Arbeitnehmerueberlassung ({lic.authority}"
+                    f"Die Erlaubnis zur Arbeitnehmerüberlassung ({lic.authority}"
                     f"{', Az. ' + lic.file_number if lic.file_number else ''}) "
                     + (
                         f"ist seit {-remaining} Tag(en) abgelaufen."
                         if remaining < 0
-                        else f"laeuft am {lic.valid_to:%d.%m.%Y} ab (noch {remaining} Tage)."
+                        else f"läuft am {lic.valid_to:%d.%m.%Y} ab (noch {remaining} Tage)."
                     )
-                    + " Verlaengerung rechtzeitig beantragen; ohne gueltige Erlaubnis duerfen "
-                    "keine Einsaetze aktiv sein."
+                    + " Verlängerung rechtzeitig beantragen; ohne gültige Erlaubnis dürfen "
+                    "keine Einsätze aktiv sein."
                 ),
                 owner_user_id=user_id,
                 priority=TaskPriority.URGENT if remaining < 30 else TaskPriority.HIGH,

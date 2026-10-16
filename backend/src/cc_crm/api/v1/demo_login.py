@@ -33,7 +33,7 @@ class DemoLoginResponse(BaseModel):
 
 @router.get("/status", response_model=DemoLoginStatus)
 def demo_login_status() -> DemoLoginStatus:
-    """Oeffentlich (Login-Seite): zeigt nur, ob die Demo-Schaltflaechen erscheinen sollen."""
+    """Öffentlich (Login-Seite): zeigt nur, ob die Demo-Schaltflaechen erscheinen sollen."""
     return DemoLoginStatus(enabled=demo_login_active(get_settings()))
 
 
@@ -58,7 +58,7 @@ def demo_login(
     if user is None or not user.is_active:
         login_rate_limiter.record_failure(ip)
         raise AuthenticationError(
-            "Demo-Konten sind nicht angelegt: 'python scripts/seed_data.py seed --demo' ausfuehren."
+            "Demo-Konten sind nicht angelegt: 'python scripts/seed_data.py seed --demo' ausführen."
         )
     token = AuthService(session).issue_session(user)  # keine 2FA, kein vertrauensvolles Geraet
     return DemoLoginResponse(token=token, user=_user_read(user))

@@ -17,6 +17,7 @@ import { useCurrentUser } from "@/lib/api/hooks";
 import { useServerSearchList } from "@/lib/api/use-server-search";
 import { getClientsPage } from "@/lib/api/queries";
 import type { ClientCompany } from "@/lib/api/types";
+import { formatPercent } from "@/lib/format"; // NOMICON
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Aktiv (grün)" },
@@ -160,7 +161,7 @@ export function ClientsTable() {
                 </p>
                 <div className="mt-2 flex items-center justify-between text-[10.45px] text-brand-gray">
                   <span>Kontakt {formatDate(client.last_contact_at ?? client.updated_at)}</span>
-                  <span>{client.fee_percentage ?? 27} % Honorar</span>
+                  <span>{formatPercent(client.fee_percentage ?? 27)} Honorar</span>
                 </div>
               </Link>
             );
@@ -237,7 +238,7 @@ export function ClientsTable() {
                 <td className="px-4 py-3.5">{client.focus ?? "—"}</td>
                 <td className="px-4 py-3.5 text-brand-soft">{formatDate(client.last_contact_at ?? client.updated_at)}</td>
                 <td className="px-4 py-3.5"><StatusPill status={client.terms_status === "accepted" || client.terms_status === "Unterzeichnet" ? "active" : "draft"} /></td>
-                <td className="px-4 py-3.5 font-medium">{client.fee_percentage ?? 27} %</td>
+                <td className="px-4 py-3.5 font-medium">{formatPercent(client.fee_percentage ?? 27)}</td>
               </tr>
             );
           }
@@ -288,7 +289,7 @@ export function ClientsTable() {
                     <td className="px-4 py-3.5">{client.focus ?? "—"}</td>
                     <td className="px-4 py-3.5 text-brand-soft">{formatDate(client.last_contact_at ?? client.updated_at)}</td>
                     <td className="px-4 py-3.5"><StatusPill status={client.terms_status === "accepted" || client.terms_status === "Unterzeichnet" ? "active" : "draft"} /></td>
-                    <td className="px-4 py-3.5 font-medium">{client.fee_percentage ?? 27} %</td>
+                    <td className="px-4 py-3.5 font-medium">{formatPercent(client.fee_percentage ?? 27)}</td>
                   </tr>
                 ))}
             </Fragment>

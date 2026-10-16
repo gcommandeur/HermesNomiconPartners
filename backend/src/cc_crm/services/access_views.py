@@ -1,12 +1,12 @@
-# NOMICON: Ansichten (Direct, Ueberlassung, Gesamt) - nur in der Nomicon-Kopie.
+# NOMICON: Ansichten (Direct, Überlassung, Gesamt) - nur in der Nomicon-Kopie.
 """Welche Ansichten ein Nutzer sehen darf, und wer sie vergeben darf.
 
 Regeln (Server, nicht nur Oberflaeche):
 - Admins haben immer alle drei Ansichten (nicht entziehbar).
-- "management" (Gesamt) nur fuer Admins.
+- "management" (Gesamt) nur für Admins.
 - Ein Nutzer ohne jede Freigabe-Zeile ("nie konfiguriert") bekommt den einstellbaren Standard
   (app_settings `views_default_for_new_users`, ohne Eintrag: nur "direct").
-- Jede Aenderung landet im Audit-Log (entity_type `user_view_access`)."""
+- Jede Änderung landet im Audit-Log (entity_type `user_view_access`)."""
 
 import uuid
 
@@ -106,7 +106,7 @@ def set_user_views(
     default_view: str | None,
     actor: User,
 ) -> list[str]:
-    """Setzt die Ansichten eines Nutzers (nur Admins rufen das auf). Gibt die neue Liste zurueck."""
+    """Setzt die Ansichten eines Nutzers (nur Admins rufen das auf). Gibt die neue Liste zurück."""
     target = session.get(User, target_id)
     if target is None:
         raise EntityNotFoundError("Nutzer nicht gefunden")
@@ -155,7 +155,7 @@ def set_user_views(
 
 
 def remember_view(session: Session, user: User, view: str) -> None:
-    """Merkt die zuletzt gewaehlte Ansicht (Umschalter im Kopf)."""
+    """Merkt die zuletzt gewählte Ansicht (Umschalter im Kopf)."""
     if view not in get_views(session, user):
         raise BusinessRuleError(NOT_ALLOWED)
     settings = session.scalar(select(UserViewSettings).where(UserViewSettings.user_id == user.id))

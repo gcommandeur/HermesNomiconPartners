@@ -1,5 +1,5 @@
-# NOMICON: Disposition der Ueberlassung - nur in der Nomicon-Kopie.
-"""Kennzahlen, Bench und Stundenzettel-Eingang fuer die Disposition. Alles, was an Einsaetzen
+# NOMICON: Disposition der Überlassung - nur in der Nomicon-Kopie.
+"""Kennzahlen, Bench und Stundenzettel-Eingang für die Disposition. Alles, was an Einsätzen
 haengt, ist wie ueberall auf den Sichtbereich des Nutzers begrenzt (`owner_scope`); die Bench ist
 eine Liste von Leiharbeitnehmern (Profile sind wie Kandidaten ein gemeinsamer Pool)."""
 
@@ -31,7 +31,7 @@ _OPEN = (StaffingAssignmentStatus.PLANNED, StaffingAssignmentStatus.ACTIVE)
 
 
 def bench(session: Session, today: date) -> list[StaffingBenchWorkerRead]:
-    """Aktive Leiharbeitnehmer ohne geplanten oder aktiven Einsatz, am laengsten frei zuerst."""
+    """Aktive Leiharbeitnehmer ohne geplanten oder aktiven Einsatz, am längsten frei zuerst."""
     busy = select(StaffingAssignment.worker_id).where(StaffingAssignment.status.in_(_OPEN))
     rows = session.execute(
         select(StaffingWorker, Candidate.first_name, Candidate.last_name)

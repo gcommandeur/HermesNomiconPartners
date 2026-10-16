@@ -1,10 +1,10 @@
 # NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
-"""Uebernahme durch den Kunden: der Leiharbeitnehmer wird beim Kunden fest angestellt.
+"""Übernahme durch den Kunden: der Leiharbeitnehmer wird beim Kunden fest angestellt.
 
-Der Einsatz wird beendet, und es entsteht ein Vermittlungsprozess (`CandidateSubmission`) fuer
+Der Einsatz wird beendet, und es entsteht ein Vermittlungsprozess (`CandidateSubmission`) für
 Kandidat und Kunde mit dem Honorar (Prozentsatz, erwartetes Honorar aus Jahresgehalt). Der Prozess
 beginnt bewusst im ersten Status (Quali-Call): die Stufen bis zur Vermittlung durchlaeuft die
-Disponentin wie sonst auch - es werden keine Stufen vorgetaeuscht (sie zaehlen in KPIs und
+Disponentin wie sonst auch - es werden keine Stufen vorgetaeuscht (sie zählen in KPIs und
 Auswertungen)."""
 
 import uuid
@@ -45,9 +45,9 @@ class StaffingTakeoverService:
         assignments = StaffingAssignmentService(self.session)
         assignment = assignments.get_row(assignment_id).assignment
         if assignment.status != StaffingAssignmentStatus.ACTIVE:
-            raise BusinessRuleError("Nur ein aktiver Einsatz kann vom Kunden uebernommen werden.")
+            raise BusinessRuleError("Nur ein aktiver Einsatz kann vom Kunden übernommen werden.")
         if day < assignment.start_date:
-            raise BusinessRuleError("Das Uebernahmedatum liegt vor dem Einsatzbeginn.")
+            raise BusinessRuleError("Das Übernahmedatum liegt vor dem Einsatzbeginn.")
         worker = self.session.get(StaffingWorker, assignment.worker_id)
         client = self.session.get(ClientCompany, assignment.client_company_id)
         if worker is None or client is None:
@@ -71,15 +71,15 @@ class StaffingTakeoverService:
                 Decimal("0.01"), rounding=ROUND_HALF_UP
             )
         # Zuerst den Prozess anlegen (kann an einem doppelten aktiven Prozess scheitern), dann
-        # beenden - so bleibt bei einem Fehler der Einsatz unveraendert.
+        # beenden - so bleibt bei einem Fehler der Einsatz unverändert.
         submission = CandidateSubmissionService(self.session).create(
             CandidateSubmissionCreate(
                 candidate_id=worker.candidate_id,
                 client_company_id=client.id,
                 owner_user_id=assignment.owner_user_id or actor.id,
                 summary=(
-                    f"Uebernahme durch den Kunden aus der Arbeitnehmerueberlassung "
-                    f"(Einsatz seit {assignment.start_date:%d.%m.%Y}, Uebernahme {day:%d.%m.%Y})."
+                    f"Übernahme durch den Kunden aus der Arbeitnehmerüberlassung "
+                    f"(Einsatz seit {assignment.start_date:%d.%m.%Y}, Übernahme {day:%d.%m.%Y})."
                 ),
                 salary_at_submission=(
                     None
@@ -88,7 +88,7 @@ class StaffingTakeoverService:
                 ),
                 fee_percentage=percentage,
                 expected_fee=expected_fee,
-                next_step="Vermittlungshonorar klaeren und Vermittlung abschliessen",
+                next_step="Vermittlungshonorar klären und Vermittlung abschliessen",
             ),
             created_by_user_id=actor.id,
         )

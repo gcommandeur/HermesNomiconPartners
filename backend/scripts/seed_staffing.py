@@ -1,13 +1,13 @@
 # NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
-"""Dummy-Daten fuer die Ueberlassung (Leiharbeitnehmer, Vertraege, Einsaetze, Erlaubnis).
+"""Dummy-Daten für die Überlassung (Leiharbeitnehmer, Verträge, Einsätze, Erlaubnis).
 
 Wird von `seed_data.py seed --staffing N` aufgerufen und arbeitet auf den dort angelegten
-Kandidaten und Kanzleien. NUR fuer lokale Entwicklungsdatenbanken (Dummy-Daten, nie Produktion):
+Kandidaten und Kanzleien. NUR für lokale Entwicklungsdatenbanken (Dummy-Daten, nie Produktion):
 alle Personen, Nummern und Aktenzeichen sind erfunden.
 
 Die Daten gehen durch die echten Services (Regeln, Checkliste, Audit-Log wie im Betrieb) und
-decken verschiedene Faelle ab: Frist rot/gelb/gruen, Luecke unter 3 Monaten (Zaehler laeuft
-weiter), beendeter und geplanter Einsatz, Anwaerter ohne Einsatz."""
+decken verschiedene Faelle ab: Frist rot/gelb/gruen, Lücke unter 3 Monaten (Zähler läuft
+weiter), beendeter und geplanter Einsatz, Anwärter ohne Einsatz."""
 
 from __future__ import annotations
 
@@ -77,13 +77,13 @@ class _Plan:
 SCENARIOS: list[list[_Plan]] = [
     [_Plan(520, StaffingAssignmentStatus.ACTIVE)],  # ~17 Monate -> Frist rot/gelb
     [_Plan(120, StaffingAssignmentStatus.ACTIVE)],  # gruen
-    [_Plan(300, StaffingAssignmentStatus.ACTIVE)],  # Equal Pay laeuft schon
-    [  # Luecke von 50 Tagen: Zaehler laeuft weiter
+    [_Plan(300, StaffingAssignmentStatus.ACTIVE)],  # Equal Pay läuft schon
+    [  # Lücke von 50 Tagen: Zähler läuft weiter
         _Plan(400, StaffingAssignmentStatus.ENDED, 200),
         _Plan(150, StaffingAssignmentStatus.ACTIVE),
     ],
     [_Plan(-20, StaffingAssignmentStatus.PLANNED)],  # beginnt in 20 Tagen, Checkliste halb
-    [],  # Anwaerter ohne Einsatz
+    [],  # Anwärter ohne Einsatz
     [_Plan(200, StaffingAssignmentStatus.ENDED, 60)],  # beendet
     [_Plan(30, StaffingAssignmentStatus.ACTIVE)],
 ]
@@ -104,7 +104,7 @@ def _ensure_license(session: Session, actor: User, today: date) -> bool:
         return False
     StaffingLicenseService(session).create(
         StaffingLicenseCreate(
-            authority="Bundesagentur fuer Arbeit (Beispiel)",
+            authority="Bundesagentur für Arbeit (Beispiel)",
             file_number="DEMO-AÜG-0001",
             valid_from=today - timedelta(days=900),
             valid_to=today + timedelta(days=500),
@@ -121,7 +121,7 @@ def seed_staffing(
     today: date | None = None,
 ) -> StaffingSeedResult:
     """Legt bis zu `workers` Leiharbeitnehmer aus vorhandenen Kandidaten an (Kandidaten, die
-    schon Leiharbeitnehmer sind, werden uebersprungen). Mehrfaches Ausfuehren ist moeglich."""
+    schon Leiharbeitnehmer sind, werden übersprungen). Mehrfaches Ausführen ist möglich."""
     rand = rng or random.Random()
     day = today or date.today()
     result = StaffingSeedResult()
@@ -166,7 +166,7 @@ def seed_staffing(
         worker = worker_service.create(
             StaffingWorkerCreate(
                 candidate_id=candidate.id,
-                # Statusregel: Aktiv erst ab begonnenem Einsatz; geplante Einsaetze -> Anwaerter
+                # Statusregel: Aktiv erst ab begonnenem Einsatz; geplante Einsätze -> Anwärter
                 status=(
                     StaffingWorkerStatus.ACTIVE
                     if plans and plans[0].status != StaffingAssignmentStatus.PLANNED

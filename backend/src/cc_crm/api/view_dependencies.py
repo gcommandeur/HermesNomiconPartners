@@ -1,6 +1,6 @@
-# NOMICON: Ansichten (Direct, Ueberlassung, Gesamt) - nur in der Nomicon-Kopie.
+# NOMICON: Ansichten (Direct, Überlassung, Gesamt) - nur in der Nomicon-Kopie.
 """FastAPI-Abhaengigkeiten, die eine freigeschaltete Ansicht verlangen. 403 mit klarer Meldung
-(kein Verstecken per 404). ID-Routen behalten ihr 404 fuer fremde Datensaetze (Owner-Scope)."""
+(kein Verstecken per 404). ID-Routen behalten ihr 404 für fremde Datensätze (Owner-Scope)."""
 
 from collections.abc import Callable
 from typing import Annotated

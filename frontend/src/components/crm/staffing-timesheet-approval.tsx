@@ -16,6 +16,7 @@ import {
 } from "@/lib/api/staffing-public";
 import type { PublicTimesheet } from "@/lib/api/staffing";
 import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatHours } from "@/lib/format"; // NOMICON
 
 type State =
   | { phase: "loading" }
@@ -110,7 +111,7 @@ export function StaffingTimesheetApproval({ token }: { token: string }) {
                   {state.sheet.entries.map((entry) => (
                     <tr key={entry.work_date} className="border-t border-white/5">
                       <td className="py-1.5">{weekday(entry.work_date)}</td>
-                      <td className="py-1.5 text-right">{Number(entry.hours).toLocaleString("de-DE", { minimumFractionDigits: 2 })}</td>
+                      <td className="py-1.5 text-right">{formatHours(entry.hours, { fixed: true, unit: "" })}</td>
                       <td className="py-1.5 text-right">{entry.break_minutes} Min.</td>
                     </tr>
                   ))}
@@ -118,7 +119,7 @@ export function StaffingTimesheetApproval({ token }: { token: string }) {
                 <tfoot>
                   <tr className="border-t border-white/10 font-semibold">
                     <td className="pt-2">Summe</td>
-                    <td className="pt-2 text-right">{Number(state.sheet.total_hours).toLocaleString("de-DE", { minimumFractionDigits: 2 })} Std.</td>
+                    <td className="pt-2 text-right">{formatHours(state.sheet.total_hours, { fixed: true })}</td>
                     <td />
                   </tr>
                 </tfoot>

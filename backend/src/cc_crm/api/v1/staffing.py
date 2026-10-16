@@ -1,9 +1,9 @@
-# NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
-"""Arbeitnehmerueberlassung: Leiharbeitnehmer, Vertraege, Einsaetze, Erlaubnis, Fristen.
+# NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
+"""Arbeitnehmerüberlassung: Leiharbeitnehmer, Verträge, Einsätze, Erlaubnis, Fristen.
 
-Rechte: Einsaetze sind ueber den Disponenten gescopt (api/staffing_dependencies.py), jede Route
+Rechte: Einsätze sind über den Disponenten gescopt (api/staffing_dependencies.py), jede Route
 mit `assignment_id` im Pfad hat `AssignmentAccess`. Lohn und Verrechnungssatz sehen und setzen nur
-Admins (services/staffing_visibility.py); Erlaubnis und Einstellungen aendern nur Admins."""
+Admins (services/staffing_visibility.py); Erlaubnis und Einstellungen ändern nur Admins."""
 
 import uuid
 from datetime import date
@@ -100,14 +100,14 @@ router = APIRouter(prefix="/staffing")
 def _check_owner(
     session: DatabaseSession, user: CurrentUser, owner_user_id: uuid.UUID | None
 ) -> None:
-    """Ein Nicht-Admin darf Einsaetze nur Disponenten seines Bereichs zuweisen (sonst verschwaende
+    """Ein Nicht-Admin darf Einsätze nur Disponenten seines Bereichs zuweisen (sonst verschwände
     der Einsatz aus seiner eigenen Sicht)."""
     scope = staffing_owner_scope(user, session)
     if scope is not None and owner_user_id is not None and owner_user_id not in scope:
         raise PermissionDeniedError("Dieser Disponent liegt ausserhalb Ihres Bereichs.")
 
 
-# --- Uebersicht, Fristen, Einstellungen --------------------------------------------------------
+# --- Übersicht, Fristen, Einstellungen --------------------------------------------------------
 
 
 @router.get("/overview", response_model=StaffingOverviewRead)
@@ -117,7 +117,7 @@ def get_overview(session: DatabaseSession, current_user: CurrentUser) -> Staffin
 
 @router.get("/disposition", response_model=StaffingDispositionRead)
 def get_disposition(session: DatabaseSession, current_user: CurrentUser) -> StaffingDispositionRead:
-    """Disposition: Kennzahlen, Bench ("frei seit"), Stundenzettel-Eingang. Einsaetze im
+    """Disposition: Kennzahlen, Bench ("frei seit"), Stundenzettel-Eingang. Einsätze im
     Sichtbereich des Nutzers; kein Lohn, keine Marge."""
     return disposition(session, staffing_owner_scope(current_user, session), date.today())
 
@@ -183,7 +183,7 @@ def get_worker_by_candidate(
 ) -> StaffingWorkerRead:
     row = StaffingWorkerService(session).row_for_candidate(candidate_id)
     if row is None:
-        raise EntityNotFoundError("Kein Leiharbeitnehmer-Profil fuer diesen Kandidaten")
+        raise EntityNotFoundError("Kein Leiharbeitnehmer-Profil für diesen Kandidaten")
     return redact(worker_read(row), current_user)
 
 
@@ -206,7 +206,7 @@ def update_worker(
     return redact(worker_read(row), current_user)
 
 
-# --- Vertraege ---------------------------------------------------------------------------------
+# --- Verträge ---------------------------------------------------------------------------------
 
 
 @router.get("/contracts", response_model=list[StaffingContractRead])
@@ -249,7 +249,7 @@ def update_contract(
     )
 
 
-# --- Einsaetze ---------------------------------------------------------------------------------
+# --- Einsätze ---------------------------------------------------------------------------------
 
 
 @router.get("/assignments", response_model=list[StaffingAssignmentRead])
@@ -333,7 +333,7 @@ def change_assignment_status(
     session: DatabaseSession,
     current_user: CurrentUser,
 ) -> StaffingAssignmentDetail:
-    """Aktivierung nur mit gueltiger AÜG-Erlaubnis und vollstaendiger Pflicht-Checkliste."""
+    """Aktivierung nur mit gültiger AÜG-Erlaubnis und vollständiger Pflicht-Checkliste."""
     StaffingActivationService(session).change_status(assignment_id, payload, current_user)
     return redact(StaffingAssignmentService(session).detail(assignment_id), current_user)
 
@@ -452,12 +452,12 @@ def set_timesheet_entries(
 def submit_timesheet(
     timesheet_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
 ) -> StaffingTimesheetSubmitResult:
-    """Einreichen und den Freigabelink fuer den Kunden erzeugen (erneuter Aufruf = neuer Link,
-    der alte wird ungueltig). Der Link steht nur in dieser Antwort."""
+    """Einreichen und den Freigabelink für den Kunden erzeugen (erneuter Aufruf = neuer Link,
+    der alte wird ungültig). Der Link steht nur in dieser Antwort."""
     return StaffingTimesheetService(session).submit(timesheet_id, current_user)
 
 
-# --- Direct -> Ueberlassung: als Einsatz anbieten -------------------------------------------
+# --- Direct -> Überlassung: als Einsatz anbieten -------------------------------------------
 
 
 @router.post("/offer-from-candidate", response_model=StaffingOfferResult)
@@ -467,8 +467,8 @@ def offer_candidate_as_assignment(
     current_user: CurrentUser,
     confirm_engagement: bool = False,
 ) -> StaffingOfferResult:
-    """Legt das Leiharbeitnehmer-Profil (Anwaerter) und optional einen geplanten Einsatz an. Ist der
-    Kandidat schon im Austausch, greift der Hinweis (409, mit Bestaetigung) bzw. die Sperre."""
+    """Legt das Leiharbeitnehmer-Profil (Anwärter) und optional einen geplanten Einsatz an. Ist der
+    Kandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) bzw. die Sperre."""
     _check_owner(session, current_user, payload.owner_user_id)
     ensure_no_conflict(session, current_user, payload.candidate_id, "staffing", confirm_engagement)
     workers = StaffingWorkerService(session)
@@ -498,7 +498,7 @@ def offer_candidate_as_assignment(
     )
 
 
-# --- Uebernahme durch den Kunden ----------------------------------------------------------------
+# --- Übernahme durch den Kunden ----------------------------------------------------------------
 
 
 @router.post(
@@ -526,7 +526,7 @@ def take_over_assignment(
 def preview_takeover(
     assignment_id: uuid.UUID, session: DatabaseSession, takeover_date: date | None = None
 ) -> StaffingTakeoverPreview:
-    """Wie wirkt die Staffel der Uebernahme-Fee bei diesem Einsatz (Monate, Anteil, Honorarsatz)."""
+    """Wie wirkt die Staffel der Übernahme-Fee bei diesem Einsatz (Monate, Anteil, Honorarsatz)."""
     assignment = StaffingAssignmentService(session).get_row(assignment_id).assignment
     client = session.get(ClientCompany, assignment.client_company_id)
     months = months_between(assignment.start_date, takeover_date or date.today())
@@ -575,8 +575,8 @@ def put_takeover_fee_tiers(
 
 # --- Abrechnung und Export -----------------------------------------------------------------------
 # Rechnungen folgen dem Rechnungs- und Freigabemodell der Vermittlung
-# (services/staffing_invoices.py). Betraege sind Margendaten: Nicht-Admins sehen sie nie, koennen
-# aber Entwuerfe aus Stundenzetteln ihres Bereichs erstellen und das Stellen ueber die
+# (services/staffing_invoices.py). Beträge sind Margendaten: Nicht-Admins sehen sie nie, können
+# aber Entwuerfe aus Stundenzetteln ihres Bereichs erstellen und das Stellen über die
 # Freigabe-Inbox beantragen.
 
 
@@ -647,7 +647,7 @@ def change_invoice_status(
 def export_hours_csv(
     period_start: date, period_end: date, session: DatabaseSession, _admin: AdminUser
 ) -> Response:
-    """Stunden je Leiharbeitnehmer und Kunde fuer die Lohnabrechnung (nur Admins - enthaelt den
+    """Stunden je Leiharbeitnehmer und Kunde für die Lohnabrechnung (nur Admins - enthält den
     Stundenlohn). Nur vom Kunden freigegebene Stunden. Format: docs/UEBERLASSUNG.md."""
     content = StaffingInvoiceService(session).export_hours_csv(period_start, period_end)
     filename = f"stunden_{period_start:%Y%m%d}_{period_end:%Y%m%d}.csv"

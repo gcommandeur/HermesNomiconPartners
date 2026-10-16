@@ -3,10 +3,10 @@
 
 Freigabe-Link: ein zufaelliges Token (`secrets.token_urlsafe(32)`, 256 Bit). In der Datenbank liegt
 NUR der SHA-256-Hash (`approval_token_hash`), der Klartext steht einmalig in der Antwort von
-`submit` und im Link. Das Token laeuft ab (`TOKEN_VALID_DAYS`), ist nur EINMAL nutzbar (Freigabe
-oder Ablehnung entwertet es) und gilt nur fuer genau diesen Stundenzettel. Wer den Zettel erneut
-einreicht ("Link neu erzeugen"), entwertet den alten Link. Der Kunde sieht ueber den Link nur die
-noetigen Daten (siehe schemas.staffing.PublicTimesheetRead)."""
+`submit` und im Link. Das Token läuft ab (`TOKEN_VALID_DAYS`), ist nur EINMAL nutzbar (Freigabe
+oder Ablehnung entwertet es) und gilt nur für genau diesen Stundenzettel. Wer den Zettel erneut
+einreicht ("Link neu erzeugen"), entwertet den alten Link. Der Kunde sieht über den Link nur die
+nötigen Daten (siehe schemas.staffing.PublicTimesheetRead)."""
 
 import hashlib
 import secrets
@@ -147,10 +147,10 @@ class StaffingTimesheetService:
             StaffingAssignmentStatus.ENDED,
         ):
             raise BusinessRuleError(
-                "Stundenzettel gibt es nur fuer aktive oder beendete Einsaetze."
+                "Stundenzettel gibt es nur für aktive oder beendete Einsätze."
             )
         if (payload.period_end - payload.period_start).days + 1 > MAX_PERIOD_DAYS:
-            raise BusinessRuleError(f"Ein Stundenzettel umfasst hoechstens {MAX_PERIOD_DAYS} Tage.")
+            raise BusinessRuleError(f"Ein Stundenzettel umfasst höchstens {MAX_PERIOD_DAYS} Tage.")
         start, end = self._span(assignment)
         if payload.period_end < start or (end is not None and payload.period_start > end):
             raise BusinessRuleError("Der Zeitraum liegt ausserhalb des Einsatzes.")
@@ -162,7 +162,7 @@ class StaffingTimesheetService:
                 and payload.period_end >= other.period_start
             ):
                 raise ConflictError(
-                    "Fuer diesen Zeitraum gibt es schon einen Stundenzettel "
+                    "Für diesen Zeitraum gibt es schon einen Stundenzettel "
                     f"({other.period_start:%d.%m.%Y} bis {other.period_end:%d.%m.%Y})."
                 )
         sheet = StaffingTimesheet(
@@ -188,7 +188,7 @@ class StaffingTimesheetService:
         sheet = self._get(timesheet_id)
         if sheet.status not in _EDITABLE:
             raise BusinessRuleError(
-                "Eingereichte oder freigegebene Stundenzettel sind nicht mehr aenderbar."
+                "Eingereichte oder freigegebene Stundenzettel sind nicht mehr änderbar."
             )
         assignment = self._assignment(sheet.assignment_id)
         span_start, span_end = self._span(assignment)
@@ -237,7 +237,7 @@ class StaffingTimesheetService:
         self, timesheet_id: uuid.UUID, actor: User, now: datetime | None = None
     ) -> StaffingTimesheetSubmitResult:
         """Einreichen und Freigabelink erzeugen. Bei einem schon eingereichten Zettel wird der
-        Link neu erzeugt (der alte wird ungueltig) - fuer abgelaufene oder verlorene Links."""
+        Link neu erzeugt (der alte wird ungültig) - für abgelaufene oder verlorene Links."""
         sheet = self._get(timesheet_id)
         if sheet.status in (StaffingTimesheetStatus.APPROVED,):
             raise BusinessRuleError("Dieser Stundenzettel ist bereits freigegeben.")
@@ -265,7 +265,7 @@ class StaffingTimesheetService:
             expires_at=sheet.approval_token_expires_at,
         )
 
-    # --- Oeffentlich (Kunde, ohne Login) ------------------------------------------------------
+    # --- Öffentlich (Kunde, ohne Login) ------------------------------------------------------
 
     def _by_token(self, token: str, now: datetime) -> StaffingTimesheet:
         sheet = self.session.scalar(

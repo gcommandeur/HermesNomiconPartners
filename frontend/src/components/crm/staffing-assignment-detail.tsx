@@ -34,6 +34,7 @@ import {
   LoadingRows,
   labelClass,
 } from "./staffing-ui";
+import { formatPercent } from "@/lib/format"; // NOMICON
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -315,9 +316,9 @@ function TakeoverModal({ assignmentId, workerId, clientName, onClose }: { assign
         {/* NOMICON: gestaffelte Übernahme-Fee nach Einsatzdauer (einstellbar unter Compliance) */}
         {preview?.data && (
           <p className="rounded-lg border border-white/10 bg-brand-surface p-3 text-xs text-brand-soft" role="status">
-            Einsatz bis dahin: {preview.data.months_worked} {preview.data.months_worked === 1 ? "Monat" : "Monate"} → Anteil am Honorar laut Staffel: <strong>{Number(preview.data.tier_percent)} %</strong>
+            Einsatz bis dahin: {preview.data.months_worked} {preview.data.months_worked === 1 ? "Monat" : "Monate"} → Anteil am Honorar laut Staffel: <strong>{formatPercent(preview.data.tier_percent)}</strong>
             {preview.data.base_fee_percentage && preview.data.effective_fee_percentage
-              ? <> (Honorarsatz des Kunden {Number(preview.data.base_fee_percentage)} % → <strong>{Number(preview.data.effective_fee_percentage)} %</strong>)</>
+              ? <> (Honorarsatz des Kunden {formatPercent(preview.data.base_fee_percentage)} → <strong>{formatPercent(preview.data.effective_fee_percentage)}</strong>)</>
               : <> (für diesen Kunden ist kein Honorarsatz hinterlegt)</>}. Ein eigener Prozentsatz unten überschreibt die Staffel.
           </p>
         )}

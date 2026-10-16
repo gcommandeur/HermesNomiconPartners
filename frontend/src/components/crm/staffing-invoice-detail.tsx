@@ -21,6 +21,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import { INVOICE_TONE } from "./staffing-billing-view";
 import { Fact, LoadError, LoadingRows, labelClass } from "./staffing-ui";
+import { formatHours, formatPercent } from "@/lib/format"; // NOMICON
 
 function isoPlus(days: number): string {
   const d = new Date();
@@ -99,7 +100,7 @@ export function StaffingInvoiceDetailView({ id }: { id: string }) {
               {invoice.lines.map((line) => (
                 <tr key={line.id} className="border-t border-white/5 align-top">
                   <td className="py-2 pr-3">{line.description}</td>
-                  <td className="py-2 text-right">{Number(line.hours).toLocaleString("de-DE", { minimumFractionDigits: 2 })}</td>
+                  <td className="py-2 text-right">{formatHours(line.hours, { fixed: true, unit: "" })}</td>
                   {isAdmin && <><td className="py-2 text-right">{formatMoney(line.rate)}</td><td className="py-2 text-right">{formatMoney(line.amount_net)}</td></>}
                 </tr>
               ))}
@@ -107,7 +108,7 @@ export function StaffingInvoiceDetailView({ id }: { id: string }) {
             {isAdmin && (
               <tfoot>
                 <tr className="border-t border-white/10"><td className="pt-2" colSpan={3}>Netto</td><td className="pt-2 text-right">{formatMoney(invoice.amount_net)}</td></tr>
-                <tr><td colSpan={3}>Umsatzsteuer {Number(invoice.vat_rate).toLocaleString("de-DE")} %</td><td className="text-right">{formatMoney((Number(invoice.amount_gross) - Number(invoice.amount_net)).toFixed(2))}</td></tr>
+                <tr><td colSpan={3}>Umsatzsteuer {formatPercent(invoice.vat_rate)}</td><td className="text-right">{formatMoney((Number(invoice.amount_gross) - Number(invoice.amount_net)).toFixed(2))}</td></tr>
                 <tr className="font-semibold"><td colSpan={3}>Brutto</td><td className="text-right">{formatMoney(invoice.amount_gross)}</td></tr>
               </tfoot>
             )}

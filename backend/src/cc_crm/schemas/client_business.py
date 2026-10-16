@@ -26,15 +26,15 @@ class ClientAssignmentRead(BaseModel):
 
 
 class ClientRevenueRead(BaseModel):
-    """Nur fuer Admins."""
+    """Nur für Admins."""
 
     placement_fees_paid: Decimal
     staffing_invoiced: Decimal
 
 
 class ClientBusinessRead(BaseModel):
-    """Jeder Abschnitt ist `None`, wenn dem Nutzer die zugehoerige Ansicht fehlt (processes: Direct,
-    assignments/deadlines: Ueberlassung, revenue: Admin). Prozesse und Einsaetze nur im eigenen
+    """Jeder Abschnitt ist `None`, wenn dem Nutzer die zugehörige Ansicht fehlt (processes: Direct,
+    assignments/deadlines: Überlassung, revenue: Admin). Prozesse und Einsätze nur im eigenen
     Sichtbereich (Owner-Scope)."""
 
     processes: list[ClientProcessRead] | None

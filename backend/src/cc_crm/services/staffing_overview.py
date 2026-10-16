@@ -1,5 +1,5 @@
-# NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
-"""Uebersicht (Dashboard) und Fristenliste der Ueberlassung, gefiltert nach Sichtbarkeit."""
+# NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
+"""Übersicht (Dashboard) und Fristenliste der Überlassung, gefiltert nach Sichtbarkeit."""
 
 import uuid
 from dataclasses import asdict
@@ -21,7 +21,7 @@ from cc_crm.services.staffing_settings import load_config
 
 DISCLAIMER = (
     "Hinweis: Diese Werte sind einstellbare Annahmen und kein Rechtsrat. Bitte mit Fachanwalt "
-    "oder Verband bestaetigen; Tarifvertraege koennen abweichen."
+    "oder Verband bestätigen; Tarifverträge können abweichen."
 )
 _OPEN = (StaffingAssignmentStatus.PLANNED, StaffingAssignmentStatus.ACTIVE)
 _URGENCY = {Traffic.RED: 0, Traffic.YELLOW: 1, Traffic.GREEN: 2}
@@ -59,7 +59,7 @@ def pair_deadlines(
     session: Session, owner_scope: list[uuid.UUID] | None, today: date
 ) -> list[StaffingPairDeadlineRead]:
     """Paare mit mindestens einem sichtbaren geplanten/aktiven Einsatz. Gerechnet wird mit ALLEN
-    Einsaetzen des Paares (die gesetzliche Zaehlung kennt keine Disponenten-Grenzen)."""
+    Einsätzen des Paares (die gesetzliche Zählung kennt keine Disponenten-Grenzen)."""
     repo = StaffingAssignmentRepository(session)
     config = load_config(session)
     seen: dict[tuple[uuid.UUID, uuid.UUID], StaffingPairDeadlineRead] = {}

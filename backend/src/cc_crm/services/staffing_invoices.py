@@ -1,15 +1,15 @@
 # NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
-"""Rechnungen ueber freigegebene Stundenzettel, Freigabe ("Rechnung stellen") und CSV-Export.
+"""Rechnungen über freigegebene Stundenzettel, Freigabe ("Rechnung stellen") und CSV-Export.
 
 Nutzt das vorhandene Rechnungs- und Freigabemodell der Vermittlung: derselbe Status
 (`InvoiceStatus`, erlaubte Uebergaenge aus services/invoices.py), dieselben Betragsfelder wie `Fee`
-und die Freigabe-Inbox - "Rechnung stellen" durch einen Nicht-Admin loest eine Anfrage
+und die Freigabe-Inbox - "Rechnung stellen" durch einen Nicht-Admin löst eine Anfrage
 (`kind="invoice_issue"`, `entity_type="staffing_invoice"`) aus, die ein Admin unter /freigaben
 entscheidet (services/approvals.py ruft dafuer `apply_staffing_invoice_issue`).
 
-Betraege (Verrechnungssatz mal Stunden) sind Margendaten: Nicht-Admins sehen sie nie (die API
-setzt sie auf None, siehe services/staffing_visibility.py). Sie koennen Entwuerfe aus
-Stundenzetteln ihres Bereichs erstellen und das Stellen beantragen, ohne die Betraege zu kennen."""
+Beträge (Verrechnungssatz mal Stunden) sind Margendaten: Nicht-Admins sehen sie nie (die API
+setzt sie auf None, siehe services/staffing_visibility.py). Sie können Entwuerfe aus
+Stundenzetteln ihres Bereichs erstellen und das Stellen beantragen, ohne die Beträge zu kennen."""
 
 import csv
 import io
@@ -152,7 +152,7 @@ class StaffingInvoiceService:
     def billable_timesheets(
         self, owner_scope: list[uuid.UUID] | None
     ) -> list[StaffingBillableTimesheetRead]:
-        """Freigegebene Stundenzettel ohne Rechnung, nur aus Einsaetzen im eigenen Bereich."""
+        """Freigegebene Stundenzettel ohne Rechnung, nur aus Einsätzen im eigenen Bereich."""
         billed = select(StaffingInvoiceLine.timesheet_id).where(
             StaffingInvoiceLine.timesheet_id.is_not(None)
         )
@@ -250,8 +250,8 @@ class StaffingInvoiceService:
             )
             if assignment.billing_rate is None:
                 raise BusinessRuleError(
-                    f"Fuer den Einsatz von {worker_name} ist kein Verrechnungssatz hinterlegt "
-                    "(nur Admins koennen ihn eintragen)."
+                    f"Für den Einsatz von {worker_name} ist kein Verrechnungssatz hinterlegt "
+                    "(nur Admins können ihn eintragen)."
                 )
             total_hours = self.session.scalar(
                 select(func.coalesce(func.sum(StaffingTimesheetEntry.hours), 0)).where(
@@ -261,7 +261,7 @@ class StaffingInvoiceService:
             hours = Decimal(total_hours or 0)
             if hours <= 0:
                 raise BusinessRuleError(
-                    f"Der Stundenzettel von {worker_name} enthaelt keine Stunden."
+                    f"Der Stundenzettel von {worker_name} enthält keine Stunden."
                 )
             lines.append(
                 StaffingInvoiceLine(
@@ -269,7 +269,7 @@ class StaffingInvoiceService:
                     assignment_id=assignment.id,
                     worker_name=worker_name,
                     description=(
-                        f"Arbeitnehmerueberlassung {worker_name}, "
+                        f"Arbeitnehmerüberlassung {worker_name}, "
                         f"{sheet.period_start:%d.%m.%Y} bis {sheet.period_end:%d.%m.%Y}"
                     ),
                     period_start=sheet.period_start,
@@ -331,7 +331,7 @@ class StaffingInvoiceService:
                 InvoiceStatus.ISSUED,
                 InvoiceStatus.CANCELLED,
             ):
-                raise PermissionDeniedError("Diese Rechnungsaenderung ist Admins vorbehalten.")
+                raise PermissionDeniedError("Diese Rechnungsänderung ist Admins vorbehalten.")
             if target == InvoiceStatus.ISSUED:
                 client = self.session.get(ClientCompany, invoice.client_company_id)
                 approval = ApprovalService(self.session).request(
@@ -345,7 +345,7 @@ class StaffingInvoiceService:
                         "amount_net": str(invoice.amount_net),
                         "amount_gross": str(invoice.amount_gross),
                         "label": (
-                            f"Ueberlassungsrechnung {client.name if client else ''} "
+                            f"Überlassungsrechnung {client.name if client else ''} "
                             f"({invoice.amount_net} EUR netto)"
                         ).replace("  ", " "),
                         **values,
@@ -372,11 +372,11 @@ class StaffingInvoiceService:
         self.session.commit()
         return invoice, None
 
-    # --- Export fuer die Lohnabrechnung -------------------------------------------------------
+    # --- Export für die Lohnabrechnung -------------------------------------------------------
 
     def export_hours_csv(self, period_start: date, period_end: date) -> str:
         """Stunden je Leiharbeitnehmer und Kunde im Zeitraum (nur VOM KUNDEN FREIGEGEBENE Stunden),
-        mit Stammdaten fuer Steuerberater oder Lohnsoftware. Format siehe docs/UEBERLASSUNG.md:
+        mit Stammdaten für Steuerberater oder Lohnsoftware. Format siehe docs/UEBERLASSUNG.md:
         Trennzeichen ';', Dezimalkomma, UTF-8 mit BOM, Zeilenende CRLF."""
         if period_end < period_start:
             raise BusinessRuleError("Das Ende liegt vor dem Beginn.")
@@ -448,8 +448,8 @@ CSV_HEADER = [
 
 
 def _cell(value: str | None) -> str:
-    """Text fuer eine Tabellenzelle. Beginnt er mit =, +, -, @ oder einem Steuerzeichen, hielte
-    Excel ihn fuer eine Formel (CSV-Injection, die Namen kommen von Nutzern): ein Apostroph
+    """Text für eine Tabellenzelle. Beginnt er mit =, +, -, @ oder einem Steuerzeichen, hielte
+    Excel ihn für eine Formel (CSV-Injection, die Namen kommen von Nutzern): ein Apostroph
     davor macht ihn zu Text."""
     text = (value or "").strip()
     if text and text[0] in "=+-@\t\r\n":

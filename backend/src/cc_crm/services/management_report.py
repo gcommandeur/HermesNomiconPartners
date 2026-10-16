@@ -1,6 +1,6 @@
 # NOMICON: Ansicht "Gesamt" (Geschaeftsfuehrung) - nur in der Nomicon-Kopie.
-"""Rohertrag, Prognose, Kunden mit beiden Geschaeften, Uebernahme-Quote und Alarme. Nur fuer Admins
-(Route mit Ansicht "management"); enthaelt Marge und damit Lohnbezug - nie fuer andere sichtbar."""
+"""Rohertrag, Prognose, Kunden mit beiden Geschäften, Übernahme-Quote und Alarme. Nur für Admins
+(Route mit Ansicht "management"); enthält Marge und damit Lohnbezug - nie für andere sichtbar."""
 
 import uuid
 from collections import defaultdict

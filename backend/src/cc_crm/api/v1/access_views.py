@@ -1,4 +1,4 @@
-# NOMICON: Ansichten (Direct, Ueberlassung, Gesamt) - nur in der Nomicon-Kopie.
+# NOMICON: Ansichten (Direct, Überlassung, Gesamt) - nur in der Nomicon-Kopie.
 """Eigene Ansichten (jeder Nutzer) und Freischaltung durch Admins."""
 
 import uuid
@@ -54,7 +54,7 @@ def get_my_views(session: DatabaseSession, current_user: CurrentUser) -> MyViews
 def select_my_view(
     payload: SelectViewUpdate, session: DatabaseSession, current_user: CurrentUser
 ) -> MyViewsRead:
-    """Merkt die gewaehlte Ansicht serverseitig (Startansicht beim naechsten Login)."""
+    """Merkt die gewählte Ansicht serverseitig (Startansicht beim nächsten Login)."""
     service.remember_view(session, current_user, payload.view)
     return _my_views(session, current_user)
 

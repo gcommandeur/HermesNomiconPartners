@@ -1,7 +1,7 @@
 # NOMICON: "Geschaeft mit dieser Kanzlei" - nur in der Nomicon-Kopie.
-"""Prozesse, Einsaetze, Fristen und Umsatz einer Kanzlei bzw. eines Kunden an einer Stelle. Es zeigt
-nur, was der Nutzer ohnehin sehen darf: Ansicht Direct fuer Prozesse, Ansicht Ueberlassung fuer
-Einsaetze und Fristen, Admin fuer Betraege; Prozesse und Einsaetze zusaetzlich im Owner-Scope."""
+"""Prozesse, Einsätze, Fristen und Umsatz einer Kanzlei bzw. eines Kunden an einer Stelle. Es zeigt
+nur, was der Nutzer ohnehin sehen darf: Ansicht Direct für Prozesse, Ansicht Überlassung für
+Einsätze und Fristen, Admin für Beträge; Prozesse und Einsätze zusätzlich im Owner-Scope."""
 
 import uuid
 from datetime import date
@@ -42,7 +42,7 @@ def client_business(
     session: Session, user: User, client_id: uuid.UUID, today: date
 ) -> ClientBusinessRead:
     views = get_views(session, user)
-    scope = process_owner_scope(user, session)  # Prozesse und Einsaetze: gleiche Regel
+    scope = process_owner_scope(user, session)  # Prozesse und Einsätze: gleiche Regel
     processes = None
     if VIEW_DIRECT in views:
         statement = (

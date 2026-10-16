@@ -1,8 +1,8 @@
-# NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
-"""Schemas der Arbeitnehmerueberlassung.
+# NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
+"""Schemas der Arbeitnehmerüberlassung.
 
 Lohn (`hourly_wage`) und Verrechnungssatz (`billing_rate`) stehen in den Read-Schemas als
-optionale Felder: fuer Nicht-Admins setzt die API-Schicht sie auf `None`
+optionale Felder: für Nicht-Admins setzt die API-Schicht sie auf `None`
 (services/staffing_visibility.py). Die Felder fehlen also nie im Schema, nur der Wert."""
 
 import uuid
@@ -74,7 +74,7 @@ class StaffingWorkerRead(EntityRead):
     notes: str | None
 
 
-# --- Ueberlassungs-/Rahmenvertraege -------------------------------------------------------------
+# --- Überlassungs-/Rahmenvertraege -------------------------------------------------------------
 
 
 class StaffingContractCreate(BaseModel):
@@ -115,7 +115,7 @@ class StaffingContractRead(EntityRead):
     notes: str | None
 
 
-# --- Einsaetze ----------------------------------------------------------------------------------
+# --- Einsätze ----------------------------------------------------------------------------------
 
 
 class StaffingAssignmentCreate(BaseModel):
@@ -151,7 +151,7 @@ class StaffingAssignmentUpdate(BaseModel):
 
 class StaffingAssignmentStatusChange(BaseModel):
     status: StaffingAssignmentStatus
-    # Nur fuer "ended"/"aborted": tatsaechliches Ende, Standard = heute.
+    # Nur für "ended"/"aborted": tatsaechliches Ende, Standard = heute.
     actual_end_date: date | None = None
 
 
@@ -216,7 +216,7 @@ class StaffingPairDeadlineRead(StaffingDeadlineRead):
 class StaffingAssignmentDetail(StaffingAssignmentRead):
     checklist: list[StaffingChecklistItemRead]
     deadline: StaffingDeadlineRead
-    # Nicht erfuellte Voraussetzungen fuer die Aktivierung (leer = aktivierbar).
+    # Nicht erfuellte Voraussetzungen für die Aktivierung (leer = aktivierbar).
     activation_problems: list[str]
 
 
@@ -234,7 +234,7 @@ class StaffingLicenseCreate(BaseModel):
 
     @model_validator(mode="after")
     def _dates(self) -> "StaffingLicenseCreate":
-        _check_range(self.valid_from, self.valid_to, "Gueltig-bis liegt vor Gueltig-ab.")
+        _check_range(self.valid_from, self.valid_to, "Gültig-bis liegt vor Gültig-ab.")
         return self
 
 
@@ -258,7 +258,7 @@ class StaffingLicenseRead(EntityRead):
     notes: str | None
 
 
-# --- Uebersicht und Einstellungen -------------------------------------------------------------
+# --- Übersicht und Einstellungen -------------------------------------------------------------
 
 
 class StaffingLicenseStatus(BaseModel):
@@ -273,9 +273,9 @@ class StaffingLicenseStatus(BaseModel):
 class StaffingOverviewRead(BaseModel):
     active_assignments: int
     planned_assignments: int
-    open_checklist_assignments: int  # geplante/aktive Einsaetze mit unvollstaendiger Checkliste
+    open_checklist_assignments: int  # geplante/aktive Einsätze mit unvollstaendiger Checkliste
     license: StaffingLicenseStatus
-    deadlines: list[StaffingPairDeadlineRead]  # dringendste zuerst, nur Paare mit Zaehler
+    deadlines: list[StaffingPairDeadlineRead]  # dringendste zuerst, nur Paare mit Zähler
 
 
 class StaffingSettingsRead(BaseModel):
@@ -315,7 +315,7 @@ class StaffingTimesheetEntryInput(BaseModel):
 
 
 class StaffingTimesheetEntriesUpdate(BaseModel):
-    """Ersetzt ALLE Eintraege des Stundenzettels (idempotent). Leere Liste = alles loeschen."""
+    """Ersetzt ALLE Einträge des Stundenzettels (idempotent). Leere Liste = alles löschen."""
 
     entries: list[StaffingTimesheetEntryInput] = Field(max_length=93)
 
@@ -351,7 +351,7 @@ class StaffingTimesheetSubmitResult(BaseModel):
 
 
 class PublicTimesheetRead(BaseModel):
-    """Alles, was der Kunde ueber den Freigabelink sieht - keine IDs, keine Lohn- oder
+    """Alles, was der Kunde über den Freigabelink sieht - keine IDs, keine Lohn- oder
     Verrechnungsdaten."""
 
     worker_name: str
@@ -376,7 +376,7 @@ class PublicTimesheetReject(BaseModel):
     reason: str = Field(min_length=3, max_length=2000)
 
 
-# --- Abrechnung, Export, Uebernahme ------------------------------------------------------------
+# --- Abrechnung, Export, Übernahme ------------------------------------------------------------
 
 
 class StaffingBillableTimesheetRead(BaseModel):
@@ -430,12 +430,12 @@ class StaffingInvoiceRead(EntityRead):
 
 class StaffingInvoiceStatusResult(BaseModel):
     invoice: StaffingInvoiceRead
-    # Gesetzt, wenn die Aenderung (Rechnung stellen durch Nicht-Admin) auf Freigabe wartet.
+    # Gesetzt, wenn die Änderung (Rechnung stellen durch Nicht-Admin) auf Freigabe wartet.
     approval_request: ApprovalRequestRead | None = None
 
 
 class StaffingTakeoverInput(BaseModel):
-    """Uebernahme durch den Kunden: der Leiharbeitnehmer wird beim Kunden fest angestellt."""
+    """Übernahme durch den Kunden: der Leiharbeitnehmer wird beim Kunden fest angestellt."""
 
     takeover_date: date | None = None  # Standard: heute (= tatsaechliches Ende des Einsatzes)
     annual_salary: Decimal | None = Field(default=None, gt=0, le=Decimal("10000000"))
@@ -447,7 +447,7 @@ class StaffingTakeoverInput(BaseModel):
 class StaffingTakeoverResult(BaseModel):
     assignment: StaffingAssignmentDetail
     submission_id: uuid.UUID  # der angelegte Vermittlungsprozess
-    # Gestaffelte Uebernahme-Fee (siehe services/staffing_takeover_fee.py)
+    # Gestaffelte Übernahme-Fee (siehe services/staffing_takeover_fee.py)
     months_worked: int = 0
     tier_percent: Decimal | None = None  # Anteil am vollen Honorar, None bei eigenem Prozentsatz
     applied_fee_percentage: Decimal | None = None
@@ -473,7 +473,7 @@ class TakeoverFeeTiersUpdate(BaseModel):
 
 
 class StaffingTakeoverPreview(BaseModel):
-    """Vorschau fuer die Maske: wie sich die Staffel auf diese Uebernahme auswirkt."""
+    """Vorschau für die Maske: wie sich die Staffel auf diese Übernahme auswirkt."""
 
     months_worked: int
     tier_percent: Decimal
@@ -482,8 +482,8 @@ class StaffingTakeoverPreview(BaseModel):
 
 
 class StaffingOfferInput(BaseModel):
-    """ "Als Einsatz anbieten" (Direct -> Ueberlassung): legt (falls noetig) das Leiharbeitnehmer-
-    Profil als Anwaerter an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz."""
+    """ "Als Einsatz anbieten" (Direct -> Überlassung): legt (falls nötig) das Leiharbeitnehmer-
+    Profil als Anwärter an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz."""
 
     candidate_id: uuid.UUID
     client_company_id: uuid.UUID | None = None

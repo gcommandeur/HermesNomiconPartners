@@ -198,7 +198,7 @@ def test_issue_goes_through_the_approval_inbox_for_non_admins(
     inbox = client.get("/api/v1/approval-requests", headers=crew.admin.headers).json()
     entry = next(r for r in inbox if r["entity_id"] == invoice["id"])
     assert (entry["kind"], entry["entity_type"]) == ("invoice_issue", "staffing_invoice")
-    assert "Ueberlassungsrechnung" in entry["entity_label"] and "684.00" in entry["entity_label"]
+    assert "Überlassungsrechnung" in entry["entity_label"] and "684.00" in entry["entity_label"]
     assert entry["proposed_values"]["amount_gross"] == "813.96"
 
     approved = client.post(
@@ -423,7 +423,7 @@ def test_takeover_ends_the_assignment_and_creates_a_placement_process(
     assert submission["status"] == "qualification_call"
     assert submission["fee_percentage"] == "25.00" and submission["expected_fee"] == "15000.00"
     assert submission["owner_user_id"] == crew.a.id
-    assert "Uebernahme" in submission["summary"]
+    assert "Übernahme" in submission["summary"]
     assert submission["salary_at_submission"] == "60000.00 EUR/Jahr"
     # Zweimal geht nicht
     assert client.post(url, json={}, headers=crew.a.headers).status_code == 422

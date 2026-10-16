@@ -22,6 +22,7 @@ import {
 } from "@/lib/api/staffing";
 import { formatDate } from "@/lib/utils";
 import { EmptyHint, LoadError, LoadingRows, labelClass } from "./staffing-ui";
+import { formatHours } from "@/lib/format"; // NOMICON
 
 export const INVOICE_TONE: Record<InvoiceStatus, "gray" | "blue" | "amber" | "green" | "red"> = {
   draft: "gray",
@@ -134,7 +135,7 @@ function BillableSection() {
                           <span className="block truncate">{item.worker_name}</span>
                           <span className="block text-xs text-brand-muted">{formatDate(item.period_start)} – {formatDate(item.period_end)}</span>
                         </span>
-                        <span className="text-right">{Number(item.total_hours).toLocaleString("de-DE", { minimumFractionDigits: 2 })} Std.</span>
+                        <span className="text-right">{formatHours(item.total_hours, { fixed: true })}</span>
                         {!item.has_rate && <Badge tone="amber" title="Ein Admin muss den Verrechnungssatz am Einsatz eintragen.">kein Satz</Badge>}
                       </label>
                     </li>

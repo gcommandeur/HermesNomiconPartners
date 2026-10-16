@@ -1,9 +1,9 @@
-# NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
-"""Einstellbare rechtliche Werte der Ueberlassung (Tabelle `app_settings`, nur Admins).
+# NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
+"""Einstellbare rechtliche Werte der Überlassung (Tabelle `app_settings`, nur Admins).
 
 Die Standardwerte stehen als benannte Konstanten in services/staffing_deadlines.py. HINWEIS (auch
-in der Oberflaeche): kein Rechtsrat - mit Fachanwalt oder Verband bestaetigen; Tarifvertraege
-koennen abweichen."""
+in der Oberflaeche): kein Rechtsrat - mit Fachanwalt oder Verband bestätigen; Tarifverträge
+können abweichen."""
 
 from dataclasses import asdict
 
@@ -26,7 +26,7 @@ FIELDS: dict[str, str] = {
 
 
 def load_config(session: Session) -> DeadlineConfig:
-    """Gespeicherte Werte, fehlende oder ungueltige fallen auf den Standard zurueck."""
+    """Gespeicherte Werte, fehlende oder ungültige fallen auf den Standard zurück."""
     rows = {
         row.key: row.value
         for row in session.scalars(
@@ -53,9 +53,9 @@ def _validated(config: DeadlineConfig) -> DeadlineConfig:
         if not isinstance(value, int) or value <= 0:
             raise BusinessRuleError(f"Wert '{field}' muss eine positive ganze Zahl sein.")
     if config.equal_pay_months >= config.max_months:
-        raise BusinessRuleError("Equal Pay muss vor der Hoechstueberlassungsdauer beginnen.")
+        raise BusinessRuleError("Equal Pay muss vor der Höchstüberlassungsdauer beginnen.")
     if config.red_days > config.yellow_days:
-        raise BusinessRuleError("Die rote Schwelle darf nicht groesser als die gelbe sein.")
+        raise BusinessRuleError("Die rote Schwelle darf nicht größer als die gelbe sein.")
     return config
 
 

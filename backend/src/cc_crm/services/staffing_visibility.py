@@ -1,9 +1,9 @@
-# NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
+# NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
 """Lohn- und Margendaten sehen und setzen nur Admins (Nutzervorgabe).
 
-Lesen: die Read-Schemas behalten die Felder, der Wert wird fuer Nicht-Admins auf `None` gesetzt.
+Lesen: die Read-Schemas behalten die Felder, der Wert wird für Nicht-Admins auf `None` gesetzt.
 Schreiben: ein Nicht-Admin, der Lohn oder Verrechnungssatz mitschickt, bekommt 403 - auch bei
-`null` (das waere ein Loeschen)."""
+`null` (das wäre ein Löschen)."""
 
 from typing import cast
 
@@ -31,11 +31,11 @@ def forbid_money_for_non_admin(payload: BaseModel, user: User) -> None:
     if user.is_admin:
         return
     if any(field in payload.model_fields_set for field in MONEY_FIELDS):
-        raise PermissionDeniedError("Lohn und Verrechnungssatz duerfen nur Admins setzen.")
+        raise PermissionDeniedError("Lohn und Verrechnungssatz dürfen nur Admins setzen.")
 
 
 def redact_invoice(invoice: StaffingInvoiceRead, user: User) -> StaffingInvoiceRead:
-    """Betraege einer Ueberlassungsrechnung (Verrechnungssatz mal Stunden) sind Margendaten."""
+    """Beträge einer Überlassungsrechnung (Verrechnungssatz mal Stunden) sind Margendaten."""
     if user.is_admin:
         return invoice
     return invoice.model_copy(

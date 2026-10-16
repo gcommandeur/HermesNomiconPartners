@@ -1,5 +1,5 @@
-# NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
-"""Ueberlassungsvertraege, Einsaetze und Pflicht-Checkliste.
+# NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
+"""Überlassungsverträge, Einsätze und Pflicht-Checkliste.
 
 Statuswechsel (Aktivierung mit Erlaubnis- und Checklistenpruefung) siehe
 services/staffing_activation.py."""
@@ -41,7 +41,7 @@ from cc_crm.schemas.staffing import (
 )
 from cc_crm.services import staffing_audit as audit
 
-# Status, in denen ein Einsatz noch aenderbar ist (beendet/abgebrochen = Nachweis, eingefroren).
+# Status, in denen ein Einsatz noch änderbar ist (beendet/abgebrochen = Nachweis, eingefroren).
 _EDITABLE = (StaffingAssignmentStatus.PLANNED, StaffingAssignmentStatus.ACTIVE)
 
 
@@ -175,7 +175,7 @@ class StaffingAssignmentService:
         if contract is None:
             raise EntityNotFoundError("Vertrag nicht gefunden")
         if contract.client_company_id != client_company_id:
-            raise BusinessRuleError("Der Vertrag gehoert zu einem anderen Kunden.")
+            raise BusinessRuleError("Der Vertrag gehört zu einem anderen Kunden.")
 
     def create(self, payload: StaffingAssignmentCreate, actor: User) -> AssignmentRow:
         worker = self.workers.get(payload.worker_id)
@@ -183,7 +183,7 @@ class StaffingAssignmentService:
             raise EntityNotFoundError("Leiharbeitnehmer nicht gefunden")
         if worker.status in (StaffingWorkerStatus.LEFT, StaffingWorkerStatus.DORMANT):
             raise BusinessRuleError(
-                "Fuer ausgeschiedene oder ruhende Leiharbeitnehmer kann kein Einsatz "
+                "Für ausgeschiedene oder ruhende Leiharbeitnehmer kann kein Einsatz "
                 "angelegt werden."
             )
         if self.session.get(ClientCompany, payload.client_company_id) is None:
@@ -217,7 +217,7 @@ class StaffingAssignmentService:
         assignment: StaffingAssignment = self.get_row(assignment_id).assignment
         if assignment.status not in _EDITABLE:
             raise BusinessRuleError(
-                "Beendete oder abgebrochene Einsaetze sind nicht mehr aenderbar."
+                "Beendete oder abgebrochene Einsätze sind nicht mehr änderbar."
             )
         values = payload.model_dump(exclude_unset=True)
         if values.get("start_date") is None:
@@ -249,7 +249,7 @@ class StaffingAssignmentService:
         assignment = self.get_row(assignment_id).assignment
         if assignment.status not in _EDITABLE:
             raise BusinessRuleError(
-                "Beendete oder abgebrochene Einsaetze sind nicht mehr aenderbar."
+                "Beendete oder abgebrochene Einsätze sind nicht mehr änderbar."
             )
         item = self.session.get(StaffingChecklistItem, item_id)
         if item is None or item.assignment_id != assignment_id:

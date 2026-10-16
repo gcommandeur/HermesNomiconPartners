@@ -1,5 +1,5 @@
 # NOMICON: Demo-Login ohne Passwort und ohne 2FA - nur lokal, nur zwei feste Demo-Konten.
-"""ACHTUNG: Das ist eine bewusste Umgehung der Anmeldung. Schutzmassnahmen (alle muessen gelten):
+"""ACHTUNG: Das ist eine bewusste Umgehung der Anmeldung. Schutzmassnahmen (alle müssen gelten):
 
 1. Schalter `CC_CRM_DEMO_LOGIN` (Standard aus).
 2. Wirkt nur in der Umgebung `local`, `test` oder `demo` UND bei SQLite oder einem Postgres auf
@@ -8,7 +8,7 @@
 3. Der Endpunkt meldet ausschliesslich die zwei hier fest definierten Konten an (Adressen auf
    `.local`), nie ein anderes Konto; ohne Schalter oder in unsicherer Umgebung: 404.
 4. Die Konten bekommen beim Seed ein zufaelliges, nie ausgegebenes Passwort; normaler Login bleibt
-   dadurch unmoeglich."""
+   dadurch unmöglich."""
 
 import secrets
 from dataclasses import dataclass
@@ -50,7 +50,7 @@ DEMO_PERSONAS: dict[str, DemoPersona] = {
         "demo-vermittler@nomicon.local",
         "Demo Vermittler",
         "member",
-        ("direct", "staffing"),  # fuer den Test beides sichtbar; der Admin kann es entziehen
+        ("direct", "staffing"),  # für den Test beides sichtbar; der Admin kann es entziehen
         "direct",
     ),
 }
@@ -96,8 +96,8 @@ def demo_login_active(settings: Settings) -> bool:
 
 
 def ensure_demo_users(session: Session) -> list[User]:
-    """Legt die zwei Demo-Konten an (idempotent). Bestehende Konten und spaeter vom Demo-Admin
-    geaenderte Ansichten bleiben unveraendert; das Passwort ist zufaellig, nie ausgegeben."""
+    """Legt die zwei Demo-Konten an (idempotent). Bestehende Konten und später vom Demo-Admin
+    geänderte Ansichten bleiben unverändert; das Passwort ist zufällig, nie ausgegeben."""
     users: list[User] = []
     for persona in DEMO_PERSONAS.values():
         user = session.scalar(select(User).where(User.email == persona.email))

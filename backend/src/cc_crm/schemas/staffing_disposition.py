@@ -1,4 +1,4 @@
-# NOMICON: Disposition der Ueberlassung - nur in der Nomicon-Kopie.
+# NOMICON: Disposition der Überlassung - nur in der Nomicon-Kopie.
 import uuid
 from datetime import date
 
@@ -19,7 +19,7 @@ class StaffingBenchWorkerRead(BaseModel):
 
 
 class StaffingTimesheetInboxRead(BaseModel):
-    """Stundenzettel nach Stand (nur Einsaetze im Sichtbereich des Nutzers)."""
+    """Stundenzettel nach Stand (nur Einsätze im Sichtbereich des Nutzers)."""
 
     open: int  # offen, noch nicht zur Freigabe beim Kunden
     open_overdue: int  # offen, Zeitraum schon vorbei = Rueckstand

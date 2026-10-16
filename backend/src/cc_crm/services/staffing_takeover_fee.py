@@ -1,9 +1,9 @@
-# NOMICON: Uebernahme-Fee gestaffelt nach Einsatzdauer - nur in der Nomicon-Kopie.
-"""Staffel der Uebernahme-Fee: je laenger der Einsatz bis zur Uebernahme gedauert hat, desto kleiner
+# NOMICON: Übernahme-Fee gestaffelt nach Einsatzdauer - nur in der Nomicon-Kopie.
+"""Staffel der Übernahme-Fee: je länger der Einsatz bis zur Übernahme gedauert hat, desto kleiner
 der Anteil des Vermittlungshonorars (in Prozent des vollen Honorars der Kanzlei bzw. des Kunden).
 
 Die Staffel ist EINSTELLBAR (Tabelle `app_settings`, Schluessel `staffing_takeover_fee_tiers`, nur
-Admins). Die Startwerte unten sind PLATZHALTER, nicht abgestimmt - der Nutzer muss sie bestaetigen
+Admins). Die Startwerte unten sind PLATZHALTER, nicht abgestimmt - der Nutzer muss sie bestätigen
 bzw. durch die vertraglich vereinbarte Staffel ersetzen. Kein Rechtsrat."""
 
 from dataclasses import dataclass
@@ -24,11 +24,11 @@ HUNDRED = Decimal("100")
 
 @dataclass(frozen=True)
 class FeeTier:
-    up_to_months: int | None  # bis einschliesslich N volle Monate Einsatz; None = darueber hinaus
+    up_to_months: int | None  # bis einschliesslich N volle Monate Einsatz; None = darüber hinaus
     percent_of_fee: Decimal  # Anteil des vollen Honorars, 0 bis 100
 
 
-# PLATZHALTER - mit dem Nutzer zu klaeren
+# PLATZHALTER - mit dem Nutzer zu klären
 DEFAULT_TIERS: tuple[FeeTier, ...] = (
     FeeTier(3, Decimal("100")),
     FeeTier(6, Decimal("75")),
@@ -39,7 +39,7 @@ DEFAULT_TIERS: tuple[FeeTier, ...] = (
 
 
 def months_between(start: date, end: date) -> int:
-    """Volle Kalendermonate zwischen Einsatzbeginn und Uebernahme (nie negativ)."""
+    """Volle Kalendermonate zwischen Einsatzbeginn und Übernahme (nie negativ)."""
     months = (end.year - start.year) * 12 + (end.month - start.month)
     if end.day < start.day:
         months -= 1
@@ -47,7 +47,7 @@ def months_between(start: date, end: date) -> int:
 
 
 def tier_percent(months: int, tiers: tuple[FeeTier, ...] | list[FeeTier]) -> Decimal:
-    """Anteil des vollen Honorars fuer einen Einsatz von `months` vollen Monaten."""
+    """Anteil des vollen Honorars für einen Einsatz von `months` vollen Monaten."""
     for tier in tiers:
         if tier.up_to_months is None or months <= tier.up_to_months:
             return tier.percent_of_fee

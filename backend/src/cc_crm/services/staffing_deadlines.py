@@ -1,20 +1,20 @@
-# NOMICON: Arbeitnehmerueberlassung - nur in der Nomicon-Kopie.
-"""Fristen der Arbeitnehmerueberlassung als REINE Funktionen (keine Datenbank, keine Uhr).
+# NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
+"""Fristen der Arbeitnehmerüberlassung als REINE Funktionen (keine Datenbank, keine Uhr).
 
 Fachliche Grundlage (Stand: Annahmen aus dem Nutzerauftrag, KEIN Rechtsrat - mit Fachanwalt oder
-Verband bestaetigen, Tarifvertraege koennen abweichen):
-- Hoechstueberlassungsdauer: 18 Monate je Paar (Leiharbeitnehmer, Kunde).
+Verband bestätigen, Tarifverträge können abweichen):
+- Höchstüberlassungsdauer: 18 Monate je Paar (Leiharbeitnehmer, Kunde).
 - Equal Pay (gleiches Entgelt wie die Stammbelegschaft) ab dem 10. Monat, d.h. nach 9 Monaten.
-- Eine Unterbrechung LAENGER als 3 Monate setzt den Zaehler zurueck; eine kuerzere (oder genau
+- Eine Unterbrechung LAENGER als 3 Monate setzt den Zähler zurück; eine kuerzere (oder genau
   3 Monate) fuehrt die Zeiten zusammen.
 
-Alle Werte stehen in `DeadlineConfig` (Standardwerte hier, einstellbar ueber app_settings, siehe
+Alle Werte stehen in `DeadlineConfig` (Standardwerte hier, einstellbar über app_settings, siehe
 services/staffing_settings.py) - nichts davon ist im Rechenkern hart verdrahtet.
 
-Rechenmodell: Gezaehlt werden die Einsatztage (Vereinigung ueberlappender Einsaetze), Luecken
-zaehlen nicht mit. "N Monate" sind dabei die Kalendertage, die N Monate ab Kettenbeginn lang sind
-(`add_months(start, N) - start`). Ohne Luecke endet die Hoechstdauer damit am Tag vor
-`add_months(Kettenbeginn, 18)`; jede Luecke verschiebt die Frist um ihre Laenge nach hinten.
+Rechenmodell: Gezaehlt werden die Einsatztage (Vereinigung ueberlappender Einsätze), Luecken
+zählen nicht mit. "N Monate" sind dabei die Kalendertage, die N Monate ab Kettenbeginn lang sind
+(`add_months(start, N) - start`). Ohne Lücke endet die Höchstdauer damit am Tag vor
+`add_months(Kettenbeginn, 18)`; jede Lücke verschiebt die Frist um ihre Laenge nach hinten.
 Monatsarithmetik schneidet am Monatsende ab (31.8. + 6 Monate = 28./29.2.)."""
 
 import calendar
@@ -24,11 +24,11 @@ from datetime import date, timedelta
 from enum import StrEnum
 
 # Benannte Standardwerte (Nutzervorgabe 2026-10-11) - einstellbar, nicht hartcodiert verwenden.
-DEFAULT_MAX_ASSIGNMENT_MONTHS = 18  # Hoechstueberlassungsdauer
+DEFAULT_MAX_ASSIGNMENT_MONTHS = 18  # Höchstüberlassungsdauer
 DEFAULT_EQUAL_PAY_MONTHS = 9  # Equal Pay gilt ab dem Folgetag nach 9 Monaten
-DEFAULT_RESET_GAP_MONTHS = 3  # Unterbrechung laenger als 3 Monate setzt den Zaehler zurueck
+DEFAULT_RESET_GAP_MONTHS = 3  # Unterbrechung länger als 3 Monate setzt den Zähler zurück
 DEFAULT_YELLOW_DAYS = 60  # Ampel gelb: weniger als 60 Tage Restlaufzeit
-DEFAULT_RED_DAYS = 30  # Ampel rot: weniger als 30 Tage oder ueberschritten
+DEFAULT_RED_DAYS = 30  # Ampel rot: weniger als 30 Tage oder überschritten
 
 
 @dataclass(frozen=True)
@@ -48,8 +48,8 @@ class Traffic(StrEnum):
 
 @dataclass(frozen=True)
 class Span:
-    """Ein Einsatz als Zeitraum (beide Tage eingeschlossen). `end=None`: laeuft noch (bis heute
-    und darueber hinaus)."""
+    """Ein Einsatz als Zeitraum (beide Tage eingeschlossen). `end=None`: läuft noch (bis heute
+    und darüber hinaus)."""
 
     start: date
     end: date | None = None
@@ -57,8 +57,8 @@ class Span:
 
 @dataclass(frozen=True)
 class DeadlineResult:
-    # False: kein laufender oder fortsetzbarer Zaehler (z.B. keine Einsaetze oder die letzte
-    # Unterbrechung ist schon laenger als die Grenze) - dann sind alle Daten None, Ampel gruen.
+    # False: kein laufender oder fortsetzbarer Zähler (z.B. keine Einsätze oder die letzte
+    # Unterbrechung ist schon länger als die Grenze) - dann sind alle Daten None, Ampel gruen.
     has_chain: bool
     chain_start: date | None
     elapsed_months: int  # bisherige Dauer (Einsatztage bis heute) in vollen Monaten ...
@@ -67,7 +67,7 @@ class DeadlineResult:
     equal_pay_from: date | None  # erster Tag, ab dem Equal Pay gilt
     equal_pay_reached: bool
     max_end_date: date | None  # letzter zulaessiger Einsatztag
-    days_remaining: int | None  # max_end_date - heute (negativ = ueberschritten)
+    days_remaining: int | None  # max_end_date - heute (negativ = überschritten)
     exceeded: bool
     traffic: Traffic
 
@@ -104,7 +104,7 @@ def full_months_between(start: date, end: date) -> tuple[int, int]:
 
 
 def merge_spans(spans: Iterable[Span]) -> list[Span]:
-    """Ueberlappende oder unmittelbar aufeinanderfolgende Einsaetze zu einem Zeitraum
+    """Überlappende oder unmittelbar aufeinanderfolgende Einsätze zu einem Zeitraum
     vereinigen. Sortiert nach Beginn; ein offenes Ende bleibt offen."""
     merged: list[Span] = []
     for span in sorted(spans, key=lambda s: (s.start, s.end or date.max)):
@@ -121,13 +121,13 @@ def merge_spans(spans: Iterable[Span]) -> list[Span]:
 
 
 def _gap_resets(previous_end: date, next_start: date, config: DeadlineConfig) -> bool:
-    """Luecke = Tage zwischen den Einsaetzen. Laenger als `reset_gap_months` => Neustart.
-    Genau 3 Monate zaehlen noch zusammen, 3 Monate und 1 Tag nicht."""
+    """Lücke = Tage zwischen den Einsätzen. Länger als `reset_gap_months` => Neustart.
+    Genau 3 Monate zählen noch zusammen, 3 Monate und 1 Tag nicht."""
     return next_start > add_months(previous_end + timedelta(days=1), config.reset_gap_months)
 
 
 def _current_chain(spans: Sequence[Span], config: DeadlineConfig) -> list[Span]:
-    """Die letzte zusammenhaengende Kette (nach Reset-Regel) aus bereits vereinigten Spans."""
+    """Die letzte zusammenhängende Kette (nach Reset-Regel) aus bereits vereinigten Spans."""
     chain: list[Span] = []
     for span in spans:
         if chain:
@@ -139,7 +139,7 @@ def _current_chain(spans: Sequence[Span], config: DeadlineConfig) -> list[Span]:
 
 
 def _nth_day(chain: Sequence[Span], n: int) -> date:
-    """Datum des n-ten Einsatztages (n >= 1). Ueber das Ende der bekannten Einsaetze hinaus wird
+    """Datum des n-ten Einsatztages (n >= 1). Über das Ende der bekannten Einsätze hinaus wird
     ununterbrochene Fortsetzung angenommen (Projektion)."""
     remaining = n
     for span in chain:
@@ -164,7 +164,7 @@ def _days_counted(chain: Sequence[Span], today: date) -> int:
 
 
 def _traffic(days_remaining: int, config: DeadlineConfig) -> Traffic:
-    if days_remaining < config.red_days:  # inkl. ueberschritten (negativ)
+    if days_remaining < config.red_days:  # inkl. überschritten (negativ)
         return Traffic.RED
     if days_remaining < config.yellow_days:
         return Traffic.YELLOW
@@ -174,11 +174,11 @@ def _traffic(days_remaining: int, config: DeadlineConfig) -> Traffic:
 def compute_deadline(
     spans: Iterable[Span], today: date, config: DeadlineConfig | None = None
 ) -> DeadlineResult:
-    """Fristen fuer EIN Paar (Leiharbeitnehmer, Kunde). `spans`: alle nicht abgebrochenen
-    Einsaetze dieses Paares (Beginn, Ende oder None).
+    """Fristen für EIN Paar (Leiharbeitnehmer, Kunde). `spans`: alle nicht abgebrochenen
+    Einsätze dieses Paares (Beginn, Ende oder None).
 
-    Liegt der letzte Einsatz schon laenger als `reset_gap_months` zurueck, gibt es keinen
-    fortsetzbaren Zaehler mehr (`has_chain=False`): ein neuer Einsatz faengt bei null an."""
+    Liegt der letzte Einsatz schon länger als `reset_gap_months` zurück, gibt es keinen
+    fortsetzbaren Zähler mehr (`has_chain=False`): ein neuer Einsatz fängt bei null an."""
     cfg = config or DeadlineConfig()
     merged = merge_spans(spans)
     if not merged:

@@ -1,7 +1,7 @@
 # NOMICON: Ansicht "Gesamt" (Geschaeftsfuehrung) - nur in der Nomicon-Kopie.
 """Reine Rechenfunktionen der Ansicht "Gesamt": keine Datenbank, keine Uhr, handgerechnet testbar.
 
-ANNAHME (im Bericht und in der Oberflaeche genannt): Die Marge der Ueberlassung je Stunde ist
+ANNAHME (im Bericht und in der Oberflaeche genannt): Die Marge der Überlassung je Stunde ist
 `Verrechnungssatz - Stundenlohn x Arbeitgeber-Faktor`. Der Faktor ist der bereits einstellbare
 Arbeitgeber-Faktor des Provisionsmodells (Standard 1,23); es gibt keine eigene Lohnberechnung,
 keine Steuer- oder Sozialversicherungslogik."""
@@ -59,7 +59,7 @@ class DirectForecast:
 
 def direct_forecast(items: Iterable[DirectItem]) -> DirectForecast:
     """Prognose Direct = erwartete Fee x Abschlusswahrscheinlichkeit. Es wird nichts erfunden: wer
-    eine der beiden Angaben nicht hat, fehlt in der Summe und wird gezaehlt."""
+    eine der beiden Angaben nicht hat, fehlt in der Summe und wird gezählt."""
     weighted = Decimal("0")
     no_probability = 0
     no_fee = 0
@@ -78,7 +78,7 @@ class StaffingItem:
     margin_per_hour: Decimal | None  # None: Satz oder Lohn fehlt
     weekly_hours: Decimal | None
     planned_end: date | None
-    max_end: date | None  # Hoechstueberlassungsdauer des Paares
+    max_end: date | None  # Höchstüberlassungsdauer des Paares
 
 
 @dataclass(frozen=True)
@@ -89,7 +89,7 @@ class StaffingForecast:
 
 
 def forecast_end(planned_end: date | None, max_end: date | None) -> date | None:
-    """Geplantes Ende, nie ueber die Hoechstdauer hinaus; fehlt eines, gilt das andere."""
+    """Geplantes Ende, nie über die Höchstdauer hinaus; fehlt eines, gilt das andere."""
     candidates = [d for d in (planned_end, max_end) if d is not None]
     return min(candidates) if candidates else None
 
@@ -100,7 +100,7 @@ def remaining_weeks(end: date, today: date) -> Decimal:
 
 
 def staffing_forecast(items: Iterable[StaffingItem], today: date) -> StaffingForecast:
-    """Prognose Ueberlassung = Marge je Stunde x Wochenstunden x Restwochen aktiver Einsaetze."""
+    """Prognose Überlassung = Marge je Stunde x Wochenstunden x Restwochen aktiver Einsätze."""
     total = Decimal("0")
     counted = 0
     excluded = 0

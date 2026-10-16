@@ -11,6 +11,7 @@ import { formatDate } from "@/lib/utils";
 import { StaffingAssignmentsView } from "./staffing-assignments-view";
 import { WorkerCreateFromCandidate } from "./staffing-workers-view";
 import { Fact, LoadError, LoadingRows, WorkerStatusBadge } from "./staffing-ui";
+import { formatHours } from "@/lib/format"; // NOMICON
 
 export function StaffingCandidatePanel({ candidateId }: { candidateId: string }) {
   const { data: worker, error, isLoading, mutate } = useStaffingWorkerForCandidate(candidateId);
@@ -58,7 +59,7 @@ export function StaffingCandidatePanel({ candidateId }: { candidateId: string })
           <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-3">
             <Fact label="Eintritt">{worker.entry_date ? formatDate(worker.entry_date) : null}</Fact>
             <Fact label="Tarif-/Entgeltgruppe">{worker.pay_grade}</Fact>
-            <Fact label="Wochenstunden">{worker.weekly_hours}</Fact>
+            <Fact label="Wochenstunden">{worker.weekly_hours ? formatHours(worker.weekly_hours) : null}</Fact>
           </div>
         </CardContent>
       </Card>
