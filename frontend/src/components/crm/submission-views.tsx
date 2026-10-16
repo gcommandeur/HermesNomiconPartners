@@ -30,6 +30,7 @@ import { cn, contactName as formatContactName, formatDate } from "@/lib/utils";
 import { feeAmount, feeIsOpen, formatEuro, summarizeItems } from "@/lib/fee-forecast"; // NOMICON
 import { PipelineKpiStrip } from "@/components/crm/pipeline-kpi-strip"; // NOMICON
 import { OfferAsAssignmentButton } from "@/components/crm/staffing-offer-modal"; // NOMICON
+import { FOLLOW_UP_DUE_CARD_CLASS, isFollowUpDue as followUpDue } from "@/lib/follow-up"; // NOMICON
 import { CandidateQuickViewDrawer } from "./candidate-quickview-drawer";
 import { ClosingScoreForm } from "./closing-score-form";
 
@@ -102,10 +103,7 @@ function interviewDotClass(interview: Interview): string {
  * eines konkreten Termins. follow_up_at ist ein echtes tz-aware ISO-Datetime
  * (anders als scheduled_at bei Interviews), new Date() ist hier also sicher. */
 function isFollowUpDue(item: CandidateSubmission): boolean {
-  if (!item.follow_up_at) return false;
-  const endOfToday = new Date();
-  endOfToday.setHours(23, 59, 59, 999);
-  return new Date(item.follow_up_at) <= endOfToday;
+  return followUpDue(item.follow_up_at); // NOMICON: Regel in lib/follow-up.ts (testbar)
 }
 
 export function SubmissionViews({ submissions, candidates, clients, contacts = [], interviews: initialInterviews = [], initialStage = null, initialMineOnly = false }: {
@@ -405,7 +403,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
           "cursor-pointer rounded-lg border p-2 shadow-[0_1px_1px_rgba(0,0,0,.03)]",
           !mobile && "active:cursor-grabbing",
           dueFollowUp
-            ? "border-brand-danger/40 border-l-4 border-l-brand-danger bg-brand-danger-soft hover:border-brand-danger/70" // NOMICON: Nachfassen fällig klar erkennbar
+            ? FOLLOW_UP_DUE_CARD_CLASS // NOMICON: Nachfassen fällig - Kantenstreifen statt dunkelroter Fläche (Lesbarkeit)
             : "border-white/10 bg-brand-panel hover:border-brand-accent/50",
         )}
       >

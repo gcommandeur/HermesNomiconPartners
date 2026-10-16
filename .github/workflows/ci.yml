@@ -134,6 +134,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Unit-Tests (Vitest)
+        run: pnpm test
+
       # Die erzeugten API-Typen muessen zum eingecheckten OpenAPI-Schema passen.
       - name: API-Typen aktuell
         run: |

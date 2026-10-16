@@ -469,7 +469,15 @@ def seed_submissions(session, clients: list, candidates: list, count: int) -> No
                             "Interview vereinbaren",
                         ]
                     ),
-                    follow_up_at=now + timedelta(days=random.randint(1, 10)),
+                    # NOMICON: meist zukünftige Termine, einzelne überfällig (realistisch)
+                    follow_up_at=now
+                    + timedelta(
+                        days=(
+                            random.randint(-3, -1)
+                            if random.random() < 0.12
+                            else random.randint(2, 21)
+                        )
+                    ),
                     owner=random.choice(["Team Recruiting", "M. Weber", "S. Klein"]),
                     owner_user_id=seed_user.id,  # NOMICON: Seed-Prozesse mit Verantwortlichem
                 )
