@@ -21,7 +21,7 @@ const EMPTY_REPORT: CommissionReport = {
   rows: [],
   unassigned: [],
   totals: { revenue: "0", commission: "0", fixed_pay: "0", employer_cost: "0", margin: "0", margin_percent: null, traffic: "green" },
-  revenue_basis: { placement_fees: "paid", include_staffing: true, staffing: "issued" },
+  revenue_basis: { placement_fees: "paid", include_staffing: true, staffing: "paid" },
   notice: "",
 };
 

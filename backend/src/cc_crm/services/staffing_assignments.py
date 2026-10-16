@@ -15,6 +15,7 @@ from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.staffing import (
     CHECKLIST_KEYS,
     StaffingAssignment,
+    StaffingAssignmentExtension,
     StaffingAssignmentStatus,
     StaffingChecklistItem,
     StaffingContract,
@@ -235,7 +236,19 @@ class StaffingAssignmentService:
         audit.log_updated(
             self.session, audit.ENTITY_ASSIGNMENT, assignment, assignment.id, values, actor.email
         )
+        old_end = assignment.planned_end_date
         self.assignments.update(assignment, values)
+        if old_end is not None and end is not None and end > old_end:
+            # Verlaengerung = neuer Deal im Provisionsmodell (services/commission_deals.py)
+            self.session.add(
+                StaffingAssignmentExtension(
+                    assignment_id=assignment.id,
+                    previous_end=old_end,
+                    new_end=end,
+                    extended_on=date.today(),
+                    created_by_user_id=actor.id,
+                )
+            )
         self.session.commit()
         return self.get_row(assignment.id)
 

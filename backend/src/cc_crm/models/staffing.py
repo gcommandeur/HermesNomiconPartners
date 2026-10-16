@@ -154,6 +154,24 @@ class StaffingAssignment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     notes: Mapped[str | None] = mapped_column(Text)
 
 
+class StaffingAssignmentExtension(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Verlaengerung eines Einsatzes (geplantes Ende wurde nach hinten verschoben). Jede Zeile ist
+    fuer das Provisionsmodell ein NEUER Deal (Bonus bei der ersten Zahlung einer Rechnung ueber
+    Zeitraeume nach `previous_end`). Ein Folgeeinsatz ist dagegen ein neuer `StaffingAssignment`."""
+
+    __tablename__ = "staffing_assignment_extensions"
+
+    assignment_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("staffing_assignments.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    previous_end: Mapped[date] = mapped_column(Date, nullable=False)
+    new_end: Mapped[date] = mapped_column(Date, nullable=False)
+    extended_on: Mapped[date] = mapped_column(Date, nullable=False)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+
 class StaffingChecklistItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "staffing_assignment_checklist_items"
     __table_args__ = (UniqueConstraint("assignment_id", "item_key"),)

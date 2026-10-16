@@ -44,6 +44,7 @@ from cc_crm.models.sourcing_lead import SourcingLead
 from cc_crm.models.sourcing_run import SourcingRun
 from cc_crm.models.staffing import (  # NOMICON
     StaffingAssignment,
+    StaffingAssignmentExtension,
     StaffingChecklistItem,
     StaffingContract,
     StaffingInvoice,
@@ -114,6 +115,7 @@ __all__ = [
     "SourcingMetric",
     "SourcingRun",
     "StaffingAssignment",  # NOMICON
+    "StaffingAssignmentExtension",  # NOMICON
     "StaffingChecklistItem",
     "StaffingContract",
     "StaffingInvoice",

@@ -100,7 +100,7 @@ def test_config_defaults_roundtrip_and_validation(client: TestClient, team: Team
     assert config["revenue_basis"] == {
         "placement_fees": "paid",
         "include_staffing": True,
-        "staffing": "issued",
+        "staffing": "paid",
     }
     assert "Excel" in config["notice"]
 
@@ -152,7 +152,9 @@ def test_rank_assignment(client: TestClient, team: Team) -> None:  # noqa: F811
     )
     assert wrong.status_code == 422
     missing = client.put(
-        f"{C}/users/{uuid.uuid4()}/rank", json={"rank_key": "consultant"}, headers=team.admin.headers
+        f"{C}/users/{uuid.uuid4()}/rank",
+        json={"rank_key": "consultant"},
+        headers=team.admin.headers,
     )
     assert missing.status_code == 404
     assert assign(client, team.admin, team.a.id, None)["rank_key"] is None  # entfernen
@@ -193,12 +195,13 @@ def test_report_from_paid_placement_fees(
         "0.00",
         "0.00",
     )
-    assert a["fixed_pay"] == "10000.00" and a["employer_cost"] == "15030.00"
-    assert a["margin"] == "4970.00" and a["margin_percent"] == "24.85"
+    assert a["fixed_pay"] == "10000.00" and a["employer_cost"] == "15399.00"
+    assert a["margin"] == "4601.00" and a["margin_percent"] == "23.01"
     assert a["traffic"] == "yellow"
     assert a["break_even_revenue"] == "14332.96"
     assert a["promotion_to_key"] is None and a["promotion_hurdle"] == "48000"
-    assert (a["bonus"], a["gross"]) == ("0.00", "11000.00")
+    # bezahlte Fee = ein Deal (Bonus 300 EUR), Brutto = Fix 10.000 + Provision 1.000 + Bonus
+    assert (a["bonus"], a["gross"]) == ("300.00", "11300.00")
     b = rows[team.b.id]
     assert b["revenue"] == "50000.00"
     assert (
@@ -280,11 +283,15 @@ def test_staffing_invoices_count_for_the_dispatcher(
         headers=crew.admin.headers,
     )
     assert issued.status_code == 200
-    row = report(client, crew.admin.headers)["rows"][0]
-    assert row["revenue_staffing"] == "684.00" and row["revenue"] == "684.00"
-    # Einstellung: Ueberlassung ganz ausblenden, bzw. nur bezahlte Rechnungen
+    # Startwert "nur bezahlte": eine gestellte Rechnung zaehlt noch nicht
+    assert report(client, crew.admin.headers)["rows"][0]["revenue_staffing"] == "0.00"
+    # Einstellung: ab "gestellt" zaehlen, Ueberlassung ganz ausblenden, bzw. nur bezahlte
     config = client.get(f"{C}/config", headers=crew.admin.headers).json()
     body = {k: v for k, v in config.items() if k != "notice"}
+    body["revenue_basis"]["staffing"] = "issued"
+    client.put(f"{C}/config", json=body, headers=crew.admin.headers)
+    row = report(client, crew.admin.headers)["rows"][0]
+    assert row["revenue_staffing"] == "684.00" and row["revenue"] == "684.00"
     body["revenue_basis"]["staffing"] = "paid"
     client.put(f"{C}/config", json=body, headers=crew.admin.headers)
     assert report(client, crew.admin.headers)["rows"][0]["revenue_staffing"] == "0.00"

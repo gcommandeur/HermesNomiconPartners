@@ -107,7 +107,13 @@ def build_report(
         data = revenue.by_user.get(user.id)
         fees = data.fees if data else Decimal("0")
         staffing = data.staffing if data else Decimal("0")
-        result = evaluate_quarter(fees + staffing, rank_key, cfg)
+        result = evaluate_quarter(
+            fees + staffing,
+            rank_key,
+            cfg,
+            placement_deals=data.placement_deals if data else 0,
+            staffing_deals=data.staffing_deals if data else 0,
+        )
         rank = cfg.rank(rank_key)
         promotion = cfg.rank(result.promotion_to) if result.promotion_to else None
         rows.append(

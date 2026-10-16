@@ -70,7 +70,7 @@ class RevenueBasis:
 
     placement_fees: str = "paid"  # "paid" = nur bezahlte, "issued" = ab Rechnung gestellt
     include_staffing: bool = True  # Ueberlassungsrechnungen mitzaehlen
-    staffing: str = "issued"  # "issued" = ab gestellt (AÜ-Rechnungssumme), "paid" = nur bezahlte
+    staffing: str = "paid"  # "paid" = nur bezahlte (Zahldatum), "issued" = ab gestellt
 
 
 @dataclass(frozen=True)

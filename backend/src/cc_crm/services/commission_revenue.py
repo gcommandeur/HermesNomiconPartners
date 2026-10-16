@@ -1,8 +1,9 @@
 # NOMICON: Provisionsmodell - nur in der Nomicon-Kopie.
 """Umsatz je Mitarbeiter und Quartal aus Vermittlungshonoraren und Ueberlassungsrechnungen.
 
-Welcher Umsatz zaehlt, ist EINSTELLBAR (`RevenueBasis`; OFFENE Frage an den Nutzer, Startannahme:
-bezahlte Vermittlungshonorare plus Ueberlassungsrechnungen ab "gestellt"):
+Welcher Umsatz zaehlt, ist EINSTELLBAR (`RevenueBasis`). Startwert laut Karriereplan: fuer
+Vermittlung UND Ueberlassung nur bezahlte (Zahldatum). Dazu die Deals fuer den Bonus
+(`commission_deals`, immer nach Zahldatum):
 - Vermittlung: `Fee.amount_net`; Mitarbeiter = Verantwortlicher des Prozesses
   (`CandidateSubmission.owner_user_id`); Datum = Zahlungsdatum ("paid") bzw. Rechnungsdatum
   ("issued": gestellt, faellig oder bezahlt).
@@ -23,6 +24,7 @@ from cc_crm.models.enums import InvoiceStatus
 from cc_crm.models.recruiting import Fee, Placement
 from cc_crm.models.staffing import StaffingAssignment, StaffingInvoice, StaffingInvoiceLine
 from cc_crm.models.submission import CandidateSubmission
+from cc_crm.services.commission_deals import deals_for_quarter
 from cc_crm.services.commission_model import RevenueBasis
 
 _ISSUED_OR_LATER = (InvoiceStatus.ISSUED, InvoiceStatus.DUE, InvoiceStatus.PAID)
@@ -32,6 +34,8 @@ _ISSUED_OR_LATER = (InvoiceStatus.ISSUED, InvoiceStatus.DUE, InvoiceStatus.PAID)
 class UserRevenue:
     fees: Decimal = Decimal("0")
     staffing: Decimal = Decimal("0")
+    placement_deals: int = 0  # Deals mit Zahldatum im Quartal (Vermittlungsbonus)
+    staffing_deals: int = 0
 
     @property
     def total(self) -> Decimal:
@@ -124,4 +128,10 @@ def quarter_revenue(
             )
         for amount, assignment_owner, creator in session.execute(line_statement):
             result.add(assignment_owner or creator, staffing=Decimal(amount))
+
+    deals = deals_for_quarter(session, start, end, include_staffing=basis.include_staffing)
+    for user_id, count in deals.items():
+        entry = result.by_user.setdefault(user_id, UserRevenue())
+        entry.placement_deals = count.placement
+        entry.staffing_deals = count.staffing
     return result
