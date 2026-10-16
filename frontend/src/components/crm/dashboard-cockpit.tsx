@@ -11,6 +11,7 @@ import { DemoNotice } from "@/components/crm/demo-notice";
 import { WeeklyChartLoader } from "@/components/crm/weekly-chart-loader";
 import { DashboardTodo } from "@/components/crm/dashboard-todo";
 import { StaffingHome } from "@/components/crm/staffing-home"; // NOMICON
+import { MyCommissionBar } from "@/components/crm/my-commission"; // NOMICON
 import { useActiveView } from "@/lib/api/views-hooks"; // NOMICON
 import { useCurrentUser, useKpiRankingCache } from "@/lib/api/hooks";
 import { PITCH_LABEL, STAGE_LABELS } from "@/lib/stage-labels";
@@ -181,6 +182,7 @@ export function DashboardCockpit({
     <>
       <PageHeader eyebrow="Operative Schaltzentrale" title="Übersicht" />
       <DemoNotice source={source} error={error} />
+      <MyCommissionBar /> {/* NOMICON: Karrierebalken */}
       {activeView === "staffing" ? (
         <StaffingHome /> // NOMICON
       ) : (

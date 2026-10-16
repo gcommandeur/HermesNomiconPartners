@@ -42,10 +42,11 @@ from cc_crm.services.commission_settings import (
 )
 
 NOTICE = (
-    "Annahmen, die mit der Excel 'Nomicon_Provisionsmodell' abzugleichen sind: gestaffelte "
-    "Provision je Quartal auf den Umsatz oberhalb der Freigrenze, Kosten = (Fixgehalt + Provision) "
-    "x Arbeitgeber-Faktor + Zusatzkosten, Befoerderung bei Erreichen der Schwelle 2 (Kaskade). "
-    "Die Umsatzbasis ist einstellbar und noch zu bestaetigen."
+    "Karriereplan Oktober 2026: gestaffelte Provision je Quartal auf den Umsatz oberhalb der "
+    "Freigrenze, Umsatz und Bonus nach Zahldatum. Brutto = Fixgehalt im Quartal + Provision + "
+    "Bonus; Kosten = (Fixgehalt + Provision + Bonus) x Arbeitgeber-Faktor + Zusatzkosten. "
+    "Befoerderung bei Erreichen der Schwelle 2 des eigenen Rangs (Kaskade, Admin setzt den Rang). "
+    "Mit der Excel 'Nomicon_Provisionsmodell' abzugleichen."
 )
 CONFIG_ENTITY = "commission_config"
 RANK_ENTITY = "commission_rank"

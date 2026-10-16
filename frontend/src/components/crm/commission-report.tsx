@@ -4,7 +4,7 @@
 // Mitarbeiter mit Provision, Kosten, Marge, Break-even, Ampel und Beförderungshinweis; Rangzuordnung
 // und Einstellungen des Modells.
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Settings2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Plus, Settings2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +25,7 @@ import {
 } from "@/lib/api/commission";
 import { formatDate } from "@/lib/utils";
 import { formatPercent } from "@/lib/format"; // NOMICON
+import { moveItem, rankKeyFromLabel } from "@/lib/commission-ui"; // NOMICON
 
 const TRAFFIC_TONE = { green: "green", yellow: "amber", red: "red" } as const;
 const TRAFFIC_LABEL = { green: "Ziel erreicht", yellow: "Über Break-even", red: "Unter Break-even" } as const;
@@ -92,13 +93,15 @@ export function CommissionReport() {
           ) : (
             <Card>
               <CardContent className="overflow-x-auto p-0">
-                <table className="w-full min-w-[56rem] text-left text-xs">
+                <table className="w-full min-w-[64rem] text-left text-xs">
                   <thead>
                     <tr className="border-b border-white/10 text-[9.5px] uppercase tracking-wider text-brand-muted">
                       <th className="px-4 py-3">Mitarbeiter:in</th>
                       <th className="px-3 py-3">Rang</th>
                       <th className="px-3 py-3 text-right">Umsatz</th>
                       <th className="px-3 py-3 text-right">Provision</th>
+                      <th className="px-3 py-3 text-right">Bonus</th>
+                      <th className="px-3 py-3 text-right">Brutto</th>
                       <th className="px-3 py-3 text-right">Kosten</th>
                       <th className="px-3 py-3 text-right">Marge</th>
                       <th className="px-3 py-3 text-right">Break-even</th>
@@ -114,6 +117,8 @@ export function CommissionReport() {
                       <td className="px-4 py-3" colSpan={2}>Gesamt</td>
                       <td className="px-3 py-3 text-right">{eur(report.totals.revenue)}</td>
                       <td className="px-3 py-3 text-right">{eur(report.totals.commission)}</td>
+                      <td className="px-3 py-3" />
+                      <td className="px-3 py-3" />
                       <td className="px-3 py-3 text-right">{eur(report.totals.employer_cost)}</td>
                       <td className="px-3 py-3 text-right">{eur(report.totals.margin)} <span className="font-normal text-brand-muted">({percent(report.totals.margin_percent)})</span></td>
                       <td className="px-3 py-3" />
@@ -170,6 +175,8 @@ function Row({ row, ranks, onRank }: { row: CommissionRow; ranks: { key: string;
         <span className="block text-[10.45px] text-brand-muted">Vermittlung {eur(row.revenue_fees)} · Überlassung {eur(row.revenue_staffing)}</span>
       </td>
       <td className="px-3 py-3 text-right">{eur(row.commission)}<span className="block text-[10.45px] text-brand-muted">Fix {eur(row.fixed_pay)}</span></td>
+      <td className="px-3 py-3 text-right">{eur(row.bonus)}<span className="block text-[10.45px] text-brand-muted">{row.placement_deals + row.staffing_deals} Deal(s)</span></td>
+      <td className="px-3 py-3 text-right">{eur(row.gross)}</td>
       <td className="px-3 py-3 text-right">{eur(row.employer_cost)}</td>
       <td className="px-3 py-3 text-right">{eur(row.margin)}<span className="block text-[10.45px] text-brand-muted">{percent(row.margin_percent)}</span></td>
       <td className="px-3 py-3 text-right">{eur(row.break_even_revenue)}<span className="block text-[10.45px] text-brand-muted">Ziel {eur(row.target_revenue)}</span></td>
@@ -231,6 +238,19 @@ function ConfigModal({ config, onClose }: { config: CommissionConfig; onClose: (
     setRanks((current) => current.map((rank, i) => (i === index ? { ...rank, [field]: value } : rank)));
   }
 
+  function addRank() {
+    setRanks((current) => {
+      const last = current[current.length - 1];
+      const label = `Neue Stufe ${current.length + 1}`;
+      const key = rankKeyFromLabel(label, current.map((r) => r.key));
+      return [...current, { ...(last ?? { fixed_yearly: "0", rate1: "0", threshold1: "0", rate2: "0", threshold2: "0", rate3: "0" }), key, label }];
+    });
+  }
+
+  function removeRank(index: number) {
+    setRanks((current) => (current.length > 1 ? current.filter((_, i) => i !== index) : current));
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -275,8 +295,8 @@ function ConfigModal({ config, onClose }: { config: CommissionConfig; onClose: (
           </div>
         </section>
         <section>
-          <h3 className="mb-1 text-sm font-semibold">Umsatzbasis <span className="font-normal text-brand-warning">(noch zu bestätigen)</span></h3>
-          <p className="mb-2 text-xs text-brand-muted">Was als Umsatz eines Mitarbeiters zählt – Startannahme: bezahlte Vermittlungshonorare plus gestellte Überlassungsrechnungen.</p>
+          <h3 className="mb-1 text-sm font-semibold">Umsatzbasis</h3>
+          <p className="mb-2 text-xs text-brand-muted">Was als Umsatz eines Mitarbeiters zählt – laut Karriereplan nur bezahlte Vermittlungshonorare und bezahlte Überlassungsrechnungen, jeweils im Quartal des Zahldatums. Der Bonus zählt immer erst mit der Zahlung.</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <label className={labelClass} htmlFor="cb-fees">Vermittlungshonorare</label>
@@ -303,20 +323,27 @@ function ConfigModal({ config, onClose }: { config: CommissionConfig; onClose: (
           <p className="mb-2 text-xs text-brand-muted">Gestaffelt je Quartal: Satz 1 bis zur ersten Schwelle, Satz 2 bis zur zweiten (zugleich Beförderungshürde), darüber Satz 3. Die ersten Euro bis zur Freigrenze bringen keine Provision.</p>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[44rem] text-xs">
-              <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-brand-muted">{RANK_COLUMNS.map((c) => <th key={c.key} className="pb-2 pr-2 font-medium">{c.label}</th>)}</tr></thead>
+              <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-brand-muted">{RANK_COLUMNS.map((c) => <th key={c.key} className="pb-2 pr-2 font-medium">{c.label}</th>)}<th className="pb-2 font-medium"><span className="sr-only">Reihenfolge und Entfernen</span></th></tr></thead>
               <tbody>
                 {ranks.map((rank, index) => (
                   <tr key={rank.key}>
                     {RANK_COLUMNS.map((column) => (
                       <td key={column.key} className="pr-2 pb-2">
-                        <Input aria-label={`${rank.label}: ${column.label}`} className="h-9" required inputMode={column.key === "label" ? "text" : "decimal"} value={rank[column.key]} onChange={(e) => setRankField(index, column.key, e.target.value)} />
+                        <Input aria-label={`${rank.label}: ${column.label}`} className={column.wide ? "h-9 min-w-[11rem]" : "h-9"} required inputMode={column.key === "label" ? "text" : "decimal"} value={rank[column.key]} onChange={(e) => setRankField(index, column.key, e.target.value)} />
                       </td>
                     ))}
+                    <td className="whitespace-nowrap pb-2">
+                      <Button type="button" size="icon" variant="outline" aria-label={`${rank.label} nach oben`} disabled={index === 0} onClick={() => setRanks((c) => moveItem(c, index, -1))}><ArrowUp size={14} /></Button>{" "}
+                      <Button type="button" size="icon" variant="outline" aria-label={`${rank.label} nach unten`} disabled={index === ranks.length - 1} onClick={() => setRanks((c) => moveItem(c, index, 1))}><ArrowDown size={14} /></Button>{" "}
+                      <Button type="button" size="icon" variant="outline" aria-label={`${rank.label} entfernen`} disabled={ranks.length <= 1} onClick={() => removeRank(index)}><Trash2 size={14} /></Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <Button type="button" size="sm" variant="outline" className="mt-2" onClick={addRank}><Plus size={14} />Stufe hinzufügen</Button>
+          <p className="mt-2 text-xs text-brand-muted">Die Reihenfolge ist die Karriereleiter (unten = höchste Stufe, dort gibt es keine Beförderung). Umbenennen ändert keine Zuweisungen; wird eine Stufe entfernt, erscheinen ihre Mitarbeiter:innen unter „ohne Rang“ und bekommen einen neuen Rang vom Admin.</p>
         </section>
         <ErrorBanner message={error} />
         <div className="flex justify-end gap-2">

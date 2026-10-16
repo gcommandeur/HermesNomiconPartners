@@ -9,6 +9,7 @@ import {
   HardHat, // NOMICON
   Receipt, // NOMICON
   UsersRound, // NOMICON
+  Wallet, // NOMICON
   KanbanSquare,
   UserRoundSearch,
   LayoutDashboard,
@@ -78,6 +79,7 @@ export const navigationGroups: NavigationGroup[] = [
       { label: "Übersicht", href: "/", icon: LayoutDashboard },
       { label: "Kalender", href: "/kalender", icon: CalendarDays },
       { label: "Mailing", href: "/mailing", icon: Mail },
+      { label: "Meine Provision", href: "/provision", icon: Wallet }, // NOMICON
       { label: "Claude-Vorschläge", href: "/claude-vorschlaege", icon: Sparkles, badge: "aiProposals", requiresAi: true },
     ],
   },
