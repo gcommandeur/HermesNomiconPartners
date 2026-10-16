@@ -2303,6 +2303,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/my-commission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get My Commission
+         * @description Provision einer Person im Quartal (Standard: ich selbst, laufendes Quartal). Fremde oder
+         *     nicht vorhandene `user_id`: 404.
+         */
+        get: operations["get_my_commission_api_v1_my_commission_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my-commission/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get People
+         * @description Personen, die ich ansehen darf: ich selbst, als Teamleiter mein Team, als Admin alle.
+         */
+        get: operations["get_people_api_v1_my_commission_people_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notes": {
         parameters: {
             query?: never;
@@ -8023,6 +8064,137 @@ export interface components {
              */
             period: "week" | "month" | "quarter";
             takeover: components["schemas"]["TakeoverRateRead"];
+        };
+        /** MyCommissionAssignment */
+        MyCommissionAssignment: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /** Paid Months */
+            paid_months: number;
+            /** Revenue */
+            revenue: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /** MyCommissionBand */
+        MyCommissionBand: {
+            /** Commission */
+            commission: string;
+            /** Label */
+            label: string;
+            /** Rate */
+            rate: string | null;
+            /** Revenue */
+            revenue: string;
+        };
+        /** MyCommissionPerson */
+        MyCommissionPerson: {
+            /** Display Name */
+            display_name: string;
+            /** Is Self */
+            is_self: boolean;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** MyCommissionRead */
+        MyCommissionRead: {
+            /**
+             * Bands
+             * @default []
+             */
+            bands: components["schemas"]["MyCommissionBand"][];
+            /**
+             * Bonus
+             * @default 0.00
+             */
+            bonus: string;
+            /**
+             * Commission
+             * @default 0.00
+             */
+            commission: string;
+            /** Display Name */
+            display_name: string;
+            /** Expected Revenue */
+            expected_revenue: string;
+            /**
+             * Explanation
+             * @default []
+             */
+            explanation: string[];
+            /**
+             * Fixed Pay
+             * @default 0.00
+             */
+            fixed_pay: string;
+            /**
+             * Gross
+             * @default 0.00
+             */
+            gross: string;
+            /**
+             * Is Top Rank
+             * @default false
+             */
+            is_top_rank: boolean;
+            /** Next Rank Label */
+            next_rank_label?: string | null;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Placement Deals
+             * @default 0
+             */
+            placement_deals: number;
+            /** Progress Percent */
+            progress_percent?: string | null;
+            /** Promotion Hurdle */
+            promotion_hurdle?: string | null;
+            /** Promotion Label */
+            promotion_label?: string | null;
+            /** Quarter */
+            quarter: number;
+            /** Rank Key */
+            rank_key?: string | null;
+            /** Rank Label */
+            rank_label?: string | null;
+            /** Revenue */
+            revenue: string;
+            /** Revenue Fees */
+            revenue_fees: string;
+            /** Revenue Staffing */
+            revenue_staffing: string;
+            /**
+             * Staffing Assignments
+             * @default []
+             */
+            staffing_assignments: components["schemas"]["MyCommissionAssignment"][];
+            /**
+             * Staffing Deals
+             * @default 0
+             */
+            staffing_deals: number;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Year */
+            year: number;
         };
         /**
          * MyMailAccountCreate
@@ -15947,6 +16119,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyViewsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_commission_api_v1_my_commission_get: {
+        parameters: {
+            query?: {
+                user_id?: string | null;
+                year?: number | null;
+                quarter?: number | null;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyCommissionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_people_api_v1_my_commission_people_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyCommissionPerson"][];
                 };
             };
             /** @description Validation Error */

@@ -31,6 +31,7 @@ from cc_crm.api.v1.management import router as management_router  # NOMICON
 from cc_crm.api.v1.matching import router as matching_router
 from cc_crm.api.v1.mcp import router as mcp_router
 from cc_crm.api.v1.microsoft_login import public_router as microsoft_login_router
+from cc_crm.api.v1.my_commission import router as my_commission_router  # NOMICON
 from cc_crm.api.v1.my_mail_accounts import router as my_mail_accounts_router
 from cc_crm.api.v1.my_outlook import router as my_outlook_router
 from cc_crm.api.v1.nl_search import router as nl_search_router
@@ -136,6 +137,7 @@ protected_router.include_router(
     management_router, tags=["management"], dependencies=[Depends(require_management_view)]
 )  # NOMICON
 protected_router.include_router(engagement_router, tags=["engagement"])  # NOMICON
+protected_router.include_router(my_commission_router, tags=["my-commission"])  # NOMICON
 protected_router.include_router(audit_logs_router, tags=["audit-logs"])
 protected_router.include_router(deletion_requests_router, tags=["deletion-requests"])
 api_router.include_router(protected_router)

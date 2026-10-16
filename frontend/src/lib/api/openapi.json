@@ -12107,6 +12107,280 @@
         "title": "ManagementOverviewRead",
         "type": "object"
       },
+      "MyCommissionAssignment": {
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "title": "Assignment Id",
+            "type": "string"
+          },
+          "paid_months": {
+            "title": "Paid Months",
+            "type": "integer"
+          },
+          "revenue": {
+            "title": "Revenue",
+            "type": "string"
+          },
+          "worker_name": {
+            "title": "Worker Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "worker_name",
+          "paid_months",
+          "revenue"
+        ],
+        "title": "MyCommissionAssignment",
+        "type": "object"
+      },
+      "MyCommissionBand": {
+        "properties": {
+          "commission": {
+            "title": "Commission",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "revenue": {
+            "title": "Revenue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "revenue",
+          "rate",
+          "commission"
+        ],
+        "title": "MyCommissionBand",
+        "type": "object"
+      },
+      "MyCommissionPerson": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "is_self": {
+            "title": "Is Self",
+            "type": "boolean"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "display_name",
+          "is_self"
+        ],
+        "title": "MyCommissionPerson",
+        "type": "object"
+      },
+      "MyCommissionRead": {
+        "properties": {
+          "bands": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MyCommissionBand"
+            },
+            "title": "Bands",
+            "type": "array"
+          },
+          "bonus": {
+            "default": "0.00",
+            "title": "Bonus",
+            "type": "string"
+          },
+          "commission": {
+            "default": "0.00",
+            "title": "Commission",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "expected_revenue": {
+            "title": "Expected Revenue",
+            "type": "string"
+          },
+          "explanation": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Explanation",
+            "type": "array"
+          },
+          "fixed_pay": {
+            "default": "0.00",
+            "title": "Fixed Pay",
+            "type": "string"
+          },
+          "gross": {
+            "default": "0.00",
+            "title": "Gross",
+            "type": "string"
+          },
+          "is_top_rank": {
+            "default": false,
+            "title": "Is Top Rank",
+            "type": "boolean"
+          },
+          "next_rank_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Rank Label"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "placement_deals": {
+            "default": 0,
+            "title": "Placement Deals",
+            "type": "integer"
+          },
+          "progress_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress Percent"
+          },
+          "promotion_hurdle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promotion Hurdle"
+          },
+          "promotion_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promotion Label"
+          },
+          "quarter": {
+            "title": "Quarter",
+            "type": "integer"
+          },
+          "rank_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank Key"
+          },
+          "rank_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank Label"
+          },
+          "revenue": {
+            "title": "Revenue",
+            "type": "string"
+          },
+          "revenue_fees": {
+            "title": "Revenue Fees",
+            "type": "string"
+          },
+          "revenue_staffing": {
+            "title": "Revenue Staffing",
+            "type": "string"
+          },
+          "staffing_assignments": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MyCommissionAssignment"
+            },
+            "title": "Staffing Assignments",
+            "type": "array"
+          },
+          "staffing_deals": {
+            "default": 0,
+            "title": "Staffing Deals",
+            "type": "integer"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "display_name",
+          "year",
+          "quarter",
+          "period_start",
+          "period_end",
+          "revenue",
+          "revenue_fees",
+          "revenue_staffing",
+          "expected_revenue"
+        ],
+        "title": "MyCommissionRead",
+        "type": "object"
+      },
       "MyMailAccountCreate": {
         "description": "Eigenes IMAP/SMTP-Postfach anlegen (Einstellungen -> Mein Postfach).\nAnders als MailAccountCreate ohne Admin-Felder (kein CV-Out-Standard); das\nPasswort ist auch hier nur schreibend (bei Gmail/Outlook/GMX: App-Passwort).",
         "properties": {
@@ -30946,6 +31220,173 @@
         "summary": "Get My Views",
         "tags": [
           "access-views"
+        ]
+      }
+    },
+    "/api/v1/my-commission": {
+      "get": {
+        "description": "Provision einer Person im Quartal (Standard: ich selbst, laufendes Quartal). Fremde oder\nnicht vorhandene `user_id`: 404.",
+        "operationId": "get_my_commission_api_v1_my_commission_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 2200,
+                  "minimum": 2000,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "in": "query",
+            "name": "quarter",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 4,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quarter"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyCommissionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get My Commission",
+        "tags": [
+          "my-commission"
+        ]
+      }
+    },
+    "/api/v1/my-commission/people": {
+      "get": {
+        "description": "Personen, die ich ansehen darf: ich selbst, als Teamleiter mein Team, als Admin alle.",
+        "operationId": "get_people_api_v1_my_commission_people_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MyCommissionPerson"
+                  },
+                  "title": "Response Get People Api V1 My Commission People Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get People",
+        "tags": [
+          "my-commission"
         ]
       }
     },
