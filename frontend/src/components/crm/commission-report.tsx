@@ -192,7 +192,7 @@ function Row({ row, ranks, onRank }: { row: CommissionRow; ranks: { key: string;
 
 // --- Einstellungen -----------------------------------------------------------------------------
 
-type RankForm = Record<"key" | "label" | "fixed_monthly" | "rate1" | "threshold1" | "rate2" | "threshold2" | "rate3", string>;
+type RankForm = Record<"key" | "label" | "fixed_yearly" | "rate1" | "threshold1" | "rate2" | "threshold2" | "rate3", string>;
 
 const GENERAL_FIELDS: { key: keyof CommissionConfig["general"]; label: string }[] = [
   { key: "commission_free_base", label: "Umsatz ohne Provision je Quartal (€)" },
@@ -201,11 +201,13 @@ const GENERAL_FIELDS: { key: keyof CommissionConfig["general"]; label: string }[
   { key: "fee_rate_on_target_salary", label: "Honorarsatz auf Zielgehalt (%) – nur hinterlegt" },
   { key: "min_fee", label: "Mindesthonorar (€) – nur hinterlegt" },
   { key: "target_margin", label: "Ziel-Marge (%)" },
+  { key: "placement_bonus", label: "Vermittlungsbonus je Deal (€)" },
+  { key: "staffing_bonus", label: "Überlassungsbonus je Deal (€)" },
 ];
 
 const RANK_COLUMNS: { key: keyof RankForm; label: string; wide?: boolean }[] = [
   { key: "label", label: "Rang", wide: true },
-  { key: "fixed_monthly", label: "Fix €/Monat" },
+  { key: "fixed_yearly", label: "Fix €/Jahr" },
   { key: "rate1", label: "Satz 1 %" },
   { key: "threshold1", label: "bis (€)" },
   { key: "rate2", label: "Satz 2 %" },
@@ -217,7 +219,7 @@ function ConfigModal({ config, onClose }: { config: CommissionConfig; onClose: (
   const [general, setGeneral] = useState(() => Object.fromEntries(Object.entries(config.general).map(([k, v]) => [k, String(v)])) as Record<string, string>);
   const [ranks, setRanks] = useState<RankForm[]>(() =>
     config.ranks.map((r) => ({
-      key: r.key, label: r.label, fixed_monthly: String(r.fixed_monthly), rate1: String(r.rate1), threshold1: String(r.threshold1),
+      key: r.key, label: r.label, fixed_yearly: String(r.fixed_yearly), rate1: String(r.rate1), threshold1: String(r.threshold1),
       rate2: String(r.rate2), threshold2: String(r.threshold2), rate3: String(r.rate3),
     })),
   );
@@ -240,9 +242,10 @@ function ConfigModal({ config, onClose }: { config: CommissionConfig; onClose: (
           commission_free_base: num(general.commission_free_base), employer_factor: num(general.employer_factor),
           extra_cost_monthly: num(general.extra_cost_monthly), fee_rate_on_target_salary: num(general.fee_rate_on_target_salary),
           min_fee: num(general.min_fee), target_margin: num(general.target_margin),
+          placement_bonus: num(general.placement_bonus), staffing_bonus: num(general.staffing_bonus),
         },
         ranks: ranks.map((r) => ({
-          key: r.key, label: r.label, fixed_monthly: num(r.fixed_monthly), rate1: num(r.rate1), threshold1: num(r.threshold1),
+          key: r.key, label: r.label, fixed_yearly: num(r.fixed_yearly), rate1: num(r.rate1), threshold1: num(r.threshold1),
           rate2: num(r.rate2), threshold2: num(r.threshold2), rate3: num(r.rate3),
         })),
         revenue_basis: basis,

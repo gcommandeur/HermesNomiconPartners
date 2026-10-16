@@ -32,7 +32,7 @@ export async function getCommissionReport(year?: number, quarter?: number): Prom
 
 export async function getCommissionConfig(): Promise<DataResult<CommissionConfig>> {
   return apiGet<CommissionConfig>("/commission/config", {
-    general: { commission_free_base: "10000", employer_factor: "1.23", extra_cost_monthly: "500", fee_rate_on_target_salary: "28", min_fee: "12000", target_margin: "50" },
+    general: { commission_free_base: "10000", employer_factor: "1.23", extra_cost_monthly: "500", fee_rate_on_target_salary: "28", min_fee: "12000", target_margin: "50", placement_bonus: "300", staffing_bonus: "300" },
     ranks: [],
     revenue_basis: EMPTY_REPORT.revenue_basis,
     notice: "",

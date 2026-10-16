@@ -1,7 +1,9 @@
 # NOMICON: Provisionsmodell - nur in der Nomicon-Kopie.
 """Speicherung des Provisionsmodells (Saetze, Schwellen, Gehaelter, Umsatzbasis) als JSON in
 `app_settings` (Schluessel `commission_config`). Fehlt der Eintrag oder ist er unbrauchbar, gelten
-die Startwerte aus der Excel (commission_model.DEFAULT_CONFIG)."""
+die Startwerte laut Karriereplan (commission_model.DEFAULT_CONFIG). Eine aeltere gespeicherte
+Konfiguration mit Fixgehalt je Monat (`fixed_monthly`, Rang Junior) ist nicht mehr gueltig und
+wird durch die Startwerte ersetzt."""
 
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -35,12 +37,14 @@ def to_json(config: CommissionConfig) -> dict[str, Any]:
             "fee_rate_on_target_salary": str(general.fee_rate_on_target_salary),
             "min_fee": str(general.min_fee),
             "target_margin": str(general.target_margin),
+            "placement_bonus": str(general.placement_bonus),
+            "staffing_bonus": str(general.staffing_bonus),
         },
         "ranks": [
             {
                 "key": r.key,
                 "label": r.label,
-                "fixed_monthly": str(r.fixed_monthly),
+                "fixed_yearly": str(r.fixed_yearly),
                 "rate1": str(r.rate1),
                 "threshold1": str(r.threshold1),
                 "rate2": str(r.rate2),
@@ -72,7 +76,7 @@ def from_json(data: Any) -> CommissionConfig:
             RankConfig(
                 key=str(r["key"]),
                 label=str(r["label"]),
-                fixed_monthly=_dec(r["fixed_monthly"]),
+                fixed_yearly=_dec(r["fixed_yearly"]),
                 rate1=_dec(r["rate1"]),
                 threshold1=_dec(r["threshold1"]),
                 rate2=_dec(r["rate2"]),

@@ -18,6 +18,11 @@ abgeleitet und im Bericht an den Nutzer als offene Fragen aufgefuehrt:
    Befoerderungshuerde"), steigt der Mitarbeiter auf; die Kaskade prueft danach den naechsten Rang
    usw., bis die Huerde nicht mehr erreicht wird oder es keinen hoeheren Rang gibt (Director: keine
    Befoerderung).
+5. (Karriereplan Oktober 2026) Das Fixgehalt steht je JAHR im Modell; der Quartalswert ist ein
+   Viertel. Der Vermittlungsbonus (300 EUR je Deal, getrennt einstellbar fuer Vermittlung und
+   Ueberlassung) ist NICHT Teil des provisionspflichtigen Umsatzes: Brutto im Quartal = Fix +
+   Provision + Bonus. Er zaehlt als Gehaltsbestandteil in die Arbeitgeberkosten. Break-even und
+   Ziel-Umsatz rechnen ohne Bonus.
 Die Honorarparameter (Honorarsatz auf Zielgehalt 28 %, Mindesthonorar 12.000 EUR) sind hinterlegt
 und einstellbar, gehen aber NICHT in die Provisionsrechnung ein."""
 
@@ -28,6 +33,7 @@ from enum import StrEnum
 CENT = Decimal("0.01")
 HUNDRED = Decimal("100")
 MONTHS_PER_QUARTER = 3
+QUARTERS_PER_YEAR = 4
 
 
 def money(value: Decimal) -> Decimal:
@@ -38,7 +44,7 @@ def money(value: Decimal) -> Decimal:
 class RankConfig:
     key: str
     label: str
-    fixed_monthly: Decimal  # Fixgehalt je Monat (brutto)
+    fixed_yearly: Decimal  # Fixgehalt je Jahr (brutto); der Quartalswert ist ein Viertel
     rate1: Decimal  # Prozent
     threshold1: Decimal  # Quartalsumsatz, bis zu dem Satz 1 gilt
     rate2: Decimal
@@ -54,6 +60,8 @@ class GeneralConfig:
     fee_rate_on_target_salary: Decimal = Decimal("28")  # Prozent (nur hinterlegt)
     min_fee: Decimal = Decimal("12000")  # Mindesthonorar (nur hinterlegt)
     target_margin: Decimal = Decimal("50")  # Prozent
+    placement_bonus: Decimal = Decimal("300")  # EUR je Vermittlungs-Deal (Fee bezahlt)
+    staffing_bonus: Decimal = Decimal("300")  # EUR je Ueberlassungs-Deal (Einsatz/Verlaengerung)
 
 
 @dataclass(frozen=True)
@@ -85,23 +93,24 @@ class CommissionConfig:
 
 
 def _rank(
-    key: str, label: str, fixed: int, r1: int, t1: int, r2: int, t2: int, r3: int
+    key: str, label: str, fixed: int, r1: str, t1: int, r2: str, t2: int, r3: str
 ) -> RankConfig:
     return RankConfig(
         key, label, Decimal(fixed), Decimal(r1), Decimal(t1), Decimal(r2), Decimal(t2), Decimal(r3)
     )
 
 
-# Startwerte aus der Excel "Nomicon_Provisionsmodell"
+# Startwerte laut Karriereplan (Oktober 2026), alles im Admin-Bereich aenderbar. Den Rang "Junior"
+# gibt es nicht mehr.
 DEFAULT_CONFIG = CommissionConfig(
     general=GeneralConfig(),
     ranks=(
-        _rank("junior", "Junior", 3000, 10, 15000, 12, 30000, 14),
-        _rank("consultant", "Consultant", 3500, 12, 20000, 14, 40000, 16),
-        _rank("specialist", "Specialist", 3500, 14, 25000, 16, 55000, 18),
-        _rank("senior", "Senior", 3500, 16, 35000, 18, 80000, 20),
-        _rank("principal", "Principal", 3750, 18, 50000, 20, 120000, 22),
-        _rank("director", "Director", 4000, 22, 75000, 25, 160000, 30),
+        _rank("consultant", "Consultant", 40000, "10", 25000, "12", 48000, "14"),
+        _rank("specialist", "Specialist Consultant", 42000, "15", 30000, "17.5", 60000, "20"),
+        _rank("senior", "Senior Consultant", 44000, "20", 35000, "22.5", 96000, "25"),
+        _rank("manager", "Manager", 50000, "25", 45000, "27.5", 120000, "30"),
+        _rank("principal", "Principal", 54000, "30", 60000, "32.5", 144000, "35"),
+        _rank("director", "Director", 60000, "35", 85000, "37.5", 168000, "40"),
     ),
 )
 
@@ -151,14 +160,22 @@ def commission_for_quarter(
 
 
 def fixed_pay_for_quarter(rank: RankConfig) -> Decimal:
-    return rank.fixed_monthly * MONTHS_PER_QUARTER
+    return rank.fixed_yearly / QUARTERS_PER_YEAR
+
+
+def bonus_for_quarter(general: GeneralConfig, placement_deals: int, staffing_deals: int) -> Decimal:
+    """Vermittlungsbonus: einmalig je Deal, unabhaengig von der Dealgroesse und der Rolle."""
+    return money(
+        general.placement_bonus * max(placement_deals, 0)
+        + general.staffing_bonus * max(staffing_deals, 0)
+    )
 
 
 def employer_cost_for_quarter(
-    rank: RankConfig, commission: Decimal, general: GeneralConfig
+    rank: RankConfig, commission: Decimal, general: GeneralConfig, bonus: Decimal = Decimal("0")
 ) -> Decimal:
-    """Arbeitgeberkosten eines Quartals (Annahme 2 im Modulkopf)."""
-    pay = fixed_pay_for_quarter(rank) + commission
+    """Arbeitgeberkosten eines Quartals (Annahme 2 und 5 im Modulkopf)."""
+    pay = fixed_pay_for_quarter(rank) + commission + bonus
     return money(pay * general.employer_factor + general.extra_cost_monthly * MONTHS_PER_QUARTER)
 
 
@@ -225,6 +242,10 @@ class QuarterResult:
     revenue: Decimal
     breakdown: CommissionBreakdown
     fixed_pay: Decimal
+    placement_deals: int
+    staffing_deals: int
+    bonus: Decimal
+    gross: Decimal  # Fix + Provision + Bonus
     employer_cost: Decimal
     margin: Decimal
     margin_percent: Decimal | None
@@ -234,17 +255,29 @@ class QuarterResult:
     promotion_to: str | None
 
 
-def evaluate_quarter(revenue: Decimal, rank_key: str, config: CommissionConfig) -> QuarterResult:
+def evaluate_quarter(
+    revenue: Decimal,
+    rank_key: str,
+    config: CommissionConfig,
+    placement_deals: int = 0,
+    staffing_deals: int = 0,
+) -> QuarterResult:
     rank = config.rank(rank_key)
     general = config.general
     breakdown = commission_for_quarter(revenue, rank, general)
-    cost = employer_cost_for_quarter(rank, breakdown.commission, general)
+    bonus = bonus_for_quarter(general, placement_deals, staffing_deals)
+    cost = employer_cost_for_quarter(rank, breakdown.commission, general, bonus)
     amount, percent = margin(breakdown.revenue, cost)
+    fixed = money(fixed_pay_for_quarter(rank))
     return QuarterResult(
         rank_key=rank_key,
         revenue=breakdown.revenue,
         breakdown=breakdown,
-        fixed_pay=money(fixed_pay_for_quarter(rank)),
+        fixed_pay=fixed,
+        placement_deals=placement_deals,
+        staffing_deals=staffing_deals,
+        bonus=bonus,
+        gross=money(fixed + breakdown.commission + bonus),
         employer_cost=cost,
         margin=amount,
         margin_percent=percent,
@@ -262,7 +295,7 @@ class ConfigError(ValueError):
 def validate_config(config: CommissionConfig) -> CommissionConfig:
     general = config.general
     if not config.ranks:
-        raise ConfigError("Es braucht mindestens einen Rang.")
+        raise ConfigError("Es braucht mindestens eine Stufe.")
     keys = [rank.key for rank in config.ranks]
     if len(set(keys)) != len(keys) or any(not key.strip() for key in keys):
         raise ConfigError("Rang-Schluessel muessen eindeutig und nicht leer sein.")
@@ -270,6 +303,8 @@ def validate_config(config: CommissionConfig) -> CommissionConfig:
         (general.commission_free_base, "Umsatz ohne Provision"),
         (general.extra_cost_monthly, "Zusatzkosten"),
         (general.min_fee, "Mindesthonorar"),
+        (general.placement_bonus, "Vermittlungsbonus"),
+        (general.staffing_bonus, "Ueberlassungsbonus"),
     ):
         if value < 0:
             raise ConfigError(f"{name} darf nicht negativ sein.")
@@ -281,7 +316,7 @@ def validate_config(config: CommissionConfig) -> CommissionConfig:
         raise ConfigError("Die Ziel-Marge muss zwischen 0 und unter 95 Prozent liegen.")
     previous: RankConfig | None = None
     for rank in config.ranks:
-        if rank.fixed_monthly < 0:
+        if rank.fixed_yearly < 0:
             raise ConfigError(f"{rank.label}: Fixgehalt darf nicht negativ sein.")
         for rate in (rank.rate1, rank.rate2, rank.rate3):
             if not Decimal("0") <= rate <= HUNDRED:

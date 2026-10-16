@@ -17,7 +17,7 @@ Money = Field(ge=0, le=Decimal("100000000"))
 class CommissionRankConfig(BaseModel):
     key: str = Field(min_length=1, max_length=40, pattern=r"^[a-z0-9_]+$")
     label: str = Field(min_length=1, max_length=80)
-    fixed_monthly: Decimal = Money
+    fixed_yearly: Decimal = Money
     rate1: Decimal = Percent
     threshold1: Decimal = Money
     rate2: Decimal = Percent
@@ -32,6 +32,8 @@ class CommissionGeneralConfig(BaseModel):
     fee_rate_on_target_salary: Decimal = Percent
     min_fee: Decimal = Money
     target_margin: Decimal = Field(ge=0, lt=95)
+    placement_bonus: Decimal = Field(default=Decimal("300"), ge=0, le=Decimal("100000"))
+    staffing_bonus: Decimal = Field(default=Decimal("300"), ge=0, le=Decimal("100000"))
 
 
 class CommissionRevenueBasis(BaseModel):
@@ -66,6 +68,10 @@ class CommissionRowRead(BaseModel):
     band2_commission: Decimal
     band3_commission: Decimal
     fixed_pay: Decimal
+    placement_deals: int = 0
+    staffing_deals: int = 0
+    bonus: Decimal = Decimal("0")
+    gross: Decimal = Decimal("0")  # Fix + Provision + Bonus
     employer_cost: Decimal
     margin: Decimal
     margin_percent: Decimal | None

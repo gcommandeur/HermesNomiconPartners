@@ -5919,6 +5919,16 @@ export interface components {
             fee_rate_on_target_salary: number | string;
             /** Min Fee */
             min_fee: number | string;
+            /**
+             * Placement Bonus
+             * @default 300
+             */
+            placement_bonus: number | string;
+            /**
+             * Staffing Bonus
+             * @default 300
+             */
+            staffing_bonus: number | string;
             /** Target Margin */
             target_margin: number | string;
         };
@@ -5934,13 +5944,23 @@ export interface components {
             fee_rate_on_target_salary: string;
             /** Min Fee */
             min_fee: string;
+            /**
+             * Placement Bonus
+             * @default 300
+             */
+            placement_bonus: string;
+            /**
+             * Staffing Bonus
+             * @default 300
+             */
+            staffing_bonus: string;
             /** Target Margin */
             target_margin: string;
         };
         /** CommissionRankConfig */
         "CommissionRankConfig-Input": {
-            /** Fixed Monthly */
-            fixed_monthly: number | string;
+            /** Fixed Yearly */
+            fixed_yearly: number | string;
             /** Key */
             key: string;
             /** Label */
@@ -5958,8 +5978,8 @@ export interface components {
         };
         /** CommissionRankConfig */
         "CommissionRankConfig-Output": {
-            /** Fixed Monthly */
-            fixed_monthly: string;
+            /** Fixed Yearly */
+            fixed_yearly: string;
             /** Key */
             key: string;
             /** Label */
@@ -6031,6 +6051,11 @@ export interface components {
             band3_commission: string;
             /** Band3 Revenue */
             band3_revenue: string;
+            /**
+             * Bonus
+             * @default 0
+             */
+            bonus: string;
             /** Break Even Revenue */
             break_even_revenue: string;
             /** Commission */
@@ -6041,10 +6066,20 @@ export interface components {
             employer_cost: string;
             /** Fixed Pay */
             fixed_pay: string;
+            /**
+             * Gross
+             * @default 0
+             */
+            gross: string;
             /** Margin */
             margin: string;
             /** Margin Percent */
             margin_percent: string | null;
+            /**
+             * Placement Deals
+             * @default 0
+             */
+            placement_deals: number;
             /** Promotion Hurdle */
             promotion_hurdle: string | null;
             /** Promotion To Key */
@@ -6061,6 +6096,11 @@ export interface components {
             revenue_fees: string;
             /** Revenue Staffing */
             revenue_staffing: string;
+            /**
+             * Staffing Deals
+             * @default 0
+             */
+            staffing_deals: number;
             /** Target Revenue */
             target_revenue: string;
             traffic: components["schemas"]["Traffic"];

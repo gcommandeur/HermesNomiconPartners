@@ -68,7 +68,7 @@ def test_everything_is_admin_only(client: TestClient, team: Team) -> None:  # no
         ("put", f"{C}/config", body),
         ("get", f"{C}/report", None),
         ("get", f"{C}/users", None),
-        ("put", f"{C}/users/{team.a.id}/rank", {"rank_key": "junior"}),
+        ("put", f"{C}/users/{team.a.id}/rank", {"rank_key": "consultant"}),
     ]
     for person in (team.a, team.b):  # Mitarbeiter und Teamleiter
         for method, url, payload in calls:
@@ -91,12 +91,12 @@ def test_everything_is_admin_only(client: TestClient, team: Team) -> None:  # no
 def test_config_defaults_roundtrip_and_validation(client: TestClient, team: Team) -> None:  # noqa: F811
     config = client.get(f"{C}/config", headers=team.admin.headers).json()
     assert [r["key"] for r in config["ranks"]] == [
-        "junior", "consultant", "specialist", "senior", "principal", "director",
+        "consultant", "specialist", "senior", "manager", "principal", "director",
     ]  # fmt: skip
     assert config["general"]["commission_free_base"] == "10000"
     assert config["general"]["employer_factor"] == "1.23"
     assert config["general"]["target_margin"] == "50"
-    assert config["ranks"][0]["fixed_monthly"] == "3000"
+    assert config["ranks"][0]["fixed_yearly"] == "40000"
     assert config["revenue_basis"] == {
         "placement_fees": "paid",
         "include_staffing": True,
@@ -106,12 +106,12 @@ def test_config_defaults_roundtrip_and_validation(client: TestClient, team: Team
 
     body = {k: v for k, v in config.items() if k != "notice"}
     body["general"]["target_margin"] = "40"
-    body["ranks"][0]["fixed_monthly"] = "3200"
+    body["ranks"][0]["fixed_yearly"] = "41000"
     saved = client.put(f"{C}/config", json=body, headers=team.admin.headers)
     assert saved.status_code == 200, saved.text
     again = client.get(f"{C}/config", headers=team.admin.headers).json()
     assert Decimal(again["general"]["target_margin"]) == 40
-    assert Decimal(again["ranks"][0]["fixed_monthly"]) == 3200
+    assert Decimal(again["ranks"][0]["fixed_yearly"]) == 41000
     assert "config_changed" in client.get("/api/v1/audit-logs", headers=team.admin.headers).text
 
     def put(mutate):  # type: ignore[no-untyped-def]
@@ -119,9 +119,9 @@ def test_config_defaults_roundtrip_and_validation(client: TestClient, team: Team
         mutate(payload)
         return client.put(f"{C}/config", json=payload, headers=team.admin.headers)
 
-    assert put(lambda p: p["ranks"][0].update(threshold1="40000")).status_code == 422  # S1 >= S2
+    assert put(lambda p: p["ranks"][0].update(threshold1="50000")).status_code == 422  # S1 >= S2
     assert (
-        put(lambda p: p["ranks"][1].update(key="junior")).status_code == 422
+        put(lambda p: p["ranks"][1].update(key="consultant")).status_code == 422
     )  # doppelter Schluessel
     assert put(lambda p: p["general"].update(employer_factor="0.5")).status_code == 422
     assert put(lambda p: p["general"].update(target_margin="99")).status_code == 422
@@ -152,7 +152,7 @@ def test_rank_assignment(client: TestClient, team: Team) -> None:  # noqa: F811
     )
     assert wrong.status_code == 422
     missing = client.put(
-        f"{C}/users/{uuid.uuid4()}/rank", json={"rank_key": "junior"}, headers=team.admin.headers
+        f"{C}/users/{uuid.uuid4()}/rank", json={"rank_key": "consultant"}, headers=team.admin.headers
     )
     assert missing.status_code == 404
     assert assign(client, team.admin, team.a.id, None)["rank_key"] is None  # entfernen
@@ -170,14 +170,14 @@ def test_report_from_paid_placement_fees(
         session_factory, team.a.fee_id, amount="20000.00", status=InvoiceStatus.PAID, paid_at=now
     )
     set_fee(
-        session_factory, team.b.fee_id, amount="45000.00", status=InvoiceStatus.PAID, paid_at=now
+        session_factory, team.b.fee_id, amount="50000.00", status=InvoiceStatus.PAID, paid_at=now
     )
     # C: bezahlt, aber ohne Rang -> unter "ohne Rang"; nur ein Entwurf zaehlt nirgends
     set_fee(
         session_factory, team.c.fee_id, amount="8000.00", status=InvoiceStatus.PAID, paid_at=now
     )
-    assign(client, team.admin, team.a.id, "junior")
-    assign(client, team.admin, team.b.id, "junior")
+    assign(client, team.admin, team.a.id, "consultant")
+    assign(client, team.admin, team.b.id, "consultant")
 
     data = report(client, team.admin.headers)
     rows = {r["user_id"]: r for r in data["rows"]}
@@ -187,27 +187,29 @@ def test_report_from_paid_placement_fees(
         and a["revenue_fees"] == "20000.00"
         and a["revenue_staffing"] == "0.00"
     )
-    assert a["commission"] == "1100.00"  # 500 + 600
+    assert a["commission"] == "1000.00"  # 10.000 zu 10 %
     assert (a["band1_revenue"], a["band2_revenue"], a["band3_revenue"]) == (
-        "5000.00",
-        "5000.00",
+        "10000.00",
+        "0.00",
         "0.00",
     )
-    assert a["fixed_pay"] == "9000.00" and a["employer_cost"] == "13923.00"
-    assert a["margin"] == "6077.00" and a["margin_percent"] == "30.39"
+    assert a["fixed_pay"] == "10000.00" and a["employer_cost"] == "15030.00"
+    assert a["margin"] == "4970.00" and a["margin_percent"] == "24.85"
     assert a["traffic"] == "yellow"
-    assert a["break_even_revenue"] == "12930.44"
-    assert a["promotion_to_key"] is None and a["promotion_hurdle"] == "30000"
+    assert a["break_even_revenue"] == "14332.96"
+    assert a["promotion_to_key"] is None and a["promotion_hurdle"] == "48000"
+    assert (a["bonus"], a["gross"]) == ("0.00", "11000.00")
     b = rows[team.b.id]
-    assert b["revenue"] == "45000.00"
+    assert b["revenue"] == "50000.00"
     assert (
-        b["promotion_to_key"] == "specialist" and b["promotion_to_label"] == "Specialist"
-    )  # Kaskade
+        b["promotion_to_key"] == "specialist"
+        and b["promotion_to_label"] == "Specialist Consultant"
+    )  # Huerde 48.000 erreicht, 60.000 noch nicht
     assert b["traffic"] == "green"
     assert [u["user_id"] for u in data["unassigned"]] == [team.c.id]
     assert data["unassigned"][0]["revenue"] == "8000.00"
     totals = data["totals"]
-    assert totals["revenue"] == "65000.00"
+    assert totals["revenue"] == "70000.00"
     assert Decimal(totals["employer_cost"]) == Decimal(a["employer_cost"]) + Decimal(
         b["employer_cost"]
     )
@@ -217,7 +219,7 @@ def test_report_from_paid_placement_fees(
 def test_report_period_and_basis_switch(
     client: TestClient, team: Team, session_factory: sessionmaker[Session]
 ) -> None:  # noqa: F811
-    assign(client, team.admin, team.a.id, "junior")
+    assign(client, team.admin, team.a.id, "consultant")
     # Im VORIGEN Quartal bezahlt zaehlt nicht; gestellt (unbezahlt) im laufenden nur mit "issued"
     long_ago = datetime.now(UTC) - timedelta(days=120)
     set_fee(
@@ -240,8 +242,8 @@ def test_report_period_and_basis_switch(
     body["revenue_basis"]["placement_fees"] = "issued"
     assert client.put(f"{C}/config", json=body, headers=team.admin.headers).status_code == 200
     row = report(client, team.admin.headers)["rows"][0]
-    assert row["revenue"] == "30000.00" and row["commission"] == "2300.00"
-    assert row["promotion_to_key"] == "consultant"  # Huerde 30.000 erreicht
+    assert row["revenue"] == "30000.00" and row["commission"] == "2100.00"
+    assert row["promotion_to_key"] is None  # Huerde 48.000 nicht erreicht
     # Bericht fuer ein anderes Quartal bleibt leer; ungueltige Quartale werden abgelehnt
     other = (QUARTER % 4) + 1
     assert (
@@ -269,7 +271,7 @@ def test_staffing_invoices_count_for_the_dispatcher(
         client, crew, make_candidate, public
     )  # A: 24 Std. x 28,50 = 684,00
     invoice = draft(client, crew.a, sheet["id"]).json()
-    assign(client, crew.admin, crew.a.id, "junior")
+    assign(client, crew.admin, crew.a.id, "consultant")
     # Entwurf zaehlt nicht
     assert report(client, crew.admin.headers)["rows"][0]["revenue_staffing"] == "0.00"
     issued = client.post(

@@ -6013,6 +6013,34 @@
             ],
             "title": "Min Fee"
           },
+          "placement_bonus": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "default": "300",
+            "title": "Placement Bonus"
+          },
+          "staffing_bonus": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "default": "300",
+            "title": "Staffing Bonus"
+          },
           "target_margin": {
             "anyOf": [
               {
@@ -6060,6 +6088,16 @@
             "title": "Min Fee",
             "type": "string"
           },
+          "placement_bonus": {
+            "default": "300",
+            "title": "Placement Bonus",
+            "type": "string"
+          },
+          "staffing_bonus": {
+            "default": "300",
+            "title": "Staffing Bonus",
+            "type": "string"
+          },
           "target_margin": {
             "title": "Target Margin",
             "type": "string"
@@ -6078,7 +6116,7 @@
       },
       "CommissionRankConfig-Input": {
         "properties": {
-          "fixed_monthly": {
+          "fixed_yearly": {
             "anyOf": [
               {
                 "maximum": 100000000.0,
@@ -6089,7 +6127,7 @@
                 "type": "string"
               }
             ],
-            "title": "Fixed Monthly"
+            "title": "Fixed Yearly"
           },
           "key": {
             "maxLength": 40,
@@ -6173,7 +6211,7 @@
         "required": [
           "key",
           "label",
-          "fixed_monthly",
+          "fixed_yearly",
           "rate1",
           "threshold1",
           "rate2",
@@ -6185,8 +6223,8 @@
       },
       "CommissionRankConfig-Output": {
         "properties": {
-          "fixed_monthly": {
-            "title": "Fixed Monthly",
+          "fixed_yearly": {
+            "title": "Fixed Yearly",
             "type": "string"
           },
           "key": {
@@ -6226,7 +6264,7 @@
         "required": [
           "key",
           "label",
-          "fixed_monthly",
+          "fixed_yearly",
           "rate1",
           "threshold1",
           "rate2",
@@ -6357,6 +6395,11 @@
             "title": "Band3 Revenue",
             "type": "string"
           },
+          "bonus": {
+            "default": "0",
+            "title": "Bonus",
+            "type": "string"
+          },
           "break_even_revenue": {
             "title": "Break Even Revenue",
             "type": "string"
@@ -6377,6 +6420,11 @@
             "title": "Fixed Pay",
             "type": "string"
           },
+          "gross": {
+            "default": "0",
+            "title": "Gross",
+            "type": "string"
+          },
           "margin": {
             "title": "Margin",
             "type": "string"
@@ -6391,6 +6439,11 @@
               }
             ],
             "title": "Margin Percent"
+          },
+          "placement_deals": {
+            "default": 0,
+            "title": "Placement Deals",
+            "type": "integer"
           },
           "promotion_hurdle": {
             "anyOf": [
@@ -6444,6 +6497,11 @@
           "revenue_staffing": {
             "title": "Revenue Staffing",
             "type": "string"
+          },
+          "staffing_deals": {
+            "default": 0,
+            "title": "Staffing Deals",
+            "type": "integer"
           },
           "target_revenue": {
             "title": "Target Revenue",
