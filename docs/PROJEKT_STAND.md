@@ -40,7 +40,7 @@ Stand: `entwicklung` = Commits `a7907d9` bis `e48bb33` plus Dokumentations-Commi
 - Migrationen `f2a4c6e8b0d1` (candidates: Einwilligungsnachweis, `anonymized_at`) und `g3b5d7f9a1c2` (Vorstellungs-Archiv, `mailing_groups.context_candidate_id`, Postgres-Trigger) laufen beim naechsten Deploy mit.
 - **Vorstellungs-Archiv:** Aufbewahrungsfrist festlegen (`retention_until` je Eintrag, keine Standardfrist) und klaeren, ob ein einzelner Admin reicht: Entfernen braucht einen ZWEITEN Admin (bei nur einem Admin nicht moeglich). Rechtsgrundlage/Verarbeitungsverzeichnis: `DSGVO_INVENTUR.md` 3a.
 - **Nomicon-Modul Überlassung (Details `docs/UEBERLASSUNG.md`):** Scheduled Job `python scripts/run_staffing_deadlines.py` (z. B. `30 5 * * *` UTC) auf DigitalOcean anlegen; AÜG-Erlaubnis unter Überlassung > Compliance eintragen; rechtliche Werte (18/9/3 Monate) und die offenen Fragen mit Fachanwalt klären.
-- **Nomicon-Provisionsmodell (`docs/PROVISIONSMODELL.md`):** Umsatzbasis bestaetigen (Startannahme: bezahlte Vermittlungshonorare + Ueberlassung ab gestellt) und die Rechenregeln mit den Beispielzahlen der Excel abgleichen - die Excel lag der Entwicklung nicht vor.
+- **Nomicon-Provisionsmodell (`docs/PROVISIONSMODELL.md`, Karriereplan Oktober 2026, seit 2026-10-16 umgesetzt):** offen nur noch der Abgleich mit der Excel (lag nie vor), die Beförderung auf Basis eines Quartals, die Annahme "abgebrochener Einsatz behält den Bonus" und ein Klicktest mit echten Mitarbeiter-/Teamleiter-Logins ("Meine Provision"). Verlängerung = neue Zeile in `staffing_assignment_extensions` (neuer Deal), Bonus und Umsatz immer nach Zahldatum.
 - Kopie `HermesNomiconPartners`: lokal ca. 20 Commits vor GitHub, bewusst nicht gepusht; Freigabe zum Pushen offen.
 
 **Offen (Claude):**
