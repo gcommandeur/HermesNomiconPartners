@@ -31,6 +31,8 @@ export type StaffingLicense = Schemas["StaffingLicenseRead"];
 export type StaffingOverview = Schemas["StaffingOverviewRead"];
 export type StaffingSettings = Schemas["StaffingSettingsRead"];
 export type StaffingDisposition = Schemas["StaffingDispositionRead"];
+export type StaffingTasks = Schemas["StaffingTasksRead"];
+export type StaffingTask = Schemas["StaffingTaskRead"];
 export type StaffingBenchWorker = Schemas["StaffingBenchWorkerRead"];
 export type StaffingSettingsInput = Schemas["StaffingSettingsUpdate"];
 export type Traffic = Schemas["Traffic"];
@@ -122,6 +124,10 @@ export function formatRemaining(daysRemaining: number | null): string {
 
 export async function getStaffingOverview(): Promise<DataResult<StaffingOverview>> {
   return apiGet<StaffingOverview>("/staffing/overview", DEMO_OVERVIEW);
+}
+
+export async function getStaffingTasks(): Promise<DataResult<StaffingTasks>> {
+  return apiGet<StaffingTasks>("/staffing/tasks", { tasks: [], alerts: [], bench_after_days: 14, equal_pay_warn_days: 30 });
 }
 
 export async function getStaffingDisposition(): Promise<DataResult<StaffingDisposition>> {

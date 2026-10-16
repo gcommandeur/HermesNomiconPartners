@@ -17748,6 +17748,120 @@
         "title": "StaffingTakeoverResult",
         "type": "object"
       },
+      "StaffingTaskRead": {
+        "properties": {
+          "assignment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment Id"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "kind": {
+            "enum": [
+              "deadline_max",
+              "equal_pay",
+              "timesheet_missing",
+              "timesheet_overdue",
+              "timesheet_rejected",
+              "checklist_open",
+              "bench",
+              "license"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "red",
+              "yellow",
+              "info"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "worker_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worker Id"
+          }
+        },
+        "required": [
+          "kind",
+          "severity",
+          "title",
+          "detail"
+        ],
+        "title": "StaffingTaskRead",
+        "type": "object"
+      },
+      "StaffingTasksRead": {
+        "description": "To-dos und Hinweise der Ansicht Überlassung. Keine Lohn- oder Margenangaben.",
+        "properties": {
+          "alerts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "bench_after_days": {
+            "title": "Bench After Days",
+            "type": "integer"
+          },
+          "equal_pay_warn_days": {
+            "title": "Equal Pay Warn Days",
+            "type": "integer"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/StaffingTaskRead"
+            },
+            "title": "Tasks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tasks",
+          "alerts",
+          "bench_after_days",
+          "equal_pay_warn_days"
+        ],
+        "title": "StaffingTasksRead",
+        "type": "object"
+      },
       "StaffingTimesheetCreate": {
         "properties": {
           "period_end": {
@@ -35133,6 +35247,61 @@
           }
         ],
         "summary": "Put Takeover Fee Tiers",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/tasks": {
+      "get": {
+        "description": "To-dos und Hinweise der Ansicht Überlassung (Fristen, Stundenzettel, Checklisten, Bench,\nErlaubnis). Im Besitzbereich des Nutzers; kein Lohn, keine Marge.",
+        "operationId": "get_staffing_tasks_api_v1_staffing_tasks_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingTasksRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Staffing Tasks",
         "tags": [
           "staffing"
         ]

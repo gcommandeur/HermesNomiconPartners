@@ -63,6 +63,7 @@ from cc_crm.schemas.staffing import (
     TakeoverFeeTiersUpdate,
 )
 from cc_crm.schemas.staffing_disposition import StaffingDispositionRead
+from cc_crm.schemas.staffing_tasks import StaffingTasksRead
 from cc_crm.services.approvals import ApprovalService
 from cc_crm.services.engagement_status import ensure_no_conflict
 from cc_crm.services.staffing_activation import StaffingActivationService
@@ -86,6 +87,7 @@ from cc_crm.services.staffing_takeover_fee import (
     save_tiers,
     tier_percent,
 )
+from cc_crm.services.staffing_tasks import build_tasks
 from cc_crm.services.staffing_timesheets import StaffingTimesheetService
 from cc_crm.services.staffing_visibility import (
     forbid_money_for_non_admin,
@@ -120,6 +122,13 @@ def get_disposition(session: DatabaseSession, current_user: CurrentUser) -> Staf
     """Disposition: Kennzahlen, Bench ("frei seit"), Stundenzettel-Eingang. Einsätze im
     Sichtbereich des Nutzers; kein Lohn, keine Marge."""
     return disposition(session, staffing_owner_scope(current_user, session), date.today())
+
+
+@router.get("/tasks", response_model=StaffingTasksRead)
+def get_staffing_tasks(session: DatabaseSession, current_user: CurrentUser) -> StaffingTasksRead:
+    """To-dos und Hinweise der Ansicht Überlassung (Fristen, Stundenzettel, Checklisten, Bench,
+    Erlaubnis). Im Besitzbereich des Nutzers; kein Lohn, keine Marge."""
+    return build_tasks(session, staffing_owner_scope(current_user, session), date.today())
 
 
 @router.get("/deadlines", response_model=list[StaffingPairDeadlineRead])

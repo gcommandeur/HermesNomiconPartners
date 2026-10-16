@@ -17,6 +17,7 @@ import {
   getStaffingLicenses,
   getStaffingOverview,
   getStaffingSettings,
+  getStaffingTasks,
   getStaffingTimesheets,
   getStaffingWorker,
   getStaffingWorkerForCandidate,
@@ -35,6 +36,10 @@ export function useStaffingOverview() {
 
 export function useStaffingDisposition() {
   return useSWR("/staffing/disposition", getStaffingDisposition, config);
+}
+
+export function useStaffingTasks(enabled = true) {
+  return useSWR(enabled ? "/staffing/tasks" : null, getStaffingTasks, config);
 }
 
 export function useStaffingDeadlines() {

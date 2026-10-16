@@ -3302,6 +3302,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staffing/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Staffing Tasks
+         * @description To-dos und Hinweise der Ansicht Überlassung (Fristen, Stundenzettel, Checklisten, Bench,
+         *     Erlaubnis). Im Besitzbereich des Nutzers; kein Lohn, keine Marge.
+         */
+        get: operations["get_staffing_tasks_api_v1_staffing_tasks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staffing/timesheets/{timesheet_id}": {
         parameters: {
             query?: never;
@@ -9855,6 +9876,43 @@ export interface components {
             submission_id: string;
             /** Tier Percent */
             tier_percent?: string | null;
+        };
+        /** StaffingTaskRead */
+        StaffingTaskRead: {
+            /** Assignment Id */
+            assignment_id?: string | null;
+            /** Detail */
+            detail: string;
+            /** Due At */
+            due_at?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "deadline_max" | "equal_pay" | "timesheet_missing" | "timesheet_overdue" | "timesheet_rejected" | "checklist_open" | "bench" | "license";
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "red" | "yellow" | "info";
+            /** Title */
+            title: string;
+            /** Worker Id */
+            worker_id?: string | null;
+        };
+        /**
+         * StaffingTasksRead
+         * @description To-dos und Hinweise der Ansicht Überlassung. Keine Lohn- oder Margenangaben.
+         */
+        StaffingTasksRead: {
+            /** Alerts */
+            alerts: string[];
+            /** Bench After Days */
+            bench_after_days: number;
+            /** Equal Pay Warn Days */
+            equal_pay_warn_days: number;
+            /** Tasks */
+            tasks: components["schemas"]["StaffingTaskRead"][];
         };
         /** StaffingTimesheetCreate */
         StaffingTimesheetCreate: {
@@ -18111,6 +18169,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TakeoverFeeTiersRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_staffing_tasks_api_v1_staffing_tasks_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTasksRead"];
                 };
             };
             /** @description Validation Error */

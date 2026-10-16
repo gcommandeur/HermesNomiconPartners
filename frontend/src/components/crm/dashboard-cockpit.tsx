@@ -10,6 +10,8 @@ import { PageHeader } from "@/components/crm/page-header";
 import { DemoNotice } from "@/components/crm/demo-notice";
 import { WeeklyChartLoader } from "@/components/crm/weekly-chart-loader";
 import { DashboardTodo } from "@/components/crm/dashboard-todo";
+import { StaffingHome } from "@/components/crm/staffing-home"; // NOMICON
+import { useActiveView } from "@/lib/api/views-hooks"; // NOMICON
 import { useCurrentUser, useKpiRankingCache } from "@/lib/api/hooks";
 import { PITCH_LABEL, STAGE_LABELS } from "@/lib/stage-labels";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -161,6 +163,7 @@ export function DashboardCockpit({
   const source = initialSource;
   const error = initialError;
 
+  const { active: activeView } = useActiveView(); // NOMICON: Ansicht Überlassung zeigt eigene Aufgaben
   const { data: currentUserData } = useCurrentUser();
   const mineOnly = currentUserData ? !currentUserData.data.is_admin : false;
   const chartData = buildChartData(cockpit, mineOnly);
@@ -178,7 +181,10 @@ export function DashboardCockpit({
     <>
       <PageHeader eyebrow="Operative Schaltzentrale" title="Übersicht" />
       <DemoNotice source={source} error={error} />
-
+      {activeView === "staffing" ? (
+        <StaffingHome /> // NOMICON
+      ) : (
+      <>
       {/* Auf Mobile ein horizontal scrollbarer Streifen aus kompakten Chips
        * (erster hervorgehoben, volle Meldung nur als title-Tooltip) statt
        * drei volle Kaesten uebereinander - ab lg wieder das bekannte Grid mit
@@ -235,6 +241,8 @@ export function DashboardCockpit({
         </Card>
         <LiveRankingCard />
       </section>
+      </>
+      )}
     </>
   );
 }

@@ -84,6 +84,11 @@ Vermittlung (Placement, auch archiviert), Einsatz geplant oder aktiv.
 
 ## Ansicht Überlassung (Disposition)
 
+`GET /staffing/tasks` (neu 2026-10-16, Ansicht `staffing`, Besitzbereich des Nutzers, kein Lohn/Marge): Aufgaben und Hinweise
+für die Startseite „Übersicht“ in der Ansicht Überlassung - rote/gelbe Fristen (Höchstdauer, Equal Pay), offene und
+abgelehnte Stundenzettel, fehlender Stundenzettel für den Vormonat, offene Checklisten, Bench ab 14 Tagen, AÜG-Erlaubnis.
+Ampel und Schwellen kommen aus den Compliance-Einstellungen (`yellow_days`/`red_days`), Direct-To-dos bleiben in Direct und Gesamt.
+
 `GET /staffing/disposition` (Sichtbereich wie überall, kein Lohn, keine Marge): aktive/geplante Einsätze,
 offene Checklisten, **Bench** (aktive Leiharbeitnehmer ohne geplanten/aktiven Einsatz, „frei seit“ = Ende des
 letzten Einsatzes, ersatzweise Eintritt), Stundenzettel-Eingang (offen, überfällig, beim Kunden,
