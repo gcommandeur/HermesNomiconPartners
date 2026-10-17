@@ -3,6 +3,11 @@
 
 const DAYS_PER_MONTH = 30.4375;
 
+/** Meldung des Servers (HTTP 409), wenn ein anderer Einsatz derselben Person im selben Zeitraum liegt. */
+export function isOverlapConflict(message: string): boolean {
+  return message.startsWith("Überschneidung:");
+}
+
 /** Warnzeile der Übersicht: "1 Einsatz überfällig" / "3 Einsätze überfällig". */
 export function overdueSummary(count: number): string {
   return `${count} ${count === 1 ? "Einsatz" : "Einsätze"} überfällig`;

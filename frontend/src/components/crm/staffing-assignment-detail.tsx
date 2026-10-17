@@ -37,6 +37,7 @@ import {
   selectClass,
 } from "./staffing-ui";
 import { formatPercent } from "@/lib/format"; // NOMICON
+import { isOverlapConflict } from "@/lib/staffing-deadline-text";
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -106,6 +107,15 @@ export function StaffingAssignmentDetailView({ id }: { id: string }) {
       </div>
 
       <ErrorBanner message={actionError} />
+
+      {assignment.status === "planned" && assignment.activation_warnings.length > 0 && (
+        <div role="status" className="rounded-lg border border-white/10 bg-brand-surface p-3 text-xs text-brand-soft">
+          <p className="font-semibold">Hinweis (sperrt die Aktivierung nicht):</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            {assignment.activation_warnings.map((warning) => <li key={warning}>{warning}</li>)}
+          </ul>
+        </div>
+      )}
 
       {assignment.status === "planned" && hasProblems && (
         <div role="status" className="rounded-lg border border-brand-warning/30 bg-brand-warning/10 p-3 text-xs text-brand-warning">
@@ -273,6 +283,7 @@ function EndModal({ mode, startDate, onClose, onConfirm }: {
 }
 
 function EditModal({ assignment, isAdmin, onClose }: { assignment: StaffingAssignmentDetail; isAdmin: boolean; onClose: () => void }) {
+  const [overlap, setOverlap] = useState<string | null>(null);
   const [form, setForm] = useState({
     planned_end_date: assignment.planned_end_date ?? "",
     location: assignment.location ?? "",
@@ -288,20 +299,30 @@ function EditModal({ assignment, isAdmin, onClose }: { assignment: StaffingAssig
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    await save(false);
+  }
+  async function save(confirmOverlap: boolean) {
     setBusy(true);
     setError(null);
+    setOverlap(null);
     try {
-      await updateStaffingAssignment(assignment.id, {
-        planned_end_date: form.planned_end_date || null,
-        location: form.location || null,
-        activity: form.activity || null,
-        notes: form.notes || null,
-        ...(isAdmin ? { billing_rate: form.billing_rate ? form.billing_rate.replace(",", ".") : null, hourly_wage: form.hourly_wage ? form.hourly_wage.replace(",", ".") : null } : {}),
-      });
+      await updateStaffingAssignment(
+        assignment.id,
+        {
+          planned_end_date: form.planned_end_date || null,
+          location: form.location || null,
+          activity: form.activity || null,
+          notes: form.notes || null,
+          ...(isAdmin ? { billing_rate: form.billing_rate ? form.billing_rate.replace(",", ".") : null, hourly_wage: form.hourly_wage ? form.hourly_wage.replace(",", ".") : null } : {}),
+        },
+        confirmOverlap,
+      );
       await invalidateStaffing();
       onClose();
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Speichern fehlgeschlagen.");
+      const message = exception instanceof Error ? exception.message : "Speichern fehlgeschlagen.";
+      if (isOverlapConflict(message)) setOverlap(message);
+      else setError(message);
     } finally {
       setBusy(false);
     }
@@ -325,12 +346,26 @@ function EditModal({ assignment, isAdmin, onClose }: { assignment: StaffingAssig
           <textarea id="ed-notes" rows={3} className="w-full rounded-md border border-white/10 bg-brand-surface px-3 py-2 text-sm text-brand-text outline-none focus:border-brand-accent" value={form.notes} onChange={(e) => set("notes", e.target.value)} />
         </div>
         <ErrorBanner message={error} />
+        {overlap && <OverlapNotice message={overlap} busy={busy} onConfirm={() => void save(true)} onCancel={() => setOverlap(null)} />}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose}>Abbrechen</Button>
           <Button type="submit" disabled={busy}>{busy ? "Speichern…" : "Speichern"}</Button>
         </div>
       </form>
     </Modal>
+  );
+}
+
+/** Überschneidung mit einem anderen Einsatz derselben Person: nur Hinweis, mit Bestätigung speichern. */
+function OverlapNotice({ message, busy, onConfirm, onCancel }: { message: string; busy: boolean; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div role="alertdialog" aria-live="polite" className="space-y-3 rounded-lg border border-brand-warning/40 bg-brand-warning/10 p-3 text-xs text-brand-soft">
+      <p>{message}</p>
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={busy}>Abbrechen</Button>
+        <Button type="button" size="sm" onClick={onConfirm} disabled={busy}>Trotzdem speichern</Button>
+      </div>
+    </div>
   );
 }
 

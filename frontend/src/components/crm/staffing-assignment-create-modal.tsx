@@ -16,6 +16,7 @@ import { useStaffingContracts, useStaffingPriorPeriods, useStaffingWorkers } fro
 import { createStaffingAssignment, type NewAssignmentInput } from "@/lib/api/staffing";
 import { EngagementConflictNotice } from "@/components/crm/engagement-conflict-notice";
 import { isEngagementConflict } from "@/lib/api/engagement";
+import { isOverlapConflict } from "@/lib/staffing-deadline-text";
 import { invalidateStaffing } from "@/lib/api/staffing-hooks";
 
 export function StaffingAssignmentCreateButton({ workerId }: { workerId?: string }) {
@@ -67,7 +68,7 @@ function CreateForm({ workerId, onClose, onCreated }: { workerId?: string; onClo
     !priorData.data.some((period) => period.client_company_id === form.client_company_id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [conflict, setConflict] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<{ kind: "engagement" | "overlap"; message: string } | null>(null);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -75,10 +76,10 @@ function CreateForm({ workerId, onClose, onCreated }: { workerId?: string; onClo
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    await send(false);
+    await send(false, false);
   }
 
-  async function send(confirmEngagement: boolean) {
+  async function send(confirmEngagement: boolean, confirmOverlap: boolean) {
     setBusy(true);
     setError(null);
     setConflict(null);
@@ -98,12 +99,13 @@ function CreateForm({ workerId, onClose, onCreated }: { workerId?: string; onClo
         ...(isAdmin && form.billing_rate ? { billing_rate: form.billing_rate.replace(",", ".") } : {}),
         ...(isAdmin && form.hourly_wage ? { hourly_wage: form.hourly_wage.replace(",", ".") } : {}),
       };
-      const created = await createStaffingAssignment(input, confirmEngagement);
+      const created = await createStaffingAssignment(input, confirmEngagement, confirmOverlap);
       await invalidateStaffing();
       onCreated(created.id);
     } catch (exception) {
       const message = exception instanceof Error ? exception.message : "Einsatz konnte nicht angelegt werden.";
-      if (isEngagementConflict(message) && !message.includes("gesperrt")) setConflict(message);
+      if (isEngagementConflict(message) && !message.includes("gesperrt")) setConflict({ kind: "engagement", message });
+      else if (isOverlapConflict(message)) setConflict({ kind: "overlap", message });
       else setError(message);
     } finally {
       setBusy(false);
@@ -173,7 +175,14 @@ function CreateForm({ workerId, onClose, onCreated }: { workerId?: string; onClo
           </div>
         )}
         <ErrorBanner message={error} />
-        {conflict && <EngagementConflictNotice message={conflict} busy={busy} onConfirm={() => void send(true)} onCancel={() => setConflict(null)} />}
+        {conflict && (
+          <EngagementConflictNotice
+            message={conflict.message}
+            busy={busy}
+            onConfirm={() => void send(true, conflict.kind === "overlap")}
+            onCancel={() => setConflict(null)}
+          />
+        )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose}>Abbrechen</Button>
           <Button type="submit" disabled={busy}>{busy ? "Speichern…" : "Einsatz anlegen"}</Button>

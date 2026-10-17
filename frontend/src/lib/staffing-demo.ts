@@ -68,6 +68,7 @@ export const DEMO_ASSIGNMENT_DETAIL: StaffingAssignmentDetail = {
     equal_pay_from: "2026-11-01", equal_pay_reached: false, max_end_date: "2027-07-31",
     days_remaining: 500, exceeded: false, traffic: "green", prior_days: 0,
   },
+  activation_warnings: [],
   activation_problems: [
     "Keine gültige AÜG-Erlaubnis für den Zeitraum 01.02.2026 bis 31.07.2026 hinterlegt.",
     "Pflicht-Checkliste unvollständig (offen: Überlassungsvertrag, Konkretisierung, Sicherheitsunterweisung, PSA-Übergabeprotokoll).",

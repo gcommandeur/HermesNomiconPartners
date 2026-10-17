@@ -13,6 +13,7 @@ import { SearchSelect } from "@/components/ui/search-select";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { EngagementConflictNotice } from "@/components/crm/engagement-conflict-notice";
 import { isEngagementConflict } from "@/lib/api/engagement";
+import { isOverlapConflict } from "@/lib/staffing-deadline-text";
 import { refreshEngagement } from "@/lib/api/engagement-hooks";
 import { searchClients } from "@/lib/api/search-select-helpers";
 import { invalidateStaffing } from "@/lib/api/staffing-hooks";
@@ -76,12 +77,13 @@ function StaffingOfferModal({ candidateId, defaultClientId, onClose }: { candida
       const result = await offerCandidateAsAssignment(
         { candidate_id: candidateId, client_company_id: clientId || null, start_date: start || null, planned_end_date: end || null },
         confirm,
+        confirm,
       );
       await Promise.all([invalidateStaffing(), refreshEngagement(candidateId)]);
       router.push(result.assignment_id ? `/ueberlassung/einsaetze/${result.assignment_id}` : `/ueberlassung/leiharbeitnehmer/${result.worker_id}`);
     } catch (exception) {
       const message = exception instanceof Error ? exception.message : "Anbieten fehlgeschlagen.";
-      if (isEngagementConflict(message) && !message.includes("gesperrt")) setConflict(message);
+      if ((isEngagementConflict(message) && !message.includes("gesperrt")) || isOverlapConflict(message)) setConflict(message);
       else setError(message);
       setBusy(false);
     }

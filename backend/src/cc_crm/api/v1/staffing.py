@@ -368,7 +368,10 @@ def create_assignment(
     session: DatabaseSession,
     current_user: CurrentUser,
     confirm_engagement: bool = False,
+    confirm_overlap: bool = False,
 ) -> StaffingAssignmentRead:
+    """Überschneidet sich der Zeitraum mit einem anderen Einsatz derselben Person, antwortet die API
+    mit 409 (Liste `overlaps`); `confirm_overlap=true` speichert trotzdem und protokolliert es."""
     forbid_money_for_non_admin(payload, current_user)
     _check_owner(session, current_user, payload.owner_user_id)
     worker = session.get(StaffingWorker, payload.worker_id)
@@ -376,7 +379,7 @@ def create_assignment(
         ensure_no_conflict(
             session, current_user, worker.candidate_id, "staffing", confirm_engagement
         )
-    row = StaffingAssignmentService(session).create(payload, current_user)
+    row = StaffingAssignmentService(session).create(payload, current_user, confirm_overlap)
     return redact(assignment_read(row), current_user)
 
 
@@ -401,11 +404,12 @@ def update_assignment(
     payload: StaffingAssignmentUpdate,
     session: DatabaseSession,
     current_user: CurrentUser,
+    confirm_overlap: bool = False,
 ) -> StaffingAssignmentDetail:
     forbid_money_for_non_admin(payload, current_user)
     _check_owner(session, current_user, payload.owner_user_id)
     service = StaffingAssignmentService(session)
-    service.update(assignment_id, payload, current_user)
+    service.update(assignment_id, payload, current_user, confirm_overlap)
     return redact(service.detail(assignment_id), current_user)
 
 
@@ -553,6 +557,7 @@ def offer_candidate_as_assignment(
     session: DatabaseSession,
     current_user: CurrentUser,
     confirm_engagement: bool = False,
+    confirm_overlap: bool = False,
 ) -> StaffingOfferResult:
     """Legt das Leiharbeitnehmer-Profil (Anwärter) und optional einen geplanten Einsatz an. Ist der
     Kandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) bzw. die Sperre."""
@@ -578,6 +583,7 @@ def offer_candidate_as_assignment(
                 planned_end_date=payload.planned_end_date,
             ),
             current_user,
+            confirm_overlap,
         )
         assignment_id = row.assignment.id
     return StaffingOfferResult(

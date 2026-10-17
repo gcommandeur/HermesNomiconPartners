@@ -2944,7 +2944,11 @@ export interface paths {
          */
         get: operations["list_assignments_api_v1_staffing_assignments_get"];
         put?: never;
-        /** Create Assignment */
+        /**
+         * Create Assignment
+         * @description Überschneidet sich der Zeitraum mit einem anderen Einsatz derselben Person, antwortet die API
+         *     mit 409 (Liste `overlaps`); `confirm_overlap=true` speichert trotzdem und protokolliert es.
+         */
         post: operations["create_assignment_api_v1_staffing_assignments_post"];
         delete?: never;
         options?: never;
@@ -9462,6 +9466,11 @@ export interface components {
         StaffingAssignmentDetail: {
             /** Activation Problems */
             activation_problems: string[];
+            /**
+             * Activation Warnings
+             * @default []
+             */
+            activation_warnings: string[];
             /** Activity */
             activity: string | null;
             /** Actual End Date */
@@ -17685,6 +17694,7 @@ export interface operations {
         parameters: {
             query?: {
                 confirm_engagement?: boolean;
+                confirm_overlap?: boolean;
             };
             header?: {
                 "X-API-Key"?: string | null;
@@ -17753,7 +17763,9 @@ export interface operations {
     };
     update_assignment_api_v1_staffing_assignments__assignment_id__patch: {
         parameters: {
-            query?: never;
+            query?: {
+                confirm_overlap?: boolean;
+            };
             header?: {
                 "X-API-Key"?: string | null;
             };
@@ -18550,6 +18562,7 @@ export interface operations {
         parameters: {
             query?: {
                 confirm_engagement?: boolean;
+                confirm_overlap?: boolean;
             };
             header?: {
                 "X-API-Key"?: string | null;

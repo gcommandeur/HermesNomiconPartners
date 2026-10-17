@@ -48,6 +48,7 @@ from cc_crm.services.staffing_contract_sync import (
     notify_contract_gap,
     sync_supply_contract_item,
 )
+from cc_crm.services.staffing_overlap import OverlapItem, find_overlaps, raise_if_unconfirmed
 
 # Status, in denen ein Einsatz noch änderbar ist (beendet/abgebrochen = Nachweis, eingefroren).
 _EDITABLE = (StaffingAssignmentStatus.PLANNED, StaffingAssignmentStatus.ACTIVE)
@@ -189,11 +190,10 @@ class StaffingAssignmentService:
             self.assignments.checklist(assignment_id), key=lambda item: order[item.item_key]
         )
         assignment = row.assignment
-        problems = (
-            StaffingActivationService(self.session).activation_problems(assignment_id, day)
-            if assignment.status == StaffingAssignmentStatus.PLANNED
-            else []
-        )
+        activation = StaffingActivationService(self.session)
+        planned = assignment.status == StaffingAssignmentStatus.PLANNED
+        problems = activation.activation_problems(assignment_id, day) if planned else []
+        warnings = activation.activation_warnings(assignment_id) if planned else []
         # "Überlassungsvertrag" ergibt sich live aus dem verknüpften Vertrag, nie aus einem Haken
         covered = contract_problem_for(self.session, assignment, day) is None
         checklist = [
@@ -212,6 +212,7 @@ class StaffingAssignmentService:
                 pair_deadline(self.session, assignment.worker_id, assignment.client_company_id, day)
             ),
             activation_problems=problems,
+            activation_warnings=warnings,
         )
 
     def _check_contract(self, contract_id: uuid.UUID, client_company_id: uuid.UUID) -> None:
@@ -221,7 +222,9 @@ class StaffingAssignmentService:
         if contract.client_company_id != client_company_id:
             raise BusinessRuleError("Der Vertrag gehört zu einem anderen Kunden.")
 
-    def create(self, payload: StaffingAssignmentCreate, actor: User) -> AssignmentRow:
+    def create(
+        self, payload: StaffingAssignmentCreate, actor: User, confirm_overlap: bool = False
+    ) -> AssignmentRow:
         worker = self.workers.get(payload.worker_id)
         if worker is None:
             raise EntityNotFoundError("Leiharbeitnehmer nicht gefunden")
@@ -237,6 +240,12 @@ class StaffingAssignmentService:
         owner_id = payload.owner_user_id or actor.id
         if self.session.get(User, owner_id) is None:
             raise EntityNotFoundError("Disponent nicht gefunden")
+        # Überschneidung mit einem anderen Einsatz derselben Person: nur warnen (409), mit
+        # Bestätigung trotzdem speichern.
+        overlaps = find_overlaps(
+            self.session, payload.worker_id, payload.start_date, payload.planned_end_date
+        )
+        raise_if_unconfirmed(overlaps, confirm_overlap, "anlegen")
         values = payload.model_dump()
         values["owner_user_id"] = owner_id
         # Lohn: ohne Angabe der Stammwert des Leiharbeitnehmers (Momentaufnahme zum Einsatzbeginn).
@@ -251,6 +260,15 @@ class StaffingAssignmentService:
             audit.log_created(
                 self.session, audit.ENTITY_ASSIGNMENT, assignment.id, values, actor.email
             )
+            if overlaps:
+                audit.log_event(
+                    self.session,
+                    audit.ENTITY_ASSIGNMENT,
+                    assignment.id,
+                    "overlap_acknowledged",
+                    actor.email,
+                    {"overlapping_assignments": [str(item.assignment_id) for item in overlaps]},
+                )
             self.session.commit()
         except IntegrityError as exception:
             self.session.rollback()
@@ -258,7 +276,11 @@ class StaffingAssignmentService:
         return self.get_row(assignment.id)
 
     def update(
-        self, assignment_id: uuid.UUID, payload: StaffingAssignmentUpdate, actor: User
+        self,
+        assignment_id: uuid.UUID,
+        payload: StaffingAssignmentUpdate,
+        actor: User,
+        confirm_overlap: bool = False,
     ) -> AssignmentRow:
         assignment: StaffingAssignment = self.get_row(assignment_id).assignment
         if assignment.status not in _EDITABLE:
@@ -276,6 +298,14 @@ class StaffingAssignmentService:
         end = values.get("planned_end_date", assignment.planned_end_date)
         if end is not None and end < start:
             raise BusinessRuleError("Geplantes Ende liegt vor dem Start.")
+        # Nur bei geänderten Daten erneut auf Überschneidung prüfen (eine schon bestätigte
+        # Überschneidung fragt bei Ort- oder Notizänderungen nicht erneut).
+        overlaps: list[OverlapItem] = []
+        if "start_date" in values or "planned_end_date" in values:
+            overlaps = find_overlaps(
+                self.session, assignment.worker_id, start, end, exclude_id=assignment.id
+            )
+            raise_if_unconfirmed(overlaps, confirm_overlap, "speichern")
         audit.log_updated(
             self.session, audit.ENTITY_ASSIGNMENT, assignment, assignment.id, values, actor.email
         )
@@ -287,6 +317,15 @@ class StaffingAssignmentService:
         # Lücke eine Aufgabe anlegen (blockiert nicht).
         sync_supply_contract_item(self.session, assignment, today)
         notify_contract_gap(self.session, assignment, contract_before, today)
+        if overlaps:
+            audit.log_event(
+                self.session,
+                audit.ENTITY_ASSIGNMENT,
+                assignment.id,
+                "overlap_acknowledged",
+                actor.email,
+                {"overlapping_assignments": [str(item.assignment_id) for item in overlaps]},
+            )
         if old_end is not None and end is not None and end > old_end:
             # Verlaengerung = neuer Deal im Provisionsmodell (services/commission_deals.py)
             self.session.add(

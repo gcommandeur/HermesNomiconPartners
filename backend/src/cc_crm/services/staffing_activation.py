@@ -22,6 +22,7 @@ from cc_crm.schemas.staffing import StaffingAssignmentStatusChange
 from cc_crm.services import staffing_audit as audit
 from cc_crm.services.staffing_assignments import StaffingAssignmentService
 from cc_crm.services.staffing_contract_sync import contract_problem_for, sync_supply_contract_item
+from cc_crm.services.staffing_overlap import find_overlaps, overlap_text
 
 CHECKLIST_LABELS: dict[StaffingChecklistKey, str] = {
     StaffingChecklistKey.EMPLOYMENT_CONTRACT: "Arbeitsvertrag / Nachweis (§ 11 AÜG)",
@@ -97,6 +98,20 @@ class StaffingActivationService:
         if missing:
             problems.append("Pflicht-Checkliste unvollständig (offen: " + ", ".join(missing) + ").")
         return problems
+
+    def activation_warnings(self, assignment_id: uuid.UUID) -> list[str]:
+        """Hinweise ohne Sperre: Überschneidung mit einem anderen Einsatz derselben Person."""
+        assignment = self.assignments.get_row(assignment_id).assignment
+        overlaps = find_overlaps(
+            self.session,
+            assignment.worker_id,
+            assignment.start_date,
+            assignment.planned_end_date,
+            exclude_id=assignment.id,
+        )
+        if not overlaps:
+            return []
+        return [f"{overlap_text(overlaps)} Die Aktivierung ist dadurch nicht gesperrt."]
 
     def change_status(
         self,

@@ -257,6 +257,8 @@ class StaffingAssignmentDetail(StaffingAssignmentRead):
     deadline: StaffingDeadlineRead
     # Nicht erfuellte Voraussetzungen für die Aktivierung (leer = aktivierbar).
     activation_problems: list[str]
+    # Hinweise, die die Aktivierung NICHT blockieren (z.B. Überschneidung mit anderem Einsatz).
+    activation_warnings: list[str] = []
 
 
 # --- Erlaubnis ----------------------------------------------------------------------------------

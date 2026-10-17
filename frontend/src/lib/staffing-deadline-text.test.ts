@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { formatPriorDays, overdueSummary } from "./staffing-deadline-text";
+import { formatPriorDays, isOverlapConflict, overdueSummary } from "./staffing-deadline-text";
+
+describe("isOverlapConflict", () => {
+  it("erkennt die Überschneidungs-Meldung des Servers", () => {
+    expect(isOverlapConflict("Überschneidung: Dieser Leiharbeitnehmer hat im selben Zeitraum bereits ...")).toBe(true);
+    expect(isOverlapConflict("Dieser Kandidat ist bereits im Austausch: ...")).toBe(false);
+  });
+});
 
 describe("overdueSummary", () => {
   it("steht im Singular und Plural", () => {

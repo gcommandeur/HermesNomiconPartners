@@ -10,6 +10,15 @@ class ConflictError(CcCrmError):
     pass
 
 
+class OverlapConflictError(ConflictError):
+    """NOMICON: Überlassung - ein anderer Einsatz desselben Leiharbeitnehmers liegt im selben
+    Zeitraum (HTTP 409). `overlaps` ist die Liste der überschneidenden Einsätze für die Antwort."""
+
+    def __init__(self, message: str, overlaps: list[dict[str, object]]) -> None:
+        super().__init__(message)
+        self.overlaps = overlaps
+
+
 class BusinessRuleError(CcCrmError):
     pass
 

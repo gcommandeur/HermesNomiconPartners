@@ -15939,6 +15939,14 @@
             "title": "Activation Problems",
             "type": "array"
           },
+          "activation_warnings": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Activation Warnings",
+            "type": "array"
+          },
           "activity": {
             "anyOf": [
               {
@@ -34304,6 +34312,7 @@
         ]
       },
       "post": {
+        "description": "Überschneidet sich der Zeitraum mit einem anderen Einsatz derselben Person, antwortet die API\nmit 409 (Liste `overlaps`); `confirm_overlap=true` speichert trotzdem und protokolliert es.",
         "operationId": "create_assignment_api_v1_staffing_assignments_post",
         "parameters": [
           {
@@ -34313,6 +34322,16 @@
             "schema": {
               "default": false,
               "title": "Confirm Engagement",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "confirm_overlap",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Confirm Overlap",
               "type": "boolean"
             }
           },
@@ -34450,6 +34469,16 @@
               "format": "uuid",
               "title": "Assignment Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "confirm_overlap",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Confirm Overlap",
+              "type": "boolean"
             }
           },
           {
@@ -36043,6 +36072,16 @@
             "schema": {
               "default": false,
               "title": "Confirm Engagement",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "confirm_overlap",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Confirm Overlap",
               "type": "boolean"
             }
           },

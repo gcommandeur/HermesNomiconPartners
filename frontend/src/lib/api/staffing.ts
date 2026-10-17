@@ -253,12 +253,19 @@ export interface NewAssignmentInput {
   notes?: string | null;
 }
 
-export function createStaffingAssignment(input: NewAssignmentInput, confirmEngagement = false) {
-  return apiPost<StaffingAssignment>(`/staffing/assignments${confirmEngagement ? "?confirm_engagement=true" : ""}`, input);
+/** Bestätigungen als Abfrageparameter: `confirm_engagement` (Kandidat schon im Austausch) und
+ * `confirm_overlap` (anderer Einsatz derselben Person im selben Zeitraum). */
+function confirmQuery(confirmEngagement: boolean, confirmOverlap: boolean): string {
+  const params = [confirmEngagement ? "confirm_engagement=true" : "", confirmOverlap ? "confirm_overlap=true" : ""].filter(Boolean);
+  return params.length > 0 ? `?${params.join("&")}` : "";
 }
 
-export function updateStaffingAssignment(id: string, input: Partial<Omit<NewAssignmentInput, "worker_id" | "client_company_id">>) {
-  return apiPatch<StaffingAssignmentDetail>(`/staffing/assignments/${id}`, input);
+export function createStaffingAssignment(input: NewAssignmentInput, confirmEngagement = false, confirmOverlap = false) {
+  return apiPost<StaffingAssignment>(`/staffing/assignments${confirmQuery(confirmEngagement, confirmOverlap)}`, input);
+}
+
+export function updateStaffingAssignment(id: string, input: Partial<Omit<NewAssignmentInput, "worker_id" | "client_company_id">>, confirmOverlap = false) {
+  return apiPatch<StaffingAssignmentDetail>(`/staffing/assignments/${id}${confirmQuery(false, confirmOverlap)}`, input);
 }
 
 export function changeStaffingAssignmentStatus(id: string, status: StaffingAssignmentStatus, actualEndDate?: string) {
@@ -417,8 +424,9 @@ export function saveTakeoverFeeTiers(tiers: TakeoverFeeTier[]) {
 export function offerCandidateAsAssignment(
   input: { candidate_id: string; client_company_id?: string | null; start_date?: string | null; planned_end_date?: string | null },
   confirmEngagement = false,
+  confirmOverlap = false,
 ) {
-  return apiPost<StaffingOfferResult>(`/staffing/offer-from-candidate${confirmEngagement ? "?confirm_engagement=true" : ""}`, input);
+  return apiPost<StaffingOfferResult>(`/staffing/offer-from-candidate${confirmQuery(confirmEngagement, confirmOverlap)}`, input);
 }
 
 export function takeOverStaffingAssignment(
