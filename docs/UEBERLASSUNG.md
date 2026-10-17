@@ -29,7 +29,9 @@ und die Einsätze folgen eigenen Regeln).
 | `staffing_workers` | 1:1 zu `candidates`; Status (Anwärter, aktiv, ruhend, ausgeschieden), Eintritt/Austritt, Stundenlohn, Entgeltgruppe, Wochenstunden, Arbeitserlaubnis gültig bis, Notizen |
 | `staffing_contracts` | Überlassungs-/Rahmenvertrag je Kunde: Nummer, gültig von/bis, Branche (Branchenzuschlag), Dokument, Status |
 | `staffing_assignments` | Einsatz: Leiharbeitnehmer, Kunde, Vertrag, Disponent (`owner_user_id`), Beginn, geplantes/tatsächliches Ende, Ort, Tätigkeit, Verrechnungssatz, Lohn, Status (geplant, aktiv, beendet, abgebrochen) |
+| `staffing_assignments` (Ergänzung, Migration `nomicon08equalpay`) | zusätzlich `equal_pay_confirmed_on` und `equal_pay_confirmed_by_user_id`: der Disponent hat den Lohn bei Equal Pay geprüft und angeglichen (siehe „Equal Pay mit Folge“) |
 | `staffing_assignment_checklist_items` | sechs Pflichtpunkte je Einsatz (Arbeitsvertrag/Nachweis § 11, Merkblatt, Überlassungsvertrag § 12, Konkretisierung, Sicherheitsunterweisung, PSA-Protokoll) mit erledigt/Datum/Dokument |
+| `staffing_prior_periods` | **Vorzeiten beim Kunden** (Migration `nomicon07prior`): früher geleistete Überlassungszeiten desselben Leiharbeitnehmers beim selben Kunden (anderer Verleiher, vor CRM-Start, sonstiges) mit Beginn, Ende, Herkunft, Notiz |
 | `staffing_licenses` | Erlaubnis nach AÜG: Behörde, Aktenzeichen, gültig von/bis (leer = unbefristet), Dokument, Erinnerungsvorlauf in Tagen |
 | `staffing_timesheets`, `staffing_timesheet_entries` | Stundenzettel je Einsatz und Zeitraum (Paket G); Freigabe-Token nur als Hash |
 
@@ -72,10 +74,59 @@ Beispiele (Standardwerte): Beginn 1.1.2025, ohne Lücke → Equal Pay ab 1.10.20
 30.6.2026. Einsatz 1.1.–31.3.2025, nächster ab 1.7.2025 (Lücke genau 3 Monate) → Zähler läuft weiter,
 Höchstdauer bis 29.9.2026; nächster ab 2.7.2025 → Zähler beginnt neu.
 
+**Vorzeiten beim Kunden (seit 2026-10-17, Annahme, kein Rechtsrat).** Zeiten früherer Überlassungen an
+denselben Entleiher zählen vollständig mit, auch bei einem anderen Verleiher oder vor dem CRM-Start.
+Sie werden je Leiharbeitnehmer erfasst (Leiharbeitnehmer-Detail und Kandidaten-Reiter „Überlassung“,
+Abschnitt „Vorzeiten beim Kunden“; API `GET|POST /staffing/workers/{id}/prior-periods`,
+`PATCH|DELETE /staffing/prior-periods/{id}`; Löschen ist als Eingabekorrektur erlaubt und steht im
+Audit-Log). Eine Vorzeit ist **immer abgeschlossen** (Ende ≥ Beginn, Ende nicht in der Zukunft) und
+trägt keinen Lohn. Der Rechenkern nimmt sie als zusätzliche Zeiträume (`compute_deadline(...,
+prior_spans=...)`): Vereinigung und Reset-Regel wie bei Einsätzen (Lücke bis 3 Monate verbindet, länger
+setzt zurück – auch zwischen Vorzeit und Einsatz); `prior_days` nennt die Tage der Kette, die **nur**
+aus Vorzeiten stammen („inkl. 10 Monate Vorzeit“ in der Fristanzeige). Das Equal-Pay-Datum rückt
+dadurch nach vorn. Vorzeiten eines anderen Kunden zählen nicht. Die Vorzeiten gehören zum
+Leiharbeitnehmer (gemeinsamer Pool wie die Person), nicht zu einem Einsatz; Rechte wie die übrigen
+Überlassungs-Routen. Beim Anlegen eines Einsatzes weist die Maske darauf hin, Vorzeiten zuerst zu
+erfassen (Hinweis, kein Zwang).
+
+**Überfällige Einsätze (seit 2026-10-17).** Ein **aktiver** Einsatz, dessen geplantes Ende vorbei ist,
+zählt in der Fristrechnung als **offen** (Ende „offen“), bis er beendet oder verlängert wird — die
+vorsichtige Richtung (Restlaufzeit kürzer, die Kette erlischt nicht, nur weil niemand das Ende pflegt).
+Die reine Funktion bleibt rein; nur die Zuordnung `assignment_span(assignment, heute)` kennt „heute“.
+Der tägliche Job legt am Tag nach dem geplanten Ende eine **Aufgabe mit hoher Priorität** für den
+Disponenten an („Einsatz überfällig: … bei … — beenden oder verlängern“), einmalig je Einsatz **und**
+geplantem Ende (wird das Ende verlängert und erneut überschritten, entsteht wieder eine). Die
+Übersicht zeigt eine Warnzeile „N Einsätze überfällig“ mit Link auf die gefilterte Einsatzliste
+(`/ueberlassung/einsaetze?ueberfaellig=1`, API `GET /assignments?overdue=true`); die Liste trägt das
+Kennzeichen „Überfällig“ (`is_overdue`), die Aufgabenliste der Ansicht eine rote Aufgabe
+`assignment_overdue`.
+
+**Vorläufige Fristen (seit 2026-10-17).** `DeadlineResult.provisional` (und die API) ist wahr, wenn die
+Kette einen **geplanten** (noch nicht aktivierten) Einsatz enthält oder ein Einsatz **ohne Enddatum**
+zählt; `provisional_reasons` nennt die Gründe (`planned_assignment`, `open_end`). Die Oberfläche zeigt
+dann ein kleines Kennzeichen „vorläufig“ mit Tooltip („Einsatz noch nicht aktiviert“ / „kein Enddatum
+erfasst“). Die **Ampelfarbe bleibt unverändert**. Vorzeiten allein machen eine Frist nicht vorläufig.
+
+**Equal Pay mit Folge (seit 2026-10-17, Annahme, kein Rechtsrat).** Ab dem Equal-Pay-Datum der Kette
+legt der Job eine Aufgabe für den Disponenten an: „Equal Pay gilt ab TT.MM.JJJJ: Lohn von X bei Y prüfen
+und angleichen“ — einmalig je Paar und Kette (Kennung `…:equal_pay:<Kettenbeginn>:<Nutzer>`).
+**Erledigt**, sobald `equal_pay_confirmed_on` an einem Einsatz des Paares gesetzt ist: die Aufgabe wird
+auf „erledigt“ gestellt und nicht neu erzeugt. Eine Bestätigung zählt nur für die **aktuelle Kette**
+(Datum am oder nach dem Kettenbeginn; nach einem Reset beginnt Equal Pay von vorn). **Vorwarnung:** 30
+Tage vor dem Datum entsteht einmalig ein Hinweis („Equal Pay beginnt am …“, normale Priorität).
+Bestätigen: `POST /assignments/{id}/equal-pay-confirmation` (optional `confirmed_on`, Standard heute;
+nicht in der Zukunft, nicht vor Einsatzbeginn), zurücknehmen `DELETE` derselben Adresse (Eingabekorrektur);
+beides mit Audit-Eintrag (`equal_pay_confirmed` / `equal_pay_unconfirmed`) und nur für geplante/aktive
+Einsätze. Das Bestätigen darf **jeder mit Zugriff auf den Einsatz**; die **Lohnhöhe sehen und ändern
+weiter nur Admins** — Aufgabentexte, Aufgabenliste und Antworten enthalten nur Namen und Datum, nie Lohn
+oder Marge (per Test belegt, für Admin und Nicht-Admin). Oberfläche: Feld „Equal Pay — bestätigt am …“
+mit Schaltfläche im Einsatz, am Leiharbeitnehmer und im Kandidaten-Reiter; in der Frist-Übersicht das
+Kennzeichen „Equal Pay offen“.
+
 **Täglicher Job** `scripts/run_staffing_deadlines.py` (`services/staffing_deadline_job.py`): legt
 Aufgaben (`tasks`) an — an den Disponenten des Paares (ohne Disponent: an alle aktiven Admins) bei
-gelb, rot, überschritten und Equal-Pay-Beginn, und an die Admins für ablaufende/abgelaufene
-Erlaubnisse. Je Paar und Stufe genau **eine** Aufgabe (Kennung in der Beschreibung), auch wenn sie
+gelb, rot, überschritten, Equal-Pay-Beginn (mit Vorwarnung) und überfälligen Einsätzen, und an die
+Admins für ablaufende/abgelaufene Erlaubnisse. Je Paar und Stufe genau **eine** Aufgabe (Kennung in der Beschreibung), auch wenn sie
 erledigt ist; ändert sich die Kette (neuer Beginn), kommen neue Aufgaben. Die Aufgaben erscheinen in
 der Aufgabenliste und in der vorhandenen täglichen Fälligkeits-Mail.
 
@@ -86,13 +137,52 @@ endgültig und nicht mehr änderbar. Ein Einsatz wird nur **aktiv**, wenn
 
 1. eine gültige AÜG-Erlaubnis den Zeitraum abdeckt (Beginn bis geplantes Ende; ohne geplantes Ende bis
    heute — eine später ablaufende Erlaubnis meldet der tägliche Job) **und**
-2. die Pflicht-Checkliste vollständig ist **und**
-3. der Einsatz begonnen hat (Beginn ≤ heute, seit 2026-10-16; ein Einsatz in der Zukunft bleibt „geplant“).
+2. am Einsatz ein **Überlassungsvertrag** verknüpft ist, der den Zeitraum abdeckt (seit 2026-10-17, siehe
+   unten) **und**
+3. die Pflicht-Checkliste vollständig ist **und**
+4. der Einsatz begonnen hat (Beginn ≤ heute, seit 2026-10-16; ein Einsatz in der Zukunft bleibt „geplant“).
 
-Die Fehlermeldung nennt beide Probleme, z. B. „Keine gültige AÜG-Erlaubnis für den Zeitraum … Pflicht-Checkliste
-unvollständig (offen: Merkblatt …)“. Mit der ersten Aktivierung wird ein Anwärter automatisch zum
+Die Fehlermeldung nennt alle Probleme gemeinsam, z. B. „Keine gültige AÜG-Erlaubnis für den Zeitraum … Kein
+Überlassungsvertrag am Einsatz verknüpft … Pflicht-Checkliste unvollständig (offen: Merkblatt …)“. Mit der ersten Aktivierung wird ein Anwärter automatisch zum
 aktiven Leiharbeitnehmer. **Annahme:** Eine überschrittene Höchstdauer blockiert die Aktivierung
 nicht; sie wird als rote Frist angezeigt und als Aufgabe gemeldet.
+
+### Überschneidung desselben Leiharbeitnehmers (seit 2026-10-17, Entscheidung: nur warnen)
+
+Beim Anlegen und beim Ändern von Beginn/Ende eines Einsatzes prüft `services/staffing_overlap.py`, ob für
+**denselben** Leiharbeitnehmer ein anderer geplanter oder aktiver Einsatz (gleicher **oder** anderer Kunde)
+im selben Zeitraum liegt (Zeiträume inklusive; angrenzende Tage überschneiden sich nicht; abgebrochene und
+beendete Einsätze zählen nicht; ohne geplantes Ende läuft ein Einsatz offen). Treffer: **409** mit der Meldung
+„Überschneidung: …“ und der Liste `overlaps` (Einsatz-ID, Kunde, Beginn, geplantes Ende, Status — **ohne
+Lohn und Verrechnungssatz**). Mit `confirm_overlap=true` (Einsatz anlegen, ändern, „Als Einsatz anbieten“)
+wird trotzdem gespeichert und ein Audit-Eintrag `overlap_acknowledged` mit den überschneidenden Einsätzen
+geschrieben. Eine bereits bestätigte Überschneidung fragt bei Änderungen ohne Datumsänderung nicht erneut.
+Die Aktivierung sperrt **nicht**: `activation_problems` bleibt unverändert, der Einsatz-Detail liefert
+zusätzlich `activation_warnings` (nur Hinweis). Die Oberfläche zeigt einen Bestätigungsdialog („Trotzdem
+anlegen“ / „Trotzdem speichern“). Rechte und 404-Regeln sind unverändert.
+
+### Überlassungsvertrag (§ 12 AÜG) als Aktivierungsvoraussetzung (seit 2026-10-17)
+
+`services/staffing_contract_check.py` (reine Funktion). Der Vertrag **deckt** den Einsatz, wenn er (a) dem
+Kunden des Einsatzes gehört, (b) den Status *aktiv* hat, (c) ein Gültig-ab hat, das nicht nach dem
+Einsatzbeginn liegt (ohne Gültig-ab gilt er als nicht belegt – die Meldung sagt das), und (d) `valid_to`
+leer ist oder nicht vor dem Ende des geprüften Zeitraums liegt. Der Zeitraum ist derselbe wie bei der
+Erlaubnis: Beginn bis geplantes Ende, ohne Plan bis heute. Jede Verletzung hat eine eigene deutsche Meldung.
+
+* Der Checklistenpunkt „Überlassungsvertrag“ wird **nicht mehr von Hand abgehakt**: er ergibt sich aus
+  dieser Prüfung (Detailansicht und Zähler rechnen ihn live; der gespeicherte Haken wird bei jeder Änderung
+  von Einsatz oder Vertrag und bei der Aktivierung nachgezogen). Ein manueller Versuch (abhaken oder
+  zurücknehmen) liefert 422 mit Erklärung.
+* **Bestehende Einsätze werden nicht rückwirkend verändert.** Die Regel greift bei der nächsten
+  Aktivierung; bereits aktive Einsätze ohne Vertrag listet `backend/scripts/list_active_assignments_without_contract.py`
+  (nur lesend, ohne Lohnwerte).
+* Ändert sich Vertrag (Status, Gültigkeit) oder Einsatz (Vertrag, Beginn, geplantes Ende) eines **aktiven**
+  Einsatzes so, dass der Vertrag den Zeitraum **nicht mehr** deckt, entsteht einmalig eine **Aufgabe** für den
+  Disponenten (ohne Disponent: aktive Admins; Kennung `[staffing-contract:…]` mit dem Zustand von Vertrag und
+  Zeitraum, nur der Übergang „gedeckt → nicht gedeckt“ löst aus). Die Änderung wird **nicht blockiert**; der
+  Aufgabentext enthält keine Lohn- oder Margenwerte.
+* Oberfläche: Im Einsatz steht die Pflichtauswahl „Überlassungsvertrag“ vor „Einsatz aktivieren“ (mit dem
+  Grund, falls er den Zeitraum nicht deckt); die Checkliste zeigt den Punkt als „ergibt sich aus dem Vertrag“.
 
 ## Status eines Leiharbeitnehmers (eine Regel für Liste, Board, Fristen, Kennzahlen)
 
@@ -145,8 +235,10 @@ Kopfbereich der Kandidatenseite (gemeinsamer Kandidatenstatus mit Konflikt-Hinwe
 ## Schnittstellen (`/api/v1/staffing`)
 
 `GET /overview`, `GET /deadlines`, `GET|PUT /settings`; `GET|POST /workers`, `GET /workers/by-candidate/{id}`,
-`GET|PATCH /workers/{id}`; `GET|POST /contracts`, `GET|PATCH /contracts/{id}`; `GET|POST /assignments`,
+`GET|PATCH /workers/{id}`; `GET|POST /workers/{id}/prior-periods`, `PATCH|DELETE /prior-periods/{id}`;
+`GET|POST /contracts`, `GET|PATCH /contracts/{id}`; `GET|POST /assignments`,
 `GET|PATCH /assignments/{id}`, `POST /assignments/{id}/status`, `PATCH /assignments/{id}/checklist/{item}`;
+`POST|DELETE /assignments/{id}/equal-pay-confirmation`, `GET /assignments?overdue=true`;
 `GET|POST /licenses`, `PATCH /licenses/{id}`. Das OpenAPI-Schema (`/docs`) beschreibt Felder und Fehler.
 
 ## Stundenzettel und Kundenfreigabe
@@ -234,13 +326,18 @@ Es gibt **keine neuen Umgebungsvariablen**. Zu tun (nur der Nutzer, nicht von Cl
 `python scripts/seed_data.py seed --candidates 60 --staffing 8` (nur lokale Entwicklungs-Datenbank,
 nie Produktion). Es entstehen Leiharbeitnehmer, Verträge, eine Beispiel-Erlaubnis und Einsätze für
 mehrere Fälle (Frist rot/gelb/grün, Lücke unter 3 Monaten, geplanter und beendeter Einsatz, Anwärter ohne
-Einsatz), alle über die echten Services und Regeln.
+Einsatz), alle über die echten Services und Regeln. Seit 2026-10-17 zusätzlich: eine Person mit **Vorzeit**
+(10 Monate bei einem Kunden), ein **überfälliger** aktiver Einsatz, ein Einsatz mit **bestätigter
+Überschneidung**, ein Einsatz **kurz vor/nach Equal Pay** (offen und bestätigt) und ein aktiver Einsatz, dessen
+**Vertrag den Zeitraum nicht mehr deckt**. Das Seed-Skript ist idempotent (`seed_staffing.py` erkennt seine
+Demo-Fälle an den Kandidaten).
 
 ## Offene rechtliche und fachliche Fragen (an Nutzer / Fachanwalt)
 
 1. **Zählweise:** Kalendermonate oder Einsatztage? (Umgesetzt: Einsatztage, Lücken zählen nicht mit.)
-2. **Verleiherwechsel / Konzernverbund:** Einsatzzeiten desselben Kunden bei anderen Verleihern werden
-   nicht berücksichtigt (nur eigene Einsätze).
+2. **Verleiherwechsel / Konzernverbund:** Einsatzzeiten desselben Kunden bei anderen Verleihern zählen
+   über die manuell erfassten **Vorzeiten** mit (seit 2026-10-17); eine automatische Erkennung gibt es nicht.
+   Ob auch Zeiten innerhalb eines Konzernverbunds zusammengerechnet werden müssen, ist offen.
 3. **Abweichungen durch Tarifvertrag** (Höchstdauer, Equal Pay nach 15 Monaten mit Branchenzuschlag):
    derzeit nur über die einstellbaren Werte abbildbar, nicht je Kunde/Branche.
 4. **Überschrittene Höchstdauer:** soll die Aktivierung oder Verlängerung blockiert werden?
