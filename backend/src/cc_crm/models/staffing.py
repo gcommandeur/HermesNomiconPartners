@@ -152,6 +152,12 @@ class StaffingAssignment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
     )
     notes: Mapped[str | None] = mapped_column(Text)
+    # Equal Pay: Disponent hat Lohn geprüft und angeglichen (siehe services/staffing_equal_pay.py).
+    # Gilt für das ganze Paar; das Datum ordnet die Bestätigung der aktuellen Kette zu.
+    equal_pay_confirmed_on: Mapped[date | None] = mapped_column(Date)
+    equal_pay_confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
 
 
 class StaffingAssignmentExtension(UUIDPrimaryKeyMixin, TimestampMixin, Base):

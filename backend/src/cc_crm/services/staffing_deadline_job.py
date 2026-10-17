@@ -33,6 +33,11 @@ from cc_crm.services.staffing_deadlines import (
     Traffic,
     compute_deadline,
 )
+from cc_crm.services.staffing_equal_pay import (
+    EQUAL_PAY_PREWARN_DAYS,
+    close_equal_pay_tasks,
+    pair_equal_pay_confirmed_on,
+)
 from cc_crm.services.staffing_settings import load_config
 
 _BERLIN = ZoneInfo("Europe/Berlin")
@@ -189,15 +194,39 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
                     TaskPriority.URGENT if deadline.traffic == Traffic.RED else TaskPriority.HIGH,
                 )
             )
-        if deadline.equal_pay_reached:
+        # Equal Pay mit Folge: Aufgabe "Lohn prüfen und angleichen", erledigt mit der Bestätigung
+        # am Einsatz. Die Texte nennen nur Namen und Datum - nie Lohn- oder Margenwerte.
+        confirmed_on = pair_equal_pay_confirmed_on(
+            session, worker_id, client_id, deadline.chain_start
+        )
+        if confirmed_on is not None:
+            close_equal_pay_tasks(session, worker_id, client_id)
+        elif deadline.equal_pay_from is not None and deadline.equal_pay_reached:
             levels.append(
                 (
                     "equal_pay",
-                    f"Equal Pay ab jetzt: {worker_name} bei {client_name}",
+                    f"Equal Pay gilt ab {deadline.equal_pay_from:%d.%m.%Y}: Lohn von "
+                    f"{worker_name} bei {client_name} prüfen und angleichen",
                     f"Seit {deadline.equal_pay_from:%d.%m.%Y} gilt Equal Pay (gleiches Entgelt wie "
-                    "die Stammbelegschaft). Lohn und Verrechnungssatz prüfen. Hinweis: kein "
-                    "Rechtsrat, Tarifverträge können abweichen.",
+                    "die Stammbelegschaft). Bitte den Lohn prüfen, angleichen und danach im "
+                    "Einsatz „Equal Pay bestätigen“. Hinweis: kein Rechtsrat, Tarifverträge "
+                    "können abweichen.",
                     TaskPriority.HIGH,
+                )
+            )
+        elif (
+            deadline.equal_pay_from is not None
+            and 0 < (deadline.equal_pay_from - day).days <= EQUAL_PAY_PREWARN_DAYS
+        ):
+            levels.append(
+                (
+                    "equal_pay_soon",
+                    f"Equal Pay beginnt am {deadline.equal_pay_from:%d.%m.%Y}: "
+                    f"{worker_name} bei {client_name}",
+                    f"In {(deadline.equal_pay_from - day).days} Tag(en), am "
+                    f"{deadline.equal_pay_from:%d.%m.%Y}, gilt Equal Pay. Den Lohn rechtzeitig "
+                    "prüfen. Hinweis: kein Rechtsrat, Tarifverträge können abweichen.",
+                    TaskPriority.NORMAL,
                 )
             )
         for level, title, body, priority in levels:

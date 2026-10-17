@@ -44,6 +44,7 @@ export const DEMO_ASSIGNMENTS: StaffingAssignment[] = [
     owner_user_id: null, start_date: "2025-03-01", planned_end_date: null, actual_end_date: null,
     location: "Lager Nord", activity: "Kommissionierung", billing_rate: null, hourly_wage: null,
     status: "active", notes: null, checklist_done: 6, checklist_total: 6, is_overdue: false,
+    equal_pay_confirmed_on: null, equal_pay_confirmed_by_user_id: null,
   },
   {
     id: ID(22), created_at: STAMP, updated_at: STAMP, worker_id: ID(2), worker_name: "Jonas Muster",
@@ -51,6 +52,7 @@ export const DEMO_ASSIGNMENTS: StaffingAssignment[] = [
     owner_user_id: null, start_date: "2026-02-01", planned_end_date: "2026-07-31", actual_end_date: null,
     location: "Lager Süd", activity: "Staplerfahrer", billing_rate: null, hourly_wage: null,
     status: "planned", notes: null, checklist_done: 2, checklist_total: 6, is_overdue: false,
+    equal_pay_confirmed_on: null, equal_pay_confirmed_by_user_id: null,
   },
 ];
 
@@ -67,6 +69,7 @@ export const DEMO_ASSIGNMENT_DETAIL: StaffingAssignmentDetail = {
     has_chain: true, chain_start: "2026-02-01", elapsed_months: 0, elapsed_days: 0, counted_days: 0,
     equal_pay_from: "2026-11-01", equal_pay_reached: false, max_end_date: "2027-07-31",
     days_remaining: 500, exceeded: false, traffic: "green", prior_days: 0,
+    equal_pay_confirmed_on: null, equal_pay_open: false,
   },
   activation_warnings: [],
   activation_problems: [
@@ -82,6 +85,7 @@ export const DEMO_DEADLINES: StaffingPairDeadline[] = [
     chain_start: "2025-03-01", elapsed_months: 10, elapsed_days: 5, counted_days: 310,
     equal_pay_from: "2025-12-01", equal_pay_reached: true, max_end_date: "2026-08-31",
     days_remaining: 55, exceeded: false, traffic: "yellow", prior_days: 120,
+    equal_pay_confirmed_on: null, equal_pay_open: true, assignment_id: ID(21),
   },
 ];
 

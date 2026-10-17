@@ -16026,6 +16026,30 @@
           "deadline": {
             "$ref": "#/components/schemas/StaffingDeadlineRead"
           },
+          "equal_pay_confirmed_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equal Pay Confirmed By User Id"
+          },
+          "equal_pay_confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equal Pay Confirmed On"
+          },
           "hourly_wage": {
             "anyOf": [
               {
@@ -16215,6 +16239,30 @@
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "equal_pay_confirmed_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equal Pay Confirmed By User Id"
+          },
+          "equal_pay_confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equal Pay Confirmed On"
           },
           "hourly_wage": {
             "anyOf": [
@@ -17173,6 +17221,18 @@
             "title": "Elapsed Months",
             "type": "integer"
           },
+          "equal_pay_confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equal Pay Confirmed On"
+          },
           "equal_pay_from": {
             "anyOf": [
               {
@@ -17184,6 +17244,11 @@
               }
             ],
             "title": "Equal Pay From"
+          },
+          "equal_pay_open": {
+            "default": false,
+            "title": "Equal Pay Open",
+            "type": "boolean"
           },
           "equal_pay_reached": {
             "title": "Equal Pay Reached",
@@ -17281,6 +17346,24 @@
           "bench"
         ],
         "title": "StaffingDispositionRead",
+        "type": "object"
+      },
+      "StaffingEqualPayConfirm": {
+        "properties": {
+          "confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed On"
+          }
+        },
+        "title": "StaffingEqualPayConfirm",
         "type": "object"
       },
       "StaffingInvoiceCreate": {
@@ -18017,6 +18100,18 @@
       },
       "StaffingPairDeadlineRead": {
         "properties": {
+          "assignment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment Id"
+          },
           "chain_start": {
             "anyOf": [
               {
@@ -18061,6 +18156,18 @@
             "title": "Elapsed Months",
             "type": "integer"
           },
+          "equal_pay_confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equal Pay Confirmed On"
+          },
           "equal_pay_from": {
             "anyOf": [
               {
@@ -18072,6 +18179,11 @@
               }
             ],
             "title": "Equal Pay From"
+          },
+          "equal_pay_open": {
+            "default": false,
+            "title": "Equal Pay Open",
+            "type": "boolean"
           },
           "equal_pay_reached": {
             "title": "Equal Pay Reached",
@@ -34620,6 +34732,151 @@
           }
         ],
         "summary": "Update Checklist Item",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/assignments/{assignment_id}/equal-pay-confirmation": {
+      "delete": {
+        "description": "Bestätigung zurücknehmen (Eingabekorrektur, mit Audit-Eintrag).",
+        "operationId": "unconfirm_equal_pay_api_v1_staffing_assignments__assignment_id__equal_pay_confirmation_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingAssignmentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unconfirm Equal Pay",
+        "tags": [
+          "staffing"
+        ]
+      },
+      "post": {
+        "description": "Equal Pay bestätigen: Lohn geprüft und angeglichen. Darf jeder mit Zugriff auf den Einsatz;\ndie Lohnhöhe selbst sehen und ändern weiter nur Admins. Erledigt die Equal-Pay-Aufgabe.",
+        "operationId": "confirm_equal_pay_api_v1_staffing_assignments__assignment_id__equal_pay_confirmation_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/StaffingEqualPayConfirm"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingAssignmentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Confirm Equal Pay",
         "tags": [
           "staffing"
         ]

@@ -13,6 +13,7 @@ import { formatDate } from "@/lib/utils";
 import { candidateStaffingActions } from "@/lib/staffing-candidate";
 import { StaffingAssignmentCreateButton } from "./staffing-assignment-create-modal";
 import { StaffingAssignmentsView } from "./staffing-assignments-view";
+import { EqualPayBox } from "./staffing-equal-pay";
 import { StaffingPriorPeriodsSection } from "./staffing-prior-periods";
 import { WorkerCreateFromCandidate, WorkerEditModal } from "./staffing-workers-view";
 import { DeadlineMeter, Fact, LEGAL_NOTICE, LoadError, LoadingRows, WorkerStatusBadge } from "./staffing-ui";
@@ -135,6 +136,7 @@ export function StaffingCandidatePanel({ candidateId }: { candidateId: string })
                 <CardContent>
                   <p className="mb-2 text-sm font-semibold">{deadline.client_name}</p>
                   <DeadlineMeter deadline={deadline} />
+                  <EqualPayBox assignmentId={deadline.assignment_id} deadline={deadline} />
                   <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <Fact label="Spätester Einsatztag">{deadline.max_end_date ? formatDate(deadline.max_end_date) : null}</Fact>
                     <Fact label="Equal Pay ab">{deadline.equal_pay_from ? formatDate(deadline.equal_pay_from) : null}</Fact>

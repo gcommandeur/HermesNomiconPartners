@@ -36,6 +36,7 @@ from cc_crm.schemas.staffing import (
     StaffingContractCreate,
     StaffingContractRead,
     StaffingContractUpdate,
+    StaffingEqualPayConfirm,
     StaffingInvoiceCreate,
     StaffingInvoiceRead,
     StaffingInvoiceStatusResult,
@@ -84,6 +85,7 @@ from cc_crm.services.staffing_assignments import (
 from cc_crm.services.staffing_candidates import candidate_summaries, worker_timesheet_summary
 from cc_crm.services.staffing_deadlines import DeadlineConfig
 from cc_crm.services.staffing_disposition import disposition
+from cc_crm.services.staffing_equal_pay import StaffingEqualPayService
 from cc_crm.services.staffing_invoices import StaffingInvoiceService
 from cc_crm.services.staffing_licenses import StaffingLicenseService
 from cc_crm.services.staffing_overview import DISCLAIMER, overview, pair_deadlines
@@ -426,6 +428,38 @@ def change_assignment_status(
 ) -> StaffingAssignmentDetail:
     """Aktivierung nur mit gültiger AÜG-Erlaubnis und vollständiger Pflicht-Checkliste."""
     StaffingActivationService(session).change_status(assignment_id, payload, current_user)
+    return redact(StaffingAssignmentService(session).detail(assignment_id), current_user)
+
+
+@router.post(
+    "/assignments/{assignment_id}/equal-pay-confirmation",
+    dependencies=[AssignmentAccess],
+    response_model=StaffingAssignmentDetail,
+)
+def confirm_equal_pay(
+    assignment_id: uuid.UUID,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+    payload: StaffingEqualPayConfirm | None = None,
+) -> StaffingAssignmentDetail:
+    """Equal Pay bestätigen: Lohn geprüft und angeglichen. Darf jeder mit Zugriff auf den Einsatz;
+    die Lohnhöhe selbst sehen und ändern weiter nur Admins. Erledigt die Equal-Pay-Aufgabe."""
+    StaffingEqualPayService(session).confirm(
+        assignment_id, current_user, payload.confirmed_on if payload else None
+    )
+    return redact(StaffingAssignmentService(session).detail(assignment_id), current_user)
+
+
+@router.delete(
+    "/assignments/{assignment_id}/equal-pay-confirmation",
+    dependencies=[AssignmentAccess],
+    response_model=StaffingAssignmentDetail,
+)
+def unconfirm_equal_pay(
+    assignment_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> StaffingAssignmentDetail:
+    """Bestätigung zurücknehmen (Eingabekorrektur, mit Audit-Eintrag)."""
+    StaffingEqualPayService(session).clear(assignment_id, current_user)
     return redact(StaffingAssignmentService(session).detail(assignment_id), current_user)
 
 

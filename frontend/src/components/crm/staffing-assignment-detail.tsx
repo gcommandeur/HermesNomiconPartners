@@ -25,6 +25,7 @@ import {
   type StaffingAssignmentStatus,
 } from "@/lib/api/staffing";
 import { formatDate } from "@/lib/utils";
+import { EqualPayBox } from "./staffing-equal-pay";
 import { StaffingTimesheetsPanel } from "./staffing-timesheets-panel";
 import {
   AssignmentStatusBadge,
@@ -150,6 +151,7 @@ export function StaffingAssignmentDetailView({ id }: { id: string }) {
           <CardContent>
             <h3 className="font-semibold">Fristen (Paar {assignment.worker_name} / {assignment.client_name})</h3>
             <div className="mt-4"><DeadlineMeter deadline={assignment.deadline} /></div>
+            <EqualPayBox assignmentId={id} deadline={assignment.deadline} editable={editable} />
             <p className="mt-4 text-xs text-brand-muted">{LEGAL_NOTICE}</p>
           </CardContent>
         </Card>

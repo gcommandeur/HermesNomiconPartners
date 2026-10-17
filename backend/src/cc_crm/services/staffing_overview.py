@@ -18,6 +18,7 @@ from cc_crm.schemas.staffing import (
 from cc_crm.services.staffing_assignments import is_overdue
 from cc_crm.services.staffing_deadline_job import pair_deadline
 from cc_crm.services.staffing_deadlines import DeadlineResult, Traffic
+from cc_crm.services.staffing_equal_pay import pair_equal_pay_confirmed_on
 from cc_crm.services.staffing_settings import load_config
 
 DISCLAIMER = (
@@ -28,8 +29,14 @@ _OPEN = (StaffingAssignmentStatus.PLANNED, StaffingAssignmentStatus.ACTIVE)
 _URGENCY = {Traffic.RED: 0, Traffic.YELLOW: 1, Traffic.GREEN: 2}
 
 
-def deadline_read(result: DeadlineResult) -> StaffingDeadlineRead:
-    return StaffingDeadlineRead(**asdict(result))
+def deadline_read(
+    result: DeadlineResult, equal_pay_confirmed_on: date | None = None
+) -> StaffingDeadlineRead:
+    return StaffingDeadlineRead(
+        **asdict(result),
+        equal_pay_confirmed_on=equal_pay_confirmed_on,
+        equal_pay_open=result.equal_pay_reached and equal_pay_confirmed_on is None,
+    )
 
 
 def license_status(session: Session, today: date) -> StaffingLicenseStatus:
@@ -74,8 +81,12 @@ def pair_deadlines(
         result = pair_deadline(session, key[0], key[1], today, config)
         if not result.has_chain:
             continue
+        confirmed_on = pair_equal_pay_confirmed_on(session, key[0], key[1], result.chain_start)
         seen[key] = StaffingPairDeadlineRead(
             **asdict(result),
+            equal_pay_confirmed_on=confirmed_on,
+            equal_pay_open=result.equal_pay_reached and confirmed_on is None,
+            assignment_id=assignment.id,
             worker_id=key[0],
             worker_name=row.worker_name,
             client_company_id=key[1],

@@ -105,6 +105,8 @@ def assignment_read(row: AssignmentRow) -> StaffingAssignmentRead:
         checklist_done=row.checklist_done,
         checklist_total=row.checklist_total,
         is_overdue=is_overdue(a, date.today()),
+        equal_pay_confirmed_on=a.equal_pay_confirmed_on,
+        equal_pay_confirmed_by_user_id=a.equal_pay_confirmed_by_user_id,
     )
 
 
@@ -181,6 +183,7 @@ class StaffingAssignmentService:
         # Lokale Importe: staffing_activation und staffing_overview bauen auf diesem Modul auf.
         from cc_crm.services.staffing_activation import StaffingActivationService
         from cc_crm.services.staffing_deadline_job import pair_deadline
+        from cc_crm.services.staffing_equal_pay import pair_equal_pay_confirmed_on
         from cc_crm.services.staffing_overview import deadline_read
 
         day = today or date.today()
@@ -204,13 +207,15 @@ class StaffingAssignmentService:
             else StaffingChecklistItemRead.model_validate(item)
             for item in items
         ]
+        pair = pair_deadline(self.session, assignment.worker_id, assignment.client_company_id, day)
+        confirmed_on = pair_equal_pay_confirmed_on(
+            self.session, assignment.worker_id, assignment.client_company_id, pair.chain_start
+        )
         return StaffingAssignmentDetail(
             **assignment_read(row).model_dump()
             | {"checklist_done": sum(i.done for i in checklist)},
             checklist=checklist,
-            deadline=deadline_read(
-                pair_deadline(self.session, assignment.worker_id, assignment.client_company_id, day)
-            ),
+            deadline=deadline_read(pair, confirmed_on),
             activation_problems=problems,
             activation_warnings=warnings,
         )

@@ -3,6 +3,7 @@
 // NOMICON: Überlassung - Übersicht: aktive Einsätze, Fristen nach Dringlichkeit, Erlaubnis, offene Checklisten.
 import Link from "next/link";
 import { AlertTriangle, ClipboardList, FileCheck2, HardHat } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { useStaffingOverview } from "@/lib/api/staffing-hooks";
@@ -40,7 +41,8 @@ export function DeadlineRow({ deadline }: { deadline: StaffingPairDeadline }) {
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {deadline.equal_pay_reached && <span className="text-xs text-brand-muted">Equal Pay seit {formatDate(deadline.equal_pay_from)}</span>}
+        {deadline.equal_pay_open && <Badge tone="amber" title="Equal Pay gilt, der Lohn ist noch nicht als geprüft bestätigt">Equal Pay offen</Badge>}
+        {deadline.equal_pay_reached && !deadline.equal_pay_open && <span className="text-xs text-brand-muted">Equal Pay seit {formatDate(deadline.equal_pay_from)}</span>}
         <TrafficBadge traffic={deadline.traffic} label={formatRemaining(deadline.days_remaining)} />
       </div>
     </Link>

@@ -275,6 +275,15 @@ export function changeStaffingAssignmentStatus(id: string, status: StaffingAssig
   });
 }
 
+/** Equal Pay bestätigen: Lohn geprüft und angeglichen (Standard: heute). Darf jeder mit Zugriff auf den Einsatz. */
+export function confirmStaffingEqualPay(assignmentId: string, confirmedOn?: string) {
+  return apiPost<StaffingAssignmentDetail>(`/staffing/assignments/${assignmentId}/equal-pay-confirmation`, confirmedOn ? { confirmed_on: confirmedOn } : {});
+}
+
+export function unconfirmStaffingEqualPay(assignmentId: string) {
+  return apiDelete(`/staffing/assignments/${assignmentId}/equal-pay-confirmation`);
+}
+
 export function setStaffingChecklistItem(assignmentId: string, itemId: string, done: boolean) {
   return apiPatch<StaffingAssignmentDetail>(`/staffing/assignments/${assignmentId}/checklist/${itemId}`, { done });
 }

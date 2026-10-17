@@ -75,9 +75,25 @@ def build_tasks(
                     worker_id=deadline.worker_id,
                 )
             )
-        if (
+        if deadline.equal_pay_open and deadline.equal_pay_from:
+            tasks.append(
+                StaffingTaskRead(
+                    kind="equal_pay",
+                    severity="yellow",
+                    title=f"Equal Pay offen: {deadline.worker_name} bei {deadline.client_name}",
+                    detail=(
+                        f"Equal Pay gilt seit {_fmt(deadline.equal_pay_from)} – Lohn prüfen und "
+                        "angleichen, danach im Einsatz bestätigen."
+                    ),
+                    due_at=deadline.equal_pay_from,
+                    assignment_id=assignment_id,
+                    worker_id=deadline.worker_id,
+                )
+            )
+        elif (
             deadline.equal_pay_from
             and not deadline.equal_pay_reached
+            and deadline.equal_pay_confirmed_on is None
             and (deadline.equal_pay_from - today).days <= config.yellow_days
         ):
             tasks.append(

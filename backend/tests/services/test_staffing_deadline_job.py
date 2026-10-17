@@ -166,7 +166,7 @@ def test_job_creates_one_task_per_threshold_for_the_owner(session: Session) -> N
     assert {t.owner_user_id for t in tasks} == {owner.id}
     titles = " | ".join(t.title for t in tasks)
     assert "Überlassungsfrist: Mira Muster bei Logistik GmbH" in titles
-    assert "Equal Pay ab jetzt" in titles
+    assert "Equal Pay gilt ab" in titles
     red = next(t for t in tasks if t.title.startswith("Überlassungsfrist"))
     assert "30.06.2026" in (red.description or "")
     assert "kein Rechtsrat" in (red.description or "")
@@ -309,4 +309,4 @@ def test_job_equal_pay_task_uses_prior_period(session: Session) -> None:
     # ... mit 6 Monaten Vorzeit schon ab 1.10.2025
     _prior(session, worker, client, D(2025, 1, 1), D(2025, 6, 30))
     assert run_deadline_job(session, D(2025, 10, 15)).tasks_created == 1
-    assert any("Equal Pay ab jetzt" in t.title for t in _tasks(session))
+    assert any("Equal Pay gilt ab" in t.title for t in _tasks(session))

@@ -185,6 +185,10 @@ class StaffingAssignmentUpdate(BaseModel):
     notes: str | None = None
 
 
+class StaffingEqualPayConfirm(BaseModel):
+    confirmed_on: date | None = None  # Standard: heute
+
+
 class StaffingAssignmentStatusChange(BaseModel):
     status: StaffingAssignmentStatus
     # Nur für "ended"/"aborted": tatsaechliches Ende, Standard = heute.
@@ -225,6 +229,9 @@ class StaffingAssignmentRead(EntityRead):
     checklist_total: int
     # Aktiv, aber das geplante Ende liegt in der Vergangenheit: beenden oder verlängern.
     is_overdue: bool = False
+    # Equal Pay: Lohn geprüft und angeglichen (nur das Datum der Bestätigung, nie ein Lohnwert)
+    equal_pay_confirmed_on: date | None = None
+    equal_pay_confirmed_by_user_id: uuid.UUID | None = None
 
 
 class StaffingDeadlineRead(BaseModel):
@@ -242,9 +249,13 @@ class StaffingDeadlineRead(BaseModel):
     exceeded: bool
     traffic: Traffic
     prior_days: int = 0  # davon aus Vorzeiten (früher beim Kunden geleistet)
+    # Equal Pay mit Folge: Bestätigung in der aktuellen Kette; "offen" = gilt schon, nicht bestätigt
+    equal_pay_confirmed_on: date | None = None
+    equal_pay_open: bool = False
 
 
 class StaffingPairDeadlineRead(StaffingDeadlineRead):
+    assignment_id: uuid.UUID | None = None  # ein offener Einsatz des Paares (z.B. zum Bestätigen)
     worker_id: uuid.UUID
     worker_name: str
     client_company_id: uuid.UUID

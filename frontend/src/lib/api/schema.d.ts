@@ -2991,6 +2991,31 @@ export interface paths {
         patch: operations["update_checklist_item_api_v1_staffing_assignments__assignment_id__checklist__item_id__patch"];
         trace?: never;
     };
+    "/api/v1/staffing/assignments/{assignment_id}/equal-pay-confirmation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Equal Pay
+         * @description Equal Pay bestätigen: Lohn geprüft und angeglichen. Darf jeder mit Zugriff auf den Einsatz;
+         *     die Lohnhöhe selbst sehen und ändern weiter nur Admins. Erledigt die Equal-Pay-Aufgabe.
+         */
+        post: operations["confirm_equal_pay_api_v1_staffing_assignments__assignment_id__equal_pay_confirmation_post"];
+        /**
+         * Unconfirm Equal Pay
+         * @description Bestätigung zurücknehmen (Eingabekorrektur, mit Audit-Eintrag).
+         */
+        delete: operations["unconfirm_equal_pay_api_v1_staffing_assignments__assignment_id__equal_pay_confirmation_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staffing/assignments/{assignment_id}/status": {
         parameters: {
             query?: never;
@@ -9498,6 +9523,10 @@ export interface components {
              */
             created_at: string;
             deadline: components["schemas"]["StaffingDeadlineRead"];
+            /** Equal Pay Confirmed By User Id */
+            equal_pay_confirmed_by_user_id?: string | null;
+            /** Equal Pay Confirmed On */
+            equal_pay_confirmed_on?: string | null;
             /** Hourly Wage */
             hourly_wage: string | null;
             /**
@@ -9563,6 +9592,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Equal Pay Confirmed By User Id */
+            equal_pay_confirmed_by_user_id?: string | null;
+            /** Equal Pay Confirmed On */
+            equal_pay_confirmed_on?: string | null;
             /** Hourly Wage */
             hourly_wage: string | null;
             /**
@@ -9856,8 +9889,15 @@ export interface components {
             elapsed_days: number;
             /** Elapsed Months */
             elapsed_months: number;
+            /** Equal Pay Confirmed On */
+            equal_pay_confirmed_on?: string | null;
             /** Equal Pay From */
             equal_pay_from: string | null;
+            /**
+             * Equal Pay Open
+             * @default false
+             */
+            equal_pay_open: boolean;
             /** Equal Pay Reached */
             equal_pay_reached: boolean;
             /** Exceeded */
@@ -9889,6 +9929,11 @@ export interface components {
             planned_assignments: number;
             /** Timesheet Backlog */
             timesheet_backlog: number;
+        };
+        /** StaffingEqualPayConfirm */
+        StaffingEqualPayConfirm: {
+            /** Confirmed On */
+            confirmed_on?: string | null;
         };
         /** StaffingInvoiceCreate */
         StaffingInvoiceCreate: {
@@ -10127,6 +10172,8 @@ export interface components {
         };
         /** StaffingPairDeadlineRead */
         StaffingPairDeadlineRead: {
+            /** Assignment Id */
+            assignment_id?: string | null;
             /** Chain Start */
             chain_start: string | null;
             /**
@@ -10144,8 +10191,15 @@ export interface components {
             elapsed_days: number;
             /** Elapsed Months */
             elapsed_months: number;
+            /** Equal Pay Confirmed On */
+            equal_pay_confirmed_on?: string | null;
             /** Equal Pay From */
             equal_pay_from: string | null;
+            /**
+             * Equal Pay Open
+             * @default false
+             */
+            equal_pay_open: boolean;
             /** Equal Pay Reached */
             equal_pay_reached: boolean;
             /** Exceeded */
@@ -17817,6 +17871,76 @@ export interface operations {
                 "application/json": components["schemas"]["StaffingChecklistItemUpdate"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_equal_pay_api_v1_staffing_assignments__assignment_id__equal_pay_confirmation_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StaffingEqualPayConfirm"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unconfirm_equal_pay_api_v1_staffing_assignments__assignment_id__equal_pay_confirmation_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
