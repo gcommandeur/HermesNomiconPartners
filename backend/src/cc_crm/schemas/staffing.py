@@ -252,6 +252,10 @@ class StaffingDeadlineRead(BaseModel):
     # Equal Pay mit Folge: Bestätigung in der aktuellen Kette; "offen" = gilt schon, nicht bestätigt
     equal_pay_confirmed_on: date | None = None
     equal_pay_open: bool = False
+    # Vorläufig: geplanter (nicht aktivierter) Einsatz in der Kette oder ein Einsatz ohne Enddatum.
+    # Gründe als Codes: "planned_assignment", "open_end". Die Ampelfarbe bleibt unverändert.
+    provisional: bool = False
+    provisional_reasons: list[str] = []
 
 
 class StaffingPairDeadlineRead(StaffingDeadlineRead):

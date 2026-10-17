@@ -49,7 +49,7 @@ def test_active_assignment_past_its_planned_end_counts_as_open() -> None:
     assert assignment_span(running, today) == Span(D(2026, 1, 1), D(2026, 6, 1))
     # Nur aktive Einsaetze: geplante und beendete behalten ihr Ende
     planned = _plain(StaffingAssignmentStatus.PLANNED, D(2026, 1, 1), D(2026, 2, 28))
-    assert assignment_span(planned, today) == Span(D(2026, 1, 1), D(2026, 2, 28))
+    assert assignment_span(planned, today) == Span(D(2026, 1, 1), D(2026, 2, 28), planned=True)
     ended = _plain(StaffingAssignmentStatus.ENDED, D(2026, 1, 1), D(2026, 2, 28))
     ended.actual_end_date = D(2026, 2, 20)
     assert assignment_span(ended, today) == Span(D(2026, 1, 1), D(2026, 2, 20))

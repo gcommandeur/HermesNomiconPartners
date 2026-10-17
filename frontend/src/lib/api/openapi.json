@@ -17279,6 +17279,19 @@
             "title": "Prior Days",
             "type": "integer"
           },
+          "provisional": {
+            "default": false,
+            "title": "Provisional",
+            "type": "boolean"
+          },
+          "provisional_reasons": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Provisional Reasons",
+            "type": "array"
+          },
           "traffic": {
             "$ref": "#/components/schemas/Traffic"
           }
@@ -18225,6 +18238,19 @@
             "default": 0,
             "title": "Prior Days",
             "type": "integer"
+          },
+          "provisional": {
+            "default": false,
+            "title": "Provisional",
+            "type": "boolean"
+          },
+          "provisional_reasons": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Provisional Reasons",
+            "type": "array"
           },
           "traffic": {
             "$ref": "#/components/schemas/Traffic"

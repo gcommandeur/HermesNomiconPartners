@@ -70,6 +70,7 @@ export const DEMO_ASSIGNMENT_DETAIL: StaffingAssignmentDetail = {
     equal_pay_from: "2026-11-01", equal_pay_reached: false, max_end_date: "2027-07-31",
     days_remaining: 500, exceeded: false, traffic: "green", prior_days: 0,
     equal_pay_confirmed_on: null, equal_pay_open: false,
+    provisional: true, provisional_reasons: ["planned_assignment"],
   },
   activation_warnings: [],
   activation_problems: [
@@ -86,6 +87,7 @@ export const DEMO_DEADLINES: StaffingPairDeadline[] = [
     equal_pay_from: "2025-12-01", equal_pay_reached: true, max_end_date: "2026-08-31",
     days_remaining: 55, exceeded: false, traffic: "yellow", prior_days: 120,
     equal_pay_confirmed_on: null, equal_pay_open: true, assignment_id: ID(21),
+    provisional: true, provisional_reasons: ["open_end"],
   },
 ];
 

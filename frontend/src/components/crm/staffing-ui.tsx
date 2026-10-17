@@ -18,7 +18,7 @@ import {
   type StaffingWorkerStatus,
   type Traffic,
 } from "@/lib/api/staffing";
-import { formatPriorDays } from "@/lib/staffing-deadline-text";
+import { formatPriorDays, provisionalReasonText } from "@/lib/staffing-deadline-text";
 import { formatDate } from "@/lib/utils";
 
 export const LEGAL_NOTICE =
@@ -28,6 +28,13 @@ const TRAFFIC_TONE = { green: "green", yellow: "amber", red: "red" } as const;
 
 export function TrafficBadge({ traffic, label }: { traffic: Traffic; label?: string }) {
   return <Badge tone={TRAFFIC_TONE[traffic]}>{label ?? TRAFFIC_LABELS[traffic]}</Badge>;
+}
+
+/** „vorläufig“: die Frist beruht auf einem geplanten Einsatz oder einem Einsatz ohne Enddatum. Die
+ * Ampelfarbe bleibt unverändert; der Tooltip nennt, was fehlt. */
+export function ProvisionalBadge({ deadline }: { deadline: Pick<StaffingDeadline, "provisional" | "provisional_reasons"> }) {
+  if (!deadline.provisional) return null;
+  return <Badge tone="gray" title={provisionalReasonText(deadline.provisional_reasons)}>vorläufig</Badge>;
 }
 
 export function AssignmentStatusBadge({ status }: { status: StaffingAssignmentStatus }) {
@@ -119,7 +126,10 @@ export function DeadlineMeter({ deadline, maxMonths = 18 }: { deadline: Staffing
             </span>
           )}
         </p>
-        <TrafficBadge traffic={deadline.traffic} label={formatRemaining(deadline.days_remaining)} />
+        <span className="flex flex-wrap items-center gap-2">
+          <ProvisionalBadge deadline={deadline} />
+          <TrafficBadge traffic={deadline.traffic} label={formatRemaining(deadline.days_remaining)} />
+        </span>
       </div>
       <div
         className="mt-3 h-2 overflow-hidden rounded-full bg-brand-surface"

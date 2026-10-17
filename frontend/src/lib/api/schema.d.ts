@@ -9911,6 +9911,16 @@ export interface components {
              * @default 0
              */
             prior_days: number;
+            /**
+             * Provisional
+             * @default false
+             */
+            provisional: boolean;
+            /**
+             * Provisional Reasons
+             * @default []
+             */
+            provisional_reasons: string[];
             traffic: components["schemas"]["Traffic"];
         };
         /** StaffingDispositionRead */
@@ -10215,6 +10225,16 @@ export interface components {
              * @default 0
              */
             prior_days: number;
+            /**
+             * Provisional
+             * @default false
+             */
+            provisional: boolean;
+            /**
+             * Provisional Reasons
+             * @default []
+             */
+            provisional_reasons: string[];
             traffic: components["schemas"]["Traffic"];
             /**
              * Worker Id

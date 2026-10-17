@@ -63,7 +63,12 @@ def assignment_span(assignment: StaffingAssignment, today: date) -> Span:
         and assignment.planned_end_date < today
     ):
         return Span(assignment.start_date, None)
-    return Span(assignment.start_date, assignment.planned_end_date)
+    # Geplante (noch nicht aktivierte) Einsätze zählen mit, machen die Frist aber vorläufig.
+    return Span(
+        assignment.start_date,
+        assignment.planned_end_date,
+        planned=assignment.status == StaffingAssignmentStatus.PLANNED,
+    )
 
 
 def pair_deadline(

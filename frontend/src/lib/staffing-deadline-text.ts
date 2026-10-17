@@ -8,6 +8,17 @@ export function isOverlapConflict(message: string): boolean {
   return message.startsWith("Überschneidung:");
 }
 
+const PROVISIONAL_TEXT: Record<string, string> = {
+  planned_assignment: "Einsatz noch nicht aktiviert",
+  open_end: "kein Enddatum erfasst",
+};
+
+/** Tooltip für „vorläufig“: was an der Frist noch fehlt (Gründe vom Server als Codes). */
+export function provisionalReasonText(reasons: readonly string[] | null | undefined): string {
+  const text = (reasons ?? []).map((reason) => PROVISIONAL_TEXT[reason] ?? reason).join("; ");
+  return text ? `Vorläufig: ${text}` : "Vorläufig";
+}
+
 /** Warnzeile der Übersicht: "1 Einsatz überfällig" / "3 Einsätze überfällig". */
 export function overdueSummary(count: number): string {
   return `${count} ${count === 1 ? "Einsatz" : "Einsätze"} überfällig`;

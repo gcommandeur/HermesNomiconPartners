@@ -49,10 +49,12 @@ class Traffic(StrEnum):
 @dataclass(frozen=True)
 class Span:
     """Ein Einsatz als Zeitraum (beide Tage eingeschlossen). `end=None`: läuft noch (bis heute
-    und darüber hinaus)."""
+    und darüber hinaus). `planned=True`: noch nicht aktivierter (geplanter) Einsatz - die Frist
+    ist dann vorläufig."""
 
     start: date
     end: date | None = None
+    planned: bool = False
 
 
 @dataclass(frozen=True)
@@ -73,6 +75,11 @@ class DeadlineResult:
     # Tage der Kette, die NUR aus Vorzeiten stammen (früher beim Kunden geleistet, nicht aus
     # Einsätzen des CRM). Schon in `counted_days` enthalten; dient der Anzeige "inkl. Vorzeit".
     prior_days: int = 0
+    # Vorläufig: die Kette enthält einen geplanten (noch nicht aktivierten) Einsatz oder ein
+    # Einsatz ohne Enddatum zählt. Die Ampelfarbe bleibt unverändert; die Gründe sind Codes
+    # ("planned_assignment", "open_end"), die Oberfläche übersetzt sie.
+    provisional: bool = False
+    provisional_reasons: tuple[str, ...] = ()
 
 
 NO_CHAIN = DeadlineResult(
@@ -113,11 +120,15 @@ def merge_spans(spans: Iterable[Span]) -> list[Span]:
     for span in sorted(spans, key=lambda s: (s.start, s.end or date.max)):
         if merged:
             last = merged[-1]
-            if last.end is None:
-                continue  # offener Einsatz deckt alles Spaetere ab
+            planned = (
+                last.planned or span.planned
+            )  # ein geplanter Einsatz macht die Kette vorläufig
+            if last.end is None:  # offener Einsatz deckt alles Spaetere ab
+                merged[-1] = Span(last.start, None, planned)
+                continue
             if span.start <= last.end + timedelta(days=1):
                 end = None if span.end is None else max(last.end, span.end)
-                merged[-1] = Span(last.start, end)
+                merged[-1] = Span(last.start, end, planned)
                 continue
         merged.append(span)
     return merged
@@ -218,6 +229,14 @@ def compute_deadline(
     counted = _days_counted(chain, today)
     months, extra_days = full_months_between(start, start + timedelta(days=counted))
     remaining = (max_end - today).days
+    reasons = tuple(
+        reason
+        for reason, present in (
+            ("planned_assignment", any(span.planned for span in chain)),
+            ("open_end", any(span.end is None for span in chain)),
+        )
+        if present
+    )
     return DeadlineResult(
         has_chain=True,
         chain_start=start,
@@ -231,4 +250,6 @@ def compute_deadline(
         exceeded=remaining < 0,
         traffic=_traffic(remaining, cfg),
         prior_days=_prior_only_days(chain, assignment_spans, today),
+        provisional=bool(reasons),
+        provisional_reasons=reasons,
     )

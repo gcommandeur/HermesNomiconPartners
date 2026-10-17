@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { formatPriorDays, isOverlapConflict, overdueSummary } from "./staffing-deadline-text";
+import { formatPriorDays, isOverlapConflict, overdueSummary, provisionalReasonText } from "./staffing-deadline-text";
+
+describe("provisionalReasonText", () => {
+  it("nennt, was an der Frist fehlt", () => {
+    expect(provisionalReasonText(["planned_assignment"])).toBe("Vorläufig: Einsatz noch nicht aktiviert");
+    expect(provisionalReasonText(["planned_assignment", "open_end"])).toBe(
+      "Vorläufig: Einsatz noch nicht aktiviert; kein Enddatum erfasst",
+    );
+    expect(provisionalReasonText([])).toBe("Vorläufig");
+    expect(provisionalReasonText(undefined)).toBe("Vorläufig");
+  });
+});
 
 describe("isOverlapConflict", () => {
   it("erkennt die Überschneidungs-Meldung des Servers", () => {

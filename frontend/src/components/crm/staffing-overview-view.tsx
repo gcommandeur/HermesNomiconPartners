@@ -10,7 +10,7 @@ import { useStaffingOverview } from "@/lib/api/staffing-hooks";
 import { formatDate } from "@/lib/utils";
 import { formatPriorDays, overdueSummary } from "@/lib/staffing-deadline-text";
 import { formatElapsed, formatRemaining, type StaffingPairDeadline } from "@/lib/api/staffing";
-import { EmptyHint, LEGAL_NOTICE, LoadError, LoadingRows, TrafficBadge } from "./staffing-ui";
+import { EmptyHint, LEGAL_NOTICE, LoadError, LoadingRows, ProvisionalBadge, TrafficBadge } from "./staffing-ui";
 
 function Stat({ icon: Icon, label, value, hint }: { icon: typeof HardHat; label: string; value: React.ReactNode; hint?: string }) {
   return (
@@ -43,6 +43,7 @@ export function DeadlineRow({ deadline }: { deadline: StaffingPairDeadline }) {
       <div className="flex flex-wrap items-center gap-2">
         {deadline.equal_pay_open && <Badge tone="amber" title="Equal Pay gilt, der Lohn ist noch nicht als geprüft bestätigt">Equal Pay offen</Badge>}
         {deadline.equal_pay_reached && !deadline.equal_pay_open && <span className="text-xs text-brand-muted">Equal Pay seit {formatDate(deadline.equal_pay_from)}</span>}
+        <ProvisionalBadge deadline={deadline} />
         <TrafficBadge traffic={deadline.traffic} label={formatRemaining(deadline.days_remaining)} />
       </div>
     </Link>
