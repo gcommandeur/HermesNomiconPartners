@@ -14,7 +14,12 @@ from cc_crm.models.candidate import Candidate
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.engagement import CandidateEngagementPrefs
 from cc_crm.models.recruiting import AuditLog
-from cc_crm.models.staffing import CHECKLIST_KEYS, StaffingWorkerStatus
+from cc_crm.models.staffing import (
+    CHECKLIST_KEYS,
+    StaffingChecklistKey,
+    StaffingContractStatus,
+    StaffingWorkerStatus,
+)
 from cc_crm.models.user import User
 from cc_crm.schemas.staffing import (
     StaffingAssignmentCreate,
@@ -154,9 +159,26 @@ def test_assignment_gets_full_checklist_and_default_wage(
     assert not service.checklist_complete(assignment.id)
 
     for item in detail.checklist:
+        if item.item_key == StaffingChecklistKey.SUPPLY_CONTRACT:
+            # ergibt sich aus dem verknuepften Vertrag, nicht von Hand abhakbar
+            with pytest.raises(BusinessRuleError, match="automatisch"):
+                service.update_checklist_item(
+                    assignment.id, item.id, StaffingChecklistItemUpdate(done=True), actor
+                )
+            continue
         service.update_checklist_item(
             assignment.id, item.id, StaffingChecklistItemUpdate(done=True), actor
         )
+    assert not service.checklist_complete(assignment.id)
+    contract = StaffingContractService(session).create(
+        StaffingContractCreate(
+            client_company_id=client_company.id,
+            valid_from=date(2026, 1, 1),
+            status=StaffingContractStatus.ACTIVE,
+        ),
+        actor,
+    )
+    service.update(assignment.id, StaffingAssignmentUpdate(contract_id=contract.contract.id), actor)
     assert service.checklist_complete(assignment.id)
     assert service.get_row(assignment.id).checklist_done == len(CHECKLIST_KEYS)
 

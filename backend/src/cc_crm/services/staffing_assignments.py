@@ -7,6 +7,7 @@ services/staffing_activation.py."""
 import uuid
 from datetime import date
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -18,6 +19,7 @@ from cc_crm.models.staffing import (
     StaffingAssignmentExtension,
     StaffingAssignmentStatus,
     StaffingChecklistItem,
+    StaffingChecklistKey,
     StaffingContract,
     StaffingWorkerStatus,
 )
@@ -41,6 +43,11 @@ from cc_crm.schemas.staffing import (
     StaffingContractUpdate,
 )
 from cc_crm.services import staffing_audit as audit
+from cc_crm.services.staffing_contract_sync import (
+    contract_problem_for,
+    notify_contract_gap,
+    sync_supply_contract_item,
+)
 
 # Status, in denen ein Einsatz noch änderbar ist (beendet/abgebrochen = Nachweis, eingefroren).
 _EDITABLE = (StaffingAssignmentStatus.PLANNED, StaffingAssignmentStatus.ACTIVE)
@@ -124,7 +131,22 @@ class StaffingContractService:
         audit.log_updated(
             self.session, audit.ENTITY_CONTRACT, contract, contract.id, values, actor.email
         )
+        today = date.today()
+        linked = list(
+            self.session.scalars(
+                select(StaffingAssignment).where(
+                    StaffingAssignment.contract_id == contract.id,
+                    StaffingAssignment.status.in_(_EDITABLE),
+                )
+            )
+        )
+        before = {a.id: contract_problem_for(self.session, a, today) for a in linked}
         self.contracts.update(contract, values)
+        for linked_assignment in linked:
+            sync_supply_contract_item(self.session, linked_assignment, today)
+            notify_contract_gap(
+                self.session, linked_assignment, before[linked_assignment.id], today
+            )
         self.session.commit()
         return self.get_row(contract.id)
 
@@ -162,9 +184,20 @@ class StaffingAssignmentService:
             if assignment.status == StaffingAssignmentStatus.PLANNED
             else []
         )
+        # "Überlassungsvertrag" ergibt sich live aus dem verknüpften Vertrag, nie aus einem Haken
+        covered = contract_problem_for(self.session, assignment, day) is None
+        checklist = [
+            StaffingChecklistItemRead.model_validate(item).model_copy(
+                update={"done": covered, "done_on": item.done_on if covered else None}
+            )
+            if item.item_key == StaffingChecklistKey.SUPPLY_CONTRACT
+            else StaffingChecklistItemRead.model_validate(item)
+            for item in items
+        ]
         return StaffingAssignmentDetail(
-            **assignment_read(row).model_dump(),
-            checklist=[StaffingChecklistItemRead.model_validate(item) for item in items],
+            **assignment_read(row).model_dump()
+            | {"checklist_done": sum(i.done for i in checklist)},
+            checklist=checklist,
             deadline=deadline_read(
                 pair_deadline(self.session, assignment.worker_id, assignment.client_company_id, day)
             ),
@@ -203,6 +236,8 @@ class StaffingAssignmentService:
             assignment = self.assignments.create(values)
             for key in CHECKLIST_KEYS:
                 self.session.add(StaffingChecklistItem(assignment_id=assignment.id, item_key=key))
+            self.session.flush()
+            sync_supply_contract_item(self.session, assignment, date.today())
             audit.log_created(
                 self.session, audit.ENTITY_ASSIGNMENT, assignment.id, values, actor.email
             )
@@ -217,9 +252,7 @@ class StaffingAssignmentService:
     ) -> AssignmentRow:
         assignment: StaffingAssignment = self.get_row(assignment_id).assignment
         if assignment.status not in _EDITABLE:
-            raise BusinessRuleError(
-                "Beendete oder abgebrochene Einsätze sind nicht mehr änderbar."
-            )
+            raise BusinessRuleError("Beendete oder abgebrochene Einsätze sind nicht mehr änderbar.")
         values = payload.model_dump(exclude_unset=True)
         if values.get("start_date") is None:
             values.pop("start_date", None)
@@ -237,7 +270,13 @@ class StaffingAssignmentService:
             self.session, audit.ENTITY_ASSIGNMENT, assignment, assignment.id, values, actor.email
         )
         old_end = assignment.planned_end_date
+        today = date.today()
+        contract_before = contract_problem_for(self.session, assignment, today)
         self.assignments.update(assignment, values)
+        # Vertrag/Zeitraum geändert: Checklistenpunkt angleichen, bei aktivem Einsatz mit neuer
+        # Lücke eine Aufgabe anlegen (blockiert nicht).
+        sync_supply_contract_item(self.session, assignment, today)
+        notify_contract_gap(self.session, assignment, contract_before, today)
         if old_end is not None and end is not None and end > old_end:
             # Verlaengerung = neuer Deal im Provisionsmodell (services/commission_deals.py)
             self.session.add(
@@ -261,12 +300,16 @@ class StaffingAssignmentService:
     ) -> StaffingAssignmentDetail:
         assignment = self.get_row(assignment_id).assignment
         if assignment.status not in _EDITABLE:
-            raise BusinessRuleError(
-                "Beendete oder abgebrochene Einsätze sind nicht mehr änderbar."
-            )
+            raise BusinessRuleError("Beendete oder abgebrochene Einsätze sind nicht mehr änderbar.")
         item = self.session.get(StaffingChecklistItem, item_id)
         if item is None or item.assignment_id != assignment_id:
             raise EntityNotFoundError("Checklistenpunkt nicht gefunden")
+        if item.item_key == StaffingChecklistKey.SUPPLY_CONTRACT:
+            raise BusinessRuleError(
+                "Der Punkt „Überlassungsvertrag“ wird automatisch aus dem verknüpften Vertrag "
+                "ermittelt und lässt sich nicht von Hand abhaken. Bitte den Vertrag am Einsatz "
+                "auswählen; er muss aktiv sein und den Einsatzzeitraum abdecken."
+            )
         old_done = item.done
         item.done = payload.done
         item.done_on = (payload.done_on or date.today()) if payload.done else None

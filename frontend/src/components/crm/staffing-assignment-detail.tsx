@@ -11,9 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { useCurrentUser } from "@/lib/api/hooks";
-import { invalidateStaffing, useStaffingAssignment, useTakeoverPreview } from "@/lib/api/staffing-hooks";
+import { invalidateStaffing, useStaffingAssignment, useStaffingContracts, useTakeoverPreview } from "@/lib/api/staffing-hooks";
 import {
   CHECKLIST_LABELS,
+  CONTRACT_STATUS_LABELS,
   changeStaffingAssignmentStatus,
   formatMoney,
   getStaffingWorker,
@@ -33,6 +34,7 @@ import {
   LoadError,
   LoadingRows,
   labelClass,
+  selectClass,
 } from "./staffing-ui";
 import { formatPercent } from "@/lib/format"; // NOMICON
 
@@ -143,6 +145,14 @@ export function StaffingAssignmentDetailView({ id }: { id: string }) {
         </Card>
       </div>
 
+      {editable && (
+        <ContractPicker
+          assignment={assignment}
+          busy={busy}
+          onChange={(contractId) => void run(() => updateStaffingAssignment(id, { contract_id: contractId }))}
+        />
+      )}
+
       <Card>
         <CardContent>
           <div className="flex items-baseline justify-between gap-3">
@@ -150,21 +160,26 @@ export function StaffingAssignmentDetailView({ id }: { id: string }) {
             <span className="text-xs text-brand-muted">{assignment.checklist_done} von {assignment.checklist_total} erledigt</span>
           </div>
           <ul className="mt-3 divide-y divide-white/5">
-            {assignment.checklist.map((item) => (
+            {assignment.checklist.map((item) => {
+              // "Überlassungsvertrag" ergibt sich aus dem verknüpften Vertrag und wird nie von Hand abgehakt.
+              const derived = item.item_key === "supply_contract";
+              return (
               <li key={item.id}>
                 <button
                   type="button"
-                  disabled={busy || !editable}
+                  disabled={busy || !editable || derived}
+                  title={derived ? "Ergibt sich aus dem verknüpften Überlassungsvertrag (oben)" : undefined}
                   aria-pressed={item.done}
                   onClick={() => void run(() => setStaffingChecklistItem(id, item.id, !item.done))}
                   className="flex w-full items-center gap-3 py-2.5 text-left text-sm disabled:cursor-default disabled:opacity-70"
                 >
                   {item.done ? <CheckCircle2 size={18} className="text-brand-success" aria-hidden /> : <Circle size={18} className="text-brand-muted" aria-hidden />}
-                  <span className="flex-1">{CHECKLIST_LABELS[item.item_key]}</span>
+                  <span className="flex-1">{CHECKLIST_LABELS[item.item_key]}{derived ? <span className="text-xs text-brand-muted"> · ergibt sich aus dem Vertrag</span> : null}</span>
                   {item.done_on && <span className="text-xs text-brand-muted">{formatDate(item.done_on)}</span>}
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </CardContent>
       </Card>
@@ -185,6 +200,47 @@ export function StaffingAssignmentDetailView({ id }: { id: string }) {
         />
       )}
     </div>
+  );
+}
+
+/** Überlassungsvertrag (§ 12 AÜG): Pflichtauswahl vor „Einsatz aktivieren“. Der Vertrag muss dem Kunden
+ * gehören, aktiv sein und den Einsatzzeitraum abdecken; sonst steht der Grund direkt darunter. */
+function ContractPicker({ assignment, busy, onChange }: { assignment: StaffingAssignmentDetail; busy: boolean; onChange: (contractId: string | null) => void }) {
+  const { data } = useStaffingContracts(assignment.client_company_id);
+  const contracts = data?.data ?? [];
+  const problems = assignment.activation_problems.filter((problem) => problem.includes("Überlassungsvertrag"));
+  const unlinkedHint = assignment.contract_id === null ? "Kein Überlassungsvertrag verknüpft – ohne ihn lässt sich der Einsatz nicht aktivieren." : null;
+  return (
+    <Card>
+      <CardContent>
+        <h3 className="font-semibold">Überlassungsvertrag *</h3>
+        <label className={`${labelClass} mt-3`} htmlFor="as-contract">Vertrag mit {assignment.client_name}</label>
+        <select
+          id="as-contract"
+          className={selectClass}
+          disabled={busy}
+          value={assignment.contract_id ?? ""}
+          onChange={(event) => onChange(event.target.value || null)}
+        >
+          <option value="">Kein Vertrag gewählt</option>
+          {contracts.map((contract) => (
+            <option key={contract.id} value={contract.id}>
+              {contract.contract_number ?? "ohne Nummer"} · {CONTRACT_STATUS_LABELS[contract.status]}
+              {contract.valid_from ? ` · ab ${formatDate(contract.valid_from)}` : ""}
+              {contract.valid_to ? ` bis ${formatDate(contract.valid_to)}` : ""}
+            </option>
+          ))}
+        </select>
+        {contracts.length === 0 && (
+          <p className="mt-2 text-xs text-brand-muted">
+            Für diesen Kunden gibt es noch keinen Vertrag. Unter <Link href="/ueberlassung/compliance" className="underline">Compliance</Link> anlegen.
+          </p>
+        )}
+        {(problems.length > 0 || unlinkedHint) && assignment.status === "planned" && (
+          <p role="status" className="mt-2 text-xs text-brand-warning">{problems[0] ?? unlinkedHint}</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

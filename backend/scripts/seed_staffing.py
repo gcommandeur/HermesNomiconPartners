@@ -30,6 +30,7 @@ from cc_crm.models.engagement import CandidateEngagementPrefs  # noqa: E402
 from cc_crm.models.enums import ClientStatus  # noqa: E402
 from cc_crm.models.staffing import (  # noqa: E402
     StaffingAssignmentStatus,
+    StaffingChecklistKey,
     StaffingLicense,
     StaffingWorker,
     StaffingWorkerStatus,
@@ -202,7 +203,12 @@ def seed_staffing(
             )
             result.assignments += 1
             assignment_id = row.assignment.id
-            items = assignment_service.detail(assignment_id, day).checklist
+            # "Überlassungsvertrag" ergibt sich aus dem verknüpften Vertrag und ist nicht abhakbar
+            items = [
+                item
+                for item in assignment_service.detail(assignment_id, day).checklist
+                if item.item_key != StaffingChecklistKey.SUPPLY_CONTRACT
+            ]
             done_count = (
                 len(items) // 2 if plan.status == StaffingAssignmentStatus.PLANNED else len(items)
             )

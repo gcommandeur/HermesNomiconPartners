@@ -139,12 +139,17 @@ function CreateForm({ workerId, onClose, onCreated }: { workerId?: string; onClo
         )}
         {contracts.length > 0 && (
           <div>
-            <label className={labelClass} htmlFor="sa-contract">Überlassungs-/Rahmenvertrag</label>
+            <label className={labelClass} htmlFor="sa-contract">Überlassungsvertrag (Pflicht vor der Aktivierung)</label>
             <select id="sa-contract" className={selectClass} value={form.contract_id} onChange={(e) => set("contract_id", e.target.value)}>
-              <option value="">Ohne Vertrag</option>
+              <option value="">Noch kein Vertrag gewählt</option>
               {contracts.map((c) => <option key={c.id} value={c.id}>{c.contract_number ?? "ohne Nummer"} ({c.client_name})</option>)}
             </select>
           </div>
+        )}
+        {form.client_company_id && contracts.length === 0 && (
+          <p className="text-xs text-brand-muted">
+            Für diesen Kunden ist noch kein Überlassungsvertrag hinterlegt. Ohne aktiven Vertrag lässt sich der Einsatz nicht aktivieren – bitte unter „Compliance“ anlegen.
+          </p>
         )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelClass} htmlFor="sa-start">Beginn *</label><Input id="sa-start" required type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} /></div>

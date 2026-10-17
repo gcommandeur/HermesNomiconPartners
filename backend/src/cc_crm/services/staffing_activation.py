@@ -1,6 +1,7 @@
 # NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
-"""Statuswechsel eines Einsatzes. Aktivierung nur mit gültiger Erlaubnis UND vollständiger
-Pflicht-Checkliste (klare deutsche Fehlermeldung, beide Probleme gemeinsam)."""
+"""Statuswechsel eines Einsatzes. Aktivierung nur mit gültiger Erlaubnis, gültigem
+Überlassungsvertrag UND vollständiger Pflicht-Checkliste (klare deutsche Fehlermeldung, alle
+Probleme gemeinsam)."""
 
 import uuid
 from datetime import date
@@ -20,6 +21,7 @@ from cc_crm.repositories.staffing import AssignmentRow, StaffingLicenseRepositor
 from cc_crm.schemas.staffing import StaffingAssignmentStatusChange
 from cc_crm.services import staffing_audit as audit
 from cc_crm.services.staffing_assignments import StaffingAssignmentService
+from cc_crm.services.staffing_contract_sync import contract_problem_for, sync_supply_contract_item
 
 CHECKLIST_LABELS: dict[StaffingChecklistKey, str] = {
     StaffingChecklistKey.EMPLOYMENT_CONTRACT: "Arbeitsvertrag / Nachweis (§ 11 AÜG)",
@@ -77,16 +79,23 @@ class StaffingActivationService:
                 "Keine gültige AÜG-Erlaubnis für den Zeitraum "
                 f"{_fmt(assignment.start_date)} bis {_fmt(period_end)} hinterlegt."
             )
+        # Überlassungsvertrag: Pflicht VOR der Aktivierung und nicht von Hand abhakbar; der
+        # Checklistenpunkt ergibt sich aus dieser Prüfung (live, nicht aus dem gespeicherten Haken).
+        contract_problem = contract_problem_for(self.session, assignment, today)
+        if contract_problem is not None:
+            problems.append(contract_problem)
         done = {
             item.item_key
             for item in self.assignments.assignments.checklist(assignment_id)
             if item.done
         }
-        missing = [CHECKLIST_LABELS[key] for key in CHECKLIST_KEYS if key not in done]
+        missing = [
+            CHECKLIST_LABELS[key]
+            for key in CHECKLIST_KEYS
+            if key not in done and key != StaffingChecklistKey.SUPPLY_CONTRACT
+        ]
         if missing:
-            problems.append(
-                "Pflicht-Checkliste unvollständig (offen: " + ", ".join(missing) + ")."
-            )
+            problems.append("Pflicht-Checkliste unvollständig (offen: " + ", ".join(missing) + ").")
         return problems
 
     def change_status(
@@ -111,6 +120,8 @@ class StaffingActivationService:
                 raise BusinessRuleError(
                     "Der Einsatz kann nicht aktiviert werden. " + " ".join(problems)
                 )
+            # gespeicherten Haken des Checklistenpunkts angleichen
+            sync_supply_contract_item(self.session, assignment, day)
             worker = self.session.get(StaffingWorker, assignment.worker_id)
             if worker is not None and worker.status == StaffingWorkerStatus.APPLICANT:
                 audit.log_updated(

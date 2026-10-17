@@ -93,7 +93,7 @@ def _due_at(today: date) -> datetime:
     return datetime.combine(today, time(7, 0), tzinfo=_BERLIN).astimezone(UTC)
 
 
-def _create_task_once(
+def create_task_once(
     session: Session,
     *,
     marker: str,
@@ -118,7 +118,7 @@ def _create_task_once(
     return True
 
 
-def _active_admin_ids(session: Session) -> list[uuid.UUID]:
+def active_admin_ids(session: Session) -> list[uuid.UUID]:
     return list(
         session.scalars(
             select(User.id).where(User.role == "admin", User.is_active.is_(True)).order_by(User.id)
@@ -131,7 +131,7 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
     day = today or datetime.now(_BERLIN).date()
     config = load_config(session)
     result = DeadlineJobResult()
-    admins = _active_admin_ids(session)
+    admins = active_admin_ids(session)
 
     pairs = session.execute(
         select(StaffingAssignment.worker_id, StaffingAssignment.client_company_id)
@@ -147,7 +147,7 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
         deadline = pair_deadline(session, worker_id, client_id, day, config)
         if not deadline.has_chain or deadline.chain_start is None or deadline.max_end_date is None:
             continue
-        worker_name, client_name = _names(session, worker_id, client_id)
+        worker_name, client_name = pair_names(session, worker_id, client_id)
         owner = session.scalar(
             select(StaffingAssignment.owner_user_id)
             .where(
@@ -198,7 +198,7 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
                     f"[staffing-deadline:{worker_id}:{client_id}:{level}:"
                     f"{deadline.chain_start.isoformat()}:{user_id}]"
                 )
-                if _create_task_once(
+                if create_task_once(
                     session,
                     marker=marker,
                     title=title,
@@ -216,7 +216,7 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
             continue
         remaining = (lic.valid_to - day).days
         for user_id in admins:
-            if _create_task_once(
+            if create_task_once(
                 session,
                 marker=(
                     f"[staffing-license:{lic.id}:{lic.valid_to.isoformat()}:"
@@ -244,7 +244,7 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
     return result
 
 
-def _names(session: Session, worker_id: uuid.UUID, client_id: uuid.UUID) -> tuple[str, str]:
+def pair_names(session: Session, worker_id: uuid.UUID, client_id: uuid.UUID) -> tuple[str, str]:
     row = session.execute(
         select(Candidate.first_name, Candidate.last_name)
         .join(StaffingWorker, StaffingWorker.candidate_id == Candidate.id)

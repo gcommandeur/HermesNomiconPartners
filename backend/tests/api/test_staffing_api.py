@@ -96,9 +96,39 @@ def _assignment(client: TestClient, who: Person, worker_id: str, client_id: str,
     return response.json()
 
 
+def _attach_contract(client: TestClient, who: Person, assignment: dict, **extra: object) -> dict:
+    """Aktiver Überlassungsvertrag des Kunden, der den Einsatz abdeckt, und Verknüpfung."""
+    created = client.post(
+        f"{P}/contracts",
+        json={
+            "client_company_id": assignment["client_company_id"],
+            "contract_number": "R-TEST-01",
+            "valid_from": (TODAY - timedelta(days=400)).isoformat(),
+            "status": "active",
+            **extra,
+        },
+        headers=who.headers,
+    )
+    assert created.status_code == 201, created.text
+    linked = client.patch(
+        f"{P}/assignments/{assignment['id']}",
+        json={"contract_id": created.json()["id"]},
+        headers=who.headers,
+    )
+    assert linked.status_code == 200, linked.text
+    return created.json()
+
+
 def _complete_checklist(client: TestClient, who: Person, assignment_id: str) -> None:
+    """Alle Pflichtpunkte erledigen. "Überlassungsvertrag" ergibt sich aus dem verknüpften Vertrag
+    (nicht abhakbar): fehlt er, wird ein deckender Vertrag angelegt und verknüpft."""
     detail = client.get(f"{P}/assignments/{assignment_id}", headers=who.headers).json()
+    if detail["contract_id"] is None:
+        _attach_contract(client, who, detail)
+        detail = client.get(f"{P}/assignments/{assignment_id}", headers=who.headers).json()
     for item in detail["checklist"]:
+        if item["item_key"] == "supply_contract":
+            continue
         response = client.patch(
             f"{P}/assignments/{assignment_id}/checklist/{item['id']}",
             json={"done": True},
@@ -131,7 +161,8 @@ def test_full_flow_and_activation_rules(client: TestClient, crew: Crew, make_can
     assert "Merkblatt" in detail
 
     shown = client.get(f"{P}/assignments/{assignment['id']}", headers=crew.a.headers).json()
-    assert len(shown["activation_problems"]) == 2
+    assert len(shown["activation_problems"]) == 3  # Erlaubnis, Vertrag, Checkliste
+    assert "Kein Überlassungsvertrag" in detail
 
     _license(client, crew)
     still_blocked = client.post(
