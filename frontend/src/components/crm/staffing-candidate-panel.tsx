@@ -13,6 +13,7 @@ import { formatDate } from "@/lib/utils";
 import { candidateStaffingActions } from "@/lib/staffing-candidate";
 import { StaffingAssignmentCreateButton } from "./staffing-assignment-create-modal";
 import { StaffingAssignmentsView } from "./staffing-assignments-view";
+import { StaffingPriorPeriodsSection } from "./staffing-prior-periods";
 import { WorkerCreateFromCandidate, WorkerEditModal } from "./staffing-workers-view";
 import { DeadlineMeter, Fact, LEGAL_NOTICE, LoadError, LoadingRows, WorkerStatusBadge } from "./staffing-ui";
 import { formatHours } from "@/lib/format"; // NOMICON
@@ -122,6 +123,7 @@ export function StaffingCandidatePanel({ candidateId }: { candidateId: string })
         </div>
         <StaffingAssignmentsView workerId={worker.id} />
       </section>
+      <StaffingPriorPeriodsSection workerId={worker.id} />
       <section>
         <h3 className="mb-3 font-semibold">Fristen je Kunde</h3>
         {myDeadlines.length === 0 ? (

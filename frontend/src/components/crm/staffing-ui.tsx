@@ -18,6 +18,7 @@ import {
   type StaffingWorkerStatus,
   type Traffic,
 } from "@/lib/api/staffing";
+import { formatPriorDays } from "@/lib/staffing-deadline-text";
 import { formatDate } from "@/lib/utils";
 
 export const LEGAL_NOTICE =
@@ -112,6 +113,11 @@ export function DeadlineMeter({ deadline, maxMonths = 18 }: { deadline: Staffing
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium">
           {formatElapsed(deadline)} <span className="text-brand-muted">von {maxMonths} Monaten</span>
+          {deadline.prior_days > 0 && (
+            <span className="ml-2 text-xs font-normal text-brand-muted" title={`${deadline.prior_days} Tage aus Vorzeiten beim Kunden`}>
+              ({formatPriorDays(deadline.prior_days)})
+            </span>
+          )}
         </p>
         <TrafficBadge traffic={deadline.traffic} label={formatRemaining(deadline.days_remaining)} />
       </div>

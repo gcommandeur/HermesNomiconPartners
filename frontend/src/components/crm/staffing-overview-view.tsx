@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { useStaffingOverview } from "@/lib/api/staffing-hooks";
 import { formatDate } from "@/lib/utils";
+import { formatPriorDays } from "@/lib/staffing-deadline-text";
 import { formatElapsed, formatRemaining, type StaffingPairDeadline } from "@/lib/api/staffing";
 import { EmptyHint, LEGAL_NOTICE, LoadError, LoadingRows, TrafficBadge } from "./staffing-ui";
 
@@ -34,7 +35,8 @@ export function DeadlineRow({ deadline }: { deadline: StaffingPairDeadline }) {
       <div className="min-w-0">
         <p className="truncate text-sm font-medium">{deadline.worker_name}</p>
         <p className="truncate text-xs text-brand-muted">
-          {deadline.client_name} · {formatElapsed(deadline)} · Höchstdauer bis {formatDate(deadline.max_end_date)}
+          {deadline.client_name} · {formatElapsed(deadline)}
+          {deadline.prior_days > 0 ? ` (${formatPriorDays(deadline.prior_days)})` : ""} · Höchstdauer bis {formatDate(deadline.max_end_date)}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">

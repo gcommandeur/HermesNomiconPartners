@@ -70,6 +70,9 @@ class DeadlineResult:
     days_remaining: int | None  # max_end_date - heute (negativ = überschritten)
     exceeded: bool
     traffic: Traffic
+    # Tage der Kette, die NUR aus Vorzeiten stammen (früher beim Kunden geleistet, nicht aus
+    # Einsätzen des CRM). Schon in `counted_days` enthalten; dient der Anzeige "inkl. Vorzeit".
+    prior_days: int = 0
 
 
 NO_CHAIN = DeadlineResult(
@@ -163,6 +166,20 @@ def _days_counted(chain: Sequence[Span], today: date) -> int:
     return total
 
 
+def _prior_only_days(chain: Sequence[Span], assignment_spans: Sequence[Span], today: date) -> int:
+    """Tage der Kette bis heute, die von keinem Einsatz abgedeckt sind (also nur Vorzeit).
+    `assignment_spans` müssen bereits vereinigt (`merge_spans`) sein."""
+    covered: list[Span] = []
+    for link in chain:
+        for own in assignment_spans:
+            start = max(link.start, own.start)
+            ends = [d for d in (link.end, own.end) if d is not None]
+            end = min(ends) if ends else None
+            if end is None or start <= end:
+                covered.append(Span(start, end))
+    return _days_counted(chain, today) - _days_counted(merge_spans(covered), today)
+
+
 def _traffic(days_remaining: int, config: DeadlineConfig) -> Traffic:
     if days_remaining < config.red_days:  # inkl. überschritten (negativ)
         return Traffic.RED
@@ -172,15 +189,21 @@ def _traffic(days_remaining: int, config: DeadlineConfig) -> Traffic:
 
 
 def compute_deadline(
-    spans: Iterable[Span], today: date, config: DeadlineConfig | None = None
+    spans: Iterable[Span],
+    today: date,
+    config: DeadlineConfig | None = None,
+    prior_spans: Iterable[Span] = (),
 ) -> DeadlineResult:
     """Fristen für EIN Paar (Leiharbeitnehmer, Kunde). `spans`: alle nicht abgebrochenen
-    Einsätze dieses Paares (Beginn, Ende oder None).
+    Einsätze dieses Paares (Beginn, Ende oder None). `prior_spans`: Vorzeiten beim selben
+    Kunden (früher geleistet, z.B. über einen anderen Verleiher) - immer abgeschlossen, sie
+    gehen wie Einsätze in Vereinigung und Reset-Regel ein.
 
     Liegt der letzte Einsatz schon länger als `reset_gap_months` zurück, gibt es keinen
     fortsetzbaren Zähler mehr (`has_chain=False`): ein neuer Einsatz fängt bei null an."""
     cfg = config or DeadlineConfig()
-    merged = merge_spans(spans)
+    assignment_spans = merge_spans(spans)
+    merged = merge_spans([*assignment_spans, *prior_spans])
     if not merged:
         return NO_CHAIN
     chain = _current_chain(merged, cfg)
@@ -207,4 +230,5 @@ def compute_deadline(
         days_remaining=remaining,
         exceeded=remaining < 0,
         traffic=_traffic(remaining, cfg),
+        prior_days=_prior_only_days(chain, assignment_spans, today),
     )

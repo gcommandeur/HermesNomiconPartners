@@ -26,6 +26,7 @@ import { formatDate } from "@/lib/utils";
 import { StaffingAssignmentCreateButton } from "./staffing-assignment-create-modal";
 import { StaffingAssignmentsView } from "./staffing-assignments-view";
 import { DeadlineRow } from "./staffing-overview-view";
+import { StaffingPriorPeriodsSection } from "./staffing-prior-periods";
 import { EmptyHint, Fact, LoadError, LoadingRows, WorkerStatusBadge, labelClass, selectClass } from "./staffing-ui";
 import { formatHours } from "@/lib/format"; // NOMICON
 
@@ -205,6 +206,7 @@ export function StaffingWorkerDetailView({ id }: { id: string }) {
           <div className="space-y-2">{myDeadlines.map((d) => <DeadlineRow key={d.client_company_id} deadline={d} />)}</div>
         </section>
       )}
+      <StaffingPriorPeriodsSection workerId={worker.id} />
       <section>
         <h3 className="mb-3 font-semibold">Einsätze</h3>
         <StaffingAssignmentsView workerId={worker.id} />

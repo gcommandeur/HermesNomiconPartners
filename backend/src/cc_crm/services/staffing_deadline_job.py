@@ -21,6 +21,7 @@ from cc_crm.models.staffing import (
     StaffingAssignment,
     StaffingAssignmentStatus,
     StaffingLicense,
+    StaffingPriorPeriod,
     StaffingWorker,
 )
 from cc_crm.models.task import Task
@@ -66,8 +67,19 @@ def pair_deadline(
             StaffingAssignment.status.in_(_COUNTED),
         )
     ).all()
+    # Vorzeiten beim selben Kunden (früher geleistet) zählen wie Einsätze mit, sind aber immer
+    # abgeschlossen.
+    prior = session.scalars(
+        select(StaffingPriorPeriod).where(
+            StaffingPriorPeriod.worker_id == worker_id,
+            StaffingPriorPeriod.client_company_id == client_company_id,
+        )
+    ).all()
     return compute_deadline(
-        [assignment_span(a) for a in assignments], today, config or load_config(session)
+        [assignment_span(a) for a in assignments],
+        today,
+        config or load_config(session),
+        prior_spans=[Span(p.start_date, p.end_date) for p in prior],
     )
 
 

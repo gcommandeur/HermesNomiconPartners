@@ -269,3 +269,44 @@ def test_job_license_reminders(session: Session) -> None:
     assert run_deadline_job(session, D(2026, 10, 4)).tasks_created == 0
     assert run_deadline_job(session, D(2027, 10, 5)).tasks_created == 1
     assert run_deadline_job(session, D(2028, 1, 5)).tasks_created == 1  # abgelaufen
+
+
+# --- Vorzeiten beim Kunden ------------------------------------------------------------------
+
+
+def _prior(
+    session: Session, worker: StaffingWorker, client: ClientCompany, start: date, end: date
+) -> None:
+    from cc_crm.models.staffing import StaffingPriorPeriod
+
+    session.add(
+        StaffingPriorPeriod(
+            worker_id=worker.id, client_company_id=client.id, start_date=start, end_date=end
+        )
+    )
+    session.commit()
+
+
+def test_pair_deadline_counts_prior_period_of_the_same_client_only(session: Session) -> None:
+    worker, client, other = _worker(session), _client(session), _client(session, "Andere AG")
+    _assignment(session, worker, client, D(2025, 7, 1))
+    _prior(session, worker, client, D(2025, 1, 1), D(2025, 6, 30))
+    _prior(session, worker, other, D(2024, 1, 1), D(2024, 12, 31))  # anderer Kunde: zählt nicht
+    result = pair_deadline(session, worker.id, client.id, D(2025, 9, 15))
+    assert result.chain_start == D(2025, 1, 1)
+    assert result.prior_days == 181
+    assert result.counted_days == 181 + 77
+    # Der andere Kunde bleibt unberührt: nur seine eigene Vorzeit, kein Einsatz -> Kette erloschen
+    assert not pair_deadline(session, worker.id, other.id, D(2025, 9, 15)).has_chain
+
+
+def test_job_equal_pay_task_uses_prior_period(session: Session) -> None:
+    owner = _user(session, "dispo@x.example")
+    worker, client = _worker(session), _client(session)
+    _assignment(session, worker, client, D(2025, 7, 1), owner=owner)
+    # Ohne Vorzeit gilt Equal Pay erst ab 1.4.2026 ...
+    assert run_deadline_job(session, D(2025, 10, 15)).tasks_created == 0
+    # ... mit 6 Monaten Vorzeit schon ab 1.10.2025
+    _prior(session, worker, client, D(2025, 1, 1), D(2025, 6, 30))
+    assert run_deadline_job(session, D(2025, 10, 15)).tasks_created == 1
+    assert any("Equal Pay ab jetzt" in t.title for t in _tasks(session))

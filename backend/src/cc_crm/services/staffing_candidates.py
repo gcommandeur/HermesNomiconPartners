@@ -16,6 +16,7 @@ from cc_crm.models.staffing import (
     StaffingAssignment,
     StaffingAssignmentStatus,
     StaffingInvoiceLine,
+    StaffingPriorPeriod,
     StaffingTimesheet,
     StaffingTimesheetStatus,
     StaffingWorker,
@@ -26,7 +27,7 @@ from cc_crm.schemas.staffing_candidates import (
     StaffingWorkerTimesheetSummary,
 )
 from cc_crm.services.staffing_deadline_job import assignment_span
-from cc_crm.services.staffing_deadlines import Traffic, compute_deadline
+from cc_crm.services.staffing_deadlines import Span, Traffic, compute_deadline
 from cc_crm.services.staffing_settings import load_config
 
 _OPEN = (StaffingAssignmentStatus.PLANNED, StaffingAssignmentStatus.ACTIVE)
@@ -49,12 +50,26 @@ def _critical_worker_ids(
         pairs.setdefault((assignment.worker_id, assignment.client_company_id), []).append(
             assignment
         )
+    # Vorzeiten beim selben Kunden zählen mit (eine Abfrage für alle betroffenen Personen)
+    prior: dict[tuple[uuid.UUID, uuid.UUID], list[Span]] = {}
+    prior_statement = select(StaffingPriorPeriod).where(
+        StaffingPriorPeriod.worker_id.in_({worker for worker, _client in pairs})
+    )
+    for period in session.scalars(prior_statement).all():
+        prior.setdefault((period.worker_id, period.client_company_id), []).append(
+            Span(period.start_date, period.end_date)
+        )
     config = load_config(session)
     worst: dict[uuid.UUID, tuple[Traffic, int | None]] = {}
-    for (worker_id, _client), assignments in pairs.items():
+    for (worker_id, client_id), assignments in pairs.items():
         if not any(a.status in _OPEN for a in assignments):
             continue
-        result = compute_deadline([assignment_span(a) for a in assignments], today, config)
+        result = compute_deadline(
+            [assignment_span(a) for a in assignments],
+            today,
+            config,
+            prior_spans=prior.get((worker_id, client_id), ()),
+        )
         if not result.has_chain:
             continue
         current = worst.get(worker_id)
@@ -181,5 +196,3 @@ def worker_timesheet_summary(
         elif status == StaffingTimesheetStatus.REJECTED:
             counts["rejected"] += 1
     return StaffingWorkerTimesheetSummary(worker_id=worker_id, **counts)
-
-

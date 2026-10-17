@@ -208,3 +208,56 @@ def test_values_come_from_the_configuration() -> None:
     contiguous = compute_deadline([Span(D(2025, 1, 1))], D(2025, 12, 15), config)
     assert contiguous.max_end_date == D(2025, 12, 31)
     assert contiguous.traffic == Traffic.YELLOW  # 16 Tage: unter 20, ueber 10
+
+
+# --- Vorzeiten beim Kunden (anderer Verleiher, vor CRM-Start) --------------------------------
+
+
+def test_prior_period_and_assignment_form_one_chain() -> None:
+    prior = [Span(D(2025, 1, 1), D(2025, 6, 30))]  # 181 Tage
+    result = compute_deadline([Span(D(2025, 7, 1), None)], D(2025, 9, 15), prior_spans=prior)
+    assert result.chain_start == D(2025, 1, 1)
+    assert result.counted_days == 181 + 77
+    assert result.prior_days == 181
+    assert result.max_end_date == D(2026, 6, 30)  # 18 Monate ab 1.1.2025
+
+
+def test_gap_up_to_three_months_joins_prior_period_longer_resets() -> None:
+    prior = [Span(D(2025, 1, 1), D(2025, 3, 31))]
+    joined = compute_deadline([Span(D(2025, 6, 30), None)], D(2025, 7, 10), prior_spans=prior)
+    assert joined.chain_start == D(2025, 1, 1)  # Lücke 1.4. bis 29.6. = noch 3 Monate
+    reset = compute_deadline([Span(D(2025, 7, 2), None)], D(2025, 7, 10), prior_spans=prior)
+    assert reset.chain_start == D(2025, 7, 2)  # 3 Monate und 1 Tag: Neustart
+    assert reset.prior_days == 0
+
+
+def test_prior_period_moves_equal_pay_date_forward() -> None:
+    assignment = [Span(D(2025, 7, 1), None)]
+    without = compute_deadline(assignment, D(2025, 9, 15))
+    with_prior = compute_deadline(
+        assignment, D(2025, 9, 15), prior_spans=[Span(D(2025, 1, 1), D(2025, 6, 30))]
+    )
+    assert without.equal_pay_from == D(2026, 4, 1)
+    assert with_prior.equal_pay_from == D(2025, 10, 1)  # 9 Monate ab 1.1.2025
+    assert with_prior.equal_pay_from < without.equal_pay_from  # type: ignore[operator]
+
+
+def test_prior_period_alone_counts_until_the_gap_is_over() -> None:
+    prior = [Span(D(2025, 1, 1), D(2025, 6, 30))]
+    running = compute_deadline([], D(2025, 8, 1), prior_spans=prior)
+    assert running.has_chain
+    assert (running.counted_days, running.prior_days) == (181, 181)
+    assert compute_deadline([], D(2025, 10, 1), prior_spans=prior).has_chain  # genau 3 Monate
+    assert not compute_deadline([], D(2025, 10, 2), prior_spans=prior).has_chain
+
+
+def test_prior_days_ignore_overlap_with_assignments() -> None:
+    # Die Vorzeit überlappt den Einsatz: nichts wird doppelt gezählt, Vorzeit ist nur der Rest.
+    result = compute_deadline(
+        [Span(D(2025, 3, 1), D(2025, 4, 30))],
+        D(2025, 8, 1),
+        prior_spans=[Span(D(2025, 1, 1), D(2025, 3, 31))],
+    )
+    assert result.chain_start == D(2025, 1, 1)
+    assert result.counted_days == 120  # 1.1. bis 30.4.
+    assert result.prior_days == 59  # 1.1. bis 28.2. (März liegt schon im Einsatz)

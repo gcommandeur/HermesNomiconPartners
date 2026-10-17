@@ -14,7 +14,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
-from cc_crm.models.staffing import StaffingTimesheet
+from cc_crm.models.staffing import StaffingPriorPeriod, StaffingTimesheet
 from tests.api.test_staffing_api import (
     Crew,
     _assignment,
@@ -25,12 +25,17 @@ from tests.api.test_staffing_api import (
 from tests.api.test_staffing_billing import make_invoice
 from tests.api.test_staffing_timesheets import public
 
-ID_NAMES = ("assignment_id", "timesheet_id", "invoice_id")
+ID_NAMES = ("assignment_id", "timesheet_id", "invoice_id", "prior_period_id")
 METHODS = ("get", "post", "put", "patch", "delete")
 
 # Operationen, die ABSICHTLICH nicht mit 404 antworten duerfen - nur mit Begruendung eintragen.
-# Format: (METHODE, Pfad-Schablone). Aktuell keine Ausnahme.
-ALLOWED_NON_404: dict[tuple[str, str], str] = {}
+# Format: (METHODE, Pfad-Schablone). Vorzeiten gehoeren zum Leiharbeitnehmer und teilen dessen
+# Sichtbarkeit (gemeinsamer Pool wie Kandidaten); nicht vorhanden liefert trotzdem 404. Diese
+# Operationen werden fuer den Fremden nicht aufgerufen (Loeschen/Aendern waere wirksam).
+ALLOWED_NON_404: dict[tuple[str, str], str] = {
+    ("PATCH", "/api/v1/staffing/prior-periods/{prior_period_id}"): "Pool wie Leiharbeitnehmer",
+    ("DELETE", "/api/v1/staffing/prior-periods/{prior_period_id}"): "Pool wie Leiharbeitnehmer",
+}
 
 _ = (crew, make_candidate, public)  # Fixtures (per Import registriert)
 
@@ -78,12 +83,21 @@ def _real_ids(
             period_end=date(2026, 1, 31),
         )
         session.add(sheet)
+        period = StaffingPriorPeriod(
+            worker_id=uuid.UUID(worker["id"]),
+            client_company_id=uuid.UUID(crew.client_id),
+            start_date=date(2025, 1, 1),
+            end_date=date(2025, 3, 31),
+        )
+        session.add(period)
         session.commit()
         sheet_id = str(sheet.id)
+        period_id = str(period.id)
     return {
         "assignment_id": assignment["id"],
         "item_id": detail["checklist"][0]["id"],
         "timesheet_id": sheet_id,
+        "prior_period_id": period_id,
     }
 
 
@@ -107,14 +121,16 @@ def test_every_staffing_id_route_hides_foreign_assignments(
     assert len(operations) >= 4, len(operations)
     paths = {path for _method, path, _op in operations}
     assert "/api/v1/staffing/invoices/{invoice_id}" in paths  # Rechnungen sind abgedeckt
+    assert "/api/v1/staffing/prior-periods/{prior_period_id}" in paths  # Vorzeiten sind abgedeckt
 
     leaks = []
     reachable_for_owner = 0
     for method, path, operation in operations:
         url = _url(path, operation, real)
-        status = _call(client, method, url, stranger.headers)
-        if status != 404 and (method, path) not in ALLOWED_NON_404:
-            leaks.append((method, path, status))
+        if (method, path) not in ALLOWED_NON_404:
+            status = _call(client, method, url, stranger.headers)
+            if status != 404:
+                leaks.append((method, path, status))
         if _call(client, method, url, owner.headers) != 404:
             reachable_for_owner += 1
     assert not leaks, f"Routen ohne Zugriffspruefung (Fremder bekommt kein 404): {leaks}"

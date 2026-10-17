@@ -46,6 +46,9 @@ from cc_crm.schemas.staffing import (
     StaffingOfferResult,
     StaffingOverviewRead,
     StaffingPairDeadlineRead,
+    StaffingPriorPeriodCreate,
+    StaffingPriorPeriodRead,
+    StaffingPriorPeriodUpdate,
     StaffingSettingsRead,
     StaffingSettingsUpdate,
     StaffingTakeoverInput,
@@ -84,6 +87,7 @@ from cc_crm.services.staffing_disposition import disposition
 from cc_crm.services.staffing_invoices import StaffingInvoiceService
 from cc_crm.services.staffing_licenses import StaffingLicenseService
 from cc_crm.services.staffing_overview import DISCLAIMER, overview, pair_deadlines
+from cc_crm.services.staffing_prior_periods import StaffingPriorPeriodService
 from cc_crm.services.staffing_settings import load_config, save_config
 from cc_crm.services.staffing_takeover import StaffingTakeoverService
 from cc_crm.services.staffing_takeover_fee import (
@@ -239,6 +243,51 @@ def update_worker(
     forbid_money_for_non_admin(payload, current_user)
     row = StaffingWorkerService(session).update(worker_id, payload, current_user)
     return redact(worker_read(row), current_user)
+
+
+# --- Vorzeiten beim Kunden ---------------------------------------------------------------------
+# Vorzeiten gehören zum Leiharbeitnehmer (gemeinsamer Pool wie die Person selbst), nicht zu einem
+# Einsatz: gleiche Rechte wie die Leiharbeitnehmer-Routen, keine Lohn- oder Margenwerte.
+
+
+@router.get("/workers/{worker_id}/prior-periods", response_model=list[StaffingPriorPeriodRead])
+def list_prior_periods(
+    worker_id: uuid.UUID, session: DatabaseSession, _user: CurrentUser
+) -> list[StaffingPriorPeriodRead]:
+    return StaffingPriorPeriodService(session).list_for_worker(worker_id)
+
+
+@router.post(
+    "/workers/{worker_id}/prior-periods",
+    response_model=StaffingPriorPeriodRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_prior_period(
+    worker_id: uuid.UUID,
+    payload: StaffingPriorPeriodCreate,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> StaffingPriorPeriodRead:
+    return StaffingPriorPeriodService(session).create(worker_id, payload, current_user)
+
+
+@router.patch("/prior-periods/{prior_period_id}", response_model=StaffingPriorPeriodRead)
+def update_prior_period(
+    prior_period_id: uuid.UUID,
+    payload: StaffingPriorPeriodUpdate,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> StaffingPriorPeriodRead:
+    return StaffingPriorPeriodService(session).update(prior_period_id, payload, current_user)
+
+
+@router.delete("/prior-periods/{prior_period_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_prior_period(
+    prior_period_id: uuid.UUID, session: DatabaseSession, current_user: CurrentUser
+) -> Response:
+    """Löschen als Eingabekorrektur erlaubt; der Audit-Log hält den gelöschten Zeitraum fest."""
+    StaffingPriorPeriodService(session).delete(prior_period_id, current_user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # --- Verträge ---------------------------------------------------------------------------------

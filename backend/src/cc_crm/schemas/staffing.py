@@ -16,6 +16,7 @@ from cc_crm.models.staffing import (
     StaffingAssignmentStatus,
     StaffingChecklistKey,
     StaffingContractStatus,
+    StaffingPriorPeriodSource,
     StaffingTimesheetStatus,
     StaffingWorkerStatus,
 )
@@ -72,6 +73,41 @@ class StaffingWorkerRead(EntityRead):
     weekly_hours: Decimal | None
     work_permit_valid_until: date | None
     notes: str | None
+
+
+# --- Vorzeiten beim Kunden ---------------------------------------------------------------------
+
+
+class StaffingPriorPeriodCreate(BaseModel):
+    client_company_id: uuid.UUID
+    start_date: date
+    end_date: date
+    source: StaffingPriorPeriodSource = StaffingPriorPeriodSource.OTHER_PROVIDER
+    note: str | None = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def _dates(self) -> "StaffingPriorPeriodCreate":
+        _check_range(self.start_date, self.end_date, "Das Ende liegt vor dem Beginn.")
+        return self
+
+
+class StaffingPriorPeriodUpdate(BaseModel):
+    client_company_id: uuid.UUID | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    source: StaffingPriorPeriodSource | None = None
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class StaffingPriorPeriodRead(EntityRead):
+    worker_id: uuid.UUID
+    client_company_id: uuid.UUID
+    client_name: str
+    start_date: date
+    end_date: date
+    source: StaffingPriorPeriodSource
+    note: str | None
+    created_by_user_id: uuid.UUID | None
 
 
 # --- Überlassungs-/Rahmenvertraege -------------------------------------------------------------
@@ -203,6 +239,7 @@ class StaffingDeadlineRead(BaseModel):
     days_remaining: int | None
     exceeded: bool
     traffic: Traffic
+    prior_days: int = 0  # davon aus Vorzeiten (früher beim Kunden geleistet)
 
 
 class StaffingPairDeadlineRead(StaffingDeadlineRead):

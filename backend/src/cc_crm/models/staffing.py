@@ -172,6 +172,38 @@ class StaffingAssignmentExtension(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
+class StaffingPriorPeriodSource(StrEnum):
+    OTHER_PROVIDER = "other_provider"  # früher über einen anderen Verleiher beim Kunden
+    BEFORE_CRM = "before_crm"  # vor dem Start dieses CRM, nicht erfasst
+    OTHER = "other"
+
+
+class StaffingPriorPeriod(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Früher geleistete Überlassungszeit beim selben Kunden (anderer Verleiher oder vor CRM-Start).
+    Zählt vollständig in Höchstdauer und Equal Pay mit (Annahme, kein Rechtsrat), ist immer
+    abgeschlossen und trägt keinen Lohn."""
+
+    __tablename__ = "staffing_prior_periods"
+
+    worker_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("staffing_workers.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    client_company_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("client_companies.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    source: Mapped[StaffingPriorPeriodSource] = mapped_column(
+        Enum(StaffingPriorPeriodSource, native_enum=False, length=20),
+        default=StaffingPriorPeriodSource.OTHER_PROVIDER,
+        nullable=False,
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+
 class StaffingChecklistItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "staffing_assignment_checklist_items"
     __table_args__ = (UniqueConstraint("assignment_id", "item_key"),)

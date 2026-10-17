@@ -66,7 +66,7 @@ export const DEMO_ASSIGNMENT_DETAIL: StaffingAssignmentDetail = {
   deadline: {
     has_chain: true, chain_start: "2026-02-01", elapsed_months: 0, elapsed_days: 0, counted_days: 0,
     equal_pay_from: "2026-11-01", equal_pay_reached: false, max_end_date: "2027-07-31",
-    days_remaining: 500, exceeded: false, traffic: "green",
+    days_remaining: 500, exceeded: false, traffic: "green", prior_days: 0,
   },
   activation_problems: [
     "Keine gültige AÜG-Erlaubnis für den Zeitraum 01.02.2026 bis 31.07.2026 hinterlegt.",
@@ -80,7 +80,7 @@ export const DEMO_DEADLINES: StaffingPairDeadline[] = [
     client_name: "Beispiel Logistik GmbH", owner_user_id: null, has_chain: true,
     chain_start: "2025-03-01", elapsed_months: 10, elapsed_days: 5, counted_days: 310,
     equal_pay_from: "2025-12-01", equal_pay_reached: true, max_end_date: "2026-08-31",
-    days_remaining: 55, exceeded: false, traffic: "yellow",
+    days_remaining: 55, exceeded: false, traffic: "yellow", prior_days: 120,
   },
 ];
 

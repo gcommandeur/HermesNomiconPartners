@@ -1,7 +1,7 @@
 // NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
 // Typen kommen aus dem erzeugten Schema (schema.d.ts), Abfragen/Aktionen gegen /staffing.
 // Plain-Modul (kein "use client"): aus Server- und Client-Komponenten nutzbar.
-import { apiDownload, apiGet, apiPatch, apiPost, apiPut } from "./client";
+import { apiDelete, apiDownload, apiGet, apiPatch, apiPost, apiPut } from "./client";
 import type { components } from "./schema";
 import type { DataResult } from "./types";
 import {
@@ -45,6 +45,14 @@ export type StaffingInvoice = Schemas["StaffingInvoiceRead"];
 export type StaffingInvoiceStatusResult = Schemas["StaffingInvoiceStatusResult"];
 export type StaffingTakeoverResult = Schemas["StaffingTakeoverResult"];
 export type InvoiceStatus = Schemas["InvoiceStatus"];
+export type StaffingPriorPeriod = Schemas["StaffingPriorPeriodRead"];
+export type StaffingPriorPeriodSource = Schemas["StaffingPriorPeriodSource"];
+
+export const PRIOR_SOURCE_LABELS: Record<StaffingPriorPeriodSource, string> = {
+  other_provider: "Anderer Verleiher",
+  before_crm: "Vor CRM-Start",
+  other: "Sonstiges",
+};
 
 export const WORKER_STATUS_LABELS: Record<StaffingWorkerStatus, string> = {
   applicant: "Anwärter",
@@ -259,6 +267,32 @@ export function changeStaffingAssignmentStatus(id: string, status: StaffingAssig
 
 export function setStaffingChecklistItem(assignmentId: string, itemId: string, done: boolean) {
   return apiPatch<StaffingAssignmentDetail>(`/staffing/assignments/${assignmentId}/checklist/${itemId}`, { done });
+}
+
+// --- Vorzeiten beim Kunden ---------------------------------------------------------------------
+
+export async function getStaffingPriorPeriods(workerId: string): Promise<DataResult<StaffingPriorPeriod[]>> {
+  return apiGet<StaffingPriorPeriod[]>(`/staffing/workers/${workerId}/prior-periods`, []);
+}
+
+export interface PriorPeriodInput {
+  client_company_id: string;
+  start_date: string;
+  end_date: string;
+  source: StaffingPriorPeriodSource;
+  note?: string | null;
+}
+
+export function createStaffingPriorPeriod(workerId: string, input: PriorPeriodInput) {
+  return apiPost<StaffingPriorPeriod>(`/staffing/workers/${workerId}/prior-periods`, input);
+}
+
+export function updateStaffingPriorPeriod(id: string, input: Partial<Omit<PriorPeriodInput, "client_company_id">>) {
+  return apiPatch<StaffingPriorPeriod>(`/staffing/prior-periods/${id}`, input);
+}
+
+export function deleteStaffingPriorPeriod(id: string) {
+  return apiDelete(`/staffing/prior-periods/${id}`);
 }
 
 export function createStaffingLicense(input: {

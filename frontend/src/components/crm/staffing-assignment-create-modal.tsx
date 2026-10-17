@@ -12,7 +12,7 @@ import { ErrorBanner } from "@/components/crm/error-banner";
 import { labelClass, selectClass } from "@/components/crm/staffing-ui";
 import { searchClients } from "@/lib/api/search-select-helpers";
 import { useAssignableUsersCache, useCurrentUser } from "@/lib/api/hooks";
-import { useStaffingContracts, useStaffingWorkers } from "@/lib/api/staffing-hooks";
+import { useStaffingContracts, useStaffingPriorPeriods, useStaffingWorkers } from "@/lib/api/staffing-hooks";
 import { createStaffingAssignment, type NewAssignmentInput } from "@/lib/api/staffing";
 import { EngagementConflictNotice } from "@/components/crm/engagement-conflict-notice";
 import { isEngagementConflict } from "@/lib/api/engagement";
@@ -59,6 +59,12 @@ function CreateForm({ workerId, onClose, onCreated }: { workerId?: string; onClo
   });
   const { data: contractsData } = useStaffingContracts(form.client_company_id || undefined);
   const contracts = form.client_company_id ? (contractsData?.data ?? []) : [];
+  // Hinweis (kein Zwang): Vorzeiten beim Kunden zählen für die Höchstdauer mit.
+  const { data: priorData } = useStaffingPriorPeriods(form.worker_id || null);
+  const askForPriorPeriods =
+    Boolean(form.worker_id && form.client_company_id) &&
+    priorData !== undefined &&
+    !priorData.data.some((period) => period.client_company_id === form.client_company_id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<string | null>(null);
@@ -125,6 +131,12 @@ function CreateForm({ workerId, onClose, onCreated }: { workerId?: string; onClo
             required
           />
         </div>
+        {askForPriorPeriods && (
+          <p className="rounded-md border border-white/10 bg-brand-surface p-3 text-xs text-brand-soft" role="note">
+            Hat die Person schon früher bei diesem Kunden gearbeitet, auch über einen anderen Verleiher oder vor dem CRM-Start? Dann bitte zuerst am
+            Leiharbeitnehmer unter „Vorzeiten beim Kunden“ eintragen – diese Zeiten zählen für Höchstdauer und Equal Pay mit.
+          </p>
+        )}
         {contracts.length > 0 && (
           <div>
             <label className={labelClass} htmlFor="sa-contract">Überlassungs-/Rahmenvertrag</label>

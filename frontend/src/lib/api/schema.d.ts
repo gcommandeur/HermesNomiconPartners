@@ -3328,6 +3328,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staffing/prior-periods/{prior_period_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Prior Period
+         * @description Löschen als Eingabekorrektur erlaubt; der Audit-Log hält den gelöschten Zeitraum fest.
+         */
+        delete: operations["delete_prior_period_api_v1_staffing_prior_periods__prior_period_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Prior Period */
+        patch: operations["update_prior_period_api_v1_staffing_prior_periods__prior_period_id__patch"];
+        trace?: never;
+    };
     "/api/v1/staffing/settings": {
         parameters: {
             query?: never;
@@ -3491,6 +3512,24 @@ export interface paths {
         head?: never;
         /** Update Worker */
         patch: operations["update_worker_api_v1_staffing_workers__worker_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/staffing/workers/{worker_id}/prior-periods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Prior Periods */
+        get: operations["list_prior_periods_api_v1_staffing_workers__worker_id__prior_periods_get"];
+        put?: never;
+        /** Create Prior Period */
+        post: operations["create_prior_period_api_v1_staffing_workers__worker_id__prior_periods_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/staffing/workers/{worker_id}/timesheet-summary": {
@@ -9805,6 +9844,11 @@ export interface components {
             has_chain: boolean;
             /** Max End Date */
             max_end_date: string | null;
+            /**
+             * Prior Days
+             * @default 0
+             */
+            prior_days: number;
             traffic: components["schemas"]["Traffic"];
         };
         /** StaffingDispositionRead */
@@ -10085,6 +10129,11 @@ export interface components {
             max_end_date: string | null;
             /** Owner User Id */
             owner_user_id: string | null;
+            /**
+             * Prior Days
+             * @default 0
+             */
+            prior_days: number;
             traffic: components["schemas"]["Traffic"];
             /**
              * Worker Id
@@ -10093,6 +10142,90 @@ export interface components {
             worker_id: string;
             /** Worker Name */
             worker_name: string;
+        };
+        /** StaffingPriorPeriodCreate */
+        StaffingPriorPeriodCreate: {
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Note */
+            note?: string | null;
+            /** @default other_provider */
+            source: components["schemas"]["StaffingPriorPeriodSource"];
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+        };
+        /** StaffingPriorPeriodRead */
+        StaffingPriorPeriodRead: {
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id: string | null;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            source: components["schemas"]["StaffingPriorPeriodSource"];
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+        };
+        /**
+         * StaffingPriorPeriodSource
+         * @enum {string}
+         */
+        StaffingPriorPeriodSource: "other_provider" | "before_crm" | "other";
+        /** StaffingPriorPeriodUpdate */
+        StaffingPriorPeriodUpdate: {
+            /** Client Company Id */
+            client_company_id?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Note */
+            note?: string | null;
+            source?: components["schemas"]["StaffingPriorPeriodSource"] | null;
+            /** Start Date */
+            start_date?: string | null;
         };
         /** StaffingSettingsRead */
         StaffingSettingsRead: {
@@ -18462,6 +18595,74 @@ export interface operations {
             };
         };
     };
+    delete_prior_period_api_v1_staffing_prior_periods__prior_period_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                prior_period_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_prior_period_api_v1_staffing_prior_periods__prior_period_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                prior_period_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingPriorPeriodUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingPriorPeriodRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_settings_api_v1_staffing_settings_get: {
         parameters: {
             query?: never;
@@ -18888,6 +19089,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaffingWorkerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_prior_periods_api_v1_staffing_workers__worker_id__prior_periods_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingPriorPeriodRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_prior_period_api_v1_staffing_workers__worker_id__prior_periods_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingPriorPeriodCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingPriorPeriodRead"];
                 };
             };
             /** @description Validation Error */
