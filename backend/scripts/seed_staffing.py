@@ -7,7 +7,13 @@ alle Personen, Nummern und Aktenzeichen sind erfunden.
 
 Die Daten gehen durch die echten Services (Regeln, Checkliste, Audit-Log wie im Betrieb) und
 decken verschiedene Faelle ab: Frist rot/gelb/gruen, Lücke unter 3 Monaten (Zähler läuft
-weiter), beendeter und geplanter Einsatz, Anwärter ohne Einsatz."""
+weiter), beendeter und geplanter Einsatz, Anwärter ohne Einsatz.
+
+Mit `edge_cases=True` (so ruft `seed_data.py seed --staffing N` auf) kommen die Sonderfälle der
+Logiklücken-Pakete dazu: Vorzeit beim Kunden, überfälliger aktiver Einsatz, bestätigte
+Überschneidung, Equal Pay kurz davor / offen / bestätigt und ein Vertrag, der den Zeitraum nicht
+mehr deckt. Jeder Sonderfall trägt eine Kennung in den Notizen des Leiharbeitnehmers
+("Demo-Fall: <Name>"); ein erneuter Lauf legt ihn nicht doppelt an (idempotent)."""
 
 from __future__ import annotations
 
@@ -31,7 +37,9 @@ from cc_crm.models.enums import ClientStatus  # noqa: E402
 from cc_crm.models.staffing import (  # noqa: E402
     StaffingAssignmentStatus,
     StaffingChecklistKey,
+    StaffingContractStatus,
     StaffingLicense,
+    StaffingPriorPeriodSource,
     StaffingWorker,
     StaffingWorkerStatus,
 )
@@ -41,7 +49,9 @@ from cc_crm.schemas.staffing import (  # noqa: E402
     StaffingAssignmentStatusChange,
     StaffingChecklistItemUpdate,
     StaffingContractCreate,
+    StaffingContractUpdate,
     StaffingLicenseCreate,
+    StaffingPriorPeriodCreate,
     StaffingWorkerCreate,
 )
 from cc_crm.services.staffing_activation import StaffingActivationService  # noqa: E402
@@ -49,7 +59,10 @@ from cc_crm.services.staffing_assignments import (  # noqa: E402
     StaffingAssignmentService,
     StaffingContractService,
 )
+from cc_crm.services.staffing_deadlines import add_months  # noqa: E402
+from cc_crm.services.staffing_equal_pay import StaffingEqualPayService  # noqa: E402
 from cc_crm.services.staffing_licenses import StaffingLicenseService  # noqa: E402
+from cc_crm.services.staffing_prior_periods import StaffingPriorPeriodService  # noqa: E402
 from cc_crm.services.staffing_workers import StaffingWorkerService  # noqa: E402
 
 PAY_GRADES = ["EG 1", "EG 2", "EG 3", "EG 4"]
@@ -63,6 +76,7 @@ class StaffingSeedResult:
     contracts: int = 0
     assignments: int = 0
     license_created: bool = False
+    edge_cases: int = 0
 
 
 @dataclass
@@ -120,6 +134,7 @@ def seed_staffing(
     workers: int,
     rng: random.Random | None = None,
     today: date | None = None,
+    edge_cases: bool = False,
 ) -> StaffingSeedResult:
     """Legt bis zu `workers` Leiharbeitnehmer aus vorhandenen Kandidaten an (Kandidaten, die
     schon Leiharbeitnehmer sind, werden übersprungen). Mehrfaches Ausführen ist möglich."""
@@ -234,4 +249,256 @@ def seed_staffing(
                     actor,
                     today=end or day,
                 )
+    if edge_cases:
+        result.edge_cases = seed_edge_cases(session, actor, list(clients), day)
     return result
+
+
+# --- Sonderfälle der Logiklücken-Pakete ----------------------------------------------------------
+
+EDGE_CASES = (
+    "vorzeit",
+    "ueberfaellig",
+    "ueberschneidung",
+    "equal_pay_nah",
+    "equal_pay_offen",
+    "equal_pay_bestaetigt",
+    "vertrag_luecke",
+)
+
+
+def _marker(key: str) -> str:
+    return f"Demo-Fall: {key}"
+
+
+def seed_edge_cases(session: Session, actor: User, clients: list[ClientCompany], day: date) -> int:
+    """Legt die fehlenden Sonderfälle an (je Fall höchstens einmal) und gibt ihre Anzahl zurück.
+    Verbraucht pro Fall einen Kandidaten ohne Überlassungsprofil; sind keine mehr da, werden die
+    übrigen Fälle übersprungen."""
+    if not clients:
+        return 0
+    created = 0
+    for key in EDGE_CASES:
+        if session.scalar(select(StaffingWorker.id).where(StaffingWorker.notes == _marker(key))):
+            continue
+        candidate = session.scalar(
+            select(Candidate)
+            .where(
+                Candidate.id.not_in(select(StaffingWorker.candidate_id)),
+                Candidate.anonymized_at.is_(None),
+            )
+            .order_by(Candidate.created_at)
+            .limit(1)
+        )
+        if candidate is None:
+            break
+        _EDGE_BUILDERS[key](session, actor, clients, candidate, day)
+        created += 1
+    return created
+
+
+def _edge_worker(session: Session, actor: User, candidate: Candidate, key: str, day: date):  # type: ignore[no-untyped-def]
+    session.add(CandidateEngagementPrefs(candidate_id=candidate.id, open_for_staffing="yes"))
+    session.flush()
+    return (
+        StaffingWorkerService(session)
+        .create(
+            StaffingWorkerCreate(
+                candidate_id=candidate.id,
+                status=StaffingWorkerStatus.ACTIVE,
+                entry_date=day - timedelta(days=400),
+                hourly_wage=Decimal("15.20"),
+                pay_grade="EG 3",
+                weekly_hours=Decimal("38.5"),
+                notes=_marker(key),
+            ),
+            actor,
+        )
+        .worker
+    )
+
+
+def _edge_contract(session: Session, actor: User, client: ClientCompany, day: date, tag: str):  # type: ignore[no-untyped-def]
+    return (
+        StaffingContractService(session)
+        .create(
+            StaffingContractCreate(
+                client_company_id=client.id,
+                contract_number=f"R-DEMO-{day.year}-{tag}",
+                valid_from=day - timedelta(days=700),
+                industry_sector="Logistik",
+                status=StaffingContractStatus.ACTIVE,
+            ),
+            actor,
+        )
+        .contract
+    )
+
+
+def _edge_assignment(  # type: ignore[no-untyped-def]
+    session: Session,
+    actor: User,
+    worker: StaffingWorker,
+    client: ClientCompany,
+    contract,
+    start: date,
+    end: date | None = None,
+    *,
+    activate: bool = True,
+    confirm_overlap: bool = False,
+):
+    """Einsatz über die echten Services: Checkliste (soweit abhakbar), Aktivierung rückdatiert."""
+    service = StaffingAssignmentService(session)
+    row = service.create(
+        StaffingAssignmentCreate(
+            worker_id=worker.id,
+            client_company_id=client.id,
+            contract_id=contract.id,
+            start_date=start,
+            planned_end_date=end,
+            location="Halle 2",
+            activity="Kommissionierung",
+            billing_rate=Decimal("29.00"),
+        ),
+        actor,
+        confirm_overlap,
+    )
+    assignment_id = row.assignment.id
+    items = [
+        item
+        for item in service.detail(assignment_id, start).checklist
+        if item.item_key != StaffingChecklistKey.SUPPLY_CONTRACT
+    ]
+    for item in items if activate else items[: len(items) // 2]:
+        service.update_checklist_item(
+            assignment_id, item.id, StaffingChecklistItemUpdate(done=True), actor
+        )
+    if activate:
+        StaffingActivationService(session).change_status(
+            assignment_id,
+            StaffingAssignmentStatusChange(status=StaffingAssignmentStatus.ACTIVE),
+            actor,
+            today=start,
+        )
+    return row.assignment
+
+
+def _case_vorzeit(session, actor, clients, candidate, day):  # type: ignore[no-untyped-def]
+    """10 Monate früher beim selben Kunden (anderer Verleiher), danach ein Einsatz im CRM."""
+    client = clients[0]
+    worker = _edge_worker(session, actor, candidate, "vorzeit", day)
+    StaffingPriorPeriodService(session).create(
+        worker.id,
+        StaffingPriorPeriodCreate(
+            client_company_id=client.id,
+            start_date=day - timedelta(days=60 + 304),
+            end_date=day - timedelta(days=60),
+            source=StaffingPriorPeriodSource.OTHER_PROVIDER,
+            note="Demo: früher über einen anderen Verleiher",
+        ),
+        actor,
+        today=day,
+    )
+    contract = _edge_contract(session, actor, client, day, "V1")
+    _edge_assignment(session, actor, worker, client, contract, day - timedelta(days=45))
+
+
+def _case_ueberfaellig(session, actor, clients, candidate, day):  # type: ignore[no-untyped-def]
+    """Aktiver Einsatz, dessen geplantes Ende seit 5 Tagen vorbei ist (beenden oder verlängern)."""
+    client = clients[1 % len(clients)]
+    worker = _edge_worker(session, actor, candidate, "ueberfaellig", day)
+    contract = _edge_contract(session, actor, client, day, "U1")
+    _edge_assignment(
+        session,
+        actor,
+        worker,
+        client,
+        contract,
+        day - timedelta(days=200),
+        day - timedelta(days=5),
+    )
+
+
+def _case_ueberschneidung(session, actor, clients, candidate, day):  # type: ignore[no-untyped-def]
+    """Zwei Einsätze derselben Person im selben Zeitraum; die Überschneidung ist bestätigt."""
+    first_client, second_client = clients[0], clients[-1]
+    worker = _edge_worker(session, actor, candidate, "ueberschneidung", day)
+    first_contract = _edge_contract(session, actor, first_client, day, "S1")
+    second_contract = (
+        first_contract
+        if second_client.id == first_client.id
+        else _edge_contract(session, actor, second_client, day, "S2")
+    )
+    _edge_assignment(
+        session,
+        actor,
+        worker,
+        first_client,
+        first_contract,
+        day - timedelta(days=60),
+        day + timedelta(days=30),
+    )
+    _edge_assignment(
+        session,
+        actor,
+        worker,
+        second_client,
+        second_contract,
+        day + timedelta(days=5),
+        day + timedelta(days=60),
+        activate=False,
+        confirm_overlap=True,
+    )
+
+
+def _equal_pay_case(  # type: ignore[no-untyped-def]
+    session, actor, clients, candidate, day, key: str, start: date, tag: str, confirm: bool = False
+):
+    client = clients[2 % len(clients)]
+    worker = _edge_worker(session, actor, candidate, key, day)
+    contract = _edge_contract(session, actor, client, day, tag)
+    assignment = _edge_assignment(session, actor, worker, client, contract, start)
+    if confirm:
+        StaffingEqualPayService(session).confirm(assignment.id, actor, today=day)
+
+
+def _case_equal_pay_nah(session, actor, clients, candidate, day):  # type: ignore[no-untyped-def]
+    """Equal Pay beginnt in 12 Tagen (Vorwarnung)."""
+    start = add_months(day + timedelta(days=12), -9)
+    _equal_pay_case(session, actor, clients, candidate, day, "equal_pay_nah", start, "E1")
+
+
+def _case_equal_pay_offen(session, actor, clients, candidate, day):  # type: ignore[no-untyped-def]
+    """Equal Pay gilt seit gut einem Monat, der Lohn ist noch nicht als geprüft bestätigt."""
+    start = add_months(day, -10)
+    _equal_pay_case(session, actor, clients, candidate, day, "equal_pay_offen", start, "E2")
+
+
+def _case_equal_pay_bestaetigt(session, actor, clients, candidate, day):  # type: ignore[no-untyped-def]
+    """Equal Pay gilt seit zwei Monaten, der Lohn ist geprüft und bestätigt."""
+    start = add_months(day, -11)
+    _equal_pay_case(
+        session, actor, clients, candidate, day, "equal_pay_bestaetigt", start, "E3", confirm=True
+    )
+
+
+def _case_vertrag_luecke(session, actor, clients, candidate, day):  # type: ignore[no-untyped-def]
+    """Aktiver Einsatz, dessen Vertrag nachträglich vor heute endet (Aufgabe, keine Sperre)."""
+    client = clients[1 % len(clients)]
+    worker = _edge_worker(session, actor, candidate, "vertrag_luecke", day)
+    contract = _edge_contract(session, actor, client, day, "L1")
+    _edge_assignment(session, actor, worker, client, contract, day - timedelta(days=30))
+    StaffingContractService(session).update(
+        contract.id, StaffingContractUpdate(valid_to=day - timedelta(days=3)), actor
+    )
+
+
+_EDGE_BUILDERS = {
+    "vorzeit": _case_vorzeit,
+    "ueberfaellig": _case_ueberfaellig,
+    "ueberschneidung": _case_ueberschneidung,
+    "equal_pay_nah": _case_equal_pay_nah,
+    "equal_pay_offen": _case_equal_pay_offen,
+    "equal_pay_bestaetigt": _case_equal_pay_bestaetigt,
+    "vertrag_luecke": _case_vertrag_luecke,
+}

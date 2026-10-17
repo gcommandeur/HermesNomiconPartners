@@ -588,10 +588,13 @@ def cmd_seed(args: argparse.Namespace) -> None:
         if args.staffing:  # NOMICON: Dummy-Daten der Arbeitnehmerueberlassung
             from seed_staffing import seed_staffing
 
-            staffing = seed_staffing(session, args.staffing, random.Random(args.random_seed))
+            staffing = seed_staffing(
+                session, args.staffing, random.Random(args.random_seed), edge_cases=True
+            )
             print(
                 f"Ueberlassung: {staffing.workers} Leiharbeitnehmer, "
-                f"{staffing.contracts} Vertraege, {staffing.assignments} Einsaetze."
+                f"{staffing.contracts} Vertraege, {staffing.assignments} Einsaetze, "
+                f"{staffing.edge_cases} Sonderfaelle."
             )
         if args.demo:  # NOMICON: zwei Demo-Konten und ein Kandidatenstand mit allen Zustaenden
             from seed_demo import seed_demo

@@ -94,3 +94,114 @@ def test_seed_without_candidates_or_clients_does_nothing(
 ) -> None:
     with session_factory() as session:
         assert seed_staffing(session, 5, random.Random(1), TODAY).workers == 0
+
+
+# --- Sonderfaelle der Logikluecken-Pakete ----------------------------------------------------
+
+
+def _worker_of(session: Session, key: str) -> StaffingWorker:
+    return session.scalars(
+        select(StaffingWorker).where(StaffingWorker.notes == f"Demo-Fall: {key}")
+    ).one()
+
+
+def _assignments_of(session: Session, worker: StaffingWorker) -> list[StaffingAssignment]:
+    return list(
+        session.scalars(
+            select(StaffingAssignment)
+            .where(StaffingAssignment.worker_id == worker.id)
+            .order_by(StaffingAssignment.start_date)
+        )
+    )
+
+
+def test_seed_edge_cases_cover_the_new_logic_and_run_only_once(
+    session_factory: sessionmaker[Session],
+) -> None:
+    from datetime import timedelta
+
+    from cc_crm.models.enums import TaskStatus
+    from cc_crm.models.recruiting import AuditLog
+    from cc_crm.models.staffing import StaffingPriorPeriod
+    from cc_crm.models.task import Task
+    from cc_crm.services.staffing_assignments import is_overdue
+    from cc_crm.services.staffing_equal_pay import pair_equal_pay_confirmed_on
+
+    day = date.today()  # die Dienste rechnen teils mit dem echten "heute"
+    with session_factory() as session:
+        _base(session, candidates=16)
+        first = seed_staffing(session, 4, random.Random(1), day, edge_cases=True)
+        assert first.edge_cases == 7
+        marked = session.scalars(
+            select(StaffingWorker).where(StaffingWorker.notes.like("Demo-Fall:%"))
+        ).all()
+        assert len(marked) == 7
+
+        # Vorzeit: 10 Monate beim Kunden zaehlen mit, Equal Pay deshalb schon erreicht
+        worker = _worker_of(session, "vorzeit")
+        prior = session.scalars(
+            select(StaffingPriorPeriod).where(StaffingPriorPeriod.worker_id == worker.id)
+        ).one()
+        deadline = pair_deadline(session, worker.id, prior.client_company_id, day)
+        assert deadline.prior_days == 305 and deadline.equal_pay_reached
+
+        # ueberfaelliger aktiver Einsatz
+        worker = _worker_of(session, "ueberfaellig")
+        (overdue,) = _assignments_of(session, worker)
+        assert overdue.status == StaffingAssignmentStatus.ACTIVE and is_overdue(overdue, day)
+
+        # bestaetigte Ueberschneidung: ein aktiver und ein geplanter Einsatz, Audit-Eintrag
+        worker = _worker_of(session, "ueberschneidung")
+        active, planned = _assignments_of(session, worker)
+        assert (active.status, planned.status) == (
+            StaffingAssignmentStatus.ACTIVE,
+            StaffingAssignmentStatus.PLANNED,
+        )
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(AuditLog)
+                .where(AuditLog.entity_id == planned.id, AuditLog.action == "overlap_acknowledged")
+            )
+            == 1
+        )
+
+        # Equal Pay: kurz davor / offen / bestaetigt
+        near = _worker_of(session, "equal_pay_nah")
+        (near_assignment,) = _assignments_of(session, near)
+        near_deadline = pair_deadline(session, near.id, near_assignment.client_company_id, day)
+        assert not near_deadline.equal_pay_reached
+        assert near_deadline.equal_pay_from is not None
+        assert 0 < (near_deadline.equal_pay_from - day).days <= 30
+        for key, confirmed in (("equal_pay_offen", False), ("equal_pay_bestaetigt", True)):
+            person = _worker_of(session, key)
+            (assignment,) = _assignments_of(session, person)
+            result = pair_deadline(session, person.id, assignment.client_company_id, day)
+            assert result.equal_pay_reached
+            on = pair_equal_pay_confirmed_on(
+                session, person.id, assignment.client_company_id, result.chain_start
+            )
+            assert (on is not None) is confirmed
+
+        # Vertrag, der den Zeitraum nicht mehr deckt: aktiver Einsatz + Aufgabe (nicht gesperrt)
+        worker = _worker_of(session, "vertrag_luecke")
+        (gap,) = _assignments_of(session, worker)
+        contract = session.get(StaffingContract, gap.contract_id)
+        assert gap.status == StaffingAssignmentStatus.ACTIVE
+        assert contract is not None and contract.valid_to == day - timedelta(days=3)
+        gap_tasks = session.scalars(
+            select(Task).where(Task.title.startswith("Überlassungsvertrag deckt"))
+        ).all()
+        assert len(gap_tasks) == 1 and gap_tasks[0].status == TaskStatus.OPEN
+
+        # Idempotent: ein zweiter Lauf legt keinen Sonderfall doppelt an
+        second = seed_staffing(session, 2, random.Random(2), day, edge_cases=True)
+        assert second.edge_cases == 0
+        assert (
+            len(
+                session.scalars(
+                    select(StaffingWorker).where(StaffingWorker.notes.like("Demo-Fall:%"))
+                ).all()
+            )
+            == 7
+        )
