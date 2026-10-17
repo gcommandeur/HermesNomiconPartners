@@ -18,6 +18,7 @@ from cc_crm.models.staffing import (
 )
 from cc_crm.repositories.staffing import StaffingAssignmentRepository
 from cc_crm.schemas.staffing_tasks import Severity, StaffingTaskRead, StaffingTasksRead
+from cc_crm.services.staffing_assignments import is_overdue
 from cc_crm.services.staffing_deadlines import Traffic
 from cc_crm.services.staffing_disposition import bench
 from cc_crm.services.staffing_overview import license_status, pair_deadlines
@@ -94,9 +95,13 @@ def build_tasks(
     # 2. Stundenzettel: Rückstand, abgelehnt, fehlender Zettel für den Vormonat
     scope_ids = {row.assignment.id for row in rows}
     names = {r.assignment.id: r for r in rows}
-    sheets = session.scalars(
-        select(StaffingTimesheet).where(StaffingTimesheet.assignment_id.in_(scope_ids))
-    ).all() if scope_ids else []
+    sheets = (
+        session.scalars(
+            select(StaffingTimesheet).where(StaffingTimesheet.assignment_id.in_(scope_ids))
+        ).all()
+        if scope_ids
+        else []
+    )
     for sheet in sheets:
         row = names[sheet.assignment_id]
         who = f"{row.worker_name} bei {row.client_name}"
@@ -166,6 +171,24 @@ def build_tasks(
             )
         )
 
+    # 3b. Überfällige Einsätze: aktiv, aber das geplante Ende ist überschritten
+    for row in rows:
+        planned_end = row.assignment.planned_end_date
+        if is_overdue(row.assignment, today) and planned_end is not None:
+            tasks.append(
+                StaffingTaskRead(
+                    kind="assignment_overdue",
+                    severity="red",
+                    title=f"Einsatz überfällig: {row.worker_name} bei {row.client_name}",
+                    detail=(
+                        f"Geplantes Ende {_fmt(planned_end)} überschritten – "
+                        "Einsatz beenden oder verlängern."
+                    ),
+                    due_at=planned_end,
+                    assignment_id=row.assignment.id,
+                )
+            )
+
     # 4. Bench-Dauer (agenturweit wie in der Disposition)
     for free in bench(session, today):
         if free.days_free is not None and free.days_free >= BENCH_AFTER_DAYS:
@@ -210,6 +233,9 @@ def build_tasks(
     alerts: list[str] = []
     if red:
         alerts.append(f"{red} dringende Aufgabe(n) bei Fristen, Checklisten oder Erlaubnis.")
+    overdue = sum(t.kind == "assignment_overdue" for t in tasks)
+    if overdue:
+        alerts.append(f"{overdue} Einsatz/Einsätze überfällig – beenden oder verlängern.")
     deadlines = sum(t.kind == "deadline_max" for t in tasks)
     if deadlines:
         alerts.append(f"{deadlines} Überlassung(en) nähern sich der Höchstdauer.")

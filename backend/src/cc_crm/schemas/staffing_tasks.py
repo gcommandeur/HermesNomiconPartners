@@ -12,6 +12,7 @@ TaskKind = Literal[
     "timesheet_overdue",
     "timesheet_rejected",
     "checklist_open",
+    "assignment_overdue",
     "bench",
     "license",
 ]

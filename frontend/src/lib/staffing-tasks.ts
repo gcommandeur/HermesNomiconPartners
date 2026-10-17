@@ -16,6 +16,7 @@ export const TASK_KIND_LABELS: Record<StaffingTask["kind"], string> = {
   timesheet_overdue: "Stundenzettel",
   timesheet_rejected: "Stundenzettel",
   checklist_open: "Checkliste",
+  assignment_overdue: "Einsatz",
   bench: "Bench",
   license: "Erlaubnis",
 };

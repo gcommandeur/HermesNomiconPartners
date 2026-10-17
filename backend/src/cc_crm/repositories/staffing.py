@@ -182,6 +182,7 @@ class StaffingAssignmentRepository(SQLAlchemyRepository[StaffingAssignment]):
         status: StaffingAssignmentStatus | None = None,
         worker_id: uuid.UUID | None = None,
         client_company_id: uuid.UUID | None = None,
+        overdue_on: date | None = None,
         offset: int = 0,
         limit: int = 200,
     ) -> list[AssignmentRow]:
@@ -196,6 +197,12 @@ class StaffingAssignmentRepository(SQLAlchemyRepository[StaffingAssignment]):
             statement = statement.where(StaffingAssignment.worker_id == worker_id)
         if client_company_id is not None:
             statement = statement.where(StaffingAssignment.client_company_id == client_company_id)
+        if overdue_on is not None:  # überfällig: aktiv, geplantes Ende vor dem Stichtag
+            statement = statement.where(
+                StaffingAssignment.status == StaffingAssignmentStatus.ACTIVE,
+                StaffingAssignment.planned_end_date.is_not(None),
+                StaffingAssignment.planned_end_date < overdue_on,
+            )
         statement = (
             statement.order_by(StaffingAssignment.start_date.desc(), StaffingAssignment.id)
             .offset(offset)

@@ -43,14 +43,14 @@ export const DEMO_ASSIGNMENTS: StaffingAssignment[] = [
     client_company_id: ID(201), client_name: "Beispiel Logistik GmbH", contract_id: ID(11),
     owner_user_id: null, start_date: "2025-03-01", planned_end_date: null, actual_end_date: null,
     location: "Lager Nord", activity: "Kommissionierung", billing_rate: null, hourly_wage: null,
-    status: "active", notes: null, checklist_done: 6, checklist_total: 6,
+    status: "active", notes: null, checklist_done: 6, checklist_total: 6, is_overdue: false,
   },
   {
     id: ID(22), created_at: STAMP, updated_at: STAMP, worker_id: ID(2), worker_name: "Jonas Muster",
     client_company_id: ID(201), client_name: "Beispiel Logistik GmbH", contract_id: ID(11),
     owner_user_id: null, start_date: "2026-02-01", planned_end_date: "2026-07-31", actual_end_date: null,
     location: "Lager Süd", activity: "Staplerfahrer", billing_rate: null, hourly_wage: null,
-    status: "planned", notes: null, checklist_done: 2, checklist_total: 6,
+    status: "planned", notes: null, checklist_done: 2, checklist_total: 6, is_overdue: false,
   },
 ];
 
@@ -96,6 +96,7 @@ export const DEMO_OVERVIEW: StaffingOverview = {
   active_assignments: 1,
   planned_assignments: 1,
   open_checklist_assignments: 1,
+  overdue_assignments: 0,
   license: { valid: true, valid_to: "2026-12-31", days_remaining: 300, traffic: "green" },
   deadlines: DEMO_DEADLINES,
 };

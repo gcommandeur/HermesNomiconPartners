@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { useStaffingOverview } from "@/lib/api/staffing-hooks";
 import { formatDate } from "@/lib/utils";
-import { formatPriorDays } from "@/lib/staffing-deadline-text";
+import { formatPriorDays, overdueSummary } from "@/lib/staffing-deadline-text";
 import { formatElapsed, formatRemaining, type StaffingPairDeadline } from "@/lib/api/staffing";
 import { EmptyHint, LEGAL_NOTICE, LoadError, LoadingRows, TrafficBadge } from "./staffing-ui";
 
@@ -72,6 +72,14 @@ export function StaffingOverviewView() {
           hint="gelb oder rot"
         />
       </div>
+      {overview.overdue_assignments > 0 && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-brand-danger/30 bg-brand-danger/10 p-3 text-sm text-brand-danger">
+          <span>
+            <strong>{overdueSummary(overview.overdue_assignments)}</strong> – das geplante Ende ist überschritten. Beenden oder verlängern.
+          </span>
+          <Link href="/ueberlassung/einsaetze?ueberfaellig=1" className="underline">Überfällige Einsätze anzeigen</Link>
+        </div>
+      )}
       {!license.valid && (
         <ErrorBanner
           message="Es ist keine gültige Erlaubnis zur Arbeitnehmerüberlassung hinterlegt. Ohne sie kann kein Einsatz aktiviert werden. Bitte unter „Compliance“ eintragen (nur Admins)."

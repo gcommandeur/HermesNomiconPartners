@@ -15,6 +15,7 @@ from cc_crm.schemas.staffing import (
     StaffingOverviewRead,
     StaffingPairDeadlineRead,
 )
+from cc_crm.services.staffing_assignments import is_overdue
 from cc_crm.services.staffing_deadline_job import pair_deadline
 from cc_crm.services.staffing_deadlines import DeadlineResult, Traffic
 from cc_crm.services.staffing_settings import load_config
@@ -105,6 +106,7 @@ def overview(
             r.assignment.status == StaffingAssignmentStatus.PLANNED for r in rows
         ),
         open_checklist_assignments=sum(r.checklist_done < r.checklist_total for r in rows),
+        overdue_assignments=sum(is_overdue(r.assignment, today) for r in rows),
         license=license_status(session, today),
         deadlines=pair_deadlines(session, owner_scope, today),
     )

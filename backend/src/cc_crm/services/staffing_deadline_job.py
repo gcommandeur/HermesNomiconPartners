@@ -43,13 +43,21 @@ _COUNTED = (
 )
 
 
-def assignment_span(assignment: StaffingAssignment) -> Span:
+def assignment_span(assignment: StaffingAssignment, today: date) -> Span:
     """Beendete Einsätze zählen bis zum tatsächlichen Ende, laufende bis zum geplanten Ende
-    (ohne Plan: offen)."""
+    (ohne Plan: offen). Ein AKTIVER Einsatz, dessen geplantes Ende schon vorbei ist, gilt als
+    offen, bis er beendet oder verlängert wird: das ist die vorsichtige Richtung (die Restlaufzeit
+    wird kürzer, nicht länger), und die Kette erlischt nicht, nur weil niemand das Ende pflegt."""
     if assignment.status == StaffingAssignmentStatus.ENDED:
         return Span(
             assignment.start_date, assignment.actual_end_date or assignment.planned_end_date
         )
+    if (
+        assignment.status == StaffingAssignmentStatus.ACTIVE
+        and assignment.planned_end_date is not None
+        and assignment.planned_end_date < today
+    ):
+        return Span(assignment.start_date, None)
     return Span(assignment.start_date, assignment.planned_end_date)
 
 
@@ -76,7 +84,7 @@ def pair_deadline(
         )
     ).all()
     return compute_deadline(
-        [assignment_span(a) for a in assignments],
+        [assignment_span(a, today) for a in assignments],
         today,
         config or load_config(session),
         prior_spans=[Span(p.start_date, p.end_date) for p in prior],
@@ -209,6 +217,8 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
                 ):
                     result.tasks_created += 1
 
+    _overdue_assignment_tasks(session, day, result, admins)
+
     for lic in session.scalars(
         select(StaffingLicense).where(StaffingLicense.valid_to.is_not(None))
     ):
@@ -242,6 +252,46 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
                 result.tasks_created += 1
     session.commit()
     return result
+
+
+def _overdue_assignment_tasks(
+    session: Session, day: date, result: DeadlineJobResult, admins: list[uuid.UUID]
+) -> None:
+    """Aktive Einsätze mit überschrittenem geplantem Ende: eine Aufgabe (hohe Priorität) für den
+    Disponenten, einmalig je Einsatz UND geplantem Ende - wird das Ende verlängert und erneut
+    überschritten, entsteht eine neue. Keine Lohn- oder Margenwerte im Text."""
+    overdue = session.scalars(
+        select(StaffingAssignment)
+        .where(
+            StaffingAssignment.status == StaffingAssignmentStatus.ACTIVE,
+            StaffingAssignment.planned_end_date.is_not(None),
+            StaffingAssignment.planned_end_date < day,
+        )
+        .order_by(StaffingAssignment.start_date, StaffingAssignment.id)
+    ).all()
+    for assignment in overdue:
+        planned_end = assignment.planned_end_date
+        if planned_end is None:
+            continue
+        worker_name, client_name = pair_names(
+            session, assignment.worker_id, assignment.client_company_id
+        )
+        recipients = [assignment.owner_user_id] if assignment.owner_user_id is not None else admins
+        for user_id in recipients:
+            if create_task_once(
+                session,
+                marker=f"[staffing-overdue:{assignment.id}:{planned_end.isoformat()}:{user_id}]",
+                title=f"Einsatz überfällig: {worker_name} bei {client_name}",
+                body=(
+                    f"Das geplante Ende {planned_end:%d.%m.%Y} ist überschritten, der Einsatz ist "
+                    "noch aktiv – beenden oder verlängern. Bis dahin zählt er in der Frist als "
+                    "offen."
+                ),
+                owner_user_id=user_id,
+                priority=TaskPriority.HIGH,
+                today=day,
+            ):
+                result.tasks_created += 1
 
 
 def pair_names(session: Session, worker_id: uuid.UUID, client_id: uuid.UUID) -> tuple[str, str]:

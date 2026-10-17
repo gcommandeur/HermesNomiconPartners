@@ -223,6 +223,8 @@ class StaffingAssignmentRead(EntityRead):
     notes: str | None
     checklist_done: int
     checklist_total: int
+    # Aktiv, aber das geplante Ende liegt in der Vergangenheit: beenden oder verlängern.
+    is_overdue: bool = False
 
 
 class StaffingDeadlineRead(BaseModel):
@@ -311,6 +313,7 @@ class StaffingOverviewRead(BaseModel):
     active_assignments: int
     planned_assignments: int
     open_checklist_assignments: int  # geplante/aktive Einsätze mit unvollstaendiger Checkliste
+    overdue_assignments: int = 0  # aktive Einsätze mit überschrittenem geplantem Ende
     license: StaffingLicenseStatus
     deadlines: list[StaffingPairDeadlineRead]  # dringendste zuerst, nur Paare mit Zähler
 

@@ -343,14 +343,17 @@ def list_assignments(
     assignment_status: Annotated[StaffingAssignmentStatus | None, Query(alias="status")] = None,
     worker_id: uuid.UUID | None = None,
     client_company_id: uuid.UUID | None = None,
+    overdue: bool = False,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=500)] = 200,
 ) -> list[StaffingAssignmentRead]:
+    """`overdue=true`: nur aktive Einsätze, deren geplantes Ende überschritten ist."""
     rows = StaffingAssignmentService(session).assignments.rows(
         owner_scope=staffing_owner_scope(current_user, session),
         status=assignment_status,
         worker_id=worker_id,
         client_company_id=client_company_id,
+        overdue_on=date.today() if overdue else None,
         offset=offset,
         limit=limit,
     )

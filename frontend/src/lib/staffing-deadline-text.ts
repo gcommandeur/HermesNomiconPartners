@@ -3,6 +3,11 @@
 
 const DAYS_PER_MONTH = 30.4375;
 
+/** Warnzeile der Übersicht: "1 Einsatz überfällig" / "3 Einsätze überfällig". */
+export function overdueSummary(count: number): string {
+  return `${count} ${count === 1 ? "Einsatz" : "Einsätze"} überfällig`;
+}
+
 /** "inkl. 10 Monate Vorzeit": Anteil der Zählung, der aus früher beim Kunden geleisteten Zeiten
  * stammt (Vorzeiten). Unter einem Monat in Tagen. Leer, wenn es keine Vorzeit gibt. */
 export function formatPriorDays(days: number | null | undefined): string {

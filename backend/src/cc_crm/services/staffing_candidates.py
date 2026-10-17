@@ -65,7 +65,7 @@ def _critical_worker_ids(
         if not any(a.status in _OPEN for a in assignments):
             continue
         result = compute_deadline(
-            [assignment_span(a) for a in assignments],
+            [assignment_span(a, today) for a in assignments],
             today,
             config,
             prior_spans=prior.get((worker_id, client_id), ()),

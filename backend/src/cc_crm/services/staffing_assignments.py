@@ -53,6 +53,15 @@ from cc_crm.services.staffing_contract_sync import (
 _EDITABLE = (StaffingAssignmentStatus.PLANNED, StaffingAssignmentStatus.ACTIVE)
 
 
+def is_overdue(assignment: StaffingAssignment, today: date) -> bool:
+    """Aktiv, aber das geplante Ende liegt vor heute (beenden oder verlängern)."""
+    return (
+        assignment.status == StaffingAssignmentStatus.ACTIVE
+        and assignment.planned_end_date is not None
+        and assignment.planned_end_date < today
+    )
+
+
 def contract_read(row: ContractRow) -> StaffingContractRead:
     c = row.contract
     return StaffingContractRead(
@@ -94,6 +103,7 @@ def assignment_read(row: AssignmentRow) -> StaffingAssignmentRead:
         notes=a.notes,
         checklist_done=row.checklist_done,
         checklist_total=row.checklist_total,
+        is_overdue=is_overdue(a, date.today()),
     )
 
 

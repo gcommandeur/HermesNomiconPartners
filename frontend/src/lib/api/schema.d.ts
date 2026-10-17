@@ -2938,7 +2938,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Assignments */
+        /**
+         * List Assignments
+         * @description `overdue=true`: nur aktive Einsätze, deren geplantes Ende überschritten ist.
+         */
         get: operations["list_assignments_api_v1_staffing_assignments_get"];
         put?: never;
         /** Create Assignment */
@@ -9493,6 +9496,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Is Overdue
+             * @default false
+             */
+            is_overdue: boolean;
             /** Location */
             location: string | null;
             /** Notes */
@@ -9553,6 +9561,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Is Overdue
+             * @default false
+             */
+            is_overdue: boolean;
             /** Location */
             location: string | null;
             /** Notes */
@@ -10095,6 +10108,11 @@ export interface components {
             license: components["schemas"]["StaffingLicenseStatus"];
             /** Open Checklist Assignments */
             open_checklist_assignments: number;
+            /**
+             * Overdue Assignments
+             * @default 0
+             */
+            overdue_assignments: number;
             /** Planned Assignments */
             planned_assignments: number;
         };
@@ -10311,7 +10329,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "deadline_max" | "equal_pay" | "timesheet_missing" | "timesheet_overdue" | "timesheet_rejected" | "checklist_open" | "bench" | "license";
+            kind: "deadline_max" | "equal_pay" | "timesheet_missing" | "timesheet_overdue" | "timesheet_rejected" | "checklist_open" | "assignment_overdue" | "bench" | "license";
             /**
              * Severity
              * @enum {string}
@@ -17631,6 +17649,7 @@ export interface operations {
                 status?: components["schemas"]["StaffingAssignmentStatus"] | null;
                 worker_id?: string | null;
                 client_company_id?: string | null;
+                overdue?: boolean;
                 offset?: number;
                 limit?: number;
             };

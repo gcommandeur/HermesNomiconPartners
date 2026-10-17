@@ -193,6 +193,8 @@ export interface AssignmentFilter {
   status?: StaffingAssignmentStatus;
   workerId?: string;
   clientCompanyId?: string;
+  /** Nur aktive Einsätze mit überschrittenem geplantem Ende. */
+  overdue?: boolean;
 }
 
 export function assignmentsPath(filter: AssignmentFilter = {}): string {
@@ -200,6 +202,7 @@ export function assignmentsPath(filter: AssignmentFilter = {}): string {
   if (filter.status) params.set("status", filter.status);
   if (filter.workerId) params.set("worker_id", filter.workerId);
   if (filter.clientCompanyId) params.set("client_company_id", filter.clientCompanyId);
+  if (filter.overdue) params.set("overdue", "true");
   const query = params.toString();
   return `/staffing/assignments${query ? `?${query}` : ""}`;
 }

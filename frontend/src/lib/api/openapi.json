@@ -16035,6 +16035,11 @@
             "title": "Id",
             "type": "string"
           },
+          "is_overdue": {
+            "default": false,
+            "title": "Is Overdue",
+            "type": "boolean"
+          },
           "location": {
             "anyOf": [
               {
@@ -16219,6 +16224,11 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "is_overdue": {
+            "default": false,
+            "title": "Is Overdue",
+            "type": "boolean"
           },
           "location": {
             "anyOf": [
@@ -17977,6 +17987,11 @@
             "title": "Open Checklist Assignments",
             "type": "integer"
           },
+          "overdue_assignments": {
+            "default": 0,
+            "title": "Overdue Assignments",
+            "type": "integer"
+          },
           "planned_assignments": {
             "title": "Planned Assignments",
             "type": "integer"
@@ -18589,6 +18604,7 @@
               "timesheet_overdue",
               "timesheet_rejected",
               "checklist_open",
+              "assignment_overdue",
               "bench",
               "license"
             ],
@@ -34148,6 +34164,7 @@
     },
     "/api/v1/staffing/assignments": {
       "get": {
+        "description": "`overdue=true`: nur aktive Einsätze, deren geplantes Ende überschritten ist.",
         "operationId": "list_assignments_api_v1_staffing_assignments_get",
         "parameters": [
           {
@@ -34198,6 +34215,16 @@
                 }
               ],
               "title": "Client Company Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "overdue",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Overdue",
+              "type": "boolean"
             }
           },
           {

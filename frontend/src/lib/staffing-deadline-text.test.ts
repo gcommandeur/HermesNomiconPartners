@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { formatPriorDays } from "./staffing-deadline-text";
+import { formatPriorDays, overdueSummary } from "./staffing-deadline-text";
+
+describe("overdueSummary", () => {
+  it("steht im Singular und Plural", () => {
+    expect(overdueSummary(1)).toBe("1 Einsatz überfällig");
+    expect(overdueSummary(3)).toBe("3 Einsätze überfällig");
+  });
+});
 
 describe("formatPriorDays", () => {
   it("bleibt leer ohne Vorzeit", () => {
