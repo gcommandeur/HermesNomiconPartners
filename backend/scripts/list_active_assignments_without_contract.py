@@ -36,23 +36,29 @@ def main() -> int:
             )
         ).all()
         repo = StaffingAssignmentRepository(session)
-        findings = []
+        lines: list[tuple[str, str, str]] = []  # (Sortierschluessel, Zeile, Problem)
         for assignment_id in ids:
             row = repo.row(assignment_id)
             if row is None:
                 continue
             problem = contract_problem_for(session, row.assignment, today)
-            if problem is not None:
-                findings.append((row, problem))
+            if problem is None:
+                continue
+            a = row.assignment
+            end = a.planned_end_date.isoformat() if a.planned_end_date else "offen"
+            lines.append(
+                (
+                    f"{row.client_name}|{row.worker_name}",
+                    f"{a.id}  {row.worker_name} bei {row.client_name}  "
+                    f"{a.start_date.isoformat()} bis {end}",
+                    problem,
+                )
+            )
         session.rollback()  # nur lesen: nichts festschreiben
-    for row, problem in sorted(findings, key=lambda f: (f[0].client_name, f[0].worker_name)):
-        a = row.assignment
-        end = a.planned_end_date.isoformat() if a.planned_end_date else "offen"
-        print(
-            f"{a.id}  {row.worker_name} bei {row.client_name}  {a.start_date.isoformat()} bis {end}"
-        )
+    for _key, line, problem in sorted(lines):
+        print(line)
         print(f"    {problem}")
-    print(f"{len(findings)} von {len(ids)} aktiven Einsaetzen ohne gueltigen Vertrag.")
+    print(f"{len(lines)} von {len(ids)} aktiven Einsaetzen ohne gueltigen Vertrag.")
     return 0
 
 
