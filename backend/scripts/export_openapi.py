@@ -23,6 +23,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 # Die App wird nur gebaut, nicht gestartet - kein DB-Zugriff noetig.
 os.environ.setdefault("CC_CRM_DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("CC_CRM_LOG_LEVEL", "WARNING")
+# Die API-Beschreibung enthaelt den Firmennamen aus den Einstellungen. Fest auf den Standard setzen,
+# damit das Schema nicht von einer lokalen backend/.env abhaengt (die CI hat keine).
+os.environ["CC_CRM_COMPANY_NAME"] = "Commandeur Consulting"
 
 DEFAULT_TARGET = Path(__file__).resolve().parent.parent.parent / "frontend/src/lib/api/openapi.json"
 
