@@ -38,6 +38,7 @@ from cc_crm.services.staffing_equal_pay import (
     close_equal_pay_tasks,
     pair_equal_pay_confirmed_on,
 )
+from cc_crm.services.staffing_open import is_overdue
 from cc_crm.services.staffing_settings import load_config
 
 _BERLIN = ZoneInfo("Europe/Berlin")
@@ -57,11 +58,7 @@ def assignment_span(assignment: StaffingAssignment, today: date) -> Span:
         return Span(
             assignment.start_date, assignment.actual_end_date or assignment.planned_end_date
         )
-    if (
-        assignment.status == StaffingAssignmentStatus.ACTIVE
-        and assignment.planned_end_date is not None
-        and assignment.planned_end_date < today
-    ):
+    if is_overdue(assignment, today):
         return Span(assignment.start_date, None)
     # Geplante (noch nicht aktivierte) Einsätze zählen mit, machen die Frist aber vorläufig.
     return Span(

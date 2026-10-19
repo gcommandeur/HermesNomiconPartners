@@ -18,9 +18,9 @@ from cc_crm.models.staffing import (
 )
 from cc_crm.repositories.staffing import StaffingAssignmentRepository
 from cc_crm.schemas.staffing_tasks import Severity, StaffingTaskRead, StaffingTasksRead
-from cc_crm.services.staffing_assignments import is_overdue
 from cc_crm.services.staffing_deadlines import Traffic
 from cc_crm.services.staffing_disposition import bench
+from cc_crm.services.staffing_open import is_overdue
 from cc_crm.services.staffing_overview import license_status, pair_deadlines
 from cc_crm.services.staffing_settings import load_config
 

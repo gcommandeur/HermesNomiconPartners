@@ -211,3 +211,44 @@ def test_foreign_assignments_stay_hidden_with_confirm_overlap(
         headers=crew.c.headers,
     )
     assert stranger.status_code == 404
+
+
+def _set_status(session_factory: sessionmaker[Session], assignment_id: str, status: str) -> None:
+    from cc_crm.models.staffing import StaffingAssignment, StaffingAssignmentStatus
+
+    with session_factory() as session:
+        row = session.get(StaffingAssignment, uuid.UUID(assignment_id))
+        assert row is not None
+        row.status = StaffingAssignmentStatus(status)
+        session.commit()
+
+
+def test_overdue_active_assignment_still_blocks_a_new_overlap(
+    client: TestClient,
+    crew: Crew,
+    make_candidate,  # type: ignore[no-untyped-def]
+    session_factory: sessionmaker[Session],
+) -> None:
+    """Aktiv mit abgelaufenem geplantem Ende gilt wie im Fristen-Job als offen."""
+    worker = _worker(client, crew.a, make_candidate())
+    first = _post(client, crew, worker["id"], crew.client_id, -60, -30).json()
+    _set_status(session_factory, first["id"], "active")
+
+    clash = _post(client, crew, worker["id"], crew.client_id, -5, 10)
+    assert clash.status_code == 409
+    assert clash.json()["overlaps"][0]["assignment_id"] == first["id"]
+
+    confirmed = _post(client, crew, worker["id"], crew.client_id, -5, 10, confirm_overlap="true")
+    assert confirmed.status_code == 201, confirmed.text
+
+
+def test_ended_assignment_with_past_end_does_not_block(
+    client: TestClient,
+    crew: Crew,
+    make_candidate,  # type: ignore[no-untyped-def]
+    session_factory: sessionmaker[Session],
+) -> None:
+    worker = _worker(client, crew.a, make_candidate())
+    first = _post(client, crew, worker["id"], crew.client_id, -60, -30).json()
+    _set_status(session_factory, first["id"], "ended")
+    assert _post(client, crew, worker["id"], crew.client_id, -5, 10).status_code == 201

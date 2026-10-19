@@ -15,10 +15,10 @@ from cc_crm.schemas.staffing import (
     StaffingOverviewRead,
     StaffingPairDeadlineRead,
 )
-from cc_crm.services.staffing_assignments import is_overdue
 from cc_crm.services.staffing_deadline_job import pair_deadline
 from cc_crm.services.staffing_deadlines import DeadlineResult, Traffic
 from cc_crm.services.staffing_equal_pay import pair_equal_pay_confirmed_on
+from cc_crm.services.staffing_open import is_overdue
 from cc_crm.services.staffing_settings import load_config
 
 DISCLAIMER = (

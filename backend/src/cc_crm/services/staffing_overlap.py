@@ -16,14 +16,14 @@ import uuid
 from dataclasses import dataclass
 from datetime import date
 
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from cc_crm.core.errors import OverlapConflictError
 from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.staffing import StaffingAssignment, StaffingAssignmentStatus
+from cc_crm.services.staffing_open import OPEN_STATUSES
 
-_OPEN = (StaffingAssignmentStatus.PLANNED, StaffingAssignmentStatus.ACTIVE)
 _STATUS_TEXT = {
     StaffingAssignmentStatus.PLANNED: "geplant",
     StaffingAssignmentStatus.ACTIVE: "aktiv",
@@ -63,17 +63,26 @@ def find_overlaps(
     start: date,
     end: date | None,
     exclude_id: uuid.UUID | None = None,
+    today: date | None = None,
 ) -> list[OverlapItem]:
-    """Andere geplante/aktive Einsätze des Leiharbeitnehmers im Zeitraum [start, end]."""
+    """Andere geplante/aktive Einsätze des Leiharbeitnehmers im Zeitraum [start, end].
+
+    Ein überfälliger aktiver Einsatz (geplantes Ende vorbei) läuft als offen weiter, wie im
+    Fristen-Job (`staffing_open.effective_end_date`)."""
+    day = today or date.today()
     statement = (
         select(StaffingAssignment, ClientCompany.name)
         .join(ClientCompany, ClientCompany.id == StaffingAssignment.client_company_id)
         .where(
             StaffingAssignment.worker_id == worker_id,
-            StaffingAssignment.status.in_(_OPEN),
+            StaffingAssignment.status.in_(OPEN_STATUSES),
             or_(
                 StaffingAssignment.planned_end_date.is_(None),
                 StaffingAssignment.planned_end_date >= start,
+                and_(
+                    StaffingAssignment.status == StaffingAssignmentStatus.ACTIVE,
+                    StaffingAssignment.planned_end_date < day,
+                ),
             ),
             *([StaffingAssignment.start_date <= end] if end is not None else []),
             *([StaffingAssignment.id != exclude_id] if exclude_id is not None else []),

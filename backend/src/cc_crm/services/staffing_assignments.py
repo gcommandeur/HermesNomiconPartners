@@ -48,19 +48,11 @@ from cc_crm.services.staffing_contract_sync import (
     notify_contract_gap,
     sync_supply_contract_item,
 )
+from cc_crm.services.staffing_open import is_overdue
 from cc_crm.services.staffing_overlap import OverlapItem, find_overlaps, raise_if_unconfirmed
 
 # Status, in denen ein Einsatz noch änderbar ist (beendet/abgebrochen = Nachweis, eingefroren).
 _EDITABLE = (StaffingAssignmentStatus.PLANNED, StaffingAssignmentStatus.ACTIVE)
-
-
-def is_overdue(assignment: StaffingAssignment, today: date) -> bool:
-    """Aktiv, aber das geplante Ende liegt vor heute (beenden oder verlängern)."""
-    return (
-        assignment.status == StaffingAssignmentStatus.ACTIVE
-        and assignment.planned_end_date is not None
-        and assignment.planned_end_date < today
-    )
 
 
 def contract_read(row: ContractRow) -> StaffingContractRead:
