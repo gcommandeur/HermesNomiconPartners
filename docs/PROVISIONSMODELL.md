@@ -108,6 +108,26 @@ alle. Fremd **und** nicht vorhanden liefern dasselbe 404. Die Antwort beschreibt
 Marge noch Arbeitgeberkosten (Tests: `tests/api/test_my_commission.py`). Die Route liegt bewusst nicht unter
 `/commission`, damit sie nicht hinter der Ansicht „Gesamt“ gesperrt ist.
 
+## Zeitstrahl und Monatswert (Meine Provision, seit 2026-10-19)
+
+Abgerechnet wird weiter **je Quartal** (Rechenkern und Beförderungsregel unverändert). Die Seite `/provision` zeigt
+zusätzlich, wie sich das Quartal Monat für Monat aufbaut: `GET /api/v1/my-commission/timeline` (Parameter `user_id`,
+gleiche Rechte und gleiches 404 wie `/my-commission`, `services/commission_timeline.py`).
+
+* **Monatswert:** die kumulierte Quartalsprovision bis Monatsende minus die kumulierte Provision bis Vormonatsende,
+  jeweils nach denselben Staffeln. Die drei Monate ergeben also genau die Quartalsprovision. Fix und Bonus werden
+  anteilig auf die Monate des Quartals verteilt (Bonus nach Zahldatum des Deals). Der **laufende Monat** ist
+  „vorläufig, Abrechnung zum Quartalsende“.
+* **Zeitstrahl:** die letzten 12 Monate mit Umsatz (nach Zahldatum) und Provision, Quartalsgrenzen markiert, der
+  aktuelle Monat hervorgehoben; darunter eine Tabelle (Monat, Umsatz, Provision, Fix, Bonus, Summe).
+* **Fortschritt zur nächsten Rolle:** Balken mit Abstand zur Beförderungsschwelle; auf der höchsten Stufe der Abstand
+  zur nächsten Provisionsstufe. Drei Kacheln: „Dieser Monat“, „Dieses Quartal bisher“, „Bis zur nächsten Rolle“.
+* **Annahme:** für alle Monate gilt die **aktuelle** Stufe der Person (kein Stufenverlauf gespeichert).
+* **Demo-Daten:** `scripts/seed_commission_demo.py` (aus `seed_demo.py`): Demo-Vermittler als Senior Consultant bei etwa
+  70 % der Manager-Schwelle, Demo-Admin mit Rang, neun Monate bezahlter Umsätze. Tests:
+  `tests/services/test_commission_timeline.py`, `tests/api/test_my_commission_timeline.py`,
+  `tests/test_seed_commission_demo.py`.
+
 ## Rangzuordnung
 
 Tabelle `commission_user_ranks`: je Mitarbeiter ein Rang (`rank_key`). Umbenennen einer Stufe ändert keine Zuweisung;

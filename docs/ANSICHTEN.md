@@ -185,3 +185,10 @@ AÜ gleichzeitig, vermittelt - plus Prozesse mit erwarteter Fee ab Interview.
 - Uebernahme-Fee-Staffel und Lohnfaktor bleiben einstellbar.
 - **Test:** Demo-Admin und Demo-Vermittler sehen Direct + Ueberlassung; im Demo-Seed ist auch der Standard fuer neue
   Mitarbeiter "beides". Der Admin kann die Ansicht je Mitarbeiter fest vergeben (Einstellungen -> Administration -> Ansichten).
+
+## Nachtrag 2026-10-19: Vereinfachung der Überlassung
+
+Compliance (Menü und Seiten) nur für Admins und Teamleiter, sonst 404. Leiharbeitnehmer stehen in der normalen
+Kandidatenliste (Filter „Überlassung“) und im Reiter „Überlassung“ am Kandidaten; „Anwärter“ heißt „In Auswahl“. Die
+Ansichtssperren (`require_direct_view`, `require_staffing_view`, `require_management_view`) und das Owner-Scoping sind
+unverändert. Details: `docs/UEBERLASSUNG.md` (Abschnitt „Vereinfachung der Oberfläche“).

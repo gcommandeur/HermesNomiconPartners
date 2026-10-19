@@ -213,6 +213,21 @@ Profil gibt es nicht, 409), Einsätze mit „Neuer Einsatz“ (Leiharbeitnehmer 
 Stundenzettel-Status mit Link zur Abrechnung, Bench-Hinweis „frei seit …“; Direct und Überlassung nebeneinander zeigt der
 Kopfbereich der Kandidatenseite (gemeinsamer Kandidatenstatus mit Konflikt-Hinweis). Lohn und Marge sieht nur der Admin.
 
+## Vereinfachung der Oberfläche (seit 2026-10-19)
+
+* **Begriff:** „Anwärter“ heißt in der Oberfläche **„In Auswahl“** (interner Wert `applicant` unverändert; Board-Spalte
+  „In Auswahl“). Vorschlag, nicht umgesetzt: „Geplant“ (Einsatz mit vollständiger Checkliste) und „In Auswahl“
+  (ohne Einsatz oder Checkliste offen) könnten zusammengelegt werden.
+* **Compliance im Hintergrund:** Menüpunkt und Seiten (Einstellungen, Erlaubnis, Übernahme-Staffeln) nur für **Admins
+  und Teamleiter**; für alle anderen antwortet der Server mit 404 (`ComplianceAccess` in
+  `api/staffing_dependencies.py`). Die Vermittler-Übersicht ist kompakt. Probleme erscheinen als **Meldungen**:
+  Glocke oben rechts plus Aufgaben des Tagesjobs (u. a. „Überlassungsvertrag fehlt“,
+  `[staffing-contract:…]`), **ohne Lohnwerte**. Ein Einsatz zeigt eine einzige Statuszeile, Details klappen auf.
+* **Leiharbeitnehmer sind Kandidaten:** der Menüpunkt „Leiharbeitnehmer“ entfällt. In der Ansicht Überlassung führt
+  „Kandidaten“ auf `/kandidaten?ueberlassung=workers`; Filter: Alle Leiharbeitnehmer, In Auswahl, Aktiv, Läuft aus,
+  Bench (`active` neu im Backend). Die Überlassungsdaten stehen im Reiter „Überlassung“ am Kandidaten. Alte Adressen
+  `/ueberlassung/leiharbeitnehmer` und `…/<id>` leiten dorthin weiter (unbekannte ID: zur Liste).
+
 ## Rechte
 
 | | Mitarbeiter | Teamleiter | Admin |

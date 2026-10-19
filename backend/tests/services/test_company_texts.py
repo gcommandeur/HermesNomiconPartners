@@ -17,7 +17,9 @@ def _fresh_settings() -> Iterator[None]:
     get_settings.cache_clear()
 
 
-def test_default_company_keeps_the_existing_behaviour() -> None:
+def test_default_company_keeps_the_existing_behaviour(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CC_CRM_COMPANY_NAME", "Commandeur Consulting")  # schlaegt eine lokale .env
+    get_settings.cache_clear()
     assert is_agency_letterhead("Anonymes Profil\nCommandeur Consulting GmbH\nStuttgart")
     assert not is_agency_letterhead("Lebenslauf Max Muster, Steuerberater")
     assert sourcing_user_agent() == (

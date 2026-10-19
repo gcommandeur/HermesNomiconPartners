@@ -15,7 +15,9 @@ def _fresh_settings() -> None:
     get_settings.cache_clear()
 
 
-def test_defaults_are_unchanged() -> None:
+def test_defaults_are_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CC_CRM_COMPANY_NAME", "Commandeur Consulting")  # schlaegt eine lokale .env
+    get_settings.cache_clear()
     settings = get_settings()
     assert settings.company_name == "Commandeur Consulting"
     assert settings.profile_template_path is None
