@@ -76,10 +76,20 @@ def _day_end(day: date) -> datetime:
     return datetime.combine(day, time.max, tzinfo=UTC)
 
 
+def month_bounds(year: int, month: int) -> tuple[date, date]:
+    return date(year, month, 1), date(year, month, monthrange(year, month)[1])
+
+
 def quarter_revenue(
     session: Session, year: int, quarter: int, basis: RevenueBasis
 ) -> QuarterRevenue:
     start, end = quarter_bounds(year, quarter)
+    return period_revenue(session, start, end, basis)
+
+
+def period_revenue(session: Session, start: date, end: date, basis: RevenueBasis) -> QuarterRevenue:
+    """Umsatz und Deals je Mitarbeiter mit Zahldatum im Zeitraum [start, end] (z.B. ein Quartal
+    oder ein Monat). Die Quartalsrechnung ruft dies mit den Quartalsgrenzen auf."""
     result = QuarterRevenue()
 
     fee_statement = (

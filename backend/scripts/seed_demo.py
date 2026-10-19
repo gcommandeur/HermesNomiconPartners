@@ -303,6 +303,10 @@ def seed_demo(session: Session) -> DemoSeedResult:
             result.processes += 1
     _complete_process_data(session, [admin, broker, colleague])
     _repair_worker_status(session)
+    # Provision sichtbar machen: Ränge und neun Monate bezahlte Umsätze (nur erfundene Werte)
+    from seed_commission_demo import seed_commission_demo
+
+    seed_commission_demo(session, admin, broker, colleague)
     # Für den Test sind beide Ansichten sichtbar (neue Mitarbeiter: Direct + Überlassung); der
     # Admin legt unter Einstellungen -> Administration -> Ansichten jederzeit eine Ansicht fest.
     key = "views_default_for_new_users"

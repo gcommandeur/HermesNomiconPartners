@@ -8,8 +8,12 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 
 from cc_crm.api.dependencies import CurrentUser, DatabaseSession
-from cc_crm.schemas.my_commission import MyCommissionPerson, MyCommissionRead
-from cc_crm.services import my_commission
+from cc_crm.schemas.my_commission import (
+    MyCommissionPerson,
+    MyCommissionRead,
+    MyCommissionTimeline,
+)
+from cc_crm.services import commission_timeline, my_commission
 from cc_crm.services.commission_report import current_quarter
 
 router = APIRouter(prefix="/my-commission")
@@ -29,6 +33,17 @@ def get_my_commission(
     return my_commission.build(
         session, current_user, user_id, year or default_year, quarter or default_quarter
     )
+
+
+@router.get("/timeline", response_model=MyCommissionTimeline)
+def get_timeline(
+    session: DatabaseSession,
+    current_user: CurrentUser,
+    user_id: Annotated[uuid.UUID | None, Query()] = None,
+) -> MyCommissionTimeline:
+    """Zeitstrahl der letzten 12 Monate, Monatswert, laufendes Quartal und Fortschritt zur nächsten
+    Rolle. Gleiche Rechte wie `GET /my-commission`: fremd oder nicht vorhanden = 404."""
+    return commission_timeline.build_timeline(session, current_user, user_id)
 
 
 @router.get("/people", response_model=list[MyCommissionPerson])

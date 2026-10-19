@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CommissionTimeline } from "@/components/crm/commission-timeline";
 import { ErrorState } from "@/components/crm/error-state";
 import { currentQuarter, eur, shiftQuarter } from "@/lib/api/commission";
 import type { MyCommission } from "@/lib/api/my-commission";
@@ -107,6 +108,8 @@ export function MyCommissionView() {
           </select>
         )}
       </div>
+
+      <CommissionTimeline person={person} />
 
       {error ? (
         <ErrorState onRetry={() => void mutate()} />

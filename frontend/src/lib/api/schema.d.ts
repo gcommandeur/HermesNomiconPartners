@@ -2344,6 +2344,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/my-commission/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Timeline
+         * @description Zeitstrahl der letzten 12 Monate, Monatswert, laufendes Quartal und Fortschritt zur nächsten
+         *     Rolle. Gleiche Rechte wie `GET /my-commission`: fremd oder nicht vorhanden = 404.
+         */
+        get: operations["get_timeline_api_v1_my_commission_timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notes": {
         parameters: {
             query?: never;
@@ -8173,6 +8194,29 @@ export interface components {
              */
             user_id: string;
         };
+        /** MyCommissionProgress */
+        MyCommissionProgress: {
+            /** Current Rank Label */
+            current_rank_label: string;
+            /** Days To Quarter End */
+            days_to_quarter_end: number;
+            /** Hurdle */
+            hurdle?: string | null;
+            /** Is Top Rank */
+            is_top_rank: boolean;
+            /** Next Band Rate */
+            next_band_rate?: string | null;
+            /** Next Band Remaining */
+            next_band_remaining?: string | null;
+            /** Next Rank Label */
+            next_rank_label?: string | null;
+            /** Percent */
+            percent?: string | null;
+            /** Quarter Revenue */
+            quarter_revenue: string;
+            /** Remaining */
+            remaining?: string | null;
+        };
         /** MyCommissionRead */
         MyCommissionRead: {
             /**
@@ -8264,6 +8308,65 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+            /** Year */
+            year: number;
+        };
+        /** MyCommissionTimeline */
+        MyCommissionTimeline: {
+            current_month: components["schemas"]["MyCommissionTimelineMonth"];
+            /** Display Name */
+            display_name: string;
+            /** Months */
+            months: components["schemas"]["MyCommissionTimelineMonth"][];
+            progress?: components["schemas"]["MyCommissionProgress"] | null;
+            /** Quarter */
+            quarter: number;
+            /** Quarter Bonus */
+            quarter_bonus: string;
+            /** Quarter Commission */
+            quarter_commission: string;
+            /** Quarter Fixed Pay */
+            quarter_fixed_pay: string;
+            /** Quarter Revenue */
+            quarter_revenue: string;
+            /** Quarter Total */
+            quarter_total: string;
+            /** Rank Label */
+            rank_label?: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Year */
+            year: number;
+        };
+        /**
+         * MyCommissionTimelineMonth
+         * @description Ein Monat im Zeitstrahl. Provision = Anteil an der Quartalsprovision (Stufen laufen mit),
+         *     die drei Monate eines Quartals summieren sich exakt zu ihr.
+         */
+        MyCommissionTimelineMonth: {
+            /** Bonus */
+            bonus: string;
+            /** Commission */
+            commission: string;
+            /** Fixed Pay */
+            fixed_pay: string;
+            /** Is Current */
+            is_current: boolean;
+            /** Is Provisional */
+            is_provisional: boolean;
+            /** Month */
+            month: number;
+            /** Month In Quarter */
+            month_in_quarter: number;
+            /** Quarter */
+            quarter: number;
+            /** Revenue */
+            revenue: string;
+            /** Total */
+            total: string;
             /** Year */
             year: number;
         };
@@ -16419,6 +16522,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyCommissionPerson"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_timeline_api_v1_my_commission_timeline_get: {
+        parameters: {
+            query?: {
+                user_id?: string | null;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyCommissionTimeline"];
                 };
             };
             /** @description Validation Error */

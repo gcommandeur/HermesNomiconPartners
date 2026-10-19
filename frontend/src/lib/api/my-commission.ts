@@ -16,3 +16,10 @@ export async function getMyCommission(year: number, quarter: number, userId?: st
 export async function getMyCommissionPeople(): Promise<DataResult<MyCommissionPerson[]>> {
   return apiGet<MyCommissionPerson[]>("/my-commission/people", []);
 }
+
+export type MyCommissionTimeline = Schemas["MyCommissionTimeline"];
+
+export async function getMyCommissionTimeline(userId?: string | null): Promise<DataResult<MyCommissionTimeline | null>> {
+  const user = userId ? `?user_id=${userId}` : "";
+  return apiGet<MyCommissionTimeline | null>(`/my-commission/timeline${user}`, null);
+}

@@ -12290,6 +12290,106 @@
         "title": "MyCommissionPerson",
         "type": "object"
       },
+      "MyCommissionProgress": {
+        "properties": {
+          "current_rank_label": {
+            "title": "Current Rank Label",
+            "type": "string"
+          },
+          "days_to_quarter_end": {
+            "title": "Days To Quarter End",
+            "type": "integer"
+          },
+          "hurdle": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hurdle"
+          },
+          "is_top_rank": {
+            "title": "Is Top Rank",
+            "type": "boolean"
+          },
+          "next_band_rate": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Band Rate"
+          },
+          "next_band_remaining": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Band Remaining"
+          },
+          "next_rank_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Rank Label"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent"
+          },
+          "quarter_revenue": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quarter Revenue",
+            "type": "string"
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining"
+          }
+        },
+        "required": [
+          "is_top_rank",
+          "current_rank_label",
+          "quarter_revenue",
+          "days_to_quarter_end"
+        ],
+        "title": "MyCommissionProgress",
+        "type": "object"
+      },
       "MyCommissionRead": {
         "properties": {
           "bands": {
@@ -12484,6 +12584,167 @@
           "expected_revenue"
         ],
         "title": "MyCommissionRead",
+        "type": "object"
+      },
+      "MyCommissionTimeline": {
+        "properties": {
+          "current_month": {
+            "$ref": "#/components/schemas/MyCommissionTimelineMonth"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/MyCommissionTimelineMonth"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MyCommissionProgress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quarter": {
+            "title": "Quarter",
+            "type": "integer"
+          },
+          "quarter_bonus": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quarter Bonus",
+            "type": "string"
+          },
+          "quarter_commission": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quarter Commission",
+            "type": "string"
+          },
+          "quarter_fixed_pay": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quarter Fixed Pay",
+            "type": "string"
+          },
+          "quarter_revenue": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quarter Revenue",
+            "type": "string"
+          },
+          "quarter_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quarter Total",
+            "type": "string"
+          },
+          "rank_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank Label"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "display_name",
+          "year",
+          "quarter",
+          "months",
+          "current_month",
+          "quarter_revenue",
+          "quarter_commission",
+          "quarter_fixed_pay",
+          "quarter_bonus",
+          "quarter_total"
+        ],
+        "title": "MyCommissionTimeline",
+        "type": "object"
+      },
+      "MyCommissionTimelineMonth": {
+        "description": "Ein Monat im Zeitstrahl. Provision = Anteil an der Quartalsprovision (Stufen laufen mit),\ndie drei Monate eines Quartals summieren sich exakt zu ihr.",
+        "properties": {
+          "bonus": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Bonus",
+            "type": "string"
+          },
+          "commission": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Commission",
+            "type": "string"
+          },
+          "fixed_pay": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Fixed Pay",
+            "type": "string"
+          },
+          "is_current": {
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "is_provisional": {
+            "title": "Is Provisional",
+            "type": "boolean"
+          },
+          "month": {
+            "title": "Month",
+            "type": "integer"
+          },
+          "month_in_quarter": {
+            "title": "Month In Quarter",
+            "type": "integer"
+          },
+          "quarter": {
+            "title": "Quarter",
+            "type": "integer"
+          },
+          "revenue": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Revenue",
+            "type": "string"
+          },
+          "total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "month",
+          "quarter",
+          "month_in_quarter",
+          "revenue",
+          "commission",
+          "fixed_pay",
+          "bonus",
+          "total",
+          "is_current",
+          "is_provisional"
+        ],
+        "title": "MyCommissionTimelineMonth",
         "type": "object"
       },
       "MyMailAccountCreate": {
@@ -31915,6 +32176,78 @@
           }
         ],
         "summary": "Get People",
+        "tags": [
+          "my-commission"
+        ]
+      }
+    },
+    "/api/v1/my-commission/timeline": {
+      "get": {
+        "description": "Zeitstrahl der letzten 12 Monate, Monatswert, laufendes Quartal und Fortschritt zur nächsten\nRolle. Gleiche Rechte wie `GET /my-commission`: fremd oder nicht vorhanden = 404.",
+        "operationId": "get_timeline_api_v1_my_commission_timeline_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyCommissionTimeline"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Timeline",
         "tags": [
           "my-commission"
         ]
