@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { barWidth, daysToQuarterEndText, monthLabel, moveItem, nextRoleText, provisionalNote, quarterBoundaryLabels, rankKeyFromLabel, timelineChartData, type TimelineMonthLike } from "./commission-ui";
+import { barWidth, daysToQuarterEndText, isFirstMonthOfQuarter, monthLabel, moveItem, nextRoleText, provisionalNote, quarterBoundaryLabels, rankKeyFromLabel, timelineChartData, type TimelineMonthLike } from "./commission-ui";
 
 describe("barWidth", () => {
   it("begrenzt auf 0 bis 100", () => {
@@ -101,5 +101,15 @@ describe("Zeitstrahl", () => {
   it("kennzeichnet den laufenden Monat als vorläufig", () => {
     expect(provisionalNote(true)).toContain("vorläufig");
     expect(provisionalNote(false)).toContain("Ohne Rang");
+  });
+});
+
+
+describe("isFirstMonthOfQuarter", () => {
+  it("meldet den ersten Monat nur bei gleichen Beträgen", () => {
+    expect(isFirstMonthOfQuarter(1, "1200.00", "1200.00")).toBe(true);
+    expect(isFirstMonthOfQuarter(1, 0, "0.00")).toBe(true);
+    expect(isFirstMonthOfQuarter(2, "1200.00", "1200.00")).toBe(false);
+    expect(isFirstMonthOfQuarter(1, "1200.00", "1300.00")).toBe(false);
   });
 });

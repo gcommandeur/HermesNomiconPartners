@@ -116,6 +116,16 @@ export function daysToQuarterEndText(days: number): string {
   return `noch ${days} ${days === 1 ? "Tag" : "Tage"} bis Quartalsende`;
 }
 
+/** Ob "Dieser Monat" und "Dieses Quartal bisher" nur deshalb gleich sind, weil es der erste Monat des
+ * Quartals ist (Beträge als Zahl oder Zahlentext vom Server). Dann steht unter der Quartalskachel ein Hinweis. */
+export function isFirstMonthOfQuarter(
+  monthInQuarter: number,
+  monthAmount: number | string,
+  quarterAmount: number | string,
+): boolean {
+  return monthInQuarter === 1 && Number(monthAmount) === Number(quarterAmount);
+}
+
 /** Hinweis unter dem Diagramm: Monatswert und vorläufiger laufender Monat. */
 export function provisionalNote(hasRank: boolean): string {
   const base = "Der laufende Monat ist vorläufig: gerechnet bis heute, Abrechnung zum Quartalsende.";

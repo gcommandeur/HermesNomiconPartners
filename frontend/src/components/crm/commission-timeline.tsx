@@ -10,7 +10,7 @@ import { ErrorState } from "@/components/crm/error-state";
 import { eur } from "@/lib/api/commission";
 import type { MyCommissionTimeline } from "@/lib/api/my-commission";
 import { useMyCommissionTimeline } from "@/lib/api/my-commission-hooks";
-import { barWidth, daysToQuarterEndText, monthLabel, nextRoleText, provisionalNote, quarterBoundaryLabels, timelineChartData } from "@/lib/commission-ui";
+import { barWidth, daysToQuarterEndText, isFirstMonthOfQuarter, monthLabel, nextRoleText, provisionalNote, quarterBoundaryLabels, timelineChartData } from "@/lib/commission-ui";
 import { formatPercent } from "@/lib/format";
 
 const REVENUE_COLOR = "#1F5FA8";
@@ -18,7 +18,7 @@ const CURRENT_COLOR = "#7FB3EA";
 const COMMISSION_COLOR = "#E2B04A";
 const AXIS_TICK = { fill: "#94A3B8", fontSize: 11 };
 
-function Tile({ label, value, hint, hint2 }: { label: string; value: string; hint?: string; hint2?: string }) {
+function Tile({ label, value, hint, hint2, note }: { label: string; value: string; hint?: string; hint2?: string; note?: string }) {
   return (
     <Card>
       <CardContent className="p-4">
@@ -26,6 +26,7 @@ function Tile({ label, value, hint, hint2 }: { label: string; value: string; hin
         <p className="mt-1 text-2xl font-semibold tracking-[-.02em]">{value}</p>
         {hint && <p className="mt-0.5 text-xs text-brand-muted">{hint}</p>}
         {hint2 && <p className="text-xs text-brand-muted">{hint2}</p>}
+        {note && <p className="mt-1 text-xs italic text-brand-muted">{note}</p>}
       </CardContent>
     </Card>
   );
@@ -66,6 +67,11 @@ function TimelineBody({ data }: { data: MyCommissionTimeline }) {
           value={hasRank ? eur(data.quarter_total) : eur(data.quarter_revenue)}
           hint={`Umsatz ${eur(data.quarter_revenue)}`}
           hint2={hasRank ? `Provision ${eur(data.quarter_commission)} · Bonus ${eur(data.quarter_bonus)}` : undefined}
+          note={
+            (hasRank ? isFirstMonthOfQuarter(current.month_in_quarter, current.total, data.quarter_total) : isFirstMonthOfQuarter(current.month_in_quarter, current.revenue, data.quarter_revenue))
+              ? "erster Monat im Quartal"
+              : undefined
+          }
         />
         <Tile
           label={progress?.is_top_rank ? "Bis zur nächsten Provisionsstufe" : "Bis zur nächsten Rolle"}
