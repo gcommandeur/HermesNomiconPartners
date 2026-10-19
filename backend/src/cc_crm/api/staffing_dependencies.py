@@ -77,6 +77,15 @@ def require_invoice_access(
         raise EntityNotFoundError("Rechnung nicht gefunden")
 
 
+def require_compliance_access(current_user: CurrentUser) -> None:
+    """Compliance (Erlaubnis, Fristen-Einstellungen, Übernahme-Staffel) nur für Admins und
+    Teamleiter. Für alle anderen sieht die Route aus, als gäbe es sie nicht: 404 (wie im
+    Rechtemodell). Schreiben darf weiterhin nur ein Admin (zusätzlich `AdminUser`)."""
+    if not (current_user.is_admin or current_user.is_team_lead):
+        raise EntityNotFoundError("Not Found")
+
+
 AssignmentAccess = Depends(require_assignment_access)
+ComplianceAccess = Depends(require_compliance_access)
 TimesheetAccess = Depends(require_timesheet_access)
 InvoiceAccess = Depends(require_invoice_access)

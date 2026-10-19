@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from cc_crm.api.dependencies import AdminUser, CurrentUser, DatabaseSession
 from cc_crm.api.staffing_dependencies import (
     AssignmentAccess,
+    ComplianceAccess,
     InvoiceAccess,
     TimesheetAccess,
     staffing_owner_scope,
@@ -182,12 +183,12 @@ def _settings_read(config: DeadlineConfig) -> StaffingSettingsRead:
     )
 
 
-@router.get("/settings", response_model=StaffingSettingsRead)
+@router.get("/settings", dependencies=[ComplianceAccess], response_model=StaffingSettingsRead)
 def get_settings(session: DatabaseSession, _user: CurrentUser) -> StaffingSettingsRead:
     return _settings_read(load_config(session))
 
 
-@router.put("/settings", response_model=StaffingSettingsRead)
+@router.put("/settings", dependencies=[ComplianceAccess], response_model=StaffingSettingsRead)
 def put_settings(
     payload: StaffingSettingsUpdate, session: DatabaseSession, _admin: AdminUser
 ) -> StaffingSettingsRead:
@@ -484,14 +485,19 @@ def update_checklist_item(
 # --- Erlaubnis ---------------------------------------------------------------------------------
 
 
-@router.get("/licenses", response_model=list[StaffingLicenseRead])
+@router.get("/licenses", dependencies=[ComplianceAccess], response_model=list[StaffingLicenseRead])
 def list_licenses(session: DatabaseSession, _user: CurrentUser) -> list[StaffingLicenseRead]:
     return [
         StaffingLicenseRead.model_validate(lic) for lic in StaffingLicenseService(session).list()
     ]
 
 
-@router.post("/licenses", response_model=StaffingLicenseRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/licenses",
+    dependencies=[ComplianceAccess],
+    response_model=StaffingLicenseRead,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_license(
     payload: StaffingLicenseCreate, session: DatabaseSession, admin: AdminUser
 ) -> StaffingLicenseRead:
@@ -500,7 +506,9 @@ def create_license(
     )
 
 
-@router.patch("/licenses/{license_id}", response_model=StaffingLicenseRead)
+@router.patch(
+    "/licenses/{license_id}", dependencies=[ComplianceAccess], response_model=StaffingLicenseRead
+)
 def update_license(
     license_id: uuid.UUID,
     payload: StaffingLicenseUpdate,
@@ -683,12 +691,16 @@ def _tiers_read(session: Session) -> TakeoverFeeTiersRead:
     )
 
 
-@router.get("/takeover-fee-tiers", response_model=TakeoverFeeTiersRead)
+@router.get(
+    "/takeover-fee-tiers", dependencies=[ComplianceAccess], response_model=TakeoverFeeTiersRead
+)
 def get_takeover_fee_tiers(session: DatabaseSession, _user: CurrentUser) -> TakeoverFeeTiersRead:
     return _tiers_read(session)
 
 
-@router.put("/takeover-fee-tiers", response_model=TakeoverFeeTiersRead)
+@router.put(
+    "/takeover-fee-tiers", dependencies=[ComplianceAccess], response_model=TakeoverFeeTiersRead
+)
 def put_takeover_fee_tiers(
     payload: TakeoverFeeTiersUpdate, session: DatabaseSession, admin: AdminUser
 ) -> TakeoverFeeTiersRead:

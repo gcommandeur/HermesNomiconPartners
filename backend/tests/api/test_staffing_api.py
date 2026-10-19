@@ -398,7 +398,8 @@ def test_overview_and_deadlines_are_scoped_and_ordered(
 
 
 def test_settings_and_licenses_are_admin_writes(client: TestClient, crew: Crew) -> None:
-    current = client.get(f"{P}/settings", headers=crew.a.headers).json()
+    # Compliance sehen Admins und Teamleiter (Bernd = Teamleiter); Schreiben bleibt Admin-Sache
+    current = client.get(f"{P}/settings", headers=crew.b.headers).json()
     assert (current["max_months"], current["equal_pay_months"], current["reset_gap_months"]) == (
         18,
         9,
@@ -406,7 +407,7 @@ def test_settings_and_licenses_are_admin_writes(client: TestClient, crew: Crew) 
     )
     assert "kein Rechtsrat" in current["notice"]
     body = {k: v for k, v in current.items() if k != "notice"}
-    assert client.put(f"{P}/settings", json=body, headers=crew.a.headers).status_code == 403
+    assert client.put(f"{P}/settings", json=body, headers=crew.b.headers).status_code == 403
     assert (
         client.put(
             f"{P}/settings", json={**body, "max_months": 24}, headers=crew.admin.headers
@@ -418,13 +419,13 @@ def test_settings_and_licenses_are_admin_writes(client: TestClient, crew: Crew) 
     )
     assert bad.status_code == 422  # Equal Pay muss vor der Hoechstdauer liegen
     licence = {"authority": "BA", "valid_from": "2026-01-01"}
-    assert client.post(f"{P}/licenses", json=licence, headers=crew.a.headers).status_code == 403
+    assert client.post(f"{P}/licenses", json=licence, headers=crew.b.headers).status_code == 403
     created = client.post(f"{P}/licenses", json=licence, headers=crew.admin.headers)
     assert created.status_code == 201
-    assert len(client.get(f"{P}/licenses", headers=crew.a.headers).json()) == 1
+    assert len(client.get(f"{P}/licenses", headers=crew.b.headers).json()) == 1
     assert (
         client.patch(
-            f"{P}/licenses/{created.json()['id']}", json={"notes": "x"}, headers=crew.a.headers
+            f"{P}/licenses/{created.json()['id']}", json={"notes": "x"}, headers=crew.b.headers
         ).status_code
         == 403
     )

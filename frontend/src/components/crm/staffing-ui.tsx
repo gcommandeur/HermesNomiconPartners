@@ -18,6 +18,8 @@ import {
   type StaffingWorkerStatus,
   type Traffic,
 } from "@/lib/api/staffing";
+import { useCurrentUser } from "@/lib/api/hooks";
+import { canSeeCompliance } from "@/lib/staffing-roles";
 import { formatPriorDays, provisionalReasonText } from "@/lib/staffing-deadline-text";
 import { formatDate } from "@/lib/utils";
 
@@ -58,9 +60,12 @@ const SUB_NAV = [
 /** Reiter-Leiste oben auf allen Überlassungs-Seiten (auf dem Handy seitlich scrollbar). */
 export function StaffingSubNav() {
   const pathname = usePathname();
+  const { data: me } = useCurrentUser();
+  // Compliance nur für Admins und Teamleiter (Vermittler bekommen Meldungen statt Seite)
+  const items = SUB_NAV.filter((item) => item.href !== "/ueberlassung/compliance" || canSeeCompliance(me?.data));
   return (
     <nav aria-label="Überlassung" className="scrollbar-subtle mb-5 flex gap-1 overflow-x-auto border-b border-white/10">
-      {SUB_NAV.map((item) => {
+      {items.map((item) => {
         const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
         return (
           <Link

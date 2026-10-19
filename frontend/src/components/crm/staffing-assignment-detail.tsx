@@ -39,6 +39,7 @@ import {
 } from "./staffing-ui";
 import { formatPercent } from "@/lib/format"; // NOMICON
 import { isOverlapConflict } from "@/lib/staffing-deadline-text";
+import { assignmentStatusLine, type StatusTone } from "@/lib/staffing-status";
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -96,7 +97,7 @@ export function StaffingAssignmentDetailView({ id }: { id: string }) {
         <div className="flex flex-wrap gap-2">
           {editable && <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil size={14} />Bearbeiten</Button>}
           {assignment.status === "planned" && (
-            <Button size="sm" disabled={busy || hasProblems} title={hasProblems ? "Erst die offenen Punkte unten erledigen" : undefined}
+            <Button size="sm" disabled={busy || hasProblems} title={hasProblems ? "Erst erledigen, was in der Statuszeile fehlt" : undefined}
               onClick={() => void run(() => changeStaffingAssignmentStatus(id, "active"))}>
               Einsatz aktivieren
             </Button>
@@ -109,23 +110,7 @@ export function StaffingAssignmentDetailView({ id }: { id: string }) {
 
       <ErrorBanner message={actionError} />
 
-      {assignment.status === "planned" && assignment.activation_warnings.length > 0 && (
-        <div role="status" className="rounded-lg border border-white/10 bg-brand-surface p-3 text-xs text-brand-soft">
-          <p className="font-semibold">Hinweis (sperrt die Aktivierung nicht):</p>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5">
-            {assignment.activation_warnings.map((warning) => <li key={warning}>{warning}</li>)}
-          </ul>
-        </div>
-      )}
-
-      {assignment.status === "planned" && hasProblems && (
-        <div role="status" className="rounded-lg border border-brand-warning/30 bg-brand-warning/10 p-3 text-xs text-brand-warning">
-          <p className="font-semibold">Noch nicht aktivierbar:</p>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5">
-            {assignment.activation_problems.map((problem) => <li key={problem}>{problem}</li>)}
-          </ul>
-        </div>
-      )}
+      <StatusLineBox assignment={assignment} />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.2fr_.8fr]">
         <Card>
@@ -253,6 +238,44 @@ function ContractPicker({ assignment, busy, onChange }: { assignment: StaffingAs
         )}
       </CardContent>
     </Card>
+  );
+}
+
+const STATUS_TONE_CLASS: Record<StatusTone, string> = {
+  green: "border-brand-success/30 bg-brand-success/10 text-brand-success-text",
+  amber: "border-brand-warning/30 bg-brand-warning/10 text-brand-warning",
+  red: "border-brand-danger/30 bg-brand-danger/10 text-brand-danger",
+  gray: "border-white/10 bg-brand-surface text-brand-soft",
+};
+
+/** Oben im Einsatz: EINE verständliche Statuszeile; die ausführlichen Meldungen stehen aufklappbar darunter. */
+function StatusLineBox({ assignment }: { assignment: StaffingAssignmentDetail }) {
+  const line = assignmentStatusLine(assignment);
+  const planned = assignment.status === "planned";
+  const problems = planned ? assignment.activation_problems : [];
+  const warnings = planned ? assignment.activation_warnings : [];
+  return (
+    <div role="status" className={`rounded-lg border p-3 text-sm ${STATUS_TONE_CLASS[line.tone]}`}>
+      <p className="font-semibold">{line.text}</p>
+      {(problems.length > 0 || warnings.length > 0) && (
+        <details className="mt-1 text-xs">
+          <summary className="cursor-pointer">Details</summary>
+          {problems.length > 0 && (
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              {problems.map((problem) => <li key={problem}>{problem}</li>)}
+            </ul>
+          )}
+          {warnings.length > 0 && (
+            <>
+              <p className="mt-2 font-semibold">Hinweis (sperrt die Aktivierung nicht):</p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                {warnings.map((warning) => <li key={warning}>{warning}</li>)}
+              </ul>
+            </>
+          )}
+        </details>
+      )}
+    </div>
   );
 }
 

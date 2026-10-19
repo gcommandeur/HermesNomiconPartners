@@ -15,6 +15,8 @@ from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.staffing import (
     StaffingAssignment,
     StaffingAssignmentStatus,
+    StaffingContract,
+    StaffingContractStatus,
     StaffingLicense,
     StaffingWorker,
 )
@@ -77,6 +79,18 @@ def _assignment(
         owner_user_id=owner.id if owner else None,
     )
     session.add(assignment)
+    session.flush()
+    if status == StaffingAssignmentStatus.ACTIVE:
+        # Aktive Einsaetze brauchen einen deckenden Vertrag, sonst meldet der Tagesjob ihn (eigene
+        # Tests: test_staffing_missing_contract_job.py); hier geht es um Fristen und Equal Pay.
+        contract = StaffingContract(
+            client_company_id=client.id,
+            valid_from=date(2000, 1, 1),
+            status=StaffingContractStatus.ACTIVE,
+        )
+        session.add(contract)
+        session.flush()
+        assignment.contract_id = contract.id
     session.commit()
     return assignment
 

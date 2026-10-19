@@ -115,7 +115,7 @@ export const navigationGroups: NavigationGroup[] = [
       { label: "Einsätze", href: "/ueberlassung/einsaetze", icon: CalendarRange, views: ["staffing"] },
       { label: "Leiharbeitnehmer", href: "/ueberlassung/leiharbeitnehmer", icon: UsersRound, views: ["staffing"] },
       { label: "Abrechnung", href: "/ueberlassung/abrechnung", icon: Receipt, views: ["staffing"] },
-      { label: "Compliance", href: "/ueberlassung/compliance", icon: ShieldCheck, views: ["staffing"] },
+      { label: "Compliance", href: "/ueberlassung/compliance", icon: ShieldCheck, adminOnly: true, teamLeadToo: true, views: ["staffing"] }, // Vermittler: Meldungen statt Seite
     ],
   },
   {

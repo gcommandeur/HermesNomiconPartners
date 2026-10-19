@@ -252,6 +252,7 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
                     result.tasks_created += 1
 
     _overdue_assignment_tasks(session, day, result, admins)
+    _missing_contract_tasks(session, day, result)
 
     for lic in session.scalars(
         select(StaffingLicense).where(StaffingLicense.valid_to.is_not(None))
@@ -286,6 +287,20 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
                 result.tasks_created += 1
     session.commit()
     return result
+
+
+def _missing_contract_tasks(session: Session, day: date, result: DeadlineJobResult) -> None:
+    """Aktive Einsätze ohne gültigen Überlassungsvertrag (kein Vertrag, abgelaufen, falscher
+    Zeitraum): eine kurze Aufgabe für den Disponenten, einmalig je Zustand (Kennung). Ohne Lohn-
+    oder Margenwerte. Der Einsatz wird nicht blockiert."""
+    from cc_crm.services.staffing_contract_sync import notify_contract_gap  # Zyklus vermeiden
+
+    for assignment in session.scalars(
+        select(StaffingAssignment)
+        .where(StaffingAssignment.status == StaffingAssignmentStatus.ACTIVE)
+        .order_by(StaffingAssignment.start_date, StaffingAssignment.id)
+    ).all():
+        result.tasks_created += notify_contract_gap(session, assignment, None, day)
 
 
 def _overdue_assignment_tasks(

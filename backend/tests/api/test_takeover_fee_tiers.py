@@ -91,7 +91,7 @@ def _active_assignment(session_factory: sessionmaker[Session], crew: Crew, month
 
 
 def test_tiers_are_admin_editable_and_listed(client: TestClient, crew: Crew) -> None:
-    listed = client.get(f"{P}/takeover-fee-tiers", headers=crew.a.headers).json()
+    listed = client.get(f"{P}/takeover-fee-tiers", headers=crew.b.headers).json()  # Teamleiter
     assert [t["up_to_months"] for t in listed["tiers"]] == [3, 6, 9, 12, None]
     assert "Platzhalter" in listed["notice"]
     body = {
@@ -101,7 +101,7 @@ def test_tiers_are_admin_editable_and_listed(client: TestClient, crew: Crew) -> 
         ]
     }
     assert (
-        client.put(f"{P}/takeover-fee-tiers", json=body, headers=crew.a.headers).status_code == 403
+        client.put(f"{P}/takeover-fee-tiers", json=body, headers=crew.b.headers).status_code == 403
     )
     saved = client.put(f"{P}/takeover-fee-tiers", json=body, headers=crew.admin.headers)
     assert saved.status_code == 200, saved.text

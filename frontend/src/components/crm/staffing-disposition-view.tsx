@@ -9,7 +9,10 @@ import { ErrorBanner } from "@/components/crm/error-banner";
 import { useStaffingDisposition, useStaffingOverview } from "@/lib/api/staffing-hooks";
 import { formatDate } from "@/lib/utils";
 import { DeadlineRow } from "./staffing-overview-view";
+import { useCurrentUser } from "@/lib/api/hooks";
+import { canSeeCompliance } from "@/lib/staffing-roles";
 import { StaffingAssignmentBoard } from "./staffing-assignment-board";
+import { StaffingMyOverview } from "./staffing-my-overview";
 import { EmptyHint, LEGAL_NOTICE, LoadError, LoadingRows } from "./staffing-ui";
 
 function Stat({ icon: Icon, label, value, hint, warn }: { icon: typeof HardHat; label: string; value: React.ReactNode; hint?: string; warn?: boolean }) {
@@ -28,6 +31,14 @@ function Stat({ icon: Icon, label, value, hint, warn }: { icon: typeof HardHat; 
 }
 
 export function StaffingDispositionView() {
+  const { data: me } = useCurrentUser();
+  // Vermittler: kompakt "Meine Einsätze" und "Meine nächsten Schritte"; die ausführlichen Tabellen
+  // (Fristen aller Paare, Erlaubnis, Checklisten) nur für Admins und Teamleiter.
+  if (!me) return <LoadingRows />;
+  return canSeeCompliance(me.data) ? <StaffingFullDisposition /> : <StaffingMyOverview />;
+}
+
+function StaffingFullDisposition() {
   const { data, error, isLoading, mutate } = useStaffingDisposition();
   const { data: overview } = useStaffingOverview();
   if (error) return <LoadError onRetry={() => void mutate()} />;

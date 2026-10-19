@@ -9,6 +9,7 @@ import { ViewSwitcher } from "@/components/crm/view-switcher"; // NOMICON
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { getCandidatesPage, getClientsPage, getContactsPage } from "@/lib/api/queries";
 import { useCurrentUser } from "@/lib/api/hooks";
+import { useNotifications } from "@/lib/api/notifications-hooks";
 import { cn } from "@/lib/utils";
 import { resetClientSession } from "@/lib/reset-client-session";
 import type { Candidate, ClientCompany, Contact } from "@/lib/api/types";
@@ -41,6 +42,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
   const [open, setOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notifications = useNotifications(); // NOMICON: Meldungen aus den Aufgaben des Tagesjobs
   const [accountOpen, setAccountOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
@@ -274,10 +276,37 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             onClick={() => setNotificationsOpen((current) => !current)}
           >
             <Bell size={17} />
+            {notifications.length > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-danger px-1 text-[9.5px] font-semibold text-white" aria-label={`${notifications.length} Meldungen`}>
+                {notifications.length}
+              </span>
+            )}
           </Button>
           {notificationsOpen && (
-            <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-white/10 bg-brand-surface p-3 text-xs text-brand-muted shadow-xl">
-              Keine neuen Benachrichtigungen.
+            <div className="absolute right-0 z-20 mt-1 w-80 max-w-[90vw] rounded-md border border-white/10 bg-brand-surface p-2 text-xs text-brand-muted shadow-xl" role="region" aria-label="Meldungen">
+              {notifications.length === 0 ? (
+                <p className="p-1">Keine neuen Benachrichtigungen.</p>
+              ) : (
+                <ul className="max-h-96 space-y-1 overflow-y-auto">
+                  {notifications.map((item) => (
+                    <li key={item.id}>
+                      <a
+                        href={item.href ?? "#"}
+                        onClick={(event) => {
+                          if (!item.href) return event.preventDefault();
+                          event.preventDefault();
+                          setNotificationsOpen(false);
+                          router.push(item.href);
+                        }}
+                        className="block rounded-md p-2 hover:bg-white/6"
+                      >
+                        <span className="block font-medium text-brand-text">{item.title}</span>
+                        {item.detail && <span className="mt-0.5 block text-brand-muted">{item.detail}</span>}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </div>

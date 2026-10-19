@@ -65,16 +65,16 @@ def notify_contract_gap(
     assignment: StaffingAssignment,
     problem_before: str | None,
     today: date,
-) -> None:
+) -> int:
     """Einmalige Aufgabe, wenn ein AKTIVER Einsatz durch eine Änderung den Vertrag verliert.
     Nur der Übergang "gedeckt -> nicht gedeckt" löst aus (ein schon vorher ungedeckter Einsatz
     nicht); die Kennung enthält den Zustand von Vertrag und Zeitraum, sodass dieselbe Lücke nur
     eine Aufgabe erzeugt. Keine Lohn- oder Margenwerte im Text."""
     if assignment.status != StaffingAssignmentStatus.ACTIVE or problem_before is not None:
-        return
+        return 0
     problem = contract_problem_for(session, assignment, today)
     if problem is None:
-        return
+        return 0
     contract = (
         session.get(StaffingContract, assignment.contract_id)
         if assignment.contract_id is not None
@@ -99,11 +99,13 @@ def notify_contract_gap(
             contract.status.value if contract else None,
         )
     )
+    headline = "fehlt" if assignment.contract_id is None else "deckt Einsatz nicht mehr"
+    created = 0
     for user_id in recipients:
-        create_task_once(
+        if create_task_once(
             session,
             marker=f"[staffing-contract:{assignment.id}:{state}:{user_id}]",
-            title=f"Überlassungsvertrag deckt Einsatz nicht mehr: {worker_name} bei {client_name}",
+            title=f"Überlassungsvertrag {headline}: {worker_name} bei {client_name}",
             body=(
                 f"{problem} Der Einsatz bleibt aktiv, der Vertrag oder der Einsatzzeitraum "
                 "sollte angepasst werden."
@@ -111,4 +113,6 @@ def notify_contract_gap(
             owner_user_id=user_id,
             priority=TaskPriority.HIGH,
             today=today,
-        )
+        ):
+            created += 1
+    return created
