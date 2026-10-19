@@ -593,8 +593,8 @@ def offer_candidate_as_assignment(
     confirm_engagement: bool = False,
     confirm_overlap: bool = False,
 ) -> StaffingOfferResult:
-    """Legt das Leiharbeitnehmer-Profil (Anwärter) und optional einen geplanten Einsatz an. Ist der
-    Kandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) bzw. die Sperre."""
+    """Legt das Leiharbeitnehmer-Profil ("In Auswahl") und optional einen geplanten Einsatz an.
+    Ist der Kandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) oder die Sperre."""
     _check_owner(session, current_user, payload.owner_user_id)
     ensure_no_conflict(session, current_user, payload.candidate_id, "staffing", confirm_engagement)
     workers = StaffingWorkerService(session)

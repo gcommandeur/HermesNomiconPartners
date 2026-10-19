@@ -42,12 +42,12 @@ describe("applicantsWithoutAssignment", () => {
     { id: "w3", status: "active" as const },
   ];
 
-  it("nennt Anwärter ohne geplanten oder aktiven Einsatz", () => {
+  it("nennt Personen In Auswahl ohne geplanten oder aktiven Einsatz", () => {
     const result = applicantsWithoutAssignment(workers, [{ worker_id: "w2", status: "planned" }]);
     expect(result).toEqual(["w1"]);
   });
 
-  it("ein beendeter Einsatz macht den Anwärter nicht beschäftigt", () => {
+  it("ein beendeter Einsatz macht die Person In Auswahl nicht beschäftigt", () => {
     expect(applicantsWithoutAssignment(workers, [{ worker_id: "w1", status: "ended" }])).toEqual(["w1", "w2"]);
   });
 

@@ -32,7 +32,7 @@ from cc_crm.models.enums import InvoiceStatus
 
 
 class StaffingWorkerStatus(StrEnum):
-    APPLICANT = "applicant"  # Anwärter
+    APPLICANT = "applicant"  # in der Oberfläche "In Auswahl" (interner Wert bleibt)
     ACTIVE = "active"
     DORMANT = "dormant"  # ruhend
     LEFT = "left"  # ausgeschieden

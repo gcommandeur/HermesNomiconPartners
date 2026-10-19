@@ -55,7 +55,7 @@ export const PRIOR_SOURCE_LABELS: Record<StaffingPriorPeriodSource, string> = {
 };
 
 export const WORKER_STATUS_LABELS: Record<StaffingWorkerStatus, string> = {
-  applicant: "Anwärter",
+  applicant: "In Auswahl",
   active: "Aktiv",
   dormant: "Ruhend",
   left: "Ausgeschieden",
@@ -455,12 +455,12 @@ export const STAFFING_FILTER_LABELS: Record<StaffingListFilter, string> = {
   workers: "Nur Leiharbeitnehmer",
   bench: "Bench",
   critical: "Frist kritisch",
-  applicants: "Anwärter",
+  applicants: "In Auswahl",
 };
 
 export const CANDIDATE_STAFFING_STATUS_LABELS: Record<StaffingCandidateSummary["status"], string> = {
   none: "Kein Leiharbeitnehmer",
-  applicant: "Anwärter",
+  applicant: "In Auswahl",
   active: "Aktiv",
   dormant: "Ruhend",
   left: "Ausgeschieden",

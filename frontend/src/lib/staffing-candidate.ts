@@ -29,7 +29,7 @@ export function canSeeStaffing(views: readonly string[] | null | undefined): boo
 
 /** Welche Hauptaktion der Abschnitt "Überlassung" am Kandidaten anbietet: ohne Profil "Als Leiharbeitnehmer
  * anlegen" (verknüpft den bestehenden Kandidaten, kein zweiter Datensatz), sonst Bearbeiten; neue Einsätze
- * nur für Anwärter und aktive Personen. */
+ * nur für Personen "In Auswahl" und aktive Personen. */
 export function candidateStaffingActions(worker: { status: string } | null | undefined): { create: boolean; edit: boolean; newAssignment: boolean } {
   if (!worker) return { create: true, edit: false, newAssignment: false };
   return { create: false, edit: true, newAssignment: worker.status === "active" || worker.status === "applicant" };

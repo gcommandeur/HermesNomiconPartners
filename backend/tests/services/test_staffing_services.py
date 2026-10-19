@@ -290,12 +290,12 @@ def test_candidate_history_never_contains_staffing_entries(
 def test_status_rule_active_never_in_the_future(
     session: Session, actor: User, candidate: Candidate
 ) -> None:
-    """Statusregel: Aktiv erst ab Eintritt/Einsatzbeginn, vorher bleibt die Person Anwärter."""
+    """Statusregel: Aktiv erst ab Eintritt/Einsatzbeginn, vorher bleibt die Person "In Auswahl"."""
     from datetime import timedelta
 
     service = StaffingWorkerService(session)
     future = date.today() + timedelta(days=20)
-    with pytest.raises(BusinessRuleError, match="Anwärter"):
+    with pytest.raises(BusinessRuleError, match="In Auswahl"):
         service.create(
             StaffingWorkerCreate(
                 candidate_id=candidate.id,
@@ -304,11 +304,11 @@ def test_status_rule_active_never_in_the_future(
             ),
             actor,
         )
-    # Anwärter mit künftigem Eintritt ist erlaubt ...
+    # "In Auswahl" mit künftigem Eintritt ist erlaubt ...
     row = service.create(StaffingWorkerCreate(candidate_id=candidate.id, entry_date=future), actor)
     assert row.worker.status == StaffingWorkerStatus.APPLICANT
     # ... aber nicht als "aktiv" umstellbar, solange der Eintritt in der Zukunft liegt
-    with pytest.raises(BusinessRuleError, match="Anwärter"):
+    with pytest.raises(BusinessRuleError, match="In Auswahl"):
         service.update(
             row.worker.id, StaffingWorkerUpdate(status=StaffingWorkerStatus.ACTIVE), actor
         )

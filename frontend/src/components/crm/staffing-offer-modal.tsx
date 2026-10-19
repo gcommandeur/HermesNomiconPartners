@@ -1,7 +1,7 @@
 "use client";
 
 // NOMICON: "Als Einsatz anbieten" (Direct -> Überlassung) am Kandidaten und am Prozess: legt das
-// Leiharbeitnehmer-Profil (Anwärter) und optional einen geplanten Einsatz an. Ist der Kandidat schon
+// Leiharbeitnehmer-Profil ("In Auswahl") und optional einen geplanten Einsatz an. Ist der Kandidat schon
 // im Austausch, erscheint der Hinweis mit Bestätigung (oder die Sperre, je nach Einstellung).
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -93,7 +93,7 @@ function StaffingOfferModal({ candidateId, defaultClientId, onClose }: { candida
     <Modal title="Als Einsatz anbieten" eyebrow="Überlassung" onClose={onClose} maxWidth="max-w-lg">
       <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void send(false); }}>
         <p className="text-sm text-brand-soft">
-          Legt den Kandidaten als Leiharbeitnehmer-<strong>Anwärter</strong> an. Mit Kunde und Beginn entsteht zusätzlich ein <strong>geplanter Einsatz</strong>; die Checkliste folgt wie gewohnt. Der Kandidat bleibt im gemeinsamen Pool.
+          Legt den Kandidaten als Leiharbeitnehmer <strong>In Auswahl</strong> an (ausgesucht bzw. für einen Kunden vorgesehen, Einsatz noch nicht aktiv). Mit Kunde und Beginn entsteht zusätzlich ein <strong>geplanter Einsatz</strong>; die Checkliste folgt wie gewohnt. Der Kandidat bleibt im gemeinsamen Pool.
         </p>
         <div>
           <label className={labelClass}>Kunde (optional)</label>

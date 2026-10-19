@@ -3354,8 +3354,8 @@ export interface paths {
         put?: never;
         /**
          * Offer Candidate As Assignment
-         * @description Legt das Leiharbeitnehmer-Profil (Anwärter) und optional einen geplanten Einsatz an. Ist der
-         *     Kandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) bzw. die Sperre.
+         * @description Legt das Leiharbeitnehmer-Profil ("In Auswahl") und optional einen geplanten Einsatz an.
+         *     Ist der Kandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) oder die Sperre.
          */
         post: operations["offer_candidate_as_assignment_api_v1_staffing_offer_from_candidate_post"];
         delete?: never;
@@ -10237,7 +10237,7 @@ export interface components {
         /**
          * StaffingOfferInput
          * @description "Als Einsatz anbieten" (Direct -> Überlassung): legt (falls nötig) das Leiharbeitnehmer-
-         *     Profil als Anwärter an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz.
+         *     Profil als "In Auswahl" an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz.
          */
         StaffingOfferInput: {
             /**

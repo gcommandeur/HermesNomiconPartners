@@ -102,7 +102,7 @@ Zählung), ohne Datenbankzugriff je Paar. Der Kunde im Einsatz ist für alle sic
 offene Checklisten, **Bench** (aktive Leiharbeitnehmer ohne geplanten/aktiven Einsatz, „frei seit“ = Ende des
 letzten Einsatzes, ersatzweise Eintritt), Stundenzettel-Eingang (offen, überfällig, beim Kunden,
 freigegeben aber nicht abgerechnet, abgelehnt), Erlaubnis-Status. Die Seite `/ueberlassung` zeigt dazu das
-Fristen-Radar und das **Einsatz-Board** (Anwärter/Onboarding, Geplant, Aktiv, Läuft aus = Ampel gelb/rot oder
+Fristen-Radar und das **Einsatz-Board** (In Auswahl, Geplant, Aktiv, Läuft aus = Ampel gelb/rot oder
 Ende in 30 Tagen, Beendet der letzten 30 Tage). Lohn und Verrechnungssatz auf den Karten nur für Admins.
 
 ## Ansicht Gesamt (Geschäftsführung, nur Admins)
@@ -132,7 +132,7 @@ Ende in 30 Tagen, Beendet der letzten 30 Tage). Lohn und Verrechnungssatz auf de
   bis 3 Monate 100 %, bis 6 Monate 75 %, bis 9 Monate 50 %, bis 12 Monate 25 %, danach 0 %. Ein eigener Prozentsatz
   in der Übernahme-Maske überschreibt die Staffel. Vorschau: `GET /staffing/assignments/{id}/takeover-preview`.
 - **Als Einsatz anbieten** (Direct → AÜ, am Kandidaten und an der Prozess-Karte): `POST /staffing/offer-from-candidate`
-  legt das Leiharbeitnehmer-Profil (Anwärter) und, mit Kunde und Beginn, einen geplanten Einsatz an. Der
+  legt das Leiharbeitnehmer-Profil („In Auswahl“) und, mit Kunde und Beginn, einen geplanten Einsatz an. Der
   Konflikt-Hinweis aus dem Kandidatenstatus greift.
 - **Geschäft mit dieser Kanzlei** (`GET /clients/{id}/business`, Block auf der Kanzleiseite): Prozesse (Ansicht
   Direct), Einsätze und Fristen (Ansicht Überlassung), jeweils im eigenen Sichtbereich; Umsatz nur für Admins.

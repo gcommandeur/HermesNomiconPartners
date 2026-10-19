@@ -7,7 +7,7 @@ alle Personen, Nummern und Aktenzeichen sind erfunden.
 
 Die Daten gehen durch die echten Services (Regeln, Checkliste, Audit-Log wie im Betrieb) und
 decken verschiedene Faelle ab: Frist rot/gelb/gruen, Lücke unter 3 Monaten (Zähler läuft
-weiter), beendeter und geplanter Einsatz, Anwärter ohne Einsatz.
+weiter), beendeter und geplanter Einsatz, Person In Auswahl ohne Einsatz.
 
 Mit `edge_cases=True` (so ruft `seed_data.py seed --staffing N` auf) kommen die Sonderfälle der
 Logiklücken-Pakete dazu: Vorzeit beim Kunden, überfälliger aktiver Einsatz, bestätigte
@@ -98,7 +98,7 @@ SCENARIOS: list[list[_Plan]] = [
         _Plan(150, StaffingAssignmentStatus.ACTIVE),
     ],
     [_Plan(-20, StaffingAssignmentStatus.PLANNED)],  # beginnt in 20 Tagen, Checkliste halb
-    [],  # Anwärter ohne Einsatz
+    [],  # In Auswahl, ohne Einsatz
     [_Plan(200, StaffingAssignmentStatus.ENDED, 60)],  # beendet
     [_Plan(30, StaffingAssignmentStatus.ACTIVE)],
 ]
@@ -182,7 +182,7 @@ def seed_staffing(
         worker = worker_service.create(
             StaffingWorkerCreate(
                 candidate_id=candidate.id,
-                # Statusregel: Aktiv erst ab begonnenem Einsatz; geplante Einsätze -> Anwärter
+                # Statusregel: Aktiv erst ab begonnenem Einsatz; geplante Einsätze -> "In Auswahl"
                 status=(
                     StaffingWorkerStatus.ACTIVE
                     if plans and plans[0].status != StaffingAssignmentStatus.PLANNED

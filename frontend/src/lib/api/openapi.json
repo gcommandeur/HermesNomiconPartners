@@ -18238,7 +18238,7 @@
         "type": "object"
       },
       "StaffingOfferInput": {
-        "description": "\"Als Einsatz anbieten\" (Direct -> Überlassung): legt (falls nötig) das Leiharbeitnehmer-\nProfil als Anwärter an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz.",
+        "description": "\"Als Einsatz anbieten\" (Direct -> Überlassung): legt (falls nötig) das Leiharbeitnehmer-\nProfil als \"In Auswahl\" an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz.",
         "properties": {
           "candidate_id": {
             "format": "uuid",
@@ -36678,7 +36678,7 @@
     },
     "/api/v1/staffing/offer-from-candidate": {
       "post": {
-        "description": "Legt das Leiharbeitnehmer-Profil (Anwärter) und optional einen geplanten Einsatz an. Ist der\nKandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) bzw. die Sperre.",
+        "description": "Legt das Leiharbeitnehmer-Profil (\"In Auswahl\") und optional einen geplanten Einsatz an.\nIst der Kandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) oder die Sperre.",
         "operationId": "offer_candidate_as_assignment_api_v1_staffing_offer_from_candidate_post",
         "parameters": [
           {

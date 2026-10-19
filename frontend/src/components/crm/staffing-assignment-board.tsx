@@ -1,6 +1,6 @@
 "use client";
 
-// NOMICON: Einsatz-Board der Disposition. Spalten: Anwärter/Onboarding (Anwärter ohne Einsatz sowie geplant mit offener Checkliste),
+// NOMICON: Einsatz-Board der Disposition. Spalten: In Auswahl (Personen ohne Einsatz sowie geplant mit offener Checkliste),
 // Geplant, Aktiv, Läuft aus (aktiv mit gelber/roter Frist oder Ende in den nächsten Tagen),
 // Beendet (letzte 30 Tage). Lohn und Verrechnungssatz zeigt der Server nur Admins.
 import { useMemo } from "react";
@@ -13,7 +13,7 @@ import { formatDate } from "@/lib/utils";
 import { EmptyHint, LoadError, LoadingRows, TrafficBadge } from "./staffing-ui";
 
 const COLUMNS: { key: ColumnKey; title: string }[] = [
-  { key: "onboarding", title: "Anwärter / Onboarding" },
+  { key: "onboarding", title: "In Auswahl" },
   { key: "planned", title: "Geplant" },
   { key: "active", title: "Aktiv" },
   { key: "ending", title: "Läuft aus" },
@@ -61,7 +61,7 @@ export function StaffingAssignmentBoard() {
               <li key={worker.id}>
                 <Link href={`/ueberlassung/leiharbeitnehmer/${worker.id}`} className="block rounded-lg border border-dashed border-white/20 bg-brand-panel p-2.5 transition-colors hover:border-brand-accent/50">
                   <p className="truncate text-xs font-semibold">{worker.candidate_name}</p>
-                  <p className="mt-0.5 text-[10.45px] text-brand-muted">Anwärter · noch kein Einsatz</p>
+                  <p className="mt-0.5 text-[10.45px] text-brand-muted">In Auswahl · noch kein Einsatz</p>
                   {worker.entry_date && <p className="mt-1 text-[10.45px] text-brand-muted">Eintritt ab {formatDate(worker.entry_date)}</p>}
                 </Link>
               </li>

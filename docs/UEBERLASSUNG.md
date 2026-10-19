@@ -26,7 +26,7 @@ und die Einsätze folgen eigenen Regeln).
 
 | Tabelle | Inhalt |
 |---|---|
-| `staffing_workers` | 1:1 zu `candidates`; Status (Anwärter, aktiv, ruhend, ausgeschieden), Eintritt/Austritt, Stundenlohn, Entgeltgruppe, Wochenstunden, Arbeitserlaubnis gültig bis, Notizen |
+| `staffing_workers` | 1:1 zu `candidates`; Status (In Auswahl [intern `applicant`], aktiv, ruhend, ausgeschieden), Eintritt/Austritt, Stundenlohn, Entgeltgruppe, Wochenstunden, Arbeitserlaubnis gültig bis, Notizen |
 | `staffing_contracts` | Überlassungs-/Rahmenvertrag je Kunde: Nummer, gültig von/bis, Branche (Branchenzuschlag), Dokument, Status |
 | `staffing_assignments` | Einsatz: Leiharbeitnehmer, Kunde, Vertrag, Disponent (`owner_user_id`), Beginn, geplantes/tatsächliches Ende, Ort, Tätigkeit, Verrechnungssatz, Lohn, Status (geplant, aktiv, beendet, abgebrochen) |
 | `staffing_assignments` (Ergänzung, Migration `nomicon08equalpay`) | zusätzlich `equal_pay_confirmed_on` und `equal_pay_confirmed_by_user_id`: der Disponent hat den Lohn bei Equal Pay geprüft und angeglichen (siehe „Equal Pay mit Folge“) |
@@ -143,7 +143,7 @@ endgültig und nicht mehr änderbar. Ein Einsatz wird nur **aktiv**, wenn
 4. der Einsatz begonnen hat (Beginn ≤ heute, seit 2026-10-16; ein Einsatz in der Zukunft bleibt „geplant“).
 
 Die Fehlermeldung nennt alle Probleme gemeinsam, z. B. „Keine gültige AÜG-Erlaubnis für den Zeitraum … Kein
-Überlassungsvertrag am Einsatz verknüpft … Pflicht-Checkliste unvollständig (offen: Merkblatt …)“. Mit der ersten Aktivierung wird ein Anwärter automatisch zum
+Überlassungsvertrag am Einsatz verknüpft … Pflicht-Checkliste unvollständig (offen: Merkblatt …)“. Mit der ersten Aktivierung wird eine Person „In Auswahl“ automatisch zum
 aktiven Leiharbeitnehmer. **Annahme:** Eine überschrittene Höchstdauer blockiert die Aktivierung
 nicht; sie wird als rote Frist angezeigt und als Aufgabe gemeldet.
 
@@ -186,27 +186,27 @@ Erlaubnis: Beginn bis geplantes Ende, ohne Plan bis heute. Jede Verletzung hat e
 
 ## Status eines Leiharbeitnehmers (eine Regel für Liste, Board, Fristen, Kennzahlen)
 
-Festgelegt am 2026-10-16 nach einem Klick-Test (Person „aktiv seit“ in der Zukunft, aber im Board „Anwärter“):
+Festgelegt am 2026-10-16 nach einem Klick-Test (Person „aktiv seit“ in der Zukunft, aber im Board „In Auswahl“):
 
 | Status | Bedeutung | Wie er entsteht |
 |---|---|---|
-| **Anwärter** | angelegt, noch kein Einsatz hat tatsächlich begonnen (auch mit geplantem Einsatz oder künftigem Eintritt) | Standard beim Anlegen; bleibt bis zur ersten Aktivierung eines Einsatzes |
+| **In Auswahl** (früher „Anwärter“, interner Wert `applicant`) | ausgesucht bzw. für einen Kunden vorgesehen; noch kein Einsatz hat tatsächlich begonnen (auch mit geplantem Einsatz oder künftigem Eintritt) | Standard beim Anlegen; bleibt bis zur ersten Aktivierung eines Einsatzes |
 | **Aktiv** | ab Eintritt bzw. Beginn des ersten Einsatzes, **nie in der Zukunft** | automatisch bei der ersten Einsatz-Aktivierung (Beginn ≤ heute); bleibt auch zwischen Einsätzen (dann „Bench“) |
 | **Ruhend** | vorübergehend nicht einsetzbar | manuell |
 | **Ausgeschieden** | Arbeitsverhältnis beendet | manuell (Austrittsdatum) |
 
 Durchgesetzt in `services/staffing_workers.check_status_rule` (aktiv + Eintritt in der Zukunft → Fehler) und
 `StaffingActivationService.activation_problems` (kein Aktivieren vor Beginn). Das **Einsatz-Board**
-zeigt Anwärter ohne geplanten/aktiven Einsatz als Personenkarte in der Spalte „Anwärter / Onboarding“, Anwärter mit
+zeigt Personen „In Auswahl“ ohne geplanten/aktiven Einsatz als Personenkarte in der Spalte „In Auswahl“, Personen In Auswahl mit
 geplantem Einsatz stehen über den Einsatz im Board (keine Doppelung). **Bench** = Aktive ohne geplanten/aktiven Einsatz
-(Anwärter gehören nicht dazu). Die Liste zeigt bei Anwärtern „Eintritt ab …“, bei allen anderen „seit …“.
+(Personen In Auswahl gehören nicht dazu). Die Liste zeigt bei Personen In Auswahl „Eintritt ab …“, bei allen anderen „seit …“.
 Demo-Seed und `seed_demo` (zieht ältere Demo-Datenbanken nach) halten sich an die Regel.
 
 ## Überlassung am Kandidaten (seit 2026-10-16)
 
 Alle Überlassungsinformationen zu einer Person stehen zusätzlich am Kandidaten (zweite Zugangsstufe zu denselben Daten,
 keine zweite Datenhaltung): **Liste** `/kandidaten` mit Spalte „Überlassung“ (Status, bei Aktiv der Kunde, Warnsymbol mit
-Resttagen bei gelber/roter Frist), Filter „Überlassung“ (nur Leiharbeitnehmer, Bench, Frist kritisch, Anwärter) und einer
+Resttagen bei gelber/roter Frist), Filter „Überlassung“ (nur Leiharbeitnehmer, Bench, Frist kritisch, In Auswahl) und einer
 CSV-Spalte - alles nur mit der Ansicht Überlassung. **Detail** Reiter „Überlassung“: Stammdaten mit Bearbeiten (dasselbe
 Formular wie unter Leiharbeitnehmer), „Als Leiharbeitnehmer anlegen“ (verknüpft den bestehenden Kandidaten; ein zweites
 Profil gibt es nicht, 409), Einsätze mit „Neuer Einsatz“ (Leiharbeitnehmer vorausgefüllt), Fristen je Kunde mit Rechtshinweis,
@@ -325,7 +325,7 @@ Es gibt **keine neuen Umgebungsvariablen**. Zu tun (nur der Nutzer, nicht von Cl
 
 `python scripts/seed_data.py seed --candidates 60 --staffing 8` (nur lokale Entwicklungs-Datenbank,
 nie Produktion). Es entstehen Leiharbeitnehmer, Verträge, eine Beispiel-Erlaubnis und Einsätze für
-mehrere Fälle (Frist rot/gelb/grün, Lücke unter 3 Monaten, geplanter und beendeter Einsatz, Anwärter ohne
+mehrere Fälle (Frist rot/gelb/grün, Lücke unter 3 Monaten, geplanter und beendeter Einsatz, Person In Auswahl ohne
 Einsatz), alle über die echten Services und Regeln. Seit 2026-10-17 zusätzlich: eine Person mit **Vorzeit**
 (10 Monate bei einem Kunden), ein **überfälliger** aktiver Einsatz, ein Einsatz mit **bestätigter
 Überschneidung**, ein Einsatz **kurz vor/nach Equal Pay** (offen und bestätigt) und ein aktiver Einsatz, dessen
@@ -371,6 +371,6 @@ müssten folgende Stellen konfigurierbar werden — bisher fest im Code:
 - **Disposition** (`GET /staffing/disposition`): Kennzahlen, Bench, Stundenzettel-Eingang; Einsatz-Board auf `/ueberlassung`.
 - **Übernahme-Fee nach Einsatzdauer:** einstellbare Staffel (Platzhalter-Startwerte, Admin, Compliance-Seite);
   `GET/PUT /staffing/takeover-fee-tiers`, Vorschau `GET /staffing/assignments/{id}/takeover-preview`.
-- **Als Einsatz anbieten** (`POST /staffing/offer-from-candidate`): Profil als Anwärter, optional geplanter Einsatz.
+- **Als Einsatz anbieten** (`POST /staffing/offer-from-candidate`): Profil „In Auswahl“, optional geplanter Einsatz.
 - Alle `/staffing/**`-Routen verlangen die Ansicht **Überlassung**; der Kandidatenstatus warnt (oder sperrt), wenn
   für einen bereits im Austausch befindlichen Kandidaten ein Einsatz angelegt wird.

@@ -22,9 +22,9 @@ export function classifyAssignment(a: StaffingAssignment, traffic: Traffic | und
   return traffic === "yellow" || traffic === "red" || endsSoon ? "ending" : "active";
 }
 
-/** Anwärter ohne geplanten oder aktiven Einsatz: erscheinen als Personenkarte in "Anwärter / Onboarding",
- * damit niemand im Board fehlt, nur weil noch kein Einsatz angelegt ist. Anwärter MIT geplantem
- * Einsatz stehen bereits über den Einsatz im Board. */
+/** Personen "In Auswahl" (interner Status "applicant") ohne geplanten oder aktiven Einsatz: erscheinen als
+ * Personenkarte in der Spalte "In Auswahl", damit niemand im Board fehlt, nur weil noch kein Einsatz angelegt
+ * ist. Personen In Auswahl MIT geplantem Einsatz stehen bereits über den Einsatz im Board. */
 export function applicantsWithoutAssignment(
   workers: Pick<StaffingWorker, "id" | "status">[],
   assignments: Pick<StaffingAssignment, "worker_id" | "status">[],

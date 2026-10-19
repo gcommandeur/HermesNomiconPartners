@@ -1016,7 +1016,7 @@ export interface PageQuery {
   rollenUnbestaetigt?: boolean;
   /** NOMICON: Kandidatenstatus-Filter (frei für Direct/AÜ, im Austausch). */
   engagement?: "free_direct" | "free_staffing" | "engaged";
-  /** NOMICON: Überlassungs-Filter (nur mit Ansicht Überlassung): nur Leiharbeitnehmer, Bench, Frist kritisch, Anwärter. */
+  /** NOMICON: Überlassungs-Filter (nur mit Ansicht Überlassung): nur Leiharbeitnehmer, Bench, Frist kritisch, In Auswahl. */
   staffing?: "workers" | "bench" | "critical" | "applicants";
   /** Komfort-Filter "Meine..." - siehe owner_user_id auf Candidate/
    * ClientCompany/CandidateSubmission/Task oben. */

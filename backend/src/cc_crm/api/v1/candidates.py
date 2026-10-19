@@ -97,7 +97,7 @@ def list_candidates(
     custom_field: str | None = None,
     # NOMICON: Kandidatenstatus-Filter (frei fuer Direct/AÜ, im Austausch)
     engagement: EngagementFilter | None = None,
-    # NOMICON: Überlassungs-Filter (nur Leiharbeitnehmer, Bench, Frist kritisch, Anwärter)
+    # NOMICON: Überlassungs-Filter (nur Leiharbeitnehmer, Bench, Frist kritisch, In Auswahl)
     staffing: StaffingListFilter | None = None,
     sort_by: Annotated[
         Literal["candidate_number", "name", "job_title", "city", "salary_expectation", "status"]

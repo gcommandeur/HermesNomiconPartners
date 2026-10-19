@@ -43,11 +43,11 @@ def worker_read(row: WorkerRow) -> StaffingWorkerRead:
 
 def check_status_rule(status: StaffingWorkerStatus, entry_date: date | None, today: date) -> None:
     """Statusregel: Aktiv gibt es erst ab Eintritt/Einsatzbeginn, nie in der Zukunft. Vorher ist die
-    Person Anwärter (siehe docs/UEBERLASSUNG.md, Abschnitt "Status eines Leiharbeitnehmers")."""
+    Person "In Auswahl" (siehe docs/UEBERLASSUNG.md, Abschnitt "Status eines Leiharbeitnehmers")."""
     if status == StaffingWorkerStatus.ACTIVE and entry_date is not None and entry_date > today:
         raise BusinessRuleError(
             "Ein aktiver Leiharbeitnehmer kann nicht in der Zukunft beginnen. "
-            "Bis zum ersten Einsatz bleibt die Person Anwärter."
+            "Bis zum ersten Einsatz bleibt die Person „In Auswahl“."
         )
 
 

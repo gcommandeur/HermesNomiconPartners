@@ -540,7 +540,7 @@ class StaffingTakeoverPreview(BaseModel):
 
 class StaffingOfferInput(BaseModel):
     """ "Als Einsatz anbieten" (Direct -> Überlassung): legt (falls nötig) das Leiharbeitnehmer-
-    Profil als Anwärter an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz."""
+    Profil als "In Auswahl" an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz."""
 
     candidate_id: uuid.UUID
     client_company_id: uuid.UUID | None = None

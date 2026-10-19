@@ -14,7 +14,7 @@ describe("staffingCandidateText", () => {
   });
 
   it("zeigt Status, bei Aktiv den Kunden und bei gelber/roter Frist die Resttage", () => {
-    expect(staffingCandidateText(summary({ status: "applicant" }))).toBe("Anwärter");
+    expect(staffingCandidateText(summary({ status: "applicant" }))).toBe("In Auswahl");
     expect(staffingCandidateText(summary({ client_name: "Muster GmbH" }))).toBe("Aktiv · Muster GmbH");
     expect(staffingCandidateText(summary({ client_name: "Muster GmbH", traffic: "yellow", days_remaining: 26 }))).toBe("Aktiv · Muster GmbH · Frist noch 26 Tage");
     expect(staffingCandidateText(summary({ bench: true }))).toBe("Aktiv · Bench");
@@ -45,7 +45,7 @@ describe("Sichtbarkeit und Aktionen", () => {
     expect(canSeeStaffing([])).toBe(false);
   });
 
-  it("'Als Leiharbeitnehmer anlegen' nur ohne Profil, neuer Einsatz nur für Anwärter und Aktive", () => {
+  it("'Als Leiharbeitnehmer anlegen' nur ohne Profil, neuer Einsatz nur für Personen In Auswahl und Aktive", () => {
     expect(candidateStaffingActions(null)).toEqual({ create: true, edit: false, newAssignment: false });
     expect(candidateStaffingActions({ status: "applicant" })).toEqual({ create: false, edit: true, newAssignment: true });
     expect(candidateStaffingActions({ status: "active" })).toEqual({ create: false, edit: true, newAssignment: true });
