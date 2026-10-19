@@ -49,6 +49,8 @@ export type NavigationGroup = {
   label: string;
   /** Ganze Gruppe nur fuer Admins. */
   adminOnly?: boolean;
+  /** NOMICON: Abweichende Überschrift je Ansicht (Überlassung: "Überlassung" statt "Recruiting"). */
+  viewLabels?: Partial<Record<ViewKey, string>>;
   items: NavigationItem[];
 };
 
@@ -87,6 +89,7 @@ export const navigationGroups: NavigationGroup[] = [
   {
     id: "recruiting",
     label: "Recruiting",
+    viewLabels: { staffing: "Überlassung" }, // NOMICON: in der Ansicht Überlassung stehen alle Punkte in einer Gruppe
     items: [
       // Eigener "Reaktivierung"-Menuepunkt entfernt (Phase L.2): der
       // "Erneut kontaktieren"-Filter auf /kandidaten deckt dieselbe Funktion ab.
@@ -98,6 +101,11 @@ export const navigationGroups: NavigationGroup[] = [
       // Review-Ebene des Sourcing-Agents: gefundene Personen werden hier
       // bestaetigt/verworfen, bevor sie Kandidaten werden.
       { label: "Sourcing", href: "/sourcing", icon: UserRoundSearch, views: ["direct"] }, // NOMICON
+      // NOMICON: Arbeitnehmerüberlassung (nur Ansicht Überlassung), gleiche Gruppe wie die Kandidaten
+      { label: "Übersicht & Fristen", href: "/ueberlassung", icon: HardHat, views: ["staffing"], notActiveFor: ["/ueberlassung/einsaetze", "/ueberlassung/leiharbeitnehmer", "/ueberlassung/abrechnung", "/ueberlassung/compliance"] },
+      { label: "Einsätze", href: "/ueberlassung/einsaetze", icon: CalendarRange, views: ["staffing"] },
+      { label: "Abrechnung", href: "/ueberlassung/abrechnung", icon: Receipt, views: ["staffing"] },
+      { label: "Compliance", href: "/ueberlassung/compliance", icon: ShieldCheck, adminOnly: true, teamLeadToo: true, views: ["staffing"] }, // Vermittler: Meldungen statt Seite
     ],
   },
   {
@@ -107,17 +115,6 @@ export const navigationGroups: NavigationGroup[] = [
       { label: "Kunden", href: "/kunden", icon: Building2 },
       { label: "Kontakte", href: "/kontakte", icon: ContactRound },
       { label: "Geo Mapping", href: "/geo-mapping", icon: Map },
-    ],
-  },
-  // NOMICON: Arbeitnehmerüberlassung (nur in der Nomicon-Kopie)
-  {
-    id: "ueberlassung",
-    label: "Überlassung",
-    items: [
-      { label: "Übersicht & Fristen", href: "/ueberlassung", icon: HardHat, views: ["staffing"], notActiveFor: ["/ueberlassung/einsaetze", "/ueberlassung/leiharbeitnehmer", "/ueberlassung/abrechnung", "/ueberlassung/compliance"] },
-      { label: "Einsätze", href: "/ueberlassung/einsaetze", icon: CalendarRange, views: ["staffing"] },
-      { label: "Abrechnung", href: "/ueberlassung/abrechnung", icon: Receipt, views: ["staffing"] },
-      { label: "Compliance", href: "/ueberlassung/compliance", icon: ShieldCheck, adminOnly: true, teamLeadToo: true, views: ["staffing"] }, // Vermittler: Meldungen statt Seite
     ],
   },
   {

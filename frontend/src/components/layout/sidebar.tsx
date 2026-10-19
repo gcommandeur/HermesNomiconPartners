@@ -58,6 +58,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
     .filter((group) => !group.adminOnly || isAdmin)
     .map((group) => ({
       ...group,
+      label: (activeView && group.viewLabels?.[activeView]) || group.label, // NOMICON
       items: inActiveView(visibleItems(group.items, isAdmin, isTeamLead), activeView).filter( // NOMICON
         (item) => !item.requiresAi || ai.enabled,
       ),
