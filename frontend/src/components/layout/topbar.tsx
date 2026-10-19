@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, LogOut, Menu, Search, X } from "lucide-react";
+import { Bell, LogOut, Menu, Search, User, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QuickActionMenu } from "@/components/crm/quick-action-menu";
 import { ViewSwitcher } from "@/components/crm/view-switcher"; // NOMICON
@@ -26,7 +26,7 @@ const emptyResults: GlobalSearchResults = { candidates: [], clients: [], contact
 
 function initialsOf(label: string): string {
   const words = label.split(/[\s@._-]+/).filter(Boolean);
-  if (words.length === 0) return "?";
+  if (words.length === 0) return ""; // NOMICON: kein Fragezeichen - das Profilfeld zeigt dann ein Personen-Symbol
   return words
     .slice(0, 2)
     .map((word) => word[0].toUpperCase())
@@ -315,7 +315,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             className="ml-1 flex items-center gap-2 rounded-md p-1.5 hover:bg-white/6"
             onClick={() => setAccountOpen((current) => !current)}
           >
-            <span className="grid size-8 place-items-center rounded-full bg-[#202327] text-[10.45px] font-semibold text-white">{userInitials}</span>
+            <span className="grid size-8 place-items-center rounded-full bg-[#202327] text-[10.45px] font-semibold text-white">{userInitials || <User size={15} aria-label="Profil" />}</span>
             <span className="hidden max-w-40 truncate text-left text-xs font-medium text-white md:block">
               {userLabel}
             </span>

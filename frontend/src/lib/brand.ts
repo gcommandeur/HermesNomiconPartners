@@ -9,7 +9,7 @@
  */
 export const brand = {
   /** Name der Anwendung (Tab-Titel, Login). */
-  appName: process.env.NEXT_PUBLIC_BRAND_APP_NAME || "Nomicon", // NOMICON
+  appName: process.env.NEXT_PUBLIC_BRAND_APP_NAME || "Nomicon Partners", // NOMICON
   /** Firmenname (Beschreibung, Wasserzeichen, Alt-Texte). */
   companyName: process.env.NEXT_PUBLIC_BRAND_COMPANY_NAME || "Nomicon Partners", // NOMICON
   /** Kleines Zeichen (Login, Seitenleiste), Datei unter public/. */
