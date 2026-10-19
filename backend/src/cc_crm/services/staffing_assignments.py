@@ -209,7 +209,11 @@ class StaffingAssignmentService:
         ]
         pair = pair_deadline(self.session, assignment.worker_id, assignment.client_company_id, day)
         confirmed_on = pair_equal_pay_confirmed_on(
-            self.session, assignment.worker_id, assignment.client_company_id, pair.chain_start
+            self.session,
+            assignment.worker_id,
+            assignment.client_company_id,
+            pair.chain_start,
+            pair.equal_pay_from,
         )
         return StaffingAssignmentDetail(
             **assignment_read(row).model_dump()

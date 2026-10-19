@@ -202,7 +202,7 @@ def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJob
         # Equal Pay mit Folge: Aufgabe "Lohn prüfen und angleichen", erledigt mit der Bestätigung
         # am Einsatz. Die Texte nennen nur Namen und Datum - nie Lohn- oder Margenwerte.
         confirmed_on = pair_equal_pay_confirmed_on(
-            session, worker_id, client_id, deadline.chain_start
+            session, worker_id, client_id, deadline.chain_start, deadline.equal_pay_from
         )
         if confirmed_on is not None:
             close_equal_pay_tasks(session, worker_id, client_id)

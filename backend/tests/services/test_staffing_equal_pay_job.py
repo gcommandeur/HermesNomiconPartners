@@ -78,7 +78,7 @@ def test_no_task_when_already_confirmed(session: Session) -> None:
     owner = _user(session, "dispo@x.example")
     worker, client = _worker(session), _client(session)
     assignment = _assignment(session, worker, client, D(2025, 1, 1), owner=owner)
-    StaffingEqualPayService(session).confirm(assignment.id, owner, today=D(2025, 9, 1))
+    StaffingEqualPayService(session).confirm(assignment.id, owner, today=D(2025, 10, 1))
     run_deadline_job(session, D(2025, 10, 15))
     assert _equal_pay_tasks(session) == []
 
@@ -138,3 +138,32 @@ def test_confirmation_rules(session: Session) -> None:
     session.commit()
     with pytest.raises(BusinessRuleError, match="nicht mehr änderbar"):
         service.confirm(assignment.id, owner, today=D(2025, 10, 5))
+
+
+def test_confirmation_only_from_the_cutoff_day(session: Session) -> None:
+    owner = _user(session, "dispo@x.example")
+    worker, client = _worker(session), _client(session)
+    assignment = _assignment(
+        session, worker, client, D(2025, 1, 1), owner=owner
+    )  # Stichtag 1.10.2025
+    service = StaffingEqualPayService(session)
+    with pytest.raises(BusinessRuleError, match="erst ab dem Stichtag"):
+        service.confirm(assignment.id, owner, today=D(2025, 9, 30))
+    with pytest.raises(BusinessRuleError, match="vor dem Stichtag"):
+        service.confirm(assignment.id, owner, D(2025, 9, 30), today=D(2025, 10, 1))
+    service.confirm(assignment.id, owner, today=D(2025, 10, 1))  # am Stichtag erlaubt
+    session.refresh(assignment)
+    assert assignment.equal_pay_confirmed_on == D(2025, 10, 1)
+
+
+def test_old_confirmation_from_an_earlier_chain_does_not_count(session: Session) -> None:
+    from cc_crm.services.staffing_equal_pay import pair_equal_pay_confirmed_on
+
+    owner = _user(session, "dispo@x.example")
+    worker, client = _worker(session), _client(session)
+    assignment = _assignment(session, worker, client, D(2025, 1, 1), owner=owner)
+    assignment.equal_pay_confirmed_on = D(2025, 6, 1)  # vor dem Stichtag
+    session.commit()
+    args = (session, worker.id, client.id, D(2025, 1, 1))
+    assert pair_equal_pay_confirmed_on(*args, D(2025, 10, 1)) is None
+    assert pair_equal_pay_confirmed_on(*args, D(2025, 5, 1)) == D(2025, 6, 1)

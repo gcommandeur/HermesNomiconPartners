@@ -81,7 +81,9 @@ def pair_deadlines(
         result = pair_deadline(session, key[0], key[1], today, config)
         if not result.has_chain:
             continue
-        confirmed_on = pair_equal_pay_confirmed_on(session, key[0], key[1], result.chain_start)
+        confirmed_on = pair_equal_pay_confirmed_on(
+            session, key[0], key[1], result.chain_start, result.equal_pay_from
+        )
         seen[key] = StaffingPairDeadlineRead(
             **asdict(result),
             equal_pay_confirmed_on=confirmed_on,

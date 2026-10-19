@@ -7,8 +7,9 @@ erledigt, sobald `equal_pay_confirmed_on` an einem Einsatz des Paares gesetzt is
 darf jeder mit Zugriff auf den Einsatz; die Lohnhöhe sehen und ändern weiterhin nur Admins - weder
 Aufgabentexte noch diese Antworten enthalten Lohn- oder Margenwerte, nur Namen und Datum.
 
-Eine Bestätigung gehört zur aktuellen Kette: sie zählt nur, wenn sie am oder nach dem Kettenbeginn
-liegt (nach einem Reset durch eine lange Unterbrechung beginnt Equal Pay von vorn)."""
+Eine Bestätigung gehört zur aktuellen Kette und zum Stichtag: sie zählt nur, wenn sie am oder nach
+dem Tag liegt, ab dem Equal Pay gilt (`equal_pay_from`; nach einem Reset durch eine lange
+Unterbrechung beginnt Equal Pay von vorn). Vor dem Stichtag lässt sich nicht bestätigen."""
 
 import uuid
 from datetime import date
@@ -32,18 +33,20 @@ def pair_equal_pay_confirmed_on(
     worker_id: uuid.UUID,
     client_company_id: uuid.UUID,
     chain_start: date | None,
+    equal_pay_from: date | None = None,
 ) -> date | None:
-    """Jüngste Bestätigung an einem (nicht abgebrochenen) Einsatz des Paares innerhalb der
-    aktuellen Kette; `None`, wenn es keine gibt."""
+    """Jüngste Bestätigung an einem (nicht abgebrochenen) Einsatz des Paares am oder nach dem
+    Equal-Pay-Stichtag der aktuellen Kette (ohne Stichtag: ab Kettenbeginn); sonst `None`."""
     if chain_start is None:
         return None
+    lower = equal_pay_from or chain_start
     confirmed = session.scalars(
         select(StaffingAssignment.equal_pay_confirmed_on).where(
             StaffingAssignment.worker_id == worker_id,
             StaffingAssignment.client_company_id == client_company_id,
             StaffingAssignment.status != StaffingAssignmentStatus.ABORTED,
             StaffingAssignment.equal_pay_confirmed_on.is_not(None),
-            StaffingAssignment.equal_pay_confirmed_on >= chain_start,
+            StaffingAssignment.equal_pay_confirmed_on >= lower,
         )
     ).all()
     dates = [day for day in confirmed if day is not None]
@@ -86,6 +89,9 @@ class StaffingEqualPayService:
         confirmed_on: date | None = None,
         today: date | None = None,
     ) -> None:
+        # Lokaler Import: staffing_deadline_job importiert dieses Modul.
+        from cc_crm.services.staffing_deadline_job import pair_deadline
+
         day = today or date.today()
         assignment = self._editable_assignment(assignment_id)
         on = confirmed_on or day
@@ -93,6 +99,18 @@ class StaffingEqualPayService:
             raise BusinessRuleError("Die Bestätigung kann nicht in der Zukunft liegen.")
         if on < assignment.start_date:
             raise BusinessRuleError("Die Bestätigung liegt vor dem Beginn des Einsatzes.")
+        pair = pair_deadline(self.session, assignment.worker_id, assignment.client_company_id, day)
+        stichtag = pair.equal_pay_from
+        if stichtag is None or day < stichtag:
+            raise BusinessRuleError(
+                "Equal Pay gilt für dieses Paar noch nicht"
+                + (f" (ab {stichtag:%d.%m.%Y})" if stichtag else "")
+                + ": Eine Bestätigung ist erst ab dem Stichtag möglich."
+            )
+        if on < stichtag:
+            raise BusinessRuleError(
+                f"Die Bestätigung liegt vor dem Stichtag ({stichtag:%d.%m.%Y}) und zählt nicht."
+            )
         audit.log_updated(
             self.session,
             audit.ENTITY_ASSIGNMENT,
