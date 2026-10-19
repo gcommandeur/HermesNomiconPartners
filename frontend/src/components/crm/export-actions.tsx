@@ -2,9 +2,10 @@
 
 import { Download, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { neutralizeFormula } from "@/lib/csv-safe"; // aus Hermes (Paket C3)
 
 function escapeCsv(value: unknown) {
-  const text = String(value ?? "");
+  const text = neutralizeFormula(String(value ?? ""));
   if (/[",\n;]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
   return text;
 }
