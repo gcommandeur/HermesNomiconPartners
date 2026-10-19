@@ -243,6 +243,10 @@ Kopfbereich der Kandidatenseite (gemeinsamer Kandidatenstatus mit Konflikt-Hinwe
   Bench (`active` neu im Backend). Die Überlassungsdaten stehen im Reiter „Überlassung“ am Kandidaten. Alte Adressen
   `/ueberlassung/leiharbeitnehmer` und `…/<id>` leiten dorthin weiter (unbekannte ID: zur Liste).
 
+## Kanban auf der Übersicht (seit 2026-10-19)
+
+Die Übersicht der Ansicht Überlassung zeigt für alle Rollen ein Kanban mit drei Spalten (`staffing-kanban.tsx`, Regeln in `lib/staffing-board.ts`): **In Auswahl** (geplante Einsätze und Personen „In Auswahl“ ohne Einsatz), **In Überlassung** (aktive Einsätze), **Überlassung endet bald** (aktiv, geplantes Ende in höchstens **6 Wochen** oder überfällig; füllt sich von selbst). Die ersten beiden Spalten bewegt man von Hand: Karte nach „In Überlassung“ ziehen oder „In Überlassung setzen“ (dieselbe Aktivierung wie im Einsatz; der Server prüft Checkliste, Vertrag, Erlaubnis und meldet, was fehlt). Personen ohne Einsatz haben „Einsatz anlegen“. Karte: Kandidat, Kunde, **Stundensatz (Verrechnungssatz) nur für Admins**. Zurück von „In Überlassung“ nach „In Auswahl“ gibt es nicht (kein erlaubter Statuswechsel); beendet wird im Einsatz. Das frühere 5-Spalten-Board ist ersetzt.
+
 ## Weitere Klarstellungen (seit 2026-10-19)
 
 * **Hilfsfunktionen:** `create_task_once`, `active_admin_ids`, `pair_names` liegen jetzt in

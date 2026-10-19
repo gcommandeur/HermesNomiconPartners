@@ -1,30 +1,35 @@
-// NOMICON: Spaltenlogik des Einsatz-Boards (reine Funktionen, testbar). Statusregel für
+// NOMICON: Spaltenlogik des Überlassungs-Kanbans (reine Funktionen, testbar). Statusregel für
 // Leiharbeitnehmer: docs/UEBERLASSUNG.md, Abschnitt "Status eines Leiharbeitnehmers".
-import type { StaffingAssignment, StaffingWorker, Traffic } from "./api/staffing";
+import type { StaffingAssignment, StaffingWorker } from "./api/staffing";
 
-export type ColumnKey = "onboarding" | "planned" | "active" | "ending" | "ended";
+/** In Auswahl und In Überlassung bewegt man von Hand, "Überlassung endet bald" füllt sich von selbst. */
+export type KanbanColumn = "selection" | "running" | "ending";
 
-export const ENDING_SOON_DAYS = 30;
-export const ENDED_VISIBLE_DAYS = 30;
+/** So viele Wochen vor dem geplanten Ende rutscht ein laufender Einsatz nach "Überlassung endet bald". */
+export const ENDING_SOON_WEEKS = 6;
 
-function daysBetween(from: Date, to: Date): number {
+export function daysBetween(from: Date, to: Date): number {
   return Math.round((to.getTime() - from.getTime()) / 86_400_000);
 }
 
-export function classifyAssignment(a: StaffingAssignment, traffic: Traffic | undefined, today: Date): ColumnKey | null {
-  if (a.status === "aborted") return null;
-  if (a.status === "ended") {
-    const end = a.actual_end_date ?? a.planned_end_date;
-    return end && daysBetween(new Date(end), today) <= ENDED_VISIBLE_DAYS ? "ended" : null;
-  }
-  if (a.status === "planned") return a.checklist_done < a.checklist_total ? "onboarding" : "planned";
-  const endsSoon = a.planned_end_date !== null && daysBetween(today, new Date(a.planned_end_date)) <= ENDING_SOON_DAYS;
-  return traffic === "yellow" || traffic === "red" || endsSoon ? "ending" : "active";
+/** Tage bis zum geplanten Ende (negativ: überfällig); `null` ohne geplantes Ende. */
+export function daysUntilEnd(a: Pick<StaffingAssignment, "planned_end_date">, today: Date): number | null {
+  return a.planned_end_date ? daysBetween(today, new Date(a.planned_end_date)) : null;
+}
+
+/** Spalte eines Einsatzes: geplant = In Auswahl (von Hand nach "In Überlassung" setzen); aktiv = In Überlassung,
+ * und ab ENDING_SOON_WEEKS Wochen vor dem geplanten Ende (auch überfällig) "Überlassung endet bald".
+ * Beendete und abgebrochene Einsätze stehen nicht im Kanban. */
+export function classifyKanban(a: Pick<StaffingAssignment, "status" | "planned_end_date">, today: Date): KanbanColumn | null {
+  if (a.status === "planned") return "selection";
+  if (a.status !== "active") return null;
+  const left = daysUntilEnd(a, today);
+  return left !== null && left <= ENDING_SOON_WEEKS * 7 ? "ending" : "running";
 }
 
 /** Personen "In Auswahl" (interner Status "applicant") ohne geplanten oder aktiven Einsatz: erscheinen als
- * Personenkarte in der Spalte "In Auswahl", damit niemand im Board fehlt, nur weil noch kein Einsatz angelegt
- * ist. Personen In Auswahl MIT geplantem Einsatz stehen bereits über den Einsatz im Board. */
+ * Personenkarte in der Spalte "In Auswahl", damit niemand im Kanban fehlt, nur weil noch kein Einsatz angelegt
+ * ist. Personen In Auswahl MIT geplantem Einsatz stehen bereits über den Einsatz im Kanban. */
 export function applicantsWithoutAssignment(
   workers: Pick<StaffingWorker, "id" | "status">[],
   assignments: Pick<StaffingAssignment, "worker_id" | "status">[],

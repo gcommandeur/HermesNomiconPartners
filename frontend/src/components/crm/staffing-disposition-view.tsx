@@ -11,7 +11,7 @@ import { formatDate } from "@/lib/utils";
 import { DeadlineRow } from "./staffing-overview-view";
 import { useCurrentUser } from "@/lib/api/hooks";
 import { canSeeCompliance } from "@/lib/staffing-roles";
-import { StaffingAssignmentBoard } from "./staffing-assignment-board";
+import { StaffingKanban } from "./staffing-kanban";
 import { StaffingMyOverview } from "./staffing-my-overview";
 import { EmptyHint, LEGAL_NOTICE, LoadError, LoadingRows } from "./staffing-ui";
 
@@ -61,8 +61,8 @@ function StaffingFullDisposition() {
       )}
 
       <section>
-        <h2 className="mb-3 font-semibold">Einsatz-Board</h2>
-        <StaffingAssignmentBoard />
+        <h2 className="mb-3 font-semibold">Überlassung im Überblick</h2>
+        <StaffingKanban />
       </section>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
