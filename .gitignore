@@ -73,3 +73,6 @@ app-spec*.yaml
 backend/scripts/full_dry_run_log.txt
 .git-korrupt-backup/
 backend/data/lukas_postfach_import/
+
+# Von TypeScript erzeugt, aendert sich bei jedem Lauf
+frontend/tsconfig.tsbuildinfo

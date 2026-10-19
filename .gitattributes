@@ -1,3 +1,6 @@
+# Zeilenenden: Git entscheidet bei Textdateien selbst (Windows und Linux gleichermassen).
+* text=auto
+
 # Shell-Skripte muessen auf Linux (Cloud-Sitzungen, CI) mit LF-Zeilenenden
 # ankommen - mit CRLF bricht bash am "\r" ab.
 *.sh text eol=lf
