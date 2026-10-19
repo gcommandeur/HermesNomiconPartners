@@ -261,3 +261,16 @@ def test_prior_days_ignore_overlap_with_assignments() -> None:
     assert result.chain_start == D(2025, 1, 1)
     assert result.counted_days == 120  # 1.1. bis 30.4.
     assert result.prior_days == 59  # 1.1. bis 28.2. (März liegt schon im Einsatz)
+
+
+def test_unconfirmed_prior_periods_make_the_deadline_provisional() -> None:
+    from datetime import date as _d
+
+    from cc_crm.services.staffing_deadlines import Span, compute_deadline
+
+    spans = [Span(_d(2026, 1, 1), _d(2026, 3, 1))]
+    today = _d(2026, 4, 1)
+    open_question = compute_deadline(spans, today, prior_confirmed=False)
+    assert open_question.provisional and open_question.provisional_reasons == ("prior_unconfirmed",)
+    answered = compute_deadline(spans, today, prior_confirmed=True)
+    assert not answered.provisional

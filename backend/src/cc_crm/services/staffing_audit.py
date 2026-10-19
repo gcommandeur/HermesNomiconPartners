@@ -19,6 +19,7 @@ ENTITY_ASSIGNMENT = "staffing_assignment"
 ENTITY_LICENSE = "staffing_license"
 ENTITY_TIMESHEET = "staffing_timesheet"
 ENTITY_PRIOR_PERIOD = "staffing_prior_period"
+ENTITY_PRIOR_CONFIRMATION = "staffing_prior_period_confirmation"
 
 
 def log_created(

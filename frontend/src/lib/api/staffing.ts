@@ -47,6 +47,7 @@ export type StaffingTakeoverResult = Schemas["StaffingTakeoverResult"];
 export type InvoiceStatus = Schemas["InvoiceStatus"];
 export type StaffingPriorPeriod = Schemas["StaffingPriorPeriodRead"];
 export type StaffingPriorPeriodSource = Schemas["StaffingPriorPeriodSource"];
+export type StaffingPriorConfirmation = Schemas["StaffingPriorPeriodConfirmationRead"];
 
 export const PRIOR_SOURCE_LABELS: Record<StaffingPriorPeriodSource, string> = {
   other_provider: "Anderer Verleiher",
@@ -312,6 +313,20 @@ export function updateStaffingPriorPeriod(id: string, input: Partial<Omit<PriorP
 
 export function deleteStaffingPriorPeriod(id: string) {
   return apiDelete(`/staffing/prior-periods/${id}`);
+}
+
+// "Keine Vorzeiten" bestätigen (Datum und Person werden am Server festgehalten)
+
+export async function getStaffingPriorConfirmations(workerId: string): Promise<DataResult<StaffingPriorConfirmation[]>> {
+  return apiGet<StaffingPriorConfirmation[]>(`/staffing/workers/${workerId}/prior-period-confirmations`, []);
+}
+
+export function confirmNoPriorPeriods(workerId: string, input: { client_company_id: string; confirmed_on?: string | null; note?: string | null }) {
+  return apiPost<StaffingPriorConfirmation>(`/staffing/workers/${workerId}/prior-period-confirmations`, input);
+}
+
+export function withdrawNoPriorPeriods(workerId: string, clientCompanyId: string) {
+  return apiDelete(`/staffing/workers/${workerId}/prior-period-confirmations/${clientCompanyId}`);
 }
 
 export function createStaffingLicense(input: {

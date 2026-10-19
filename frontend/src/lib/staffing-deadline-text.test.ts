@@ -4,6 +4,7 @@ import { formatPriorDays, isOverlapConflict, overdueSummary, provisionalReasonTe
 describe("provisionalReasonText", () => {
   it("nennt, was an der Frist fehlt", () => {
     expect(provisionalReasonText(["planned_assignment"])).toBe("Vorläufig: Einsatz noch nicht aktiviert");
+    expect(provisionalReasonText(["prior_unconfirmed"])).toBe("Vorläufig: Vorzeiten nicht bestätigt");
     expect(provisionalReasonText(["planned_assignment", "open_end"])).toBe(
       "Vorläufig: Einsatz noch nicht aktiviert; kein Enddatum erfasst",
     );

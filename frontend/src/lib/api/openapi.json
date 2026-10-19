@@ -18547,6 +18547,131 @@
         "title": "StaffingPairDeadlineRead",
         "type": "object"
       },
+      "StaffingPriorPeriodConfirmationCreate": {
+        "description": "\"Keine Vorzeiten\" bestätigen; ohne Datum gilt heute.",
+        "properties": {
+          "client_company_id": {
+            "format": "uuid",
+            "title": "Client Company Id",
+            "type": "string"
+          },
+          "confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed On"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "client_company_id"
+        ],
+        "title": "StaffingPriorPeriodConfirmationCreate",
+        "type": "object"
+      },
+      "StaffingPriorPeriodConfirmationRead": {
+        "properties": {
+          "client_company_id": {
+            "format": "uuid",
+            "title": "Client Company Id",
+            "type": "string"
+          },
+          "client_name": {
+            "title": "Client Name",
+            "type": "string"
+          },
+          "confirmed_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed By Name"
+          },
+          "confirmed_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed By User Id"
+          },
+          "confirmed_on": {
+            "format": "date",
+            "title": "Confirmed On",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "worker_id": {
+            "format": "uuid",
+            "title": "Worker Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "updated_at",
+          "worker_id",
+          "client_company_id",
+          "client_name",
+          "confirmed_on",
+          "confirmed_by_user_id",
+          "confirmed_by_name",
+          "note"
+        ],
+        "title": "StaffingPriorPeriodConfirmationRead",
+        "type": "object"
+      },
       "StaffingPriorPeriodCreate": {
         "properties": {
           "client_company_id": {
@@ -37790,6 +37915,215 @@
           }
         ],
         "summary": "Update Worker",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/workers/{worker_id}/prior-period-confirmations": {
+      "get": {
+        "operationId": "list_prior_confirmations_api_v1_staffing_workers__worker_id__prior_period_confirmations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "worker_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Worker Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffingPriorPeriodConfirmationRead"
+                  },
+                  "title": "Response List Prior Confirmations Api V1 Staffing Workers  Worker Id  Prior Period Confirmations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Prior Confirmations",
+        "tags": [
+          "staffing"
+        ]
+      },
+      "post": {
+        "description": "\"Keine Vorzeiten\" bestätigen (Datum und Person werden festgehalten).",
+        "operationId": "confirm_no_prior_periods_api_v1_staffing_workers__worker_id__prior_period_confirmations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "worker_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Worker Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffingPriorPeriodConfirmationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffingPriorPeriodConfirmationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Confirm No Prior Periods",
+        "tags": [
+          "staffing"
+        ]
+      }
+    },
+    "/api/v1/staffing/workers/{worker_id}/prior-period-confirmations/{client_company_id}": {
+      "delete": {
+        "description": "Bestätigung zurücknehmen (Eingabekorrektur); der Audit-Log hält es fest.",
+        "operationId": "withdraw_no_prior_periods_api_v1_staffing_workers__worker_id__prior_period_confirmations__client_company_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "worker_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Worker Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "client_company_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Withdraw No Prior Periods",
         "tags": [
           "staffing"
         ]

@@ -11,6 +11,7 @@ export function isOverlapConflict(message: string): boolean {
 const PROVISIONAL_TEXT: Record<string, string> = {
   planned_assignment: "Einsatz noch nicht aktiviert",
   open_end: "kein Enddatum erfasst",
+  prior_unconfirmed: "Vorzeiten nicht bestätigt",
 };
 
 /** Tooltip für „vorläufig“: was an der Frist noch fehlt (Gründe vom Server als Codes). */

@@ -16,6 +16,7 @@ from tests.api.test_staffing_api import (
     crew,
     make_candidate,
 )
+from tests.api.test_staffing_prior_confirmations import _confirm
 
 _ = (crew, make_candidate)  # Fixtures (per Import registriert)
 
@@ -27,6 +28,7 @@ def test_provisional_flag_follows_planned_and_open_ended_assignments(
 ) -> None:
     _license(client, crew)
     worker = _worker(client, crew.a, make_candidate())
+    assert _confirm(client, crew, worker["id"]).status_code == 201  # "Keine Vorzeiten" bestätigt
     assignment = _assignment(client, crew.a, worker["id"], crew.client_id)  # geplant, ohne Ende
     url = f"{P}/assignments/{assignment['id']}"
 

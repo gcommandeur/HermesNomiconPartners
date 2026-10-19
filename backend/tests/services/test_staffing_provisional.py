@@ -5,7 +5,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from cc_crm.models.staffing import StaffingAssignmentStatus
+from cc_crm.models.staffing import StaffingAssignmentStatus, StaffingPriorPeriodConfirmation
 from cc_crm.services.staffing_deadline_job import pair_deadline
 from cc_crm.services.staffing_deadlines import Span, Traffic, compute_deadline, merge_spans
 from tests.services.test_staffing_deadline_job import (
@@ -94,8 +94,27 @@ def test_traffic_light_is_unchanged_by_provisional() -> None:
 # --- aus der Datenbank -----------------------------------------------------------------------
 
 
+def test_pair_deadline_is_provisional_without_prior_confirmation(session: Session) -> None:
+    worker, client = _worker(session), _client(session)
+    _assignment(session, worker, client, D(2026, 1, 1), end=D(2026, 12, 31))
+    result = pair_deadline(session, worker.id, client.id, TODAY)
+    assert result.provisional_reasons == ("prior_unconfirmed",)
+    _confirm_no_prior(session, worker, client)
+    assert not pair_deadline(session, worker.id, client.id, TODAY).provisional
+
+
+def _confirm_no_prior(session: Session, worker, client) -> None:  # type: ignore[no-untyped-def]
+    session.add(
+        StaffingPriorPeriodConfirmation(
+            worker_id=worker.id, client_company_id=client.id, confirmed_on=TODAY
+        )
+    )
+    session.commit()
+
+
 def test_pair_deadline_marks_planned_and_open_ended_assignments(session: Session) -> None:
     worker, client = _worker(session), _client(session)
+    _confirm_no_prior(session, worker, client)
     active = _assignment(session, worker, client, D(2026, 1, 1), end=D(2026, 12, 31))
     result = pair_deadline(session, worker.id, client.id, TODAY)
     assert not result.provisional  # aktiv mit bekanntem Ende
@@ -119,6 +138,7 @@ def test_pair_deadline_marks_planned_and_open_ended_assignments(session: Session
 
 def test_overdue_active_assignment_counts_as_open_end(session: Session) -> None:
     worker, client = _worker(session), _client(session)
+    _confirm_no_prior(session, worker, client)
     _assignment(session, worker, client, D(2026, 1, 1), end=D(2026, 2, 28))  # aktiv, ueberfaellig
     result = pair_deadline(session, worker.id, client.id, TODAY)
     assert result.provisional_reasons == ("open_end",)

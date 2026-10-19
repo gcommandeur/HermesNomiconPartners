@@ -77,7 +77,7 @@ class DeadlineResult:
     prior_days: int = 0
     # Vorläufig: die Kette enthält einen geplanten (noch nicht aktivierten) Einsatz oder ein
     # Einsatz ohne Enddatum zählt. Die Ampelfarbe bleibt unverändert; die Gründe sind Codes
-    # ("planned_assignment", "open_end"), die Oberfläche übersetzt sie.
+    # ("planned_assignment", "open_end", "prior_unconfirmed"), die Oberfläche übersetzt sie.
     provisional: bool = False
     provisional_reasons: tuple[str, ...] = ()
 
@@ -204,11 +204,16 @@ def compute_deadline(
     today: date,
     config: DeadlineConfig | None = None,
     prior_spans: Iterable[Span] = (),
+    prior_confirmed: bool = True,
 ) -> DeadlineResult:
     """Fristen für EIN Paar (Leiharbeitnehmer, Kunde). `spans`: alle nicht abgebrochenen
     Einsätze dieses Paares (Beginn, Ende oder None). `prior_spans`: Vorzeiten beim selben
     Kunden (früher geleistet, z.B. über einen anderen Verleiher) - immer abgeschlossen, sie
     gehen wie Einsätze in Vereinigung und Reset-Regel ein.
+
+    `prior_confirmed`: Vorzeiten sind erfasst oder "keine Vorzeiten" ist bestätigt; sonst bleibt
+    die Frist vorläufig ("prior_unconfirmed"). Der Standard (`True`) gilt für reine Rechnungen
+    ohne Datenbank, `pair_deadline` setzt den echten Wert.
 
     Liegt der letzte Einsatz schon länger als `reset_gap_months` zurück, gibt es keinen
     fortsetzbaren Zähler mehr (`has_chain=False`): ein neuer Einsatz fängt bei null an."""
@@ -234,6 +239,7 @@ def compute_deadline(
         for reason, present in (
             ("planned_assignment", any(span.planned for span in chain)),
             ("open_end", any(span.end is None for span in chain)),
+            ("prior_unconfirmed", not prior_confirmed),
         )
         if present
     )

@@ -210,6 +210,27 @@ class StaffingPriorPeriod(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
+class StaffingPriorPeriodConfirmation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Bestätigung "Keine Vorzeiten": für dieses Paar (Leiharbeitnehmer, Kunde) wurde geprüft,
+    dass es keine früheren Überlassungszeiten gibt. Ohne Bestätigung und ohne erfasste Vorzeit
+    bleibt die Frist vorläufig ("Vorzeiten nicht bestätigt"). Keine Lohn- oder Margenwerte."""
+
+    __tablename__ = "staffing_prior_period_confirmations"
+    __table_args__ = (UniqueConstraint("worker_id", "client_company_id"),)
+
+    worker_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("staffing_workers.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    client_company_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("client_companies.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    confirmed_on: Mapped[date] = mapped_column(Date, nullable=False)
+    confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+
+
 class StaffingChecklistItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "staffing_assignment_checklist_items"
     __table_args__ = (UniqueConstraint("assignment_id", "item_key"),)

@@ -7,7 +7,7 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.orm import Session
 
-from cc_crm.core.errors import BusinessRuleError
+from cc_crm.core.errors import BusinessRuleError, ConflictError
 from cc_crm.models.enums import TaskStatus
 from cc_crm.models.staffing import StaffingAssignmentStatus
 from cc_crm.services.staffing_deadline_job import run_deadline_job
@@ -147,9 +147,9 @@ def test_confirmation_only_from_the_cutoff_day(session: Session) -> None:
         session, worker, client, D(2025, 1, 1), owner=owner
     )  # Stichtag 1.10.2025
     service = StaffingEqualPayService(session)
-    with pytest.raises(BusinessRuleError, match="erst ab dem Stichtag"):
+    with pytest.raises(ConflictError, match="erst ab dem Stichtag"):
         service.confirm(assignment.id, owner, today=D(2025, 9, 30))
-    with pytest.raises(BusinessRuleError, match="vor dem Stichtag"):
+    with pytest.raises(ConflictError, match="vor dem Stichtag"):
         service.confirm(assignment.id, owner, D(2025, 9, 30), today=D(2025, 10, 1))
     service.confirm(assignment.id, owner, today=D(2025, 10, 1))  # am Stichtag erlaubt
     session.refresh(assignment)

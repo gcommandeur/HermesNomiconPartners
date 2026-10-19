@@ -48,6 +48,8 @@ from cc_crm.schemas.staffing import (
     StaffingOfferResult,
     StaffingOverviewRead,
     StaffingPairDeadlineRead,
+    StaffingPriorPeriodConfirmationCreate,
+    StaffingPriorPeriodConfirmationRead,
     StaffingPriorPeriodCreate,
     StaffingPriorPeriodRead,
     StaffingPriorPeriodUpdate,
@@ -90,6 +92,7 @@ from cc_crm.services.staffing_equal_pay import StaffingEqualPayService
 from cc_crm.services.staffing_invoices import StaffingInvoiceService
 from cc_crm.services.staffing_licenses import StaffingLicenseService
 from cc_crm.services.staffing_overview import DISCLAIMER, overview, pair_deadlines
+from cc_crm.services.staffing_prior_confirmations import StaffingPriorConfirmationService
 from cc_crm.services.staffing_prior_periods import StaffingPriorPeriodService
 from cc_crm.services.staffing_settings import load_config, save_config
 from cc_crm.services.staffing_takeover import StaffingTakeoverService
@@ -272,6 +275,46 @@ def create_prior_period(
     current_user: CurrentUser,
 ) -> StaffingPriorPeriodRead:
     return StaffingPriorPeriodService(session).create(worker_id, payload, current_user)
+
+
+@router.get(
+    "/workers/{worker_id}/prior-period-confirmations",
+    response_model=list[StaffingPriorPeriodConfirmationRead],
+)
+def list_prior_confirmations(
+    worker_id: uuid.UUID, session: DatabaseSession, _user: CurrentUser
+) -> list[StaffingPriorPeriodConfirmationRead]:
+    return StaffingPriorConfirmationService(session).list_for_worker(worker_id)
+
+
+@router.post(
+    "/workers/{worker_id}/prior-period-confirmations",
+    response_model=StaffingPriorPeriodConfirmationRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def confirm_no_prior_periods(
+    worker_id: uuid.UUID,
+    payload: StaffingPriorPeriodConfirmationCreate,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> StaffingPriorPeriodConfirmationRead:
+    """ "Keine Vorzeiten" bestätigen (Datum und Person werden festgehalten)."""
+    return StaffingPriorConfirmationService(session).confirm(worker_id, payload, current_user)
+
+
+@router.delete(
+    "/workers/{worker_id}/prior-period-confirmations/{client_company_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def withdraw_no_prior_periods(
+    worker_id: uuid.UUID,
+    client_company_id: uuid.UUID,
+    session: DatabaseSession,
+    current_user: CurrentUser,
+) -> Response:
+    """Bestätigung zurücknehmen (Eingabekorrektur); der Audit-Log hält es fest."""
+    StaffingPriorConfirmationService(session).withdraw(worker_id, client_company_id, current_user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.patch("/prior-periods/{prior_period_id}", response_model=StaffingPriorPeriodRead)

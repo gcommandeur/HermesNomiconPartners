@@ -110,6 +110,24 @@ class StaffingPriorPeriodRead(EntityRead):
     created_by_user_id: uuid.UUID | None
 
 
+class StaffingPriorPeriodConfirmationCreate(BaseModel):
+    """ "Keine Vorzeiten" bestätigen; ohne Datum gilt heute."""
+
+    client_company_id: uuid.UUID
+    confirmed_on: date | None = None
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class StaffingPriorPeriodConfirmationRead(EntityRead):
+    worker_id: uuid.UUID
+    client_company_id: uuid.UUID
+    client_name: str
+    confirmed_on: date
+    confirmed_by_user_id: uuid.UUID | None
+    confirmed_by_name: str | None
+    note: str | None
+
+
 # --- Überlassungs-/Rahmenvertraege -------------------------------------------------------------
 
 
@@ -253,7 +271,8 @@ class StaffingDeadlineRead(BaseModel):
     equal_pay_confirmed_on: date | None = None
     equal_pay_open: bool = False
     # Vorläufig: geplanter (nicht aktivierter) Einsatz in der Kette oder ein Einsatz ohne Enddatum.
-    # Gründe als Codes: "planned_assignment", "open_end". Die Ampelfarbe bleibt unverändert.
+    # Gründe als Codes: "planned_assignment", "open_end", "prior_unconfirmed" (Vorzeiten weder
+    # erfasst noch als "keine" bestätigt). Die Ampelfarbe bleibt unverändert.
     provisional: bool = False
     provisional_reasons: list[str] = []
 

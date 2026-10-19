@@ -135,3 +135,16 @@ def test_task_texts_never_contain_wage_or_margin_values(
         dump = json.dumps(client.get(f"{P}/tasks", headers=headers).json())
         for value in ("14.50", "28.00", "hourly_wage", "billing_rate"):
             assert value not in dump
+
+
+def test_confirmation_before_the_cutoff_day_is_a_409(
+    client: TestClient,
+    crew: Crew,
+    make_candidate,  # type: ignore[no-untyped-def]
+) -> None:
+    worker = _worker(client, crew.a, make_candidate())
+    assignment = _assignment(client, crew.a, worker["id"], crew.client_id)  # Beginn heute - 10
+    url = f"{P}/assignments/{assignment['id']}/equal-pay-confirmation"
+    early = client.post(url, json={}, headers=crew.a.headers)
+    assert early.status_code == 409
+    assert "erst ab dem Stichtag" in early.json()["detail"]

@@ -18,6 +18,7 @@ import {
   getStaffingInvoices,
   getStaffingLicenses,
   getStaffingOverview,
+  getStaffingPriorConfirmations,
   getStaffingPriorPeriods,
   getStaffingSettings,
   getStaffingTasks,
@@ -81,6 +82,10 @@ export function useStaffingWorkerForCandidate(candidateId: string) {
 
 export function useStaffingPriorPeriods(workerId: string | null) {
   return useSWR(workerId ? `/staffing/workers/${workerId}/prior-periods` : null, () => getStaffingPriorPeriods(workerId as string), config);
+}
+
+export function useStaffingPriorConfirmations(workerId: string | null) {
+  return useSWR(workerId ? `/staffing/workers/${workerId}/prior-period-confirmations` : null, () => getStaffingPriorConfirmations(workerId as string), config);
 }
 
 export function useStaffingContracts(clientCompanyId?: string) {

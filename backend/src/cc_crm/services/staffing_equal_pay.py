@@ -17,7 +17,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cc_crm.core.errors import BusinessRuleError, EntityNotFoundError
+from cc_crm.core.errors import BusinessRuleError, ConflictError, EntityNotFoundError
 from cc_crm.models.enums import TaskStatus
 from cc_crm.models.staffing import StaffingAssignment, StaffingAssignmentStatus
 from cc_crm.models.task import Task
@@ -102,13 +102,13 @@ class StaffingEqualPayService:
         pair = pair_deadline(self.session, assignment.worker_id, assignment.client_company_id, day)
         stichtag = pair.equal_pay_from
         if stichtag is None or day < stichtag:
-            raise BusinessRuleError(
+            raise ConflictError(
                 "Equal Pay gilt für dieses Paar noch nicht"
                 + (f" (ab {stichtag:%d.%m.%Y})" if stichtag else "")
                 + ": Eine Bestätigung ist erst ab dem Stichtag möglich."
             )
         if on < stichtag:
-            raise BusinessRuleError(
+            raise ConflictError(
                 f"Die Bestätigung liegt vor dem Stichtag ({stichtag:%d.%m.%Y}) und zählt nicht."
             )
         audit.log_updated(

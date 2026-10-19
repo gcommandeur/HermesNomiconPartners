@@ -39,6 +39,7 @@ from cc_crm.services.staffing_equal_pay import (
     pair_equal_pay_confirmed_on,
 )
 from cc_crm.services.staffing_open import is_overdue
+from cc_crm.services.staffing_prior_confirmations import pair_prior_confirmed
 from cc_crm.services.staffing_settings import load_config
 
 _BERLIN = ZoneInfo("Europe/Berlin")
@@ -95,6 +96,7 @@ def pair_deadline(
         today,
         config or load_config(session),
         prior_spans=[Span(p.start_date, p.end_date) for p in prior],
+        prior_confirmed=bool(prior) or pair_prior_confirmed(session, worker_id, client_company_id),
     )
 
 

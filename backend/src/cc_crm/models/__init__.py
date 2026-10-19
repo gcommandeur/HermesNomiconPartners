@@ -51,6 +51,7 @@ from cc_crm.models.staffing import (  # NOMICON
     StaffingInvoiceLine,
     StaffingLicense,
     StaffingPriorPeriod,
+    StaffingPriorPeriodConfirmation,  # NOMICON
     StaffingTimesheet,
     StaffingTimesheetEntry,
     StaffingWorker,
@@ -123,6 +124,7 @@ __all__ = [
     "StaffingInvoiceLine",
     "StaffingLicense",
     "StaffingPriorPeriod",  # NOMICON
+    "StaffingPriorPeriodConfirmation",  # NOMICON
     "StaffingTimesheet",
     "StaffingTimesheetEntry",
     "StaffingWorker",

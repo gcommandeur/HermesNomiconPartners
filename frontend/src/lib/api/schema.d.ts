@@ -3568,6 +3568,47 @@ export interface paths {
         patch: operations["update_worker_api_v1_staffing_workers__worker_id__patch"];
         trace?: never;
     };
+    "/api/v1/staffing/workers/{worker_id}/prior-period-confirmations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Prior Confirmations */
+        get: operations["list_prior_confirmations_api_v1_staffing_workers__worker_id__prior_period_confirmations_get"];
+        put?: never;
+        /**
+         * Confirm No Prior Periods
+         * @description "Keine Vorzeiten" bestätigen (Datum und Person werden festgehalten).
+         */
+        post: operations["confirm_no_prior_periods_api_v1_staffing_workers__worker_id__prior_period_confirmations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/workers/{worker_id}/prior-period-confirmations/{client_company_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Withdraw No Prior Periods
+         * @description Bestätigung zurücknehmen (Eingabekorrektur); der Audit-Log hält es fest.
+         */
+        delete: operations["withdraw_no_prior_periods_api_v1_staffing_workers__worker_id__prior_period_confirmations__client_company_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staffing/workers/{worker_id}/prior-periods": {
         parameters: {
             query?: never;
@@ -10347,6 +10388,62 @@ export interface components {
             worker_id: string;
             /** Worker Name */
             worker_name: string;
+        };
+        /**
+         * StaffingPriorPeriodConfirmationCreate
+         * @description "Keine Vorzeiten" bestätigen; ohne Datum gilt heute.
+         */
+        StaffingPriorPeriodConfirmationCreate: {
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Confirmed On */
+            confirmed_on?: string | null;
+            /** Note */
+            note?: string | null;
+        };
+        /** StaffingPriorPeriodConfirmationRead */
+        StaffingPriorPeriodConfirmationRead: {
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Confirmed By Name */
+            confirmed_by_name: string | null;
+            /** Confirmed By User Id */
+            confirmed_by_user_id: string | null;
+            /**
+             * Confirmed On
+             * Format: date
+             */
+            confirmed_on: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
         };
         /** StaffingPriorPeriodCreate */
         StaffingPriorPeriodCreate: {
@@ -19403,6 +19500,108 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["StaffingWorkerRead"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_prior_confirmations_api_v1_staffing_workers__worker_id__prior_period_confirmations_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingPriorPeriodConfirmationRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_no_prior_periods_api_v1_staffing_workers__worker_id__prior_period_confirmations_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingPriorPeriodConfirmationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingPriorPeriodConfirmationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_no_prior_periods_api_v1_staffing_workers__worker_id__prior_period_confirmations__client_company_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+                client_company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
