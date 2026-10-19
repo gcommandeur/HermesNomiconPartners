@@ -24,7 +24,7 @@ from cc_crm.models.staffing import (
 from cc_crm.services.staffing_contract_check import (
     supply_contract_problem,
 )
-from cc_crm.services.staffing_deadline_job import (
+from cc_crm.services.staffing_task_helpers import (
     active_admin_ids,
     create_task_once,
     pair_names,

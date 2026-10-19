@@ -8,24 +8,18 @@ auch wenn sie inzwischen erledigt ist (sie kommt erst wieder, wenn sich die Kett
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, time
-from zoneinfo import ZoneInfo
+from datetime import date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cc_crm.models.candidate import Candidate
-from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.enums import TaskPriority
 from cc_crm.models.staffing import (
     StaffingAssignment,
     StaffingAssignmentStatus,
     StaffingLicense,
     StaffingPriorPeriod,
-    StaffingWorker,
 )
-from cc_crm.models.task import Task
-from cc_crm.models.user import User
 from cc_crm.services.staffing_deadlines import (
     DeadlineConfig,
     DeadlineResult,
@@ -41,8 +35,13 @@ from cc_crm.services.staffing_equal_pay import (
 from cc_crm.services.staffing_open import is_overdue
 from cc_crm.services.staffing_prior_confirmations import pair_prior_confirmed
 from cc_crm.services.staffing_settings import load_config
+from cc_crm.services.staffing_task_helpers import (
+    BERLIN,
+    active_admin_ids,
+    create_task_once,
+    pair_names,
+)
 
-_BERLIN = ZoneInfo("Europe/Berlin")
 _COUNTED = (
     StaffingAssignmentStatus.PLANNED,
     StaffingAssignmentStatus.ACTIVE,
@@ -106,46 +105,9 @@ class DeadlineJobResult:
     tasks_created: int = 0
 
 
-def _due_at(today: date) -> datetime:
-    return datetime.combine(today, time(7, 0), tzinfo=_BERLIN).astimezone(UTC)
-
-
-def create_task_once(
-    session: Session,
-    *,
-    marker: str,
-    title: str,
-    body: str,
-    owner_user_id: uuid.UUID,
-    priority: TaskPriority,
-    today: date,
-) -> bool:
-    exists = session.scalar(select(Task.id).where(Task.description.contains(marker)).limit(1))
-    if exists is not None:
-        return False
-    session.add(
-        Task(
-            title=title,
-            description=f"{body}\n\n{marker}",
-            due_at=_due_at(today),
-            owner_user_id=owner_user_id,
-            priority=priority,
-        )
-    )
-    return True
-
-
-def active_admin_ids(session: Session) -> list[uuid.UUID]:
-    return list(
-        session.scalars(
-            select(User.id).where(User.role == "admin", User.is_active.is_(True)).order_by(User.id)
-        ).all()
-    )
-
-
 def run_deadline_job(session: Session, today: date | None = None) -> DeadlineJobResult:
     """Täglich ausführen (scripts/run_staffing_deadlines.py). Idempotent."""
-    day = today or datetime.now(_BERLIN).date()
+    day = today or datetime.now(BERLIN).date()
     config = load_config(session)
     result = DeadlineJobResult()
     admins = active_admin_ids(session)
@@ -340,14 +302,3 @@ def _overdue_assignment_tasks(
                 today=day,
             ):
                 result.tasks_created += 1
-
-
-def pair_names(session: Session, worker_id: uuid.UUID, client_id: uuid.UUID) -> tuple[str, str]:
-    row = session.execute(
-        select(Candidate.first_name, Candidate.last_name)
-        .join(StaffingWorker, StaffingWorker.candidate_id == Candidate.id)
-        .where(StaffingWorker.id == worker_id)
-    ).first()
-    worker = f"{row[0] or ''} {row[1] or ''}".strip() if row else "Unbekannt"
-    client = session.scalar(select(ClientCompany.name).where(ClientCompany.id == client_id))
-    return worker, client or "Unbekannt"
