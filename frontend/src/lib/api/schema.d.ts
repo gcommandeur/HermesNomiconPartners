@@ -13003,7 +13003,7 @@ export interface operations {
                 rollen_unbestaetigt?: boolean | null;
                 custom_field?: string | null;
                 engagement?: ("free_direct" | "free_staffing" | "engaged") | null;
-                staffing?: ("workers" | "bench" | "critical" | "applicants") | null;
+                staffing?: ("workers" | "bench" | "critical" | "applicants" | "active") | null;
                 sort_by?: ("candidate_number" | "name" | "job_title" | "city" | "salary_expectation" | "status") | null;
                 sort_dir?: "asc" | "desc";
                 offset?: number;

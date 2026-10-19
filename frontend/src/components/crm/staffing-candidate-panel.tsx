@@ -11,6 +11,7 @@ import { useCurrentUser } from "@/lib/api/hooks";
 import { invalidateStaffing, useStaffingDeadlines, useStaffingDisposition, useStaffingWorkerForCandidate, useWorkerTimesheetSummary } from "@/lib/api/staffing-hooks";
 import { formatDate } from "@/lib/utils";
 import { candidateStaffingActions } from "@/lib/staffing-candidate";
+import { canSeeCompliance } from "@/lib/staffing-roles";
 import { StaffingAssignmentCreateButton } from "./staffing-assignment-create-modal";
 import { StaffingAssignmentsView } from "./staffing-assignments-view";
 import { EqualPayBox } from "./staffing-equal-pay";
@@ -18,6 +19,7 @@ import { StaffingPriorPeriodsSection } from "./staffing-prior-periods";
 import { WorkerCreateFromCandidate, WorkerEditModal } from "./staffing-workers-view";
 import { DeadlineMeter, Fact, LEGAL_NOTICE, LoadError, LoadingRows, WorkerStatusBadge } from "./staffing-ui";
 import { formatHours } from "@/lib/format"; // NOMICON
+import { formatMoney } from "@/lib/api/staffing";
 
 /** Stundenzettel der Person nach Status, mit Link zur Abrechnung. */
 function TimesheetStatus({ workerId }: { workerId: string }) {
@@ -101,7 +103,6 @@ export function StaffingCandidatePanel({ candidateId }: { candidateId: string })
             </div>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil size={14} />Bearbeiten</Button>
-              <Button asChild size="sm" variant="outline"><Link href={`/ueberlassung/leiharbeitnehmer/${worker.id}`}>Zum Überlassungsprofil</Link></Button>
             </div>
           </div>
           {benchEntry && (
@@ -113,6 +114,8 @@ export function StaffingCandidatePanel({ candidateId }: { candidateId: string })
             <Fact label="Eintritt">{worker.entry_date ? formatDate(worker.entry_date) : null}</Fact>
             <Fact label="Tarif-/Entgeltgruppe">{worker.pay_grade}</Fact>
             <Fact label="Wochenstunden">{worker.weekly_hours ? formatHours(worker.weekly_hours) : null}</Fact>
+            <Fact label="Arbeitserlaubnis gültig bis">{worker.work_permit_valid_until ? formatDate(worker.work_permit_valid_until) : null}</Fact>
+            {isAdmin && <Fact label="Stundenlohn">{formatMoney(worker.hourly_wage)}</Fact>}
           </div>
         </CardContent>
       </Card>
@@ -150,7 +153,7 @@ export function StaffingCandidatePanel({ candidateId }: { candidateId: string })
         <p className="mt-2 text-xs text-brand-muted">{LEGAL_NOTICE}</p>
       </section>
       <TimesheetStatus workerId={worker.id} />
-      <p className="text-xs text-brand-muted">Übernahme durch den Kunden: Honorar-Staffel und Vorschau am Einsatz (Aktion „Übernahme“), Staffelwerte unter <Link href="/ueberlassung/compliance" className="underline">Compliance</Link>.</p>
+      <p className="text-xs text-brand-muted">Übernahme durch den Kunden: Honorar-Staffel und Vorschau am Einsatz (Aktion „Übernahme“), Staffelwerte unter {canSeeCompliance(me?.data) ? <Link href="/ueberlassung/compliance" className="underline">Compliance</Link> : "Compliance (Admins und Teamleiter)"}.</p>
     </div>
   );
 }

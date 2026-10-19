@@ -8,7 +8,6 @@ import {
   CalendarRange, // NOMICON
   HardHat, // NOMICON
   Receipt, // NOMICON
-  UsersRound, // NOMICON
   Wallet, // NOMICON
   KanbanSquare,
   UserRoundSearch,
@@ -41,6 +40,8 @@ export type NavigationItem = {
   requiresAi?: boolean;
   /** NOMICON: Nur in diesen Ansichten zeigen (ohne Angabe: in jeder Ansicht). */
   views?: ViewKey[];
+  /** NOMICON: Abweichendes Linkziel je Ansicht (z. B. vorausgewählter Filter); die Aktiv-Erkennung bleibt `href`. */
+  viewHrefs?: Partial<Record<ViewKey, string>>;
 };
 
 export type NavigationGroup = {
@@ -89,7 +90,9 @@ export const navigationGroups: NavigationGroup[] = [
     items: [
       // Eigener "Reaktivierung"-Menuepunkt entfernt (Phase L.2): der
       // "Erneut kontaktieren"-Filter auf /kandidaten deckt dieselbe Funktion ab.
-      { label: "Kandidaten", href: "/kandidaten", icon: Users },
+      // In der Ansicht Überlassung führt "Kandidaten" auf die Liste mit vorausgewähltem Überlassungsfilter
+      // (Leiharbeitnehmer sind Kandidaten, es gibt keine eigene Personenliste mehr).
+      { label: "Kandidaten", href: "/kandidaten", icon: Users, viewHrefs: { staffing: "/kandidaten?ueberlassung=workers" } }, // NOMICON
       { label: "Prozesse", href: "/prozesse", icon: KanbanSquare, views: ["direct"] }, // NOMICON
       { label: "Vakanzen", href: "/vakanzen", icon: BriefcaseBusiness, views: ["direct"] }, // NOMICON
       // Review-Ebene des Sourcing-Agents: gefundene Personen werden hier
@@ -113,7 +116,6 @@ export const navigationGroups: NavigationGroup[] = [
     items: [
       { label: "Übersicht & Fristen", href: "/ueberlassung", icon: HardHat, views: ["staffing"], notActiveFor: ["/ueberlassung/einsaetze", "/ueberlassung/leiharbeitnehmer", "/ueberlassung/abrechnung", "/ueberlassung/compliance"] },
       { label: "Einsätze", href: "/ueberlassung/einsaetze", icon: CalendarRange, views: ["staffing"] },
-      { label: "Leiharbeitnehmer", href: "/ueberlassung/leiharbeitnehmer", icon: UsersRound, views: ["staffing"] },
       { label: "Abrechnung", href: "/ueberlassung/abrechnung", icon: Receipt, views: ["staffing"] },
       { label: "Compliance", href: "/ueberlassung/compliance", icon: ShieldCheck, adminOnly: true, teamLeadToo: true, views: ["staffing"] }, // Vermittler: Meldungen statt Seite
     ],

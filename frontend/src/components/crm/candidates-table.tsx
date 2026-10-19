@@ -31,7 +31,7 @@ import { useStaffingCandidateSummaries } from "@/lib/api/staffing-hooks"; // NOM
 import { STAFFING_FILTER_LABELS, type StaffingListFilter } from "@/lib/api/staffing"; // NOMICON
 import { useMyViews } from "@/lib/api/views-hooks"; // NOMICON
 import { StaffingCandidateCell, staffingCandidateText } from "@/components/crm/staffing-candidate-cell"; // NOMICON
-import { canSeeStaffing } from "@/lib/staffing-candidate"; // NOMICON
+import { canSeeStaffing, parseStaffingFilter } from "@/lib/staffing-candidate"; // NOMICON
 
 interface NlSearchResponse {
   items: Candidate[];
@@ -219,8 +219,7 @@ export function CandidatesTable() {
   const { data: myViews } = useMyViews();
   const canStaffing = canSeeStaffing(myViews?.data.views);
   const [staffingFilter, setStaffingFilter] = useState<StaffingListFilter | "">(() => {
-    const raw = searchParams.get("ueberlassung");
-    return raw === "workers" || raw === "bench" || raw === "critical" || raw === "applicants" ? raw : "";
+    return parseStaffingFilter(searchParams.get("ueberlassung")); // z. B. von "Kandidaten" in der Ansicht Überlassung
   });
   const activeStaffingFilter = canStaffing && staffingFilter ? staffingFilter : undefined;
   const { data: currentUserData } = useCurrentUser();

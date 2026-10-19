@@ -98,7 +98,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
     return (
       <Link
         key={item.href}
-        href={item.href}
+        href={(activeView && item.viewHrefs?.[activeView]) || item.href} // NOMICON
         title={collapsed ? item.label : undefined}
         onClick={onMobileClose}
         className={cn(

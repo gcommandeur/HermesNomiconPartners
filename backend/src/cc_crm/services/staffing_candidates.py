@@ -90,6 +90,13 @@ def list_filter(session: Session, mode: str, today: date) -> list[ColumnElement[
                 StaffingWorker.status != StaffingWorkerStatus.LEFT,
             )
         ]
+    if mode == "active":  # Aktiv: Status "aktiv", mit oder ohne laufenden Einsatz
+        return [
+            exists().where(
+                StaffingWorker.candidate_id == Candidate.id,
+                StaffingWorker.status == StaffingWorkerStatus.ACTIVE,
+            )
+        ]
     if mode == "applicants":
         return [
             exists().where(

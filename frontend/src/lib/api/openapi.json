@@ -24845,7 +24845,8 @@
                     "workers",
                     "bench",
                     "critical",
-                    "applicants"
+                    "applicants",
+                    "active"
                   ],
                   "type": "string"
                 },

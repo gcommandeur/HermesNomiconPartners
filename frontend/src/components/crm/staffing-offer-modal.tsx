@@ -80,7 +80,7 @@ function StaffingOfferModal({ candidateId, defaultClientId, onClose }: { candida
         confirm,
       );
       await Promise.all([invalidateStaffing(), refreshEngagement(candidateId)]);
-      router.push(result.assignment_id ? `/ueberlassung/einsaetze/${result.assignment_id}` : `/ueberlassung/leiharbeitnehmer/${result.worker_id}`);
+      router.push(result.assignment_id ? `/ueberlassung/einsaetze/${result.assignment_id}` : `/kandidaten/${candidateId}?tab=ueberlassung`);
     } catch (exception) {
       const message = exception instanceof Error ? exception.message : "Anbieten fehlgeschlagen.";
       if ((isEngagementConflict(message) && !message.includes("gesperrt")) || isOverlapConflict(message)) setConflict(message);

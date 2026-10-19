@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-StaffingListFilter = Literal["workers", "bench", "critical", "applicants"]
+StaffingListFilter = Literal["workers", "bench", "critical", "applicants", "active"]
 CandidateStaffingStatus = Literal["none", "applicant", "active", "dormant", "left"]
 TrafficLight = Literal["green", "yellow", "red"]
 

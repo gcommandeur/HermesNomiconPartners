@@ -52,7 +52,7 @@ export function WorkerStatusBadge({ status }: { status: StaffingWorkerStatus }) 
 const SUB_NAV = [
   { href: "/ueberlassung", label: "Übersicht", exact: true },
   { href: "/ueberlassung/einsaetze", label: "Einsätze", exact: false },
-  { href: "/ueberlassung/leiharbeitnehmer", label: "Leiharbeitnehmer", exact: false },
+  { href: "/kandidaten?ueberlassung=workers", label: "Kandidaten", exact: false },
   { href: "/ueberlassung/abrechnung", label: "Abrechnung", exact: false },
   { href: "/ueberlassung/compliance", label: "Compliance", exact: false },
 ];
@@ -66,7 +66,8 @@ export function StaffingSubNav() {
   return (
     <nav aria-label="Überlassung" className="scrollbar-subtle mb-5 flex gap-1 overflow-x-auto border-b border-white/10">
       {items.map((item) => {
-        const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+        const path = item.href.split("?")[0];
+        const active = item.exact ? pathname === path : pathname.startsWith(path);
         return (
           <Link
             key={item.href}

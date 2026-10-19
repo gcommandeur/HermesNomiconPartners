@@ -1,99 +1,27 @@
 "use client";
 
-// NOMICON: Überlassung - Leiharbeitnehmer: Liste, Anlegen aus einem Kandidaten, Detail.
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Pencil, Plus } from "lucide-react";
+// NOMICON: Überlassung - Leiharbeitnehmer anlegen und bearbeiten. Es gibt keine eigene Personenliste und
+// keine eigene Detailseite mehr: Leiharbeitnehmer sind Kandidaten (Kandidatenliste mit Überlassungsfilter,
+// Reiter "Überlassung" am Kandidatenprofil). Diese Formulare benutzt der Reiter.
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { SearchSelect } from "@/components/ui/search-select";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { searchCandidates } from "@/lib/api/search-select-helpers";
 import { useCurrentUser } from "@/lib/api/hooks";
-import { invalidateStaffing, useStaffingDeadlines, useStaffingWorker, useStaffingWorkers } from "@/lib/api/staffing-hooks";
+import { invalidateStaffing } from "@/lib/api/staffing-hooks";
 import {
   WORKER_STATUS_LABELS,
   createStaffingWorker,
-  formatMoney,
   updateStaffingWorker,
   type StaffingWorker,
   type StaffingWorkerStatus,
 } from "@/lib/api/staffing";
-import { formatDate } from "@/lib/utils";
-import { StaffingAssignmentCreateButton } from "./staffing-assignment-create-modal";
-import { StaffingAssignmentsView } from "./staffing-assignments-view";
-import { DeadlineRow } from "./staffing-overview-view";
-import { EqualPayBox } from "./staffing-equal-pay";
-import { StaffingPriorPeriodsSection } from "./staffing-prior-periods";
-import { EmptyHint, Fact, LoadError, LoadingRows, WorkerStatusBadge, labelClass, selectClass } from "./staffing-ui";
-import { formatHours } from "@/lib/format"; // NOMICON
-
-// --- Liste -------------------------------------------------------------------------------------
-
-export function StaffingWorkersView() {
-  const [status, setStatus] = useState<StaffingWorkerStatus | "">("");
-  const [search, setSearch] = useState("");
-  const { data, error, isLoading, mutate } = useStaffingWorkers(status || undefined);
-  const rows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    const all = data?.data ?? [];
-    return term ? all.filter((w) => `${w.candidate_name} ${w.candidate_number ?? ""} ${w.pay_grade ?? ""}`.toLowerCase().includes(term)) : all;
-  }, [data, search]);
-
-  return (
-    <div>
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
-        <Input aria-label="Leiharbeitnehmer durchsuchen" placeholder="Suchen: Name, Nummer, Entgeltgruppe…" value={search} onChange={(e) => setSearch(e.target.value)} className="sm:max-w-xs" />
-        <select aria-label="Status filtern" className={`${selectClass} sm:max-w-[200px]`} value={status} onChange={(e) => setStatus(e.target.value as StaffingWorkerStatus | "")}>
-          <option value="">Alle Status</option>
-          {(Object.keys(WORKER_STATUS_LABELS) as StaffingWorkerStatus[]).map((key) => <option key={key} value={key}>{WORKER_STATUS_LABELS[key]}</option>)}
-        </select>
-      </div>
-      {error ? (
-        <LoadError onRetry={() => void mutate()} />
-      ) : isLoading || !data ? (
-        <LoadingRows />
-      ) : rows.length === 0 ? (
-        <EmptyHint>{data.data.length === 0 ? "Noch keine Leiharbeitnehmer. Mit „Neuer Leiharbeitnehmer“ einen vorhandenen Kandidaten übernehmen." : "Keine Treffer zu diesem Filter."}</EmptyHint>
-      ) : (
-        <ul className="space-y-2">
-          {rows.map((w) => (
-            <li key={w.id}>
-              <Link href={`/ueberlassung/leiharbeitnehmer/${w.id}`} className="flex flex-col gap-2 rounded-lg border border-white/10 p-3 transition-colors hover:bg-brand-hover/40 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{w.candidate_name}{w.candidate_number ? <span className="text-brand-muted"> · Nr. {w.candidate_number}</span> : null}</p>
-                  <p className="truncate text-xs text-brand-muted">{[w.pay_grade, w.weekly_hours ? `${formatHours(w.weekly_hours, { unit: "Std./Woche" })}` : null, w.entry_date ? `${w.status === "applicant" ? "Eintritt ab" : "seit"} ${formatDate(w.entry_date)}` : null].filter(Boolean).join(" · ") || "Keine Angaben"}</p>
-                </div>
-                <WorkerStatusBadge status={w.status} />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
+import { labelClass, selectClass } from "./staffing-ui";
 
 // --- Anlegen -----------------------------------------------------------------------------------
-
-export function StaffingWorkerCreateButton() {
-  const [open, setOpen] = useState(false);
-  const router = useRouter();
-  return (
-    <>
-      <Button onClick={() => setOpen(true)}><Plus size={15} />Neuer Leiharbeitnehmer</Button>
-      {open && (
-        <WorkerCreateForm
-          onClose={() => setOpen(false)}
-          onCreated={(id) => { setOpen(false); router.push(`/ueberlassung/leiharbeitnehmer/${id}`); }}
-        />
-      )}
-    </>
-  );
-}
 
 function WorkerCreateForm({ initialCandidateId, onClose, onCreated }: {
   initialCandidateId?: string;
@@ -162,67 +90,7 @@ export function WorkerCreateFromCandidate({ candidateId, onCreated, onClose }: {
   return <WorkerCreateForm initialCandidateId={candidateId} onClose={onClose} onCreated={onCreated} />;
 }
 
-// --- Detail ------------------------------------------------------------------------------------
-
-export function StaffingWorkerDetailView({ id }: { id: string }) {
-  const { data, error, isLoading, mutate } = useStaffingWorker(id);
-  const { data: deadlines } = useStaffingDeadlines();
-  const { data: me } = useCurrentUser();
-  const isAdmin = me?.data.is_admin ?? false;
-  const [editing, setEditing] = useState(false);
-  if (error) return <LoadError onRetry={() => void mutate()} />;
-  if (isLoading || !data) return <LoadingRows />;
-  const worker = data.data;
-  if (!worker) return <p className="text-sm text-brand-muted">Leiharbeitnehmer nicht gefunden.</p>;
-  const myDeadlines = (deadlines?.data ?? []).filter((d) => d.worker_id === worker.id);
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-        <div className="min-w-0">
-          <div className="mb-2 flex items-center gap-2"><WorkerStatusBadge status={worker.status} /></div>
-          <h2 className="text-xl font-semibold tracking-[-.02em]">{worker.candidate_name}</h2>
-          <Link href={`/kandidaten/${worker.candidate_id}?tab=Überlassung`} className="mt-1 inline-block text-xs text-brand-muted underline hover:text-brand-platinum">Zum Kandidatenprofil</Link>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil size={14} />Bearbeiten</Button>
-          {(worker.status === "active" || worker.status === "applicant") && <StaffingAssignmentCreateButton workerId={worker.id} />}
-        </div>
-      </div>
-      <Card>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <Fact label="Eintritt">{worker.entry_date ? formatDate(worker.entry_date) : null}</Fact>
-            <Fact label="Austritt">{worker.exit_date ? formatDate(worker.exit_date) : null}</Fact>
-            <Fact label="Tarif-/Entgeltgruppe">{worker.pay_grade}</Fact>
-            <Fact label="Wochenstunden">{worker.weekly_hours ? formatHours(worker.weekly_hours) : null}</Fact>
-            <Fact label="Arbeitserlaubnis gültig bis">{worker.work_permit_valid_until ? formatDate(worker.work_permit_valid_until) : null}</Fact>
-            {isAdmin && <Fact label="Stundenlohn">{formatMoney(worker.hourly_wage)}</Fact>}
-          </div>
-          {worker.notes && <p className="mt-5 whitespace-pre-line border-t border-white/10 pt-4 text-sm text-brand-soft">{worker.notes}</p>}
-        </CardContent>
-      </Card>
-      {myDeadlines.length > 0 && (
-        <section>
-          <h3 className="mb-3 font-semibold">Fristen</h3>
-          <div className="space-y-2">
-            {myDeadlines.map((d) => (
-              <div key={d.client_company_id}>
-                <DeadlineRow deadline={d} />
-                <EqualPayBox assignmentId={d.assignment_id} deadline={d} />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-      <StaffingPriorPeriodsSection workerId={worker.id} />
-      <section>
-        <h3 className="mb-3 font-semibold">Einsätze</h3>
-        <StaffingAssignmentsView workerId={worker.id} />
-      </section>
-      {editing && <WorkerEditModal worker={worker} isAdmin={isAdmin} onClose={() => setEditing(false)} />}
-    </div>
-  );
-}
+// --- Bearbeiten --------------------------------------------------------------------------------
 
 export function WorkerEditModal({ worker, isAdmin, onClose }: { worker: StaffingWorker; isAdmin: boolean; onClose: () => void }) {
   const [form, setForm] = useState({

@@ -34,3 +34,16 @@ export function candidateStaffingActions(worker: { status: string } | null | und
   if (!worker) return { create: true, edit: false, newAssignment: false };
   return { create: false, edit: true, newAssignment: worker.status === "active" || worker.status === "applicant" };
 }
+
+/** Ziel der alten Adressen `/ueberlassung/leiharbeitnehmer/[id]`: das Kandidatenprofil mit dem Reiter
+ * "Überlassung"; ohne bekannten Leiharbeitnehmer die Kandidatenliste mit dem Überlassungsfilter. */
+export const STAFFING_CANDIDATES_LIST = "/kandidaten?ueberlassung=workers";
+
+export function workerRedirectTarget(worker: { candidate_id: string } | null | undefined): string {
+  return worker ? `/kandidaten/${worker.candidate_id}?tab=ueberlassung` : STAFFING_CANDIDATES_LIST;
+}
+
+/** Gültiger Überlassungsfilter aus der Adresse (`?ueberlassung=…`), sonst leer. */
+export function parseStaffingFilter(raw: string | null | undefined): "" | "workers" | "applicants" | "active" | "critical" | "bench" {
+  return raw === "workers" || raw === "applicants" || raw === "active" || raw === "critical" || raw === "bench" ? raw : "";
+}

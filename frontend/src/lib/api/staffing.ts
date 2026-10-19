@@ -449,13 +449,14 @@ export function takeOverStaffingAssignment(
 
 export type StaffingCandidateSummary = Schemas["StaffingCandidateSummaryRead"];
 export type StaffingWorkerTimesheetSummary = Schemas["StaffingWorkerTimesheetSummary"];
-export type StaffingListFilter = "workers" | "bench" | "critical" | "applicants";
+export type StaffingListFilter = "workers" | "applicants" | "active" | "critical" | "bench";
 
 export const STAFFING_FILTER_LABELS: Record<StaffingListFilter, string> = {
-  workers: "Nur Leiharbeitnehmer",
-  bench: "Bench",
-  critical: "Frist kritisch",
+  workers: "Alle Leiharbeitnehmer",
   applicants: "In Auswahl",
+  active: "Aktiv",
+  critical: "Läuft aus",
+  bench: "Bench",
 };
 
 export const CANDIDATE_STAFFING_STATUS_LABELS: Record<StaffingCandidateSummary["status"], string> = {

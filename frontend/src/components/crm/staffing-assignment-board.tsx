@@ -59,7 +59,7 @@ export function StaffingAssignmentBoard() {
           <ul className="space-y-2">
             {column.key === "onboarding" && applicants.map((worker) => (
               <li key={worker.id}>
-                <Link href={`/ueberlassung/leiharbeitnehmer/${worker.id}`} className="block rounded-lg border border-dashed border-white/20 bg-brand-panel p-2.5 transition-colors hover:border-brand-accent/50">
+                <Link href={`/kandidaten/${worker.candidate_id}?tab=ueberlassung`} className="block rounded-lg border border-dashed border-white/20 bg-brand-panel p-2.5 transition-colors hover:border-brand-accent/50">
                   <p className="truncate text-xs font-semibold">{worker.candidate_name}</p>
                   <p className="mt-0.5 text-[10.45px] text-brand-muted">In Auswahl · noch kein Einsatz</p>
                   {worker.entry_date && <p className="mt-1 text-[10.45px] text-brand-muted">Eintritt ab {formatDate(worker.entry_date)}</p>}

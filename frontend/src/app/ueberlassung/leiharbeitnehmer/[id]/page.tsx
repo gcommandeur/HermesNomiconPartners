@@ -1,16 +1,16 @@
-// NOMICON: Arbeitnehmerüberlassung - Leiharbeitnehmer im Detail.
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { StaffingWorkerDetailView } from "@/components/crm/staffing-workers-view";
+// NOMICON: Arbeitnehmerüberlassung - die Detailseite des Leiharbeitnehmers ist jetzt der Reiter "Überlassung"
+// am Kandidatenprofil. Alte Adressen (Board, Aufgaben, Meldungen, Lesezeichen) leiten dorthin weiter.
+import { redirect } from "next/navigation";
+import { getStaffingWorker } from "@/lib/api/staffing";
+import { workerRedirectTarget } from "@/lib/staffing-candidate";
 
-export default async function StaffingWorkerPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function StaffingWorkerRedirectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return (
-    <>
-      <Link href="/ueberlassung/leiharbeitnehmer" className="mb-5 inline-flex items-center gap-2 text-xs text-brand-muted hover:text-brand-platinum">
-        <ArrowLeft size={14} />Zu den Leiharbeitnehmern
-      </Link>
-      <StaffingWorkerDetailView id={id} />
-    </>
-  );
+  let worker = null;
+  try {
+    worker = (await getStaffingWorker(id)).data;
+  } catch {
+    worker = null; // nicht vorhanden oder nicht erreichbar: Liste statt Fehlerseite
+  }
+  redirect(workerRedirectTarget(worker));
 }

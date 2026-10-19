@@ -1,12 +1,8 @@
-// NOMICON: Arbeitnehmerüberlassung - Leiharbeitnehmer.
-import { PageHeader } from "@/components/crm/page-header";
-import { StaffingWorkerCreateButton, StaffingWorkersView } from "@/components/crm/staffing-workers-view";
+// NOMICON: Arbeitnehmerüberlassung - die eigene Personenliste "Leiharbeitnehmer" gibt es nicht mehr.
+// Leiharbeitnehmer sind Kandidaten: alte Lesezeichen führen auf die Kandidatenliste mit dem Überlassungsfilter.
+import { redirect } from "next/navigation";
+import { STAFFING_CANDIDATES_LIST } from "@/lib/staffing-candidate";
 
-export default function StaffingWorkersPage() {
-  return (
-    <>
-      <PageHeader eyebrow="Überlassung" title="Leiharbeitnehmer" action={<StaffingWorkerCreateButton />} />
-      <StaffingWorkersView />
-    </>
-  );
+export default function StaffingWorkersRedirectPage() {
+  redirect(STAFFING_CANDIDATES_LIST);
 }

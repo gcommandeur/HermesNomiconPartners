@@ -74,7 +74,8 @@ def test_summary_and_list_filters(client: TestClient, crew: Crew, make_candidate
         assert forbidden not in text.replace("assignment_status", ""), forbidden
 
     assert set(_list(client, crew.a, staffing="workers")) == {applicant, bench, placed}
-    assert _list(client, crew.a, staffing="applicants") == [applicant]
+    assert _list(client, crew.a, staffing="applicants") == [applicant]  # "In Auswahl"
+    assert set(_list(client, crew.a, staffing="active")) == {bench, placed}  # "Aktiv"
     assert _list(client, crew.a, staffing="bench") == [bench]
     assert plain in _list(client, crew.a)  # bestehende Liste unverändert
 

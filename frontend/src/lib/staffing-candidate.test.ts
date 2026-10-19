@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { StaffingCandidateSummary } from "./api/staffing";
-import { candidateStaffingActions, canSeeStaffing, staffingCandidateText, staffingWarning } from "./staffing-candidate";
+import { STAFFING_CANDIDATES_LIST, candidateStaffingActions, canSeeStaffing, parseStaffingFilter, staffingCandidateText, staffingWarning, workerRedirectTarget } from "./staffing-candidate";
 
 function summary(partial: Partial<StaffingCandidateSummary>): StaffingCandidateSummary {
   return { candidate_id: "c1", status: "active", worker_id: "w1", client_name: null, assignment_status: null, traffic: null, days_remaining: null, bench: false, ...partial } as StaffingCandidateSummary;
@@ -50,5 +50,23 @@ describe("Sichtbarkeit und Aktionen", () => {
     expect(candidateStaffingActions({ status: "applicant" })).toEqual({ create: false, edit: true, newAssignment: true });
     expect(candidateStaffingActions({ status: "active" })).toEqual({ create: false, edit: true, newAssignment: true });
     expect(candidateStaffingActions({ status: "left" })).toEqual({ create: false, edit: true, newAssignment: false });
+  });
+});
+
+describe("Weiterleitung der alten Leiharbeitnehmer-Adressen", () => {
+  it("führt auf das Kandidatenprofil mit dem Reiter Überlassung", () => {
+    expect(workerRedirectTarget({ candidate_id: "abc-123" })).toBe("/kandidaten/abc-123?tab=ueberlassung");
+  });
+
+  it("führt ohne Person auf die Kandidatenliste mit vorausgewähltem Überlassungsfilter", () => {
+    expect(workerRedirectTarget(null)).toBe("/kandidaten?ueberlassung=workers");
+    expect(STAFFING_CANDIDATES_LIST).toBe("/kandidaten?ueberlassung=workers");
+  });
+
+  it("erkennt nur gültige Filter", () => {
+    expect(parseStaffingFilter("active")).toBe("active");
+    expect(parseStaffingFilter("applicants")).toBe("applicants");
+    expect(parseStaffingFilter("quatsch")).toBe("");
+    expect(parseStaffingFilter(null)).toBe("");
   });
 });

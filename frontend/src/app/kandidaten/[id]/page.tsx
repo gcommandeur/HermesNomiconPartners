@@ -1,3 +1,4 @@
+import { candidateTabs, resolveCandidateTab } from "@/lib/candidate-tabs"; // NOMICON
 import { notFound } from "next/navigation";
 import { ArrowLeft, Ghost, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
@@ -102,11 +103,11 @@ export default async function CandidateDetailPage({
     `Gehaltsrahmen: ${candidate.salary_expectation ?? "nach Absprache"}.`,
     `Verfügbarkeit: ${candidate.notice_period ?? "nach Absprache"}.`,
   ].join("\n");
-  const tabs = ["Übersicht", "Anonymes Profil", "Notizen", "Matching", "CV-Outs", "Timeline", "Aufgaben", "Dokumente", ...(canStaffing ? ["Überlassung"] : []) /* NOMICON */];
+  const tabs = candidateTabs(canStaffing); // NOMICON: "Überlassung" nur mit der Ansicht Überlassung
   // Erlaubt einen direkten Link auf einen bestimmten Tab (z.B. "?tab=Dokumente"
   // nach dem Anlegen eines Kandidaten, siehe candidate-create-modal.tsx) -
   // faellt auf "Übersicht" zurueck, wenn der Wert fehlt oder ungueltig ist.
-  const initialTab = tab && tabs.includes(tab) ? tab : "Übersicht";
+  const initialTab = resolveCandidateTab(tab, tabs); // auch "?tab=ueberlassung" aus den Weiterleitungen
 
   return (
     <>

@@ -41,7 +41,7 @@ export function useServerSearchList<T>(
     radiusKm?: number;
     rollenUnbestaetigt?: boolean;
     engagement?: "free_direct" | "free_staffing" | "engaged"; // NOMICON
-    staffing?: "workers" | "bench" | "critical" | "applicants"; // NOMICON
+    staffing?: "workers" | "bench" | "critical" | "applicants" | "active"; // NOMICON
     ownerUserId?: string;
     pageSize?: number;
     sortBy?: string;
