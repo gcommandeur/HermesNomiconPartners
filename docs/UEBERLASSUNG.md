@@ -103,16 +103,29 @@ Kennzeichen „Überfällig“ (`is_overdue`), die Aufgabenliste der Ansicht ein
 
 **Vorläufige Fristen (seit 2026-10-17).** `DeadlineResult.provisional` (und die API) ist wahr, wenn die
 Kette einen **geplanten** (noch nicht aktivierten) Einsatz enthält oder ein Einsatz **ohne Enddatum**
-zählt; `provisional_reasons` nennt die Gründe (`planned_assignment`, `open_end`). Die Oberfläche zeigt
-dann ein kleines Kennzeichen „vorläufig“ mit Tooltip („Einsatz noch nicht aktiviert“ / „kein Enddatum
-erfasst“). Die **Ampelfarbe bleibt unverändert**. Vorzeiten allein machen eine Frist nicht vorläufig.
+zählt **oder** die Vorzeiten weder erfasst noch als „keine“ bestätigt sind; `provisional_reasons` nennt die
+Gründe (`planned_assignment`, `open_end`, `prior_unconfirmed`). Die Oberfläche zeigt dann ein kleines
+Kennzeichen „vorläufig“ mit Tooltip („Einsatz noch nicht aktiviert“ / „kein Enddatum erfasst“ / „Vorzeiten
+nicht bestätigt“). Die **Ampelfarbe bleibt unverändert**.
+
+**Bestätigung „Keine Vorzeiten“ (seit 2026-10-19, Migration `nomicon09priorconf`).** Tabelle
+`staffing_prior_period_confirmations` (Leiharbeitnehmer, Kunde, `confirmed_on`, bestätigende Person, Notiz;
+je Paar eindeutig). Mit Bestätigung **oder** erfassten Vorzeiten ist die Frist nicht mehr vorläufig; ohne
+beides bleibt sie es („Vorzeiten nicht bestätigt“). API: `GET|POST /staffing/workers/{id}/prior-period-confirmations`
+(wiederholtes Bestätigen aktualisiert; Datum nicht in der Zukunft, 422; bei bereits erfassten Vorzeiten 409),
+`DELETE …/{client_id}` zum Zurücknehmen; Audit-Einträge `created`/`updated`/`deleted`. Rechte wie die
+Vorzeiten selbst (gemeinsamer Pool wie die Person, unbekannte Person oder Kunde: 404). Oberfläche: im Reiter
+„Überlassung“ am Kandidaten „Keine Vorzeiten bestätigen“ mit Datum und Person; „Zurücknehmen“.
 
 **Equal Pay mit Folge (seit 2026-10-17, Annahme, kein Rechtsrat).** Ab dem Equal-Pay-Datum der Kette
 legt der Job eine Aufgabe für den Disponenten an: „Equal Pay gilt ab TT.MM.JJJJ: Lohn von X bei Y prüfen
 und angleichen“ — einmalig je Paar und Kette (Kennung `…:equal_pay:<Kettenbeginn>:<Nutzer>`).
 **Erledigt**, sobald `equal_pay_confirmed_on` an einem Einsatz des Paares gesetzt ist: die Aufgabe wird
-auf „erledigt“ gestellt und nicht neu erzeugt. Eine Bestätigung zählt nur für die **aktuelle Kette**
-(Datum am oder nach dem Kettenbeginn; nach einem Reset beginnt Equal Pay von vorn). **Vorwarnung:** 30
+auf „erledigt“ gestellt und nicht neu erzeugt. Eine Bestätigung zählt nur für die **aktuelle Kette
+und ab dem Stichtag** (Datum am oder nach `equal_pay_from`; nach einem Reset beginnt Equal Pay von vorn).
+Bestätigen geht erst, wenn **heute ≥ Stichtag** des Paares ist (sonst 409 „Equal Pay gilt für dieses Paar
+noch nicht … erst ab dem Stichtag möglich“); ein Bestätigungsdatum vor dem Stichtag wird ebenfalls
+abgelehnt (409), weil es nicht zählen würde. **Vorwarnung:** 30
 Tage vor dem Datum entsteht einmalig ein Hinweis („Equal Pay beginnt am …“, normale Priorität).
 Bestätigen: `POST /assignments/{id}/equal-pay-confirmation` (optional `confirmed_on`, Standard heute;
 nicht in der Zukunft, nicht vor Einsatzbeginn), zurücknehmen `DELETE` derselben Adresse (Eingabekorrektur);
@@ -152,7 +165,9 @@ nicht; sie wird als rote Frist angezeigt und als Aufgabe gemeldet.
 Beim Anlegen und beim Ändern von Beginn/Ende eines Einsatzes prüft `services/staffing_overlap.py`, ob für
 **denselben** Leiharbeitnehmer ein anderer geplanter oder aktiver Einsatz (gleicher **oder** anderer Kunde)
 im selben Zeitraum liegt (Zeiträume inklusive; angrenzende Tage überschneiden sich nicht; abgebrochene und
-beendete Einsätze zählen nicht; ohne geplantes Ende läuft ein Einsatz offen). Treffer: **409** mit der Meldung
+beendete Einsätze zählen nicht; ohne geplantes Ende läuft ein Einsatz offen; ein **aktiver** Einsatz mit
+abgelaufenem geplantem Ende gilt wie im Fristen-Job als **offen**, bis er beendet oder verlängert wird — die eine
+gemeinsame Regel steht in `services/staffing_open.py`: `is_overdue`, `effective_end_date`, `assignment_is_open`). Treffer: **409** mit der Meldung
 „Überschneidung: …“ und der Liste `overlaps` (Einsatz-ID, Kunde, Beginn, geplantes Ende, Status — **ohne
 Lohn und Verrechnungssatz**). Mit `confirm_overlap=true` (Einsatz anlegen, ändern, „Als Einsatz anbieten“)
 wird trotzdem gespeichert und ein Audit-Eintrag `overlap_acknowledged` mit den überschneidenden Einsätzen
@@ -227,6 +242,18 @@ Kopfbereich der Kandidatenseite (gemeinsamer Kandidatenstatus mit Konflikt-Hinwe
   „Kandidaten“ auf `/kandidaten?ueberlassung=workers`; Filter: Alle Leiharbeitnehmer, In Auswahl, Aktiv, Läuft aus,
   Bench (`active` neu im Backend). Die Überlassungsdaten stehen im Reiter „Überlassung“ am Kandidaten. Alte Adressen
   `/ueberlassung/leiharbeitnehmer` und `…/<id>` leiten dorthin weiter (unbekannte ID: zur Liste).
+
+## Weitere Klarstellungen (seit 2026-10-19)
+
+* **Hilfsfunktionen:** `create_task_once`, `active_admin_ids`, `pair_names` liegen jetzt in
+  `services/staffing_task_helpers.py` (früher im Fristen-Job); Verhalten unverändert.
+* **Überlassungsvertrag ohne „Gültig ab“ (offene Frage, nichts geändert):** Heute gilt ein solcher Vertrag als
+  **nicht belegt** (`staffing_contract_check.supply_contract_problem`: „kein Gültig-ab hinterlegt“). Folge: ein
+  geplanter Einsatz lässt sich nicht aktivieren (Aktivierungsfehler), und bei einem aktiven Einsatz entsteht
+  die Meldung „Überlassungsvertrag … fehlt/deckt nicht“. Optionen: so lassen (blockieren) oder nur warnen.
+  Entscheidung beim Nutzer.
+* **Demo:** der Sonderfall „keine_vorzeiten“ hat ein bestätigtes „Keine Vorzeiten“ (nicht vorläufig); alle
+  anderen Demo-Paare ohne Vorzeit zeigen „vorläufig – Vorzeiten nicht bestätigt“.
 
 ## Rechte
 
