@@ -3355,7 +3355,8 @@ export interface paths {
         /**
          * Offer Candidate As Assignment
          * @description Legt das Leiharbeitnehmer-Profil ("In Auswahl") und optional einen geplanten Einsatz an.
-         *     Ist der Kandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) oder die Sperre.
+         *     Ist der Kandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) oder die
+         *     Sperre.
          */
         post: operations["offer_candidate_as_assignment_api_v1_staffing_offer_from_candidate_post"];
         delete?: never;

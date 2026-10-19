@@ -36678,7 +36678,7 @@
     },
     "/api/v1/staffing/offer-from-candidate": {
       "post": {
-        "description": "Legt das Leiharbeitnehmer-Profil (\"In Auswahl\") und optional einen geplanten Einsatz an.\nIst der Kandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) oder die Sperre.",
+        "description": "Legt das Leiharbeitnehmer-Profil (\"In Auswahl\") und optional einen geplanten Einsatz an.\nIst der Kandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) oder die\nSperre.",
         "operationId": "offer_candidate_as_assignment_api_v1_staffing_offer_from_candidate_post",
         "parameters": [
           {
