@@ -51,6 +51,7 @@ from cc_crm.schemas.staffing import (  # noqa: E402
     StaffingContractCreate,
     StaffingContractUpdate,
     StaffingLicenseCreate,
+    StaffingPriorPeriodConfirmationCreate,
     StaffingPriorPeriodCreate,
     StaffingWorkerCreate,
 )
@@ -62,6 +63,9 @@ from cc_crm.services.staffing_assignments import (  # noqa: E402
 from cc_crm.services.staffing_deadlines import add_months  # noqa: E402
 from cc_crm.services.staffing_equal_pay import StaffingEqualPayService  # noqa: E402
 from cc_crm.services.staffing_licenses import StaffingLicenseService  # noqa: E402
+from cc_crm.services.staffing_prior_confirmations import (  # noqa: E402
+    StaffingPriorConfirmationService,
+)
 from cc_crm.services.staffing_prior_periods import StaffingPriorPeriodService  # noqa: E402
 from cc_crm.services.staffing_workers import StaffingWorkerService  # noqa: E402
 
@@ -258,6 +262,7 @@ def seed_staffing(
 
 EDGE_CASES = (
     "vorzeit",
+    "keine_vorzeiten",
     "ueberfaellig",
     "ueberschneidung",
     "equal_pay_nah",
@@ -403,6 +408,31 @@ def _case_vorzeit(session, actor, clients, candidate, day):  # type: ignore[no-u
     _edge_assignment(session, actor, worker, client, contract, day - timedelta(days=45))
 
 
+def _case_keine_vorzeiten(session, actor, clients, candidate, day):  # type: ignore[no-untyped-def]
+    """Einsatz seit 100 Tagen, "Keine Vorzeiten" ist bestätigt: die Frist ist nicht vorläufig.
+    Alle anderen Demo-Paare ohne Vorzeit bleiben "Vorzeiten nicht bestätigt"."""
+    client = clients[0]
+    worker = _edge_worker(session, actor, candidate, "keine_vorzeiten", day)
+    contract = _edge_contract(session, actor, client, day, "K1")
+    _edge_assignment(
+        session,
+        actor,
+        worker,
+        client,
+        contract,
+        day - timedelta(days=100),
+        day + timedelta(days=80),
+    )
+    StaffingPriorConfirmationService(session).confirm(
+        worker.id,
+        StaffingPriorPeriodConfirmationCreate(
+            client_company_id=client.id, note="Demo: beim Kunden erfragt"
+        ),
+        actor,
+        today=day,
+    )
+
+
 def _case_ueberfaellig(session, actor, clients, candidate, day):  # type: ignore[no-untyped-def]
     """Aktiver Einsatz, dessen geplantes Ende seit 5 Tagen vorbei ist (beenden oder verlängern)."""
     client = clients[1 % len(clients)]
@@ -495,6 +525,7 @@ def _case_vertrag_luecke(session, actor, clients, candidate, day):  # type: igno
 
 _EDGE_BUILDERS = {
     "vorzeit": _case_vorzeit,
+    "keine_vorzeiten": _case_keine_vorzeiten,
     "ueberfaellig": _case_ueberfaellig,
     "ueberschneidung": _case_ueberschneidung,
     "equal_pay_nah": _case_equal_pay_nah,

@@ -131,11 +131,11 @@ def test_seed_edge_cases_cover_the_new_logic_and_run_only_once(
     with session_factory() as session:
         _base(session, candidates=16)
         first = seed_staffing(session, 4, random.Random(1), day, edge_cases=True)
-        assert first.edge_cases == 7
+        assert first.edge_cases == 8
         marked = session.scalars(
             select(StaffingWorker).where(StaffingWorker.notes.like("Demo-Fall:%"))
         ).all()
-        assert len(marked) == 7
+        assert len(marked) == 8
 
         # Vorzeit: 10 Monate beim Kunden zaehlen mit, Equal Pay deshalb schon erreicht
         worker = _worker_of(session, "vorzeit")
@@ -144,6 +144,21 @@ def test_seed_edge_cases_cover_the_new_logic_and_run_only_once(
         ).one()
         deadline = pair_deadline(session, worker.id, prior.client_company_id, day)
         assert deadline.prior_days == 305 and deadline.equal_pay_reached
+
+        # "Keine Vorzeiten" bestaetigt: Frist nicht vorlaeufig; ohne Bestaetigung vorlaeufig
+        worker = _worker_of(session, "keine_vorzeiten")
+        (confirmed_assignment,) = _assignments_of(session, worker)
+        assert not pair_deadline(
+            session, worker.id, confirmed_assignment.client_company_id, day
+        ).provisional
+        unconfirmed = _worker_of(session, "ueberfaellig")
+        (open_one,) = _assignments_of(session, unconfirmed)
+        assert (
+            "prior_unconfirmed"
+            in pair_deadline(
+                session, unconfirmed.id, open_one.client_company_id, day
+            ).provisional_reasons
+        )
 
         # ueberfaelliger aktiver Einsatz
         worker = _worker_of(session, "ueberfaellig")
@@ -203,5 +218,5 @@ def test_seed_edge_cases_cover_the_new_logic_and_run_only_once(
                     select(StaffingWorker).where(StaffingWorker.notes.like("Demo-Fall:%"))
                 ).all()
             )
-            == 7
+            == 8
         )
