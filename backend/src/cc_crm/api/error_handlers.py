@@ -10,6 +10,7 @@ from cc_crm.core.errors import (
     ConflictError,
     ConsentNotGrantedError,
     EntityNotFoundError,
+    OverlapConflictError,
     PermissionDeniedError,
     RateLimitExceededError,
 )
@@ -26,6 +27,16 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
             content={"detail": str(exception)},
+        )
+
+    @app.exception_handler(OverlapConflictError)  # NOMICON: Überlassung, mit Liste der Treffer
+    async def overlap_conflict_handler(
+        _request: Request,
+        exception: OverlapConflictError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": str(exception), "overlaps": exception.overlaps},
         )
 
     @app.exception_handler(ConflictError)

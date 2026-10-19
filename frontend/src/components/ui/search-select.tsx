@@ -16,7 +16,7 @@ export interface SearchSelectOption {
  * Zwei Modi:
  * - `options` (Standard): eine bereits geladene, kurze Liste wird clientseitig
  *   über label/sublabel gefiltert (z.B. Status-Auswahl, kleine Listen).
- * - `onSearch`: für grosse Listen (Kandidaten/Kanzleien) wird NICHT mehr der
+ * - `onSearch`: für grosse Listen (Kandidaten/Kunden) wird NICHT mehr der
  *   komplette Bestand vorgeladen - stattdessen ruft die Eingabe (entprellt um
  *   300ms) `onSearch(query)` auf und zeigt dessen Ergebnis. Vermeidet, dass
  *   allein zum Oeffnen eines Auswahlfelds Tausende Datensaetze geladen werden. */

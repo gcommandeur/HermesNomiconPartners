@@ -19,7 +19,7 @@ const SOURCE_LABELS: Record<SourcingSourceType, string> = {
   steuerberaterverzeichnis: "StB-Verzeichnis",
   wpk_berufsregister: "WPK-Register",
   brak_anwaltsverzeichnis: "BRAK-Verzeichnis",
-  kanzlei_team_page: "Kanzlei-Team-Seite",
+  kanzlei_team_page: "Kunden-Team-Seite",
 };
 
 export function SourcingLeadsTable() {
@@ -67,7 +67,7 @@ export function SourcingLeadsTable() {
       <td className="px-4 py-3.5">
         <span className="font-semibold text-brand-platinum">{lead.first_name} {lead.last_name}</span>
         {lead.status === "possible_duplicate" && lead.duplicate_of_candidate_id && (
-          <p className="mt-1 text-[11px]">
+          <p className="mt-1 text-[10.45px]">
             <Link
               href={`/kandidaten/${lead.duplicate_of_candidate_id}`}
               className="text-brand-warning hover:underline"
@@ -94,7 +94,7 @@ export function SourcingLeadsTable() {
         {lead.notes_text && (
           <p
             title={lead.notes_text}
-            className="mt-1 line-clamp-3 max-w-xs whitespace-pre-line text-[11px] text-brand-muted"
+            className="mt-1 line-clamp-3 max-w-xs whitespace-pre-line text-[10.45px] text-brand-muted"
           >
             {lead.notes_text}
           </p>
@@ -137,7 +137,7 @@ export function SourcingLeadsTable() {
     <div key={lead.id} className="rounded-lg border border-white/10 bg-brand-panel p-3">
       <p className="font-semibold text-brand-platinum">{lead.first_name} {lead.last_name}</p>
       {lead.status === "possible_duplicate" && lead.duplicate_of_candidate_id && (
-        <p className="mt-1 text-[11px]">
+        <p className="mt-1 text-[10.45px]">
           <Link href={`/kandidaten/${lead.duplicate_of_candidate_id}`} className="text-brand-warning hover:underline">
             Möglicherweise bereits als Kandidat vorhanden – Profil öffnen
           </Link>
@@ -153,11 +153,11 @@ export function SourcingLeadsTable() {
         )}
         {" · "}{lead.current_employer ?? "Arbeitgeber offen"}
       </p>
-      <p className="mt-0.5 text-[11px] text-brand-muted">
+      <p className="mt-0.5 text-[10.45px] text-brand-muted">
         {[lead.postal_code, lead.city].filter(Boolean).join(" ") || "PLZ/Ort offen"} · Gefunden {formatDate(lead.found_at)}
       </p>
       {lead.notes_text && (
-        <p className="mt-1.5 line-clamp-3 whitespace-pre-line text-[11px] text-brand-muted">{lead.notes_text}</p>
+        <p className="mt-1.5 line-clamp-3 whitespace-pre-line text-[10.45px] text-brand-muted">{lead.notes_text}</p>
       )}
       <div className="mt-2.5 flex gap-2">
         <Button size="sm" variant="dark" disabled={busyLeadId === lead.id} onClick={() => void handleAction(lead, "approve")}>

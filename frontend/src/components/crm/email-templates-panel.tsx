@@ -86,7 +86,7 @@ export function EmailTemplatesPanel() {
                 <p className="font-semibold">{template.name}</p>
                 <p className="mt-1 truncate text-xs text-brand-muted">{template.subject}</p>
                 {template.placeholders.length > 0 && (
-                  <p className="mt-1 text-[10px] text-brand-accent-light">
+                  <p className="mt-1 text-[9.5px] text-brand-accent-light">
                     Platzhalter: {template.placeholders.map((p) => `{${p}}`).join(", ")}
                   </p>
                 )}

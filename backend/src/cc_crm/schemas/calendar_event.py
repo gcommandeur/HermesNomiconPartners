@@ -52,6 +52,9 @@ class CalendarEventUpdate(BaseModel):
 
 
 class CalendarEventRead(CalendarEventBase, EntityRead):
+    # Lesen darf nie an Altdaten scheitern (Outlook-Termine ohne Betreff, Titel '' in der
+    # Datenbank) - die Pflicht zum Titel gilt nur beim Schreiben (CalendarEventBase).
+    title: str = Field(max_length=240)
     owner_user_id: uuid.UUID
     created_by_user_id: uuid.UUID
     # Nur informativ, nie ueber Create/Update setzbar - wird ausschliesslich

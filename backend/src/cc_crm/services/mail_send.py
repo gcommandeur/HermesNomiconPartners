@@ -53,6 +53,7 @@ from cc_crm.models.enums import MailAccountProvider, MailDirection, MailMatchSta
 from cc_crm.models.mail import MailAccount, MailMessage
 from cc_crm.models.user import User
 from cc_crm.repositories.recruiting import AuditLogRepository
+from cc_crm.services import presentation_archive
 from cc_crm.services.mail_credentials import decrypt_password
 from cc_crm.services.storage import read_document_bytes
 
@@ -371,6 +372,65 @@ def send_mail(
         for ref in (attachments or [])
     ]
 
+    # Vorstellungs-Archiv (nur Admins sichtbar): geht diese Mail als Vorstellung an eine Kanzlei,
+    # werden die EXAKTEN Bytes der Anhaenge VOR dem Versand abgelegt. Schlaegt das fehl, wird
+    # nicht gesendet (kein Versand ohne Beleg); scheitert der Versand, werden die Dateien wieder
+    # entfernt und es entsteht kein Eintrag.
+    try:
+        pending_archive = presentation_archive.prepare(
+            session,
+            candidate_id=candidate_id,
+            client_company_id=client_company_id,
+            contact_person_id=contact_person_id,
+            attachments=resolved_attachments,
+        )
+    except Exception as exc:  # noqa: BLE001 - ohne Beleg wird nicht gesendet
+        logger.error("Vorstellungs-Archiv nicht beschreibbar - Versand abgebrochen", exc_info=True)
+        raise MailSendError(
+            "Das Vorstellungs-Archiv ist nicht erreichbar - die Mail wurde NICHT gesendet."
+        ) from exc
+    try:
+        return _send_and_record(
+            session,
+            account=account,
+            to_address=to_address,
+            to_name=to_name,
+            subject=subject,
+            body_text=body_text,
+            resolved_attachments=resolved_attachments,
+            candidate_id=candidate_id,
+            client_company_id=client_company_id,
+            contact_person_id=contact_person_id,
+            current_user=current_user,
+            smtp_sender=smtp_sender,
+            imap_appender=imap_appender,
+            pending_archive=pending_archive,
+        )
+    except BaseException:
+        if pending_archive is not None:
+            session.rollback()
+            presentation_archive.discard(pending_archive)
+        raise
+
+
+def _send_and_record(
+    session: Session,
+    *,
+    account: MailAccount,
+    to_address: str,
+    to_name: str | None,
+    subject: str,
+    body_text: str,
+    resolved_attachments: list[MailAttachment],
+    candidate_id: uuid.UUID | None,
+    client_company_id: uuid.UUID | None,
+    contact_person_id: uuid.UUID | None,
+    current_user: User | None,
+    smtp_sender: Callable[[MailAccount, str, MIMEMultipart, str], None],
+    imap_appender: Callable[[MailAccount, str, MIMEMultipart], bool],
+    pending_archive: presentation_archive.PendingArchive | None,
+) -> MailMessage:
+
     if account.provider == MailAccountProvider.MICROSOFT_GRAPH:
         message_id = _send_via_graph(
             session,
@@ -445,6 +505,19 @@ def send_mail(
     session.add(activity)
     session.flush()
     record.created_activity_id = activity.id
+
+    if pending_archive is not None:
+        presentation_archive.add_record(
+            session,
+            pending_archive,
+            recipient_email=to_address,
+            subject=subject,
+            body_text=body_text,
+            message_id=message_id,
+            mail_record_id=record.id,
+            sent_at=now,
+            user=current_user,
+        )
 
     _record_send_audit_log(
         session,

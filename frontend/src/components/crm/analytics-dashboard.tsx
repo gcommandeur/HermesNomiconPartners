@@ -168,7 +168,7 @@ export function AnalyticsDashboard() {
        * zu wenige Datenpunkte, um aussagekraeftig zu sein. */}
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {recruitingKpiCards.map(([label, value]) => (
-          <Card key={label}><CardContent className="p-4"><p className="text-[11px] text-brand-muted">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></CardContent></Card>
+          <Card key={label}><CardContent className="p-4"><p className="text-[10.45px] text-brand-muted">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></CardContent></Card>
         ))}
       </div>
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_.8fr]">
@@ -192,7 +192,7 @@ export function AnalyticsDashboard() {
             </div>
           </CardContent>
         </Card>
-        <Card><CardContent><h2 className="font-semibold">Conversion Rates</h2><div className="mt-5 divide-y divide-white/10">{conversions.map(([label,value]) => <div key={String(label)} className="py-3"><div className="flex justify-between text-xs"><span className="text-brand-soft">{label}</span><strong>{typeof value === "string" ? value : `${value} %`}</strong></div><div className="mt-2 h-1.5 rounded-full bg-brand-sidebar"><div className="h-full rounded-full bg-gradient-to-r from-brand-accent-strong to-brand-accent-light" style={{width:`${typeof value === "string" ? 0 : Math.min(value,100)}%`}} /></div></div>)}</div><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-lg border p-3"><p className="text-[10px] text-brand-muted">Erwartet</p><p className="mt-2 font-semibold">{formatCurrency(kpis.expected_fees)}</p></div><div className="rounded-lg border p-3"><p className="text-[10px] text-brand-muted">Realisiert</p><p className="mt-2 font-semibold">{formatCurrency(kpis.realized_fees)}</p></div></div></CardContent></Card>
+        <Card><CardContent><h2 className="font-semibold">Conversion Rates</h2><div className="mt-5 divide-y divide-white/10">{conversions.map(([label,value]) => <div key={String(label)} className="py-3"><div className="flex justify-between text-xs"><span className="text-brand-soft">{label}</span><strong>{typeof value === "string" ? value : `${value} %`}</strong></div><div className="mt-2 h-1.5 rounded-full bg-brand-sidebar"><div className="h-full rounded-full bg-gradient-to-r from-brand-accent-strong to-brand-accent-light" style={{width:`${typeof value === "string" ? 0 : Math.min(value,100)}%`}} /></div></div>)}</div><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-lg border p-3"><p className="text-[9.5px] text-brand-muted">Erwartet</p><p className="mt-2 font-semibold">{formatCurrency(kpis.expected_fees)}</p></div><div className="rounded-lg border p-3"><p className="text-[9.5px] text-brand-muted">Realisiert</p><p className="mt-2 font-semibold">{formatCurrency(kpis.realized_fees)}</p></div></div></CardContent></Card>
       </div>
     </>
   );

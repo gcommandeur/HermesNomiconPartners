@@ -59,6 +59,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/engagement-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Engagement Settings */
+        get: operations["get_engagement_settings_api_v1_admin_engagement_settings_get"];
+        /** Put Engagement Settings */
+        put: operations["put_engagement_settings_api_v1_admin_engagement_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/kpi-point-rules": {
         parameters: {
             query?: never;
@@ -71,6 +89,304 @@ export interface paths {
         /** Update Kpi Point Rules */
         put: operations["update_kpi_point_rules_api_v1_admin_kpi_point_rules_put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Records */
+        get: operations["list_records_api_v1_admin_presentation_archive_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/count-without-record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Count Without Record
+         * @description Nur Zaehlung: Prozesse ab cv_out und davon die ohne Archiv-Eintrag (kein Backfill).
+         */
+        get: operations["count_without_record_api_v1_admin_presentation_archive_count_without_record_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/removal-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Removal Requests */
+        get: operations["list_removal_requests_api_v1_admin_presentation_archive_removal_requests_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/removal-requests/{request_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Removal */
+        post: operations["approve_removal_api_v1_admin_presentation_archive_removal_requests__request_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/removal-requests/{request_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Removal */
+        post: operations["reject_removal_api_v1_admin_presentation_archive_removal_requests__request_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Record */
+        get: operations["get_record_api_v1_admin_presentation_archive__record_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/{record_id}/files/{file_index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download File */
+        get: operations["download_file_api_v1_admin_presentation_archive__record_id__files__file_index__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/{record_id}/removal-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Removal */
+        post: operations["request_removal_api_v1_admin_presentation_archive__record_id__removal_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/{record_id}/retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Retention */
+        put: operations["set_retention_api_v1_admin_presentation_archive__record_id__retention_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/presentation-archive/{record_id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verify Record */
+        get: operations["verify_record_api_v1_admin_presentation_archive__record_id__verify_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get User Views */
+        get: operations["get_user_views_api_v1_admin_users__user_id__views_get"];
+        /** Put User Views */
+        put: operations["put_user_views_api_v1_admin_users__user_id__views_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/view-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List View Access */
+        get: operations["list_view_access_api_v1_admin_view_access_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/view-access/defaults": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get View Defaults */
+        get: operations["get_view_defaults_api_v1_admin_view_access_defaults_get"];
+        /** Put View Defaults */
+        put: operations["put_view_defaults_api_v1_admin_view_access_defaults_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Proposals */
+        get: operations["list_proposals_api_v1_ai_proposals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai-proposals/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Proposal Summary
+         * @description Fuer die Seitenleiste: ist die Claude-Schnittstelle an, und wie viele
+         *     Vorschlaege warten (nur die fuer den Nutzer sichtbaren).
+         */
+        get: operations["proposal_summary_api_v1_ai_proposals_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai-proposals/{proposal_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Proposal */
+        post: operations["approve_proposal_api_v1_ai_proposals__proposal_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai-proposals/{proposal_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Proposal */
+        post: operations["reject_proposal_api_v1_ai_proposals__proposal_id__reject_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -165,6 +481,43 @@ export interface paths {
          *     Auftrags. Bewusst keine Filterung, eine einfache Zeitleiste reicht.
          */
         get: operations["list_audit_logs_api_v1_audit_logs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/demo-login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Demo Login */
+        post: operations["demo_login_api_v1_auth_demo_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/demo-login/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Demo Login Status
+         * @description Öffentlich (Login-Seite): zeigt nur, ob die Demo-Schaltflaechen erscheinen sollen.
+         */
+        get: operations["demo_login_status_api_v1_auth_demo_login_status_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -638,6 +991,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/candidates/{candidate_id}/engagement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Candidate Engagement */
+        get: operations["get_candidate_engagement_api_v1_candidates__candidate_id__engagement_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidates/{candidate_id}/engagement-prefs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Engagement Prefs */
+        patch: operations["update_engagement_prefs_api_v1_candidates__candidate_id__engagement_prefs_patch"];
+        trace?: never;
+    };
     "/api/v1/candidates/{candidate_id}/history": {
         parameters: {
             query?: never;
@@ -872,6 +1259,23 @@ export interface paths {
         patch: operations["update_client_api_v1_clients__client_id__patch"];
         trace?: never;
     };
+    "/api/v1/clients/{client_id}/business": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Client Business */
+        get: operations["get_client_business_api_v1_clients__client_id__business_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/clients/{client_id}/group-locations": {
         parameters: {
             query?: never;
@@ -903,6 +1307,78 @@ export interface paths {
         /** Get Cockpit */
         get: operations["get_cockpit_api_v1_cockpit_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Config */
+        get: operations["get_config_api_v1_commission_config_get"];
+        /** Put Config */
+        put: operations["put_config_api_v1_commission_config_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Report
+         * @description Quartalsbericht je Mitarbeiter (Standard: das laufende Quartal).
+         */
+        get: operations["get_report_api_v1_commission_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get User Ranks */
+        get: operations["get_user_ranks_api_v1_commission_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission/users/{user_id}/rank": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put User Rank */
+        put: operations["put_user_rank_api_v1_commission_users__user_id__rank_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1126,6 +1602,26 @@ export interface paths {
         head?: never;
         /** Update Email Template */
         patch: operations["update_email_template_api_v1_email_templates__key__patch"];
+        trace?: never;
+    };
+    "/api/v1/engagement/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Engagement Summary
+         * @description Sammelabfrage für ganze Listenseiten (eine Abfrage statt einer je Kandidat).
+         */
+        post: operations["engagement_summary_api_v1_engagement_summary_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/feedback": {
@@ -1561,6 +2057,23 @@ export interface paths {
         patch: operations["update_mailing_group_api_v1_mailing_groups__group_id__patch"];
         trace?: never;
     };
+    "/api/v1/management/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Management Overview */
+        get: operations["get_management_overview_api_v1_management_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mcp": {
         parameters: {
             query?: never;
@@ -1572,13 +2085,143 @@ export interface paths {
         put?: never;
         /**
          * Mcp Endpoint
-         * @description MCP (Streamable HTTP, JSON-Modus) - lesender Zugriff fuer Claude.
+         * @description MCP (Streamable HTTP, JSON-Modus) - Zugriff fuer Claude.
          *
-         *     Nur mit API-Key (X-API-Key), nicht mit einer Browser-Sitzung; es gelten die
-         *     Rechte des Key-Besitzers. Ausgeschaltet (404), solange CC_CRM_AI_ENABLED
-         *     nicht gesetzt ist. Details: services/mcp_server.py.
+         *     Zwei Wege, beide gebunden an einen Hermes-Nutzer (es gelten genau dessen
+         *     Rechte): ein API-Key (X-API-Key) oder ein OAuth-Token, das Claude ueber die
+         *     Anmeldung bei Hermes erhalten hat (Authorization: Bearer ..., siehe
+         *     services/oauth_provider.py). Eine Browser-Sitzung gilt hier nicht. Lesend,
+         *     dazu Vorschlaege mit Freigabe-Pflicht. Ausgeschaltet (404), solange
+         *     CC_CRM_AI_ENABLED nicht gesetzt ist. Details: services/mcp_server.py.
          */
         post: operations["mcp_endpoint_api_v1_mcp_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Mail Accounts */
+        get: operations["list_my_mail_accounts_api_v1_me_mail_accounts_get"];
+        put?: never;
+        /** Create My Mail Account */
+        post: operations["create_my_mail_account_api_v1_me_mail_accounts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Connection Before Saving
+         * @description Zugangsdaten pruefen (IMAP-Login, SMTP-Login), ohne etwas zu speichern oder zu senden.
+         */
+        post: operations["test_connection_before_saving_api_v1_me_mail_accounts_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts/{account_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete My Mail Account */
+        delete: operations["delete_my_mail_account_api_v1_me_mail_accounts__account_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update My Mail Account */
+        patch: operations["update_my_mail_account_api_v1_me_mail_accounts__account_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts/{account_id}/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Default Sender */
+        post: operations["set_default_sender_api_v1_me_mail_accounts__account_id__default_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts/{account_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List My Mail Messages
+         * @description Posteingang eines persoenlichen Kontos: nur fuer den Besitzer lesbar.
+         */
+        get: operations["list_my_mail_messages_api_v1_me_mail_accounts__account_id__messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts/{account_id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync My Mail Account */
+        post: operations["sync_my_mail_account_api_v1_me_mail_accounts__account_id__sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mail-accounts/{account_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test My Mail Account */
+        post: operations["test_my_mail_account_api_v1_me_mail_accounts__account_id__test_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1623,6 +2266,105 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Select My View
+         * @description Merkt die gewählte Ansicht serverseitig (Startansicht beim nächsten Login).
+         */
+        put: operations["select_my_view_api_v1_me_view_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get My Views */
+        get: operations["get_my_views_api_v1_me_views_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my-commission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get My Commission
+         * @description Provision einer Person im Quartal (Standard: ich selbst, laufendes Quartal). Fremde oder
+         *     nicht vorhandene `user_id`: 404.
+         */
+        get: operations["get_my_commission_api_v1_my_commission_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my-commission/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get People
+         * @description Personen, die ich ansehen darf: ich selbst, als Teamleiter mein Team, als Admin alle.
+         */
+        get: operations["get_people_api_v1_my_commission_people_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my-commission/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Timeline
+         * @description Zeitstrahl der letzten 12 Monate, Monatswert, laufendes Quartal und Fortschritt zur nächsten
+         *     Rolle. Gleiche Rechte wie `GET /my-commission`: fremd oder nicht vorhanden = 404.
+         */
+        get: operations["get_timeline_api_v1_my_commission_timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notes": {
         parameters: {
             query?: never;
@@ -1658,6 +2400,162 @@ export interface paths {
         head?: never;
         /** Update Note */
         patch: operations["update_note_api_v1_notes__note_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/oauth/.well-known/oauth-authorization-server": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Authorization Server Metadata */
+        get: operations["authorization_server_metadata_api_v1_oauth__well_known_oauth_authorization_server_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/.well-known/openid-configuration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Openid Configuration */
+        get: operations["openid_configuration_api_v1_oauth__well_known_openid_configuration_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Connections */
+        get: operations["list_connections_api_v1_oauth_connections_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/connections/{token_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Connection */
+        delete: operations["revoke_connection_api_v1_oauth_connections__token_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Consent */
+        post: operations["decide_consent_api_v1_oauth_consent_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/consent/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consent Info */
+        get: operations["consent_info_api_v1_oauth_consent__request_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/protected-resource": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Protected Resource Metadata
+         * @description RFC 9728 - ueber `resource_metadata` im 401 von /mcp referenziert.
+         */
+        get: operations["protected_resource_metadata_api_v1_oauth_protected_resource_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register Client */
+        post: operations["register_client_api_v1_oauth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Token */
+        post: operations["token_api_v1_oauth_token_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/offers": {
@@ -1728,6 +2626,57 @@ export interface paths {
         put?: never;
         /** Create Fee */
         post: operations["create_fee_api_v1_placements__placement_id__fees_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/timesheets/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** View Timesheet */
+        get: operations["view_timesheet_api_v1_public_timesheets__token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/timesheets/{token}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Timesheet */
+        post: operations["approve_timesheet_api_v1_public_timesheets__token__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/timesheets/{token}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Timesheet */
+        post: operations["reject_timesheet_api_v1_public_timesheets__token__reject_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2003,6 +2952,701 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staffing/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Assignments
+         * @description `overdue=true`: nur aktive Einsätze, deren geplantes Ende überschritten ist.
+         */
+        get: operations["list_assignments_api_v1_staffing_assignments_get"];
+        put?: never;
+        /**
+         * Create Assignment
+         * @description Überschneidet sich der Zeitraum mit einem anderen Einsatz derselben Person, antwortet die API
+         *     mit 409 (Liste `overlaps`); `confirm_overlap=true` speichert trotzdem und protokolliert es.
+         */
+        post: operations["create_assignment_api_v1_staffing_assignments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/assignments/{assignment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Assignment */
+        get: operations["get_assignment_api_v1_staffing_assignments__assignment_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Assignment */
+        patch: operations["update_assignment_api_v1_staffing_assignments__assignment_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/staffing/assignments/{assignment_id}/checklist/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Checklist Item */
+        patch: operations["update_checklist_item_api_v1_staffing_assignments__assignment_id__checklist__item_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/staffing/assignments/{assignment_id}/equal-pay-confirmation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Equal Pay
+         * @description Equal Pay bestätigen: Lohn geprüft und angeglichen. Darf jeder mit Zugriff auf den Einsatz;
+         *     die Lohnhöhe selbst sehen und ändern weiter nur Admins. Erledigt die Equal-Pay-Aufgabe.
+         */
+        post: operations["confirm_equal_pay_api_v1_staffing_assignments__assignment_id__equal_pay_confirmation_post"];
+        /**
+         * Unconfirm Equal Pay
+         * @description Bestätigung zurücknehmen (Eingabekorrektur, mit Audit-Eintrag).
+         */
+        delete: operations["unconfirm_equal_pay_api_v1_staffing_assignments__assignment_id__equal_pay_confirmation_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/assignments/{assignment_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Assignment Status
+         * @description Aktivierung nur mit gültiger AÜG-Erlaubnis und vollständiger Pflicht-Checkliste.
+         */
+        post: operations["change_assignment_status_api_v1_staffing_assignments__assignment_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/assignments/{assignment_id}/takeover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take Over Assignment
+         * @description Beendet den Einsatz und legt einen Vermittlungsprozess mit Honorar an (siehe
+         *     services/staffing_takeover.py).
+         */
+        post: operations["take_over_assignment_api_v1_staffing_assignments__assignment_id__takeover_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/assignments/{assignment_id}/takeover-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Takeover
+         * @description Wie wirkt die Staffel der Übernahme-Fee bei diesem Einsatz (Monate, Anteil, Honorarsatz).
+         */
+        get: operations["preview_takeover_api_v1_staffing_assignments__assignment_id__takeover_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/assignments/{assignment_id}/timesheets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Timesheets */
+        get: operations["list_timesheets_api_v1_staffing_assignments__assignment_id__timesheets_get"];
+        put?: never;
+        /** Create Timesheet */
+        post: operations["create_timesheet_api_v1_staffing_assignments__assignment_id__timesheets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/billable-timesheets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Billable Timesheets */
+        get: operations["list_billable_timesheets_api_v1_staffing_billable_timesheets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/candidate-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staffing Candidate Summary
+         * @description Sammelabfrage für die Spalte "Überlassung" der Kandidatenliste (eine Abfrage je Baustein,
+         *     nicht je Kandidat): Status, aktueller Kunde, dringendste Frist. Kein Lohn, keine Marge.
+         */
+        post: operations["staffing_candidate_summary_api_v1_staffing_candidate_summary_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Contracts */
+        get: operations["list_contracts_api_v1_staffing_contracts_get"];
+        put?: never;
+        /** Create Contract */
+        post: operations["create_contract_api_v1_staffing_contracts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/contracts/{contract_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Contract */
+        get: operations["get_contract_api_v1_staffing_contracts__contract_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Contract */
+        patch: operations["update_contract_api_v1_staffing_contracts__contract_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/staffing/deadlines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Deadlines
+         * @description Fristen je Paar (Leiharbeitnehmer, Kunde), dringendste zuerst.
+         */
+        get: operations["list_deadlines_api_v1_staffing_deadlines_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/disposition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Disposition
+         * @description Disposition: Kennzahlen, Bench ("frei seit"), Stundenzettel-Eingang. Einsätze im
+         *     Sichtbereich des Nutzers; kein Lohn, keine Marge.
+         */
+        get: operations["get_disposition_api_v1_staffing_disposition_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/export/hours.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Hours Csv
+         * @description Stunden je Leiharbeitnehmer und Kunde für die Lohnabrechnung (nur Admins - enthält den
+         *     Stundenlohn). Nur vom Kunden freigegebene Stunden. Format: docs/UEBERLASSUNG.md.
+         */
+        get: operations["export_hours_csv_api_v1_staffing_export_hours_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Invoices */
+        get: operations["list_invoices_api_v1_staffing_invoices_get"];
+        put?: never;
+        /** Create Invoice Draft */
+        post: operations["create_invoice_draft_api_v1_staffing_invoices_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/invoices/{invoice_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Invoice */
+        get: operations["get_invoice_api_v1_staffing_invoices__invoice_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/invoices/{invoice_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Invoice Status
+         * @description Wie bei Vermittlungsrechnungen: "Rechnung stellen" durch einen Nicht-Admin wird zur
+         *     Freigabe-Anfrage (`approval_request`), Admins stellen direkt.
+         */
+        post: operations["change_invoice_status_api_v1_staffing_invoices__invoice_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/licenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Licenses */
+        get: operations["list_licenses_api_v1_staffing_licenses_get"];
+        put?: never;
+        /** Create License */
+        post: operations["create_license_api_v1_staffing_licenses_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/licenses/{license_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update License */
+        patch: operations["update_license_api_v1_staffing_licenses__license_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/staffing/offer-from-candidate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Offer Candidate As Assignment
+         * @description Legt das Leiharbeitnehmer-Profil ("In Auswahl") und optional einen geplanten Einsatz an.
+         *     Ist der Kandidat schon im Austausch, greift der Hinweis (409, mit Bestätigung) oder die
+         *     Sperre.
+         */
+        post: operations["offer_candidate_as_assignment_api_v1_staffing_offer_from_candidate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Overview */
+        get: operations["get_overview_api_v1_staffing_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/prior-periods/{prior_period_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Prior Period
+         * @description Löschen als Eingabekorrektur erlaubt; der Audit-Log hält den gelöschten Zeitraum fest.
+         */
+        delete: operations["delete_prior_period_api_v1_staffing_prior_periods__prior_period_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Prior Period */
+        patch: operations["update_prior_period_api_v1_staffing_prior_periods__prior_period_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/staffing/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings */
+        get: operations["get_settings_api_v1_staffing_settings_get"];
+        /** Put Settings */
+        put: operations["put_settings_api_v1_staffing_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/takeover-fee-tiers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Takeover Fee Tiers */
+        get: operations["get_takeover_fee_tiers_api_v1_staffing_takeover_fee_tiers_get"];
+        /** Put Takeover Fee Tiers */
+        put: operations["put_takeover_fee_tiers_api_v1_staffing_takeover_fee_tiers_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Staffing Tasks
+         * @description To-dos und Hinweise der Ansicht Überlassung (Fristen, Stundenzettel, Checklisten, Bench,
+         *     Erlaubnis). Im Besitzbereich des Nutzers; kein Lohn, keine Marge.
+         */
+        get: operations["get_staffing_tasks_api_v1_staffing_tasks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/timesheets/{timesheet_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Timesheet */
+        get: operations["get_timesheet_api_v1_staffing_timesheets__timesheet_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/timesheets/{timesheet_id}/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Timesheet Entries */
+        put: operations["set_timesheet_entries_api_v1_staffing_timesheets__timesheet_id__entries_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/timesheets/{timesheet_id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Timesheet
+         * @description Einreichen und den Freigabelink für den Kunden erzeugen (erneuter Aufruf = neuer Link,
+         *     der alte wird ungültig). Der Link steht nur in dieser Antwort.
+         */
+        post: operations["submit_timesheet_api_v1_staffing_timesheets__timesheet_id__submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/workers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Workers */
+        get: operations["list_workers_api_v1_staffing_workers_get"];
+        put?: never;
+        /** Create Worker */
+        post: operations["create_worker_api_v1_staffing_workers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/workers/by-candidate/{candidate_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Worker By Candidate */
+        get: operations["get_worker_by_candidate_api_v1_staffing_workers_by_candidate__candidate_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/workers/{worker_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Worker */
+        get: operations["get_worker_api_v1_staffing_workers__worker_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Worker */
+        patch: operations["update_worker_api_v1_staffing_workers__worker_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/staffing/workers/{worker_id}/prior-period-confirmations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Prior Confirmations */
+        get: operations["list_prior_confirmations_api_v1_staffing_workers__worker_id__prior_period_confirmations_get"];
+        put?: never;
+        /**
+         * Confirm No Prior Periods
+         * @description "Keine Vorzeiten" bestätigen (Datum und Person werden festgehalten).
+         */
+        post: operations["confirm_no_prior_periods_api_v1_staffing_workers__worker_id__prior_period_confirmations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/workers/{worker_id}/prior-period-confirmations/{client_company_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Withdraw No Prior Periods
+         * @description Bestätigung zurücknehmen (Eingabekorrektur); der Audit-Log hält es fest.
+         */
+        delete: operations["withdraw_no_prior_periods_api_v1_staffing_workers__worker_id__prior_period_confirmations__client_company_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/workers/{worker_id}/prior-periods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Prior Periods */
+        get: operations["list_prior_periods_api_v1_staffing_workers__worker_id__prior_periods_get"];
+        put?: never;
+        /** Create Prior Period */
+        post: operations["create_prior_period_api_v1_staffing_workers__worker_id__prior_periods_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staffing/workers/{worker_id}/timesheet-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Worker Timesheet Summary
+         * @description Stundenzettel einer Person nach Status (nur Einsätze im Besitzbereich des Nutzers).
+         */
+        get: operations["get_worker_timesheet_summary_api_v1_staffing_workers__worker_id__timesheet_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/submissions": {
         parameters: {
             query?: never;
@@ -2033,6 +3677,27 @@ export interface paths {
          * @description Offene Prozesse sortiert nach closing_probability * erwartetem Honorar.
          */
         get: operations["list_priority_view_api_v1_submissions_priority_view_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/submissions/without-owner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Submissions Without Owner
+         * @description Nur Admin: Prozesse ohne Verantwortlichen (aus der Zeit vor dem Feld). Fuer
+         *     Nicht-Admins sind sie unsichtbar - hier tauchen sie sichtbar auf, bis sie zugewiesen sind.
+         */
+        get: operations["list_submissions_without_owner_api_v1_submissions_without_owner_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2077,6 +3742,26 @@ export interface paths {
          *     status=='placement' erlaubt.
          */
         post: operations["archive_submission_api_v1_submissions__submission_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/submissions/{submission_id}/assign-owner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign Submission Owner
+         * @description Nur Admin: Verantwortlichen setzen (Audit-Eintrag `updated` mit alt/neu).
+         */
+        post: operations["assign_submission_owner_api_v1_submissions__submission_id__assign_owner_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2471,6 +4156,26 @@ export interface paths {
         patch: operations["update_user_api_v1_users__user_id__patch"];
         trace?: never;
     };
+    "/api/v1/users/{user_id}/reset-microsoft-binding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Microsoft Binding
+         * @description Nur Admin: loest die gebundene Microsoft-Kennung (Audit-Eintrag).
+         */
+        post: operations["reset_microsoft_binding_api_v1_users__user_id__reset_microsoft_binding_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{user_id}/rotate-calendar-feed-token": {
         parameters: {
             query?: never;
@@ -2715,6 +4420,80 @@ export interface components {
             /** Subject */
             subject?: string | null;
         };
+        /**
+         * AiProposalApprove
+         * @description Freigabe; mit `payload` wird der Vorschlag vorher bearbeitet uebernommen.
+         */
+        AiProposalApprove: {
+            /** Payload */
+            payload?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** AiProposalRead */
+        AiProposalRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Name */
+            created_by_name?: string | null;
+            /**
+             * Created By User Id
+             * Format: uuid
+             */
+            created_by_user_id: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By User Id */
+            decided_by_user_id: string | null;
+            /** Decision Note */
+            decision_note: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "note" | "task" | "mail_draft";
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Recipient Email */
+            recipient_email?: string | null;
+            /** Result Entity Id */
+            result_entity_id: string | null;
+            /** Result Entity Type */
+            result_entity_type: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected";
+            /** Target Id */
+            target_id: string | null;
+            /** Target Label */
+            target_label?: string | null;
+            /** Target Type */
+            target_type: ("candidate" | "client" | "contact") | null;
+        };
+        /** AiProposalReject */
+        AiProposalReject: {
+            /** Decision Note */
+            decision_note?: string | null;
+        };
+        /** AiProposalSummary */
+        AiProposalSummary: {
+            /** Enabled */
+            enabled: boolean;
+            /** Pending */
+            pending: number;
+        };
         /** AnonymousProfileResponse */
         AnonymousProfileResponse: {
             /** Profile Text */
@@ -2871,6 +4650,21 @@ export interface components {
             /** File */
             file: string;
         };
+        /** Body_token_api_v1_oauth_token_post */
+        Body_token_api_v1_oauth_token_post: {
+            /** Client Id */
+            client_id: string;
+            /** Code */
+            code?: string | null;
+            /** Code Verifier */
+            code_verifier?: string | null;
+            /** Grant Type */
+            grant_type: string;
+            /** Redirect Uri */
+            redirect_uri?: string | null;
+            /** Refresh Token */
+            refresh_token?: string | null;
+        };
         /** Body_upload_document_api_v1_documents_upload_post */
         Body_upload_document_api_v1_documents_upload_post: {
             /** Document Type */
@@ -2886,6 +4680,24 @@ export interface components {
             owner_type: string;
             /** Uploaded By */
             uploaded_by?: string | null;
+        };
+        /** BothBusinessClientRead */
+        BothBusinessClientRead: {
+            /** Assignments */
+            assignments: number;
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Placements */
+            placements: number;
+            /** Processes */
+            processes: number;
+            /** Taken Over */
+            taken_over: number;
         };
         /** BulkSubmitRequest */
         BulkSubmitRequest: {
@@ -3196,6 +5008,31 @@ export interface components {
             /** Wechselgrund */
             wechselgrund?: string | null;
         };
+        /** CandidateEngagementRead */
+        CandidateEngagementRead: {
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Items */
+            items: components["schemas"]["EngagementItemRead"][];
+            /**
+             * Open For Direct
+             * @enum {string}
+             */
+            open_for_direct: "yes" | "no" | "unknown";
+            /**
+             * Open For Staffing
+             * @enum {string}
+             */
+            open_for_staffing: "yes" | "no" | "unknown";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "frei" | "im_direct" | "im_einsatz" | "beides" | "vermittelt";
+        };
         /** CandidateMatchRead */
         CandidateMatchRead: {
             candidate: components["schemas"]["CandidateRead"];
@@ -3290,6 +5127,8 @@ export interface components {
             aktuelles_umfeld_kanzleigroesse?: string | null;
             /** Aktuelles Umfeld Kanzleityp */
             aktuelles_umfeld_kanzleityp?: string | null;
+            /** Anonymized At */
+            anonymized_at?: string | null;
             anrede?: components["schemas"]["Anrede"] | null;
             /** Ausbildung Titel */
             ausbildung_titel?: string | null;
@@ -3306,6 +5145,10 @@ export interface components {
              * @default false
              */
             consent_received: boolean;
+            /** Consent Recorded At */
+            consent_recorded_at?: string | null;
+            /** Consent Source */
+            consent_source?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -3729,6 +5572,42 @@ export interface components {
             /** Wechselgrund */
             wechselgrund?: string | null;
         };
+        /** ClientAssignmentRead */
+        ClientAssignmentRead: {
+            /** End Date */
+            end_date: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Owner Name */
+            owner_name: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Status */
+            status: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /**
+         * ClientBusinessRead
+         * @description Jeder Abschnitt ist `None`, wenn dem Nutzer die zugehörige Ansicht fehlt (processes: Direct,
+         *     assignments/deadlines: Überlassung, revenue: Admin). Prozesse und Einsätze nur im eigenen
+         *     Sichtbereich (Owner-Scope).
+         */
+        ClientBusinessRead: {
+            /** Assignments */
+            assignments: components["schemas"]["ClientAssignmentRead"][] | null;
+            /** Deadlines */
+            deadlines: components["schemas"]["StaffingPairDeadlineRead"][] | null;
+            /** Processes */
+            processes: components["schemas"]["ClientProcessRead"][] | null;
+            revenue: components["schemas"]["ClientRevenueRead"] | null;
+        };
         /** ClientCompanyCreate */
         ClientCompanyCreate: {
             /** Agb Version */
@@ -4002,6 +5881,32 @@ export interface components {
             /** Score */
             score: number;
         };
+        /** ClientProcessRead */
+        ClientProcessRead: {
+            /** Candidate Name */
+            candidate_name: string;
+            /** Expected Fee */
+            expected_fee: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Owner Name */
+            owner_name: string | null;
+            /** Status */
+            status: string;
+        };
+        /**
+         * ClientRevenueRead
+         * @description Nur für Admins.
+         */
+        ClientRevenueRead: {
+            /** Placement Fees Paid */
+            placement_fees_paid: string;
+            /** Staffing Invoiced */
+            staffing_invoiced: string;
+        };
         /**
          * ClientStatus
          * @description Ampel-Logik fürs Beziehungsstatus-Tracking (Nutzer-Vorgabe):
@@ -4160,6 +6065,309 @@ export interface components {
             rates: components["schemas"]["CockpitRates"];
             recruiting_kpis: components["schemas"]["RecruitingKpis"];
             sourcing: components["schemas"]["SourcingFunnel"];
+        };
+        /** CommissionConfigRead */
+        CommissionConfigRead: {
+            general: components["schemas"]["CommissionGeneralConfig-Output"];
+            /** Notice */
+            notice: string;
+            /** Ranks */
+            ranks: components["schemas"]["CommissionRankConfig-Output"][];
+            revenue_basis: components["schemas"]["CommissionRevenueBasis"];
+        };
+        /** CommissionConfigUpdate */
+        CommissionConfigUpdate: {
+            general: components["schemas"]["CommissionGeneralConfig-Input"];
+            /** Ranks */
+            ranks: components["schemas"]["CommissionRankConfig-Input"][];
+            revenue_basis: components["schemas"]["CommissionRevenueBasis"];
+        };
+        /** CommissionGeneralConfig */
+        "CommissionGeneralConfig-Input": {
+            /** Commission Free Base */
+            commission_free_base: number | string;
+            /** Employer Factor */
+            employer_factor: number | string;
+            /** Extra Cost Monthly */
+            extra_cost_monthly: number | string;
+            /** Fee Rate On Target Salary */
+            fee_rate_on_target_salary: number | string;
+            /** Min Fee */
+            min_fee: number | string;
+            /**
+             * Placement Bonus
+             * @default 300
+             */
+            placement_bonus: number | string;
+            /**
+             * Staffing Bonus
+             * @default 300
+             */
+            staffing_bonus: number | string;
+            /** Target Margin */
+            target_margin: number | string;
+        };
+        /** CommissionGeneralConfig */
+        "CommissionGeneralConfig-Output": {
+            /** Commission Free Base */
+            commission_free_base: string;
+            /** Employer Factor */
+            employer_factor: string;
+            /** Extra Cost Monthly */
+            extra_cost_monthly: string;
+            /** Fee Rate On Target Salary */
+            fee_rate_on_target_salary: string;
+            /** Min Fee */
+            min_fee: string;
+            /**
+             * Placement Bonus
+             * @default 300
+             */
+            placement_bonus: string;
+            /**
+             * Staffing Bonus
+             * @default 300
+             */
+            staffing_bonus: string;
+            /** Target Margin */
+            target_margin: string;
+        };
+        /** CommissionRankConfig */
+        "CommissionRankConfig-Input": {
+            /** Fixed Yearly */
+            fixed_yearly: number | string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Rate1 */
+            rate1: number | string;
+            /** Rate2 */
+            rate2: number | string;
+            /** Rate3 */
+            rate3: number | string;
+            /** Threshold1 */
+            threshold1: number | string;
+            /** Threshold2 */
+            threshold2: number | string;
+        };
+        /** CommissionRankConfig */
+        "CommissionRankConfig-Output": {
+            /** Fixed Yearly */
+            fixed_yearly: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Rate1 */
+            rate1: string;
+            /** Rate2 */
+            rate2: string;
+            /** Rate3 */
+            rate3: string;
+            /** Threshold1 */
+            threshold1: string;
+            /** Threshold2 */
+            threshold2: string;
+        };
+        /** CommissionReportRead */
+        CommissionReportRead: {
+            /** Notice */
+            notice: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Quarter */
+            quarter: number;
+            revenue_basis: components["schemas"]["CommissionRevenueBasis"];
+            /** Rows */
+            rows: components["schemas"]["CommissionRowRead"][];
+            /** Target Margin */
+            target_margin: string;
+            totals: components["schemas"]["CommissionTotalsRead"];
+            /** Unassigned */
+            unassigned: components["schemas"]["CommissionUnassignedRead"][];
+            /** Year */
+            year: number;
+        };
+        /** CommissionRevenueBasis */
+        CommissionRevenueBasis: {
+            /** Include Staffing */
+            include_staffing: boolean;
+            /**
+             * Placement Fees
+             * @enum {string}
+             */
+            placement_fees: "paid" | "issued";
+            /**
+             * Staffing
+             * @enum {string}
+             */
+            staffing: "issued" | "paid";
+        };
+        /** CommissionRowRead */
+        CommissionRowRead: {
+            /** Band1 Commission */
+            band1_commission: string;
+            /** Band1 Revenue */
+            band1_revenue: string;
+            /** Band2 Commission */
+            band2_commission: string;
+            /** Band2 Revenue */
+            band2_revenue: string;
+            /** Band3 Commission */
+            band3_commission: string;
+            /** Band3 Revenue */
+            band3_revenue: string;
+            /**
+             * Bonus
+             * @default 0
+             */
+            bonus: string;
+            /** Break Even Revenue */
+            break_even_revenue: string;
+            /** Commission */
+            commission: string;
+            /** Display Name */
+            display_name: string;
+            /** Employer Cost */
+            employer_cost: string;
+            /** Fixed Pay */
+            fixed_pay: string;
+            /**
+             * Gross
+             * @default 0
+             */
+            gross: string;
+            /** Margin */
+            margin: string;
+            /** Margin Percent */
+            margin_percent: string | null;
+            /**
+             * Placement Deals
+             * @default 0
+             */
+            placement_deals: number;
+            /** Promotion Hurdle */
+            promotion_hurdle: string | null;
+            /** Promotion To Key */
+            promotion_to_key: string | null;
+            /** Promotion To Label */
+            promotion_to_label: string | null;
+            /** Rank Key */
+            rank_key: string;
+            /** Rank Label */
+            rank_label: string;
+            /** Revenue */
+            revenue: string;
+            /** Revenue Fees */
+            revenue_fees: string;
+            /** Revenue Staffing */
+            revenue_staffing: string;
+            /**
+             * Staffing Deals
+             * @default 0
+             */
+            staffing_deals: number;
+            /** Target Revenue */
+            target_revenue: string;
+            traffic: components["schemas"]["Traffic"];
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** CommissionTotalsRead */
+        CommissionTotalsRead: {
+            /** Commission */
+            commission: string;
+            /** Employer Cost */
+            employer_cost: string;
+            /** Fixed Pay */
+            fixed_pay: string;
+            /** Margin */
+            margin: string;
+            /** Margin Percent */
+            margin_percent: string | null;
+            /** Revenue */
+            revenue: string;
+            traffic: components["schemas"]["Traffic"];
+        };
+        /**
+         * CommissionUnassignedRead
+         * @description Mitarbeiter mit Umsatz, denen noch kein Rang zugeordnet ist.
+         */
+        CommissionUnassignedRead: {
+            /** Display Name */
+            display_name: string;
+            /** Revenue */
+            revenue: string;
+            /** Revenue Fees */
+            revenue_fees: string;
+            /** Revenue Staffing */
+            revenue_staffing: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** CommissionUserRankRead */
+        CommissionUserRankRead: {
+            /** Display Name */
+            display_name: string;
+            /** Effective From */
+            effective_from: string | null;
+            /** Email */
+            email: string;
+            /** Rank Key */
+            rank_key: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** CommissionUserRankUpdate */
+        CommissionUserRankUpdate: {
+            /** Effective From */
+            effective_from?: string | null;
+            /** Rank Key */
+            rank_key?: string | null;
+        };
+        /** ConsentDecision */
+        ConsentDecision: {
+            /** Approve */
+            approve: boolean;
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+        };
+        /** ConsentInfo */
+        ConsentInfo: {
+            /** Client Name */
+            client_name: string;
+            /** Redirect Host */
+            redirect_host: string;
+            /** Scope */
+            scope: string;
+            /** User Email */
+            user_email: string;
+        };
+        /** ConsentResult */
+        ConsentResult: {
+            /** Redirect Url */
+            redirect_url: string;
         };
         /** ContactPersonCreate */
         ContactPersonCreate: {
@@ -4516,6 +6724,25 @@ export interface components {
             /** Requested Via */
             requested_via: string;
         };
+        /** DemoLoginRequest */
+        DemoLoginRequest: {
+            /**
+             * Persona
+             * @enum {string}
+             */
+            persona: "admin" | "vermittler";
+        };
+        /** DemoLoginResponse */
+        DemoLoginResponse: {
+            /** Token */
+            token: string;
+            user: components["schemas"]["UserRead"];
+        };
+        /** DemoLoginStatus */
+        DemoLoginStatus: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /** DocumentCreate */
         DocumentCreate: {
             /** Content Type */
@@ -4667,6 +6894,65 @@ export interface components {
             name?: string | null;
             /** Subject */
             subject?: string | null;
+        };
+        /**
+         * EngagementItemRead
+         * @description Ein Prozess oder Einsatz des Kandidaten. Ohne Zugriff auf den Datensatz nur Kanal, Stufe,
+         *     Mitarbeiter und Datum: Kanzlei und IDs bleiben leer (`details_visible=False`).
+         */
+        EngagementItemRead: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "direct" | "staffing";
+            /** Client Name */
+            client_name?: string | null;
+            /** Details Visible */
+            details_visible: boolean;
+            /** Entity Id */
+            entity_id?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "process" | "placement" | "assignment";
+            /** Owner Name */
+            owner_name: string | null;
+            /** Since */
+            since: string | null;
+            /** Stage */
+            stage: string;
+            /** Until */
+            until: string | null;
+        };
+        /** EngagementPrefsUpdate */
+        EngagementPrefsUpdate: {
+            /** Open For Direct */
+            open_for_direct?: ("yes" | "no" | "unknown") | null;
+            /** Open For Staffing */
+            open_for_staffing?: ("yes" | "no" | "unknown") | null;
+        };
+        /** EngagementSettingsRead */
+        EngagementSettingsRead: {
+            /**
+             * Conflict Mode
+             * @enum {string}
+             */
+            conflict_mode: "warn" | "block";
+        };
+        /** EngagementSettingsUpdate */
+        EngagementSettingsUpdate: {
+            /**
+             * Conflict Mode
+             * @enum {string}
+             */
+            conflict_mode: "warn" | "block";
+        };
+        /** EngagementSummaryRequest */
+        EngagementSummaryRequest: {
+            /** Candidate Ids */
+            candidate_ids: string[];
         };
         /** EnrollmentCreate */
         EnrollmentCreate: {
@@ -4862,6 +7148,23 @@ export interface components {
             received_at?: string | null;
             stage?: components["schemas"]["SubmissionStatus"] | null;
         };
+        /** ForecastRead */
+        ForecastRead: {
+            /** Direct Weighted */
+            direct_weighted: string;
+            /** Direct Without Fee */
+            direct_without_fee: number;
+            /** Direct Without Probability */
+            direct_without_probability: number;
+            /** Staffing Counted */
+            staffing_counted: number;
+            /** Staffing Excluded */
+            staffing_excluded: number;
+            /** Staffing Margin */
+            staffing_margin: string;
+            /** Total */
+            total: string;
+        };
         /**
          * GeoMappingResult
          * @description Geo Mapping ist seit der Vereinfachung eine reine Kanzleien-
@@ -4910,6 +7213,19 @@ export interface components {
             latitude: number | null;
             /** Longitude */
             longitude: number | null;
+        };
+        /** GrossProfitRead */
+        GrossProfitRead: {
+            /** Direct */
+            direct: string;
+            /** Staffing */
+            staffing: string;
+            /** Staffing Hours */
+            staffing_hours: string;
+            /** Staffing Missing Rates */
+            staffing_missing_rates: number;
+            /** Total */
+            total: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -5446,6 +7762,8 @@ export interface components {
             /** Last Synced At */
             last_synced_at: string | null;
             oauth_status: components["schemas"]["MailAccountOAuthStatus"] | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
             provider: components["schemas"]["MailAccountProvider"];
             /** Send Throttle Seconds */
             send_throttle_seconds: number;
@@ -5455,6 +7773,11 @@ export interface components {
             smtp_port: number;
             /** Smtp Use Ssl */
             smtp_use_ssl: boolean;
+            /**
+             * Sync Enabled
+             * @default true
+             */
+            sync_enabled: boolean;
             /** Sync Error */
             sync_error: string | null;
             /**
@@ -5527,6 +7850,51 @@ export interface components {
              * @default 0
              */
             skipped_due_to_daily_limit_count: number;
+        };
+        /**
+         * MailConnectionTestRequest
+         * @description Verbindungstest VOR dem Speichern (Passwort wird nicht gespeichert).
+         */
+        MailConnectionTestRequest: {
+            /** Imap Host */
+            imap_host: string;
+            /**
+             * Imap Port
+             * @default 993
+             */
+            imap_port: number;
+            /**
+             * Imap Use Ssl
+             * @default true
+             */
+            imap_use_ssl: boolean;
+            /** Password */
+            password: string;
+            /** Smtp Host */
+            smtp_host: string;
+            /**
+             * Smtp Port
+             * @default 587
+             */
+            smtp_port: number;
+            /**
+             * Smtp Use Ssl
+             * @default true
+             */
+            smtp_use_ssl: boolean;
+            /** Username */
+            username: string;
+        };
+        /** MailConnectionTestResult */
+        MailConnectionTestResult: {
+            /** Imap Error */
+            imap_error?: string | null;
+            /** Imap Ok */
+            imap_ok: boolean;
+            /** Smtp Error */
+            smtp_error?: string | null;
+            /** Smtp Ok */
+            smtp_ok: boolean;
         };
         /**
          * MailMatchStatus
@@ -5712,6 +8080,8 @@ export interface components {
         };
         /** MailingGroupCreate */
         MailingGroupCreate: {
+            /** Context Candidate Id */
+            context_candidate_id?: string | null;
             /** Name */
             name: string;
             /** Recipients */
@@ -5734,6 +8104,8 @@ export interface components {
         };
         /** MailingGroupRead */
         MailingGroupRead: {
+            /** Context Candidate Id */
+            context_candidate_id?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -5778,6 +8150,424 @@ export interface components {
             kind: "candidate" | "client" | "contact";
             /** Name */
             name: string;
+        };
+        /** ManagementAlertRead */
+        ManagementAlertRead: {
+            /** Count */
+            count: number;
+            /** Href */
+            href: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "deadline_red" | "deadline_yellow" | "license" | "invoices_overdue" | "processes_without_owner";
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "red" | "yellow";
+            /** Text */
+            text: string;
+        };
+        /** ManagementOverviewRead */
+        ManagementOverviewRead: {
+            /** Alerts */
+            alerts: components["schemas"]["ManagementAlertRead"][];
+            /** Assumptions */
+            assumptions: string[];
+            /** Both Business Clients */
+            both_business_clients: components["schemas"]["BothBusinessClientRead"][];
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            /** Employer Factor */
+            employer_factor: string;
+            forecast: components["schemas"]["ForecastRead"];
+            gross_profit: components["schemas"]["GrossProfitRead"];
+            /**
+             * Period
+             * @enum {string}
+             */
+            period: "week" | "month" | "quarter";
+            takeover: components["schemas"]["TakeoverRateRead"];
+        };
+        /** MyCommissionAssignment */
+        MyCommissionAssignment: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /** Paid Months */
+            paid_months: number;
+            /** Revenue */
+            revenue: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /** MyCommissionBand */
+        MyCommissionBand: {
+            /** Commission */
+            commission: string;
+            /** Label */
+            label: string;
+            /** Rate */
+            rate: string | null;
+            /** Revenue */
+            revenue: string;
+        };
+        /** MyCommissionPerson */
+        MyCommissionPerson: {
+            /** Display Name */
+            display_name: string;
+            /** Is Self */
+            is_self: boolean;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** MyCommissionProgress */
+        MyCommissionProgress: {
+            /** Current Rank Label */
+            current_rank_label: string;
+            /** Days To Quarter End */
+            days_to_quarter_end: number;
+            /** Hurdle */
+            hurdle?: string | null;
+            /** Is Top Rank */
+            is_top_rank: boolean;
+            /** Next Band Rate */
+            next_band_rate?: string | null;
+            /** Next Band Remaining */
+            next_band_remaining?: string | null;
+            /** Next Rank Label */
+            next_rank_label?: string | null;
+            /** Percent */
+            percent?: string | null;
+            /** Quarter Revenue */
+            quarter_revenue: string;
+            /** Remaining */
+            remaining?: string | null;
+        };
+        /** MyCommissionRead */
+        MyCommissionRead: {
+            /**
+             * Bands
+             * @default []
+             */
+            bands: components["schemas"]["MyCommissionBand"][];
+            /**
+             * Bonus
+             * @default 0.00
+             */
+            bonus: string;
+            /**
+             * Commission
+             * @default 0.00
+             */
+            commission: string;
+            /** Display Name */
+            display_name: string;
+            /** Expected Revenue */
+            expected_revenue: string;
+            /**
+             * Explanation
+             * @default []
+             */
+            explanation: string[];
+            /**
+             * Fixed Pay
+             * @default 0.00
+             */
+            fixed_pay: string;
+            /**
+             * Gross
+             * @default 0.00
+             */
+            gross: string;
+            /**
+             * Is Top Rank
+             * @default false
+             */
+            is_top_rank: boolean;
+            /** Next Rank Label */
+            next_rank_label?: string | null;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Placement Deals
+             * @default 0
+             */
+            placement_deals: number;
+            /** Progress Percent */
+            progress_percent?: string | null;
+            /** Promotion Hurdle */
+            promotion_hurdle?: string | null;
+            /** Promotion Label */
+            promotion_label?: string | null;
+            /** Quarter */
+            quarter: number;
+            /** Rank Key */
+            rank_key?: string | null;
+            /** Rank Label */
+            rank_label?: string | null;
+            /** Revenue */
+            revenue: string;
+            /** Revenue Fees */
+            revenue_fees: string;
+            /** Revenue Staffing */
+            revenue_staffing: string;
+            /**
+             * Staffing Assignments
+             * @default []
+             */
+            staffing_assignments: components["schemas"]["MyCommissionAssignment"][];
+            /**
+             * Staffing Deals
+             * @default 0
+             */
+            staffing_deals: number;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Year */
+            year: number;
+        };
+        /** MyCommissionTimeline */
+        MyCommissionTimeline: {
+            current_month: components["schemas"]["MyCommissionTimelineMonth"];
+            /** Display Name */
+            display_name: string;
+            /** Months */
+            months: components["schemas"]["MyCommissionTimelineMonth"][];
+            progress?: components["schemas"]["MyCommissionProgress"] | null;
+            /** Quarter */
+            quarter: number;
+            /** Quarter Bonus */
+            quarter_bonus: string;
+            /** Quarter Commission */
+            quarter_commission: string;
+            /** Quarter Fixed Pay */
+            quarter_fixed_pay: string;
+            /** Quarter Revenue */
+            quarter_revenue: string;
+            /** Quarter Total */
+            quarter_total: string;
+            /** Rank Label */
+            rank_label?: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Year */
+            year: number;
+        };
+        /**
+         * MyCommissionTimelineMonth
+         * @description Ein Monat im Zeitstrahl. Provision = Anteil an der Quartalsprovision (Stufen laufen mit),
+         *     die drei Monate eines Quartals summieren sich exakt zu ihr.
+         */
+        MyCommissionTimelineMonth: {
+            /** Bonus */
+            bonus: string;
+            /** Commission */
+            commission: string;
+            /** Fixed Pay */
+            fixed_pay: string;
+            /** Is Current */
+            is_current: boolean;
+            /** Is Provisional */
+            is_provisional: boolean;
+            /** Month */
+            month: number;
+            /** Month In Quarter */
+            month_in_quarter: number;
+            /** Quarter */
+            quarter: number;
+            /** Revenue */
+            revenue: string;
+            /** Total */
+            total: string;
+            /** Year */
+            year: number;
+        };
+        /**
+         * MyMailAccountCreate
+         * @description Eigenes IMAP/SMTP-Postfach anlegen (Einstellungen -> Mein Postfach).
+         *     Anders als MailAccountCreate ohne Admin-Felder (kein CV-Out-Standard); das
+         *     Passwort ist auch hier nur schreibend (bei Gmail/Outlook/GMX: App-Passwort).
+         */
+        MyMailAccountCreate: {
+            /**
+             * Address
+             * Format: email
+             */
+            address: string;
+            /**
+             * Daily Send Limit
+             * @default 150
+             */
+            daily_send_limit: number;
+            /** Imap Host */
+            imap_host: string;
+            /**
+             * Imap Port
+             * @default 993
+             */
+            imap_port: number;
+            /**
+             * Imap Use Ssl
+             * @default true
+             */
+            imap_use_ssl: boolean;
+            /** Label */
+            label: string;
+            /** Password */
+            password: string;
+            /**
+             * Send Throttle Seconds
+             * @default 8
+             */
+            send_throttle_seconds: number;
+            /** Smtp Host */
+            smtp_host: string;
+            /**
+             * Smtp Port
+             * @default 587
+             */
+            smtp_port: number;
+            /**
+             * Smtp Use Ssl
+             * @default true
+             */
+            smtp_use_ssl: boolean;
+            /** Username */
+            username: string;
+        };
+        /**
+         * MyMailAccountRead
+         * @description Wie MailAccountRead (ohne Passwort), dazu die Standard-Absender-Info.
+         */
+        MyMailAccountRead: {
+            /** Address */
+            address: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Daily Send Limit */
+            daily_send_limit: number;
+            /** Default For Cv Out */
+            default_for_cv_out: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Imap Host */
+            imap_host: string | null;
+            /** Imap Port */
+            imap_port: number;
+            /** Imap Use Ssl */
+            imap_use_ssl: boolean;
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Is Default Sender
+             * @default false
+             */
+            is_default_sender: boolean;
+            /** Label */
+            label: string;
+            /** Last Synced At */
+            last_synced_at: string | null;
+            oauth_status: components["schemas"]["MailAccountOAuthStatus"] | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            provider: components["schemas"]["MailAccountProvider"];
+            /** Send Throttle Seconds */
+            send_throttle_seconds: number;
+            /** Smtp Host */
+            smtp_host: string | null;
+            /** Smtp Port */
+            smtp_port: number;
+            /** Smtp Use Ssl */
+            smtp_use_ssl: boolean;
+            /**
+             * Sync Enabled
+             * @default true
+             */
+            sync_enabled: boolean;
+            /** Sync Error */
+            sync_error: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Username */
+            username: string | null;
+        };
+        /** MyMailAccountUpdate */
+        MyMailAccountUpdate: {
+            /** Daily Send Limit */
+            daily_send_limit?: number | null;
+            /** Imap Host */
+            imap_host?: string | null;
+            /** Imap Port */
+            imap_port?: number | null;
+            /** Imap Use Ssl */
+            imap_use_ssl?: boolean | null;
+            /** Is Active */
+            is_active?: boolean | null;
+            /** Label */
+            label?: string | null;
+            /** Password */
+            password?: string | null;
+            /** Send Throttle Seconds */
+            send_throttle_seconds?: number | null;
+            /** Smtp Host */
+            smtp_host?: string | null;
+            /** Smtp Port */
+            smtp_port?: number | null;
+            /** Smtp Use Ssl */
+            smtp_use_ssl?: boolean | null;
+            /** Sync Enabled */
+            sync_enabled?: boolean | null;
+            /** Username */
+            username?: string | null;
+        };
+        /** MyViewsRead */
+        MyViewsRead: {
+            /**
+             * Default View
+             * @enum {string}
+             */
+            default_view: "direct" | "staffing" | "management";
+            /** Views */
+            views: ("direct" | "staffing" | "management")[];
         };
         /** NlSearchRequest */
         NlSearchRequest: {
@@ -5842,6 +8632,23 @@ export interface components {
         NoteUpdate: {
             /** Body */
             body: string;
+        };
+        /** OAuthConnection */
+        OAuthConnection: {
+            /** Client Name */
+            client_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Used At */
+            last_used_at?: string | null;
         };
         /** OfferCreate */
         OfferCreate: {
@@ -6088,6 +8895,147 @@ export interface components {
             start_date?: string | null;
             status?: components["schemas"]["PlacementStatus"] | null;
         };
+        /** PresentationCountResult */
+        PresentationCountResult: {
+            /** Presented Submissions */
+            presented_submissions: number;
+            /** Without Archive Record */
+            without_archive_record: number;
+        };
+        /** PresentationFileRead */
+        PresentationFileRead: {
+            /** Content Type */
+            content_type: string;
+            /** Filename */
+            filename: string;
+            /** Index */
+            index: number;
+            /** Sha256 */
+            sha256: string;
+            /** Size */
+            size: number;
+        };
+        /** PresentationRecordDetail */
+        PresentationRecordDetail: {
+            /** Candidate Id */
+            candidate_id?: string | null;
+            /** Candidate Name */
+            candidate_name?: string | null;
+            /** Candidate Number */
+            candidate_number?: string | null;
+            /** Client Id */
+            client_id?: string | null;
+            /** Client Name */
+            client_name?: string | null;
+            /** File Count */
+            file_count: number;
+            /** Files */
+            files: components["schemas"]["PresentationFileRead"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Mail Body Text */
+            mail_body_text: string;
+            /** Mail Message Id */
+            mail_message_id?: string | null;
+            /** Mail Subject */
+            mail_subject: string;
+            /** Profile Text Snapshot */
+            profile_text_snapshot?: string | null;
+            /** Recipient Emails */
+            recipient_emails: string[];
+            /**
+             * Removal Requested
+             * @default false
+             */
+            removal_requested: boolean;
+            /** Retention Set At */
+            retention_set_at?: string | null;
+            /** Retention Set By */
+            retention_set_by?: string | null;
+            /** Retention Until */
+            retention_until?: string | null;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            /** Sent By Email */
+            sent_by_email?: string | null;
+            /** Submission Id */
+            submission_id?: string | null;
+        };
+        /** PresentationRecordListItem */
+        PresentationRecordListItem: {
+            /** Candidate Id */
+            candidate_id?: string | null;
+            /** Candidate Name */
+            candidate_name?: string | null;
+            /** Candidate Number */
+            candidate_number?: string | null;
+            /** Client Id */
+            client_id?: string | null;
+            /** Client Name */
+            client_name?: string | null;
+            /** File Count */
+            file_count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Mail Subject */
+            mail_subject: string;
+            /** Recipient Emails */
+            recipient_emails: string[];
+            /**
+             * Removal Requested
+             * @default false
+             */
+            removal_requested: boolean;
+            /** Retention Until */
+            retention_until?: string | null;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            /** Sent By Email */
+            sent_by_email?: string | null;
+            /** Submission Id */
+            submission_id?: string | null;
+        };
+        /** PresentationRecordPage */
+        PresentationRecordPage: {
+            /** Items */
+            items: components["schemas"]["PresentationRecordListItem"][];
+            /** Total */
+            total: number;
+        };
+        /** PresentationVerifyItem */
+        PresentationVerifyItem: {
+            /** Actual Sha256 */
+            actual_sha256?: string | null;
+            /** Expected Sha256 */
+            expected_sha256: string;
+            /** Filename */
+            filename: string;
+            /** Index */
+            index: number;
+            /** Missing */
+            missing: boolean;
+            /** Ok */
+            ok: boolean;
+        };
+        /** PresentationVerifyResult */
+        PresentationVerifyResult: {
+            /** All Ok */
+            all_ok: boolean;
+            /** Files */
+            files: components["schemas"]["PresentationVerifyItem"][];
+        };
         /** ProfileSuggestion */
         ProfileSuggestion: {
             /**
@@ -6102,6 +9050,52 @@ export interface components {
             is_draft: boolean;
             /** Text */
             text: string;
+        };
+        /** PublicTimesheetApprove */
+        PublicTimesheetApprove: {
+            /** Approver Name */
+            approver_name: string;
+        };
+        /**
+         * PublicTimesheetRead
+         * @description Alles, was der Kunde über den Freigabelink sieht - keine IDs, keine Lohn- oder
+         *     Verrechnungsdaten.
+         */
+        PublicTimesheetRead: {
+            /** Client Name */
+            client_name: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By Name */
+            decided_by_name: string | null;
+            /** Entries */
+            entries: components["schemas"]["StaffingTimesheetEntryRead"][];
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Rejection Reason */
+            rejection_reason: string | null;
+            status: components["schemas"]["StaffingTimesheetStatus"];
+            /** Total Hours */
+            total_hours: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /** PublicTimesheetReject */
+        PublicTimesheetReject: {
+            /** Approver Name */
+            approver_name: string;
+            /** Reason */
+            reason: string;
         };
         /**
          * Rechtsgebiet
@@ -6171,6 +9165,50 @@ export interface components {
             /** Plz Prefix */
             plz_prefix?: string | null;
         };
+        /** RemovalDecision */
+        RemovalDecision: {
+            /** Note */
+            note?: string | null;
+        };
+        /** RemovalRequestCreate */
+        RemovalRequestCreate: {
+            /** Reason */
+            reason: string;
+        };
+        /** RemovalRequestRead */
+        RemovalRequestRead: {
+            /** Candidate Number */
+            candidate_number?: string | null;
+            /** Client Name */
+            client_name?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at?: string | null;
+            /** Decided By */
+            decided_by?: string | null;
+            /** Decision Note */
+            decision_note?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Record Id
+             * Format: uuid
+             */
+            record_id: string;
+            /** Requested By */
+            requested_by: string;
+            /** Status */
+            status: string;
+        };
         /** ResendLoginCodeRequest */
         ResendLoginCodeRequest: {
             /**
@@ -6192,6 +9230,11 @@ export interface components {
              */
             expires_at: string;
         };
+        /** RetentionUpdate */
+        RetentionUpdate: {
+            /** Retention Until */
+            retention_until?: string | null;
+        };
         /**
          * Rolle
          * @description Normalisierte Berufsrollen-Taxonomie fuer Kandidaten (siehe
@@ -6207,6 +9250,14 @@ export interface components {
          * @enum {string}
          */
         Rolle: "steuerfachangestellte" | "steuerfachwirt" | "bilanzbuchhalter" | "steuerberater" | "partner" | "pruefungsassistent" | "pruefungsleiter" | "wirtschaftspruefer" | "rechtsfachangestellte" | "rechtsanwalt" | "sonstige";
+        /** SelectViewUpdate */
+        SelectViewUpdate: {
+            /**
+             * View
+             * @enum {string}
+             */
+            view: "direct" | "staffing" | "management";
+        };
         /** SequenceCreate */
         SequenceCreate: {
             /**
@@ -6547,11 +9598,1304 @@ export interface components {
          * @enum {string}
          */
         SourcingSourceType: "steuerberaterverzeichnis" | "wpk_berufsregister" | "brak_anwaltsverzeichnis" | "kanzlei_team_page";
+        /** StaffingAssignmentCreate */
+        StaffingAssignmentCreate: {
+            /** Activity */
+            activity?: string | null;
+            /** Billing Rate */
+            billing_rate?: number | string | null;
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Contract Id */
+            contract_id?: string | null;
+            /** Hourly Wage */
+            hourly_wage?: number | string | null;
+            /** Location */
+            location?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Planned End Date */
+            planned_end_date?: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+        };
+        /** StaffingAssignmentDetail */
+        StaffingAssignmentDetail: {
+            /** Activation Problems */
+            activation_problems: string[];
+            /**
+             * Activation Warnings
+             * @default []
+             */
+            activation_warnings: string[];
+            /** Activity */
+            activity: string | null;
+            /** Actual End Date */
+            actual_end_date: string | null;
+            /** Billing Rate */
+            billing_rate: string | null;
+            /** Checklist */
+            checklist: components["schemas"]["StaffingChecklistItemRead"][];
+            /** Checklist Done */
+            checklist_done: number;
+            /** Checklist Total */
+            checklist_total: number;
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Contract Id */
+            contract_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            deadline: components["schemas"]["StaffingDeadlineRead"];
+            /** Equal Pay Confirmed By User Id */
+            equal_pay_confirmed_by_user_id?: string | null;
+            /** Equal Pay Confirmed On */
+            equal_pay_confirmed_on?: string | null;
+            /** Hourly Wage */
+            hourly_wage: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Is Overdue
+             * @default false
+             */
+            is_overdue: boolean;
+            /** Location */
+            location: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /** Planned End Date */
+            planned_end_date: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            status: components["schemas"]["StaffingAssignmentStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /** StaffingAssignmentRead */
+        StaffingAssignmentRead: {
+            /** Activity */
+            activity: string | null;
+            /** Actual End Date */
+            actual_end_date: string | null;
+            /** Billing Rate */
+            billing_rate: string | null;
+            /** Checklist Done */
+            checklist_done: number;
+            /** Checklist Total */
+            checklist_total: number;
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Contract Id */
+            contract_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Equal Pay Confirmed By User Id */
+            equal_pay_confirmed_by_user_id?: string | null;
+            /** Equal Pay Confirmed On */
+            equal_pay_confirmed_on?: string | null;
+            /** Hourly Wage */
+            hourly_wage: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Is Overdue
+             * @default false
+             */
+            is_overdue: boolean;
+            /** Location */
+            location: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /** Planned End Date */
+            planned_end_date: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            status: components["schemas"]["StaffingAssignmentStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /**
+         * StaffingAssignmentStatus
+         * @enum {string}
+         */
+        StaffingAssignmentStatus: "planned" | "active" | "ended" | "aborted";
+        /** StaffingAssignmentStatusChange */
+        StaffingAssignmentStatusChange: {
+            /** Actual End Date */
+            actual_end_date?: string | null;
+            status: components["schemas"]["StaffingAssignmentStatus"];
+        };
+        /** StaffingAssignmentUpdate */
+        StaffingAssignmentUpdate: {
+            /** Activity */
+            activity?: string | null;
+            /** Billing Rate */
+            billing_rate?: number | string | null;
+            /** Contract Id */
+            contract_id?: string | null;
+            /** Hourly Wage */
+            hourly_wage?: number | string | null;
+            /** Location */
+            location?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Planned End Date */
+            planned_end_date?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+        };
+        /**
+         * StaffingBenchWorkerRead
+         * @description Leiharbeitnehmer ohne aktiven oder geplanten Einsatz ("Bench").
+         */
+        StaffingBenchWorkerRead: {
+            /** Days Free */
+            days_free: number | null;
+            /** Free Since */
+            free_since: string | null;
+            /** Pay Grade */
+            pay_grade: string | null;
+            /** Work Permit Valid Until */
+            work_permit_valid_until: string | null;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /**
+         * StaffingBillableTimesheetRead
+         * @description Freigegebener, noch nicht abgerechneter Stundenzettel.
+         */
+        StaffingBillableTimesheetRead: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Has Rate */
+            has_rate: boolean;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Timesheet Id
+             * Format: uuid
+             */
+            timesheet_id: string;
+            /** Total Hours */
+            total_hours: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /**
+         * StaffingCandidateSummaryRead
+         * @description Zeile der Spalte "Überlassung" in der Kandidatenliste. Kein Lohn, keine Marge.
+         */
+        StaffingCandidateSummaryRead: {
+            /** Assignment Status */
+            assignment_status?: ("planned" | "active") | null;
+            /**
+             * Bench
+             * @default false
+             */
+            bench: boolean;
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Client Name */
+            client_name?: string | null;
+            /** Days Remaining */
+            days_remaining?: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "none" | "applicant" | "active" | "dormant" | "left";
+            /** Traffic */
+            traffic?: ("green" | "yellow" | "red") | null;
+            /** Worker Id */
+            worker_id?: string | null;
+        };
+        /** StaffingCandidateSummaryRequest */
+        StaffingCandidateSummaryRequest: {
+            /** Candidate Ids */
+            candidate_ids: string[];
+        };
+        /** StaffingChecklistItemRead */
+        StaffingChecklistItemRead: {
+            /** Document Id */
+            document_id: string | null;
+            /** Done */
+            done: boolean;
+            /** Done On */
+            done_on: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            item_key: components["schemas"]["StaffingChecklistKey"];
+        };
+        /** StaffingChecklistItemUpdate */
+        StaffingChecklistItemUpdate: {
+            /** Document Id */
+            document_id?: string | null;
+            /** Done */
+            done: boolean;
+            /** Done On */
+            done_on?: string | null;
+        };
+        /**
+         * StaffingChecklistKey
+         * @description Pflichtpunkte je Einsatz (Reihenfolge = Anzeigereihenfolge).
+         * @enum {string}
+         */
+        StaffingChecklistKey: "employment_contract" | "info_leaflet" | "supply_contract" | "specification" | "safety_briefing" | "ppe_protocol";
+        /** StaffingContractCreate */
+        StaffingContractCreate: {
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Contract Number */
+            contract_number?: string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** Industry Sector */
+            industry_sector?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** @default draft */
+            status: components["schemas"]["StaffingContractStatus"];
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** StaffingContractRead */
+        StaffingContractRead: {
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Contract Number */
+            contract_number: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Document Id */
+            document_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Industry Sector */
+            industry_sector: string | null;
+            /** Notes */
+            notes: string | null;
+            status: components["schemas"]["StaffingContractStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Valid From */
+            valid_from: string | null;
+            /** Valid To */
+            valid_to: string | null;
+        };
+        /**
+         * StaffingContractStatus
+         * @enum {string}
+         */
+        StaffingContractStatus: "draft" | "active" | "expired" | "terminated";
+        /** StaffingContractUpdate */
+        StaffingContractUpdate: {
+            /** Contract Number */
+            contract_number?: string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** Industry Sector */
+            industry_sector?: string | null;
+            /** Notes */
+            notes?: string | null;
+            status?: components["schemas"]["StaffingContractStatus"] | null;
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /**
+         * StaffingDeadlineRead
+         * @description Fristen eines Paares (Leiharbeitnehmer, Kunde), siehe services/staffing_deadlines.py.
+         */
+        StaffingDeadlineRead: {
+            /** Chain Start */
+            chain_start: string | null;
+            /** Counted Days */
+            counted_days: number;
+            /** Days Remaining */
+            days_remaining: number | null;
+            /** Elapsed Days */
+            elapsed_days: number;
+            /** Elapsed Months */
+            elapsed_months: number;
+            /** Equal Pay Confirmed On */
+            equal_pay_confirmed_on?: string | null;
+            /** Equal Pay From */
+            equal_pay_from: string | null;
+            /**
+             * Equal Pay Open
+             * @default false
+             */
+            equal_pay_open: boolean;
+            /** Equal Pay Reached */
+            equal_pay_reached: boolean;
+            /** Exceeded */
+            exceeded: boolean;
+            /** Has Chain */
+            has_chain: boolean;
+            /** Max End Date */
+            max_end_date: string | null;
+            /**
+             * Prior Days
+             * @default 0
+             */
+            prior_days: number;
+            /**
+             * Provisional
+             * @default false
+             */
+            provisional: boolean;
+            /**
+             * Provisional Reasons
+             * @default []
+             */
+            provisional_reasons: string[];
+            traffic: components["schemas"]["Traffic"];
+        };
+        /** StaffingDispositionRead */
+        StaffingDispositionRead: {
+            /** Active Assignments */
+            active_assignments: number;
+            /** Bench */
+            bench: components["schemas"]["StaffingBenchWorkerRead"][];
+            /** Bench Count */
+            bench_count: number;
+            inbox: components["schemas"]["StaffingTimesheetInboxRead"];
+            license: components["schemas"]["StaffingLicenseStatus"];
+            /** Open Checklist Assignments */
+            open_checklist_assignments: number;
+            /** Planned Assignments */
+            planned_assignments: number;
+            /** Timesheet Backlog */
+            timesheet_backlog: number;
+        };
+        /** StaffingEqualPayConfirm */
+        StaffingEqualPayConfirm: {
+            /** Confirmed On */
+            confirmed_on?: string | null;
+        };
+        /** StaffingInvoiceCreate */
+        StaffingInvoiceCreate: {
+            /** Notes */
+            notes?: string | null;
+            /** Timesheet Ids */
+            timesheet_ids: string[];
+        };
+        /** StaffingInvoiceLineRead */
+        StaffingInvoiceLineRead: {
+            /** Amount Net */
+            amount_net: string | null;
+            /** Description */
+            description: string;
+            /** Hours */
+            hours: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Rate */
+            rate: string | null;
+            /** Timesheet Id */
+            timesheet_id: string | null;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /** StaffingInvoiceRead */
+        StaffingInvoiceRead: {
+            /** Amount Gross */
+            amount_gross: string | null;
+            /** Amount Net */
+            amount_net: string | null;
+            /** Approval Pending */
+            approval_pending: boolean;
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Invoice Date */
+            invoice_date: string | null;
+            invoice_status: components["schemas"]["InvoiceStatus"];
+            /** Lines */
+            lines: components["schemas"]["StaffingInvoiceLineRead"][];
+            /** Notes */
+            notes: string | null;
+            /** Paid At */
+            paid_at: string | null;
+            /** Payment Due Date */
+            payment_due_date: string | null;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Vat Rate */
+            vat_rate: string;
+        };
+        /** StaffingInvoiceStatusResult */
+        StaffingInvoiceStatusResult: {
+            approval_request?: components["schemas"]["ApprovalRequestRead"] | null;
+            invoice: components["schemas"]["StaffingInvoiceRead"];
+        };
+        /** StaffingLicenseCreate */
+        StaffingLicenseCreate: {
+            /** Authority */
+            authority: string;
+            /** Document Id */
+            document_id?: string | null;
+            /** File Number */
+            file_number?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Reminder Days
+             * @default 90
+             */
+            reminder_days: number;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** StaffingLicenseRead */
+        StaffingLicenseRead: {
+            /** Authority */
+            authority: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Document Id */
+            document_id: string | null;
+            /** File Number */
+            file_number: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Notes */
+            notes: string | null;
+            /** Reminder Days */
+            reminder_days: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to: string | null;
+        };
+        /**
+         * StaffingLicenseStatus
+         * @description Zustand der AÜG-Erlaubnis heute.
+         */
+        StaffingLicenseStatus: {
+            /** Days Remaining */
+            days_remaining: number | null;
+            traffic: components["schemas"]["Traffic"];
+            /** Valid */
+            valid: boolean;
+            /** Valid To */
+            valid_to: string | null;
+        };
+        /** StaffingLicenseUpdate */
+        StaffingLicenseUpdate: {
+            /** Authority */
+            authority?: string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** File Number */
+            file_number?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Reminder Days */
+            reminder_days?: number | null;
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /**
+         * StaffingOfferInput
+         * @description "Als Einsatz anbieten" (Direct -> Überlassung): legt (falls nötig) das Leiharbeitnehmer-
+         *     Profil als "In Auswahl" an und, mit Kunde und Beginn, einen GEPLANTEN Einsatz.
+         */
+        StaffingOfferInput: {
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Client Company Id */
+            client_company_id?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Planned End Date */
+            planned_end_date?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+        };
+        /** StaffingOfferResult */
+        StaffingOfferResult: {
+            /** Assignment Id */
+            assignment_id: string | null;
+            /** Worker Created */
+            worker_created: boolean;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+        };
+        /** StaffingOverviewRead */
+        StaffingOverviewRead: {
+            /** Active Assignments */
+            active_assignments: number;
+            /** Deadlines */
+            deadlines: components["schemas"]["StaffingPairDeadlineRead"][];
+            license: components["schemas"]["StaffingLicenseStatus"];
+            /** Open Checklist Assignments */
+            open_checklist_assignments: number;
+            /**
+             * Overdue Assignments
+             * @default 0
+             */
+            overdue_assignments: number;
+            /** Planned Assignments */
+            planned_assignments: number;
+        };
+        /** StaffingPairDeadlineRead */
+        StaffingPairDeadlineRead: {
+            /** Assignment Id */
+            assignment_id?: string | null;
+            /** Chain Start */
+            chain_start: string | null;
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Counted Days */
+            counted_days: number;
+            /** Days Remaining */
+            days_remaining: number | null;
+            /** Elapsed Days */
+            elapsed_days: number;
+            /** Elapsed Months */
+            elapsed_months: number;
+            /** Equal Pay Confirmed On */
+            equal_pay_confirmed_on?: string | null;
+            /** Equal Pay From */
+            equal_pay_from: string | null;
+            /**
+             * Equal Pay Open
+             * @default false
+             */
+            equal_pay_open: boolean;
+            /** Equal Pay Reached */
+            equal_pay_reached: boolean;
+            /** Exceeded */
+            exceeded: boolean;
+            /** Has Chain */
+            has_chain: boolean;
+            /** Max End Date */
+            max_end_date: string | null;
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /**
+             * Prior Days
+             * @default 0
+             */
+            prior_days: number;
+            /**
+             * Provisional
+             * @default false
+             */
+            provisional: boolean;
+            /**
+             * Provisional Reasons
+             * @default []
+             */
+            provisional_reasons: string[];
+            traffic: components["schemas"]["Traffic"];
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /**
+         * StaffingPriorPeriodConfirmationCreate
+         * @description "Keine Vorzeiten" bestätigen; ohne Datum gilt heute.
+         */
+        StaffingPriorPeriodConfirmationCreate: {
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Confirmed On */
+            confirmed_on?: string | null;
+            /** Note */
+            note?: string | null;
+        };
+        /** StaffingPriorPeriodConfirmationRead */
+        StaffingPriorPeriodConfirmationRead: {
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Confirmed By Name */
+            confirmed_by_name: string | null;
+            /** Confirmed By User Id */
+            confirmed_by_user_id: string | null;
+            /**
+             * Confirmed On
+             * Format: date
+             */
+            confirmed_on: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+        };
+        /** StaffingPriorPeriodCreate */
+        StaffingPriorPeriodCreate: {
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Note */
+            note?: string | null;
+            /** @default other_provider */
+            source: components["schemas"]["StaffingPriorPeriodSource"];
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+        };
+        /** StaffingPriorPeriodRead */
+        StaffingPriorPeriodRead: {
+            /**
+             * Client Company Id
+             * Format: uuid
+             */
+            client_company_id: string;
+            /** Client Name */
+            client_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id: string | null;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            source: components["schemas"]["StaffingPriorPeriodSource"];
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+        };
+        /**
+         * StaffingPriorPeriodSource
+         * @enum {string}
+         */
+        StaffingPriorPeriodSource: "other_provider" | "before_crm" | "other";
+        /** StaffingPriorPeriodUpdate */
+        StaffingPriorPeriodUpdate: {
+            /** Client Company Id */
+            client_company_id?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Note */
+            note?: string | null;
+            source?: components["schemas"]["StaffingPriorPeriodSource"] | null;
+            /** Start Date */
+            start_date?: string | null;
+        };
+        /** StaffingSettingsRead */
+        StaffingSettingsRead: {
+            /** Equal Pay Months */
+            equal_pay_months: number;
+            /** Max Months */
+            max_months: number;
+            /** Notice */
+            notice: string;
+            /** Red Days */
+            red_days: number;
+            /** Reset Gap Months */
+            reset_gap_months: number;
+            /** Yellow Days */
+            yellow_days: number;
+        };
+        /** StaffingSettingsUpdate */
+        StaffingSettingsUpdate: {
+            /** Equal Pay Months */
+            equal_pay_months: number;
+            /** Max Months */
+            max_months: number;
+            /** Red Days */
+            red_days: number;
+            /** Reset Gap Months */
+            reset_gap_months: number;
+            /** Yellow Days */
+            yellow_days: number;
+        };
+        /**
+         * StaffingTakeoverInput
+         * @description Übernahme durch den Kunden: der Leiharbeitnehmer wird beim Kunden fest angestellt.
+         */
+        StaffingTakeoverInput: {
+            /** Annual Salary */
+            annual_salary?: number | string | null;
+            /** Fee Percentage */
+            fee_percentage?: number | string | null;
+            /** Takeover Date */
+            takeover_date?: string | null;
+        };
+        /**
+         * StaffingTakeoverPreview
+         * @description Vorschau für die Maske: wie sich die Staffel auf diese Übernahme auswirkt.
+         */
+        StaffingTakeoverPreview: {
+            /** Base Fee Percentage */
+            base_fee_percentage: string | null;
+            /** Effective Fee Percentage */
+            effective_fee_percentage: string | null;
+            /** Months Worked */
+            months_worked: number;
+            /** Tier Percent */
+            tier_percent: string;
+        };
+        /** StaffingTakeoverResult */
+        StaffingTakeoverResult: {
+            /** Applied Fee Percentage */
+            applied_fee_percentage?: string | null;
+            assignment: components["schemas"]["StaffingAssignmentDetail"];
+            /**
+             * Months Worked
+             * @default 0
+             */
+            months_worked: number;
+            /**
+             * Submission Id
+             * Format: uuid
+             */
+            submission_id: string;
+            /** Tier Percent */
+            tier_percent?: string | null;
+        };
+        /** StaffingTaskRead */
+        StaffingTaskRead: {
+            /** Assignment Id */
+            assignment_id?: string | null;
+            /** Detail */
+            detail: string;
+            /** Due At */
+            due_at?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "deadline_max" | "equal_pay" | "timesheet_missing" | "timesheet_overdue" | "timesheet_rejected" | "checklist_open" | "assignment_overdue" | "bench" | "license";
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "red" | "yellow" | "info";
+            /** Title */
+            title: string;
+            /** Worker Id */
+            worker_id?: string | null;
+        };
+        /**
+         * StaffingTasksRead
+         * @description To-dos und Hinweise der Ansicht Überlassung. Keine Lohn- oder Margenangaben.
+         */
+        StaffingTasksRead: {
+            /** Alerts */
+            alerts: string[];
+            /** Bench After Days */
+            bench_after_days: number;
+            /** Equal Pay Warn Days */
+            equal_pay_warn_days: number;
+            /** Tasks */
+            tasks: components["schemas"]["StaffingTaskRead"][];
+        };
+        /** StaffingTimesheetCreate */
+        StaffingTimesheetCreate: {
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+        };
+        /**
+         * StaffingTimesheetEntriesUpdate
+         * @description Ersetzt ALLE Einträge des Stundenzettels (idempotent). Leere Liste = alles löschen.
+         */
+        StaffingTimesheetEntriesUpdate: {
+            /** Entries */
+            entries: components["schemas"]["StaffingTimesheetEntryInput"][];
+        };
+        /** StaffingTimesheetEntryInput */
+        StaffingTimesheetEntryInput: {
+            /**
+             * Break Minutes
+             * @default 0
+             */
+            break_minutes: number;
+            /** Hours */
+            hours: number | string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+        };
+        /** StaffingTimesheetEntryRead */
+        StaffingTimesheetEntryRead: {
+            /** Break Minutes */
+            break_minutes: number;
+            /** Hours */
+            hours: string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+        };
+        /**
+         * StaffingTimesheetInboxRead
+         * @description Stundenzettel nach Stand (nur Einsätze im Sichtbereich des Nutzers).
+         */
+        StaffingTimesheetInboxRead: {
+            /** Approved Unbilled */
+            approved_unbilled: number;
+            /** Open */
+            open: number;
+            /** Open Overdue */
+            open_overdue: number;
+            /** Rejected */
+            rejected: number;
+            /** Submitted */
+            submitted: number;
+        };
+        /** StaffingTimesheetRead */
+        StaffingTimesheetRead: {
+            /** Approval Link Expires At */
+            approval_link_expires_at: string | null;
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /** Client Name */
+            client_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By Name */
+            decided_by_name: string | null;
+            /** Entries */
+            entries: components["schemas"]["StaffingTimesheetEntryRead"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Rejection Reason */
+            rejection_reason: string | null;
+            status: components["schemas"]["StaffingTimesheetStatus"];
+            /** Submitted At */
+            submitted_at: string | null;
+            /** Total Hours */
+            total_hours: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Worker Name */
+            worker_name: string;
+        };
+        /**
+         * StaffingTimesheetStatus
+         * @enum {string}
+         */
+        StaffingTimesheetStatus: "open" | "submitted" | "approved" | "rejected";
+        /** StaffingTimesheetSubmitResult */
+        StaffingTimesheetSubmitResult: {
+            /** Approval Path */
+            approval_path: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            timesheet: components["schemas"]["StaffingTimesheetRead"];
+        };
+        /** StaffingWorkerCreate */
+        StaffingWorkerCreate: {
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Entry Date */
+            entry_date?: string | null;
+            /** Exit Date */
+            exit_date?: string | null;
+            /** Hourly Wage */
+            hourly_wage?: number | string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Pay Grade */
+            pay_grade?: string | null;
+            /** @default applicant */
+            status: components["schemas"]["StaffingWorkerStatus"];
+            /** Weekly Hours */
+            weekly_hours?: number | string | null;
+            /** Work Permit Valid Until */
+            work_permit_valid_until?: string | null;
+        };
+        /** StaffingWorkerRead */
+        StaffingWorkerRead: {
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Candidate Name */
+            candidate_name: string;
+            /** Candidate Number */
+            candidate_number?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Entry Date */
+            entry_date: string | null;
+            /** Exit Date */
+            exit_date: string | null;
+            /** Hourly Wage */
+            hourly_wage: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Notes */
+            notes: string | null;
+            /** Pay Grade */
+            pay_grade: string | null;
+            status: components["schemas"]["StaffingWorkerStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Weekly Hours */
+            weekly_hours: string | null;
+            /** Work Permit Valid Until */
+            work_permit_valid_until: string | null;
+        };
+        /**
+         * StaffingWorkerStatus
+         * @enum {string}
+         */
+        StaffingWorkerStatus: "applicant" | "active" | "dormant" | "left";
+        /**
+         * StaffingWorkerTimesheetSummary
+         * @description Stundenzettel einer Person nach Status (nur Einsätze im Besitzbereich des Nutzers).
+         */
+        StaffingWorkerTimesheetSummary: {
+            /** Approved */
+            approved: number;
+            /** Approved Unbilled */
+            approved_unbilled: number;
+            /** Open */
+            open: number;
+            /** Rejected */
+            rejected: number;
+            /** Submitted */
+            submitted: number;
+            /**
+             * Worker Id
+             * Format: uuid
+             */
+            worker_id: string;
+        };
+        /** StaffingWorkerUpdate */
+        StaffingWorkerUpdate: {
+            /** Entry Date */
+            entry_date?: string | null;
+            /** Exit Date */
+            exit_date?: string | null;
+            /** Hourly Wage */
+            hourly_wage?: number | string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Pay Grade */
+            pay_grade?: string | null;
+            status?: components["schemas"]["StaffingWorkerStatus"] | null;
+            /** Weekly Hours */
+            weekly_hours?: number | string | null;
+            /** Work Permit Valid Until */
+            work_permit_valid_until?: string | null;
+        };
         /**
          * SubmissionCancellationReason
          * @enum {string}
          */
         SubmissionCancellationReason: "candidate_rejected" | "client_rejected" | "candidate_ghosting";
+        /**
+         * SubmissionOwnerAssign
+         * @description Admin weist einem Prozess ohne Verantwortlichen einen Nutzer zu.
+         */
+        SubmissionOwnerAssign: {
+            /**
+             * Owner User Id
+             * Format: uuid
+             */
+            owner_user_id: string;
+        };
         /** SubmissionShareCreate */
         SubmissionShareCreate: {
             /**
@@ -6603,6 +10947,41 @@ export interface components {
          * @enum {string}
          */
         SubmissionStatus: "qualification_call" | "cv_in" | "cv_out" | "interview" | "offer" | "placement" | "cancelled";
+        /** TakeoverFeeTierInput */
+        TakeoverFeeTierInput: {
+            /** Percent Of Fee */
+            percent_of_fee: number | string;
+            /** Up To Months */
+            up_to_months?: number | null;
+        };
+        /** TakeoverFeeTierRead */
+        TakeoverFeeTierRead: {
+            /** Percent Of Fee */
+            percent_of_fee: string;
+            /** Up To Months */
+            up_to_months: number | null;
+        };
+        /** TakeoverFeeTiersRead */
+        TakeoverFeeTiersRead: {
+            /** Notice */
+            notice: string;
+            /** Tiers */
+            tiers: components["schemas"]["TakeoverFeeTierRead"][];
+        };
+        /** TakeoverFeeTiersUpdate */
+        TakeoverFeeTiersUpdate: {
+            /** Tiers */
+            tiers: components["schemas"]["TakeoverFeeTierInput"][];
+        };
+        /** TakeoverRateRead */
+        TakeoverRateRead: {
+            /** Pairs */
+            pairs: number;
+            /** Rate */
+            rate: string | null;
+            /** Taken Over */
+            taken_over: number;
+        };
         /** TaskCreate */
         TaskCreate: {
             /** Candidate Id */
@@ -6731,6 +11110,47 @@ export interface components {
             user_id: string;
         };
         /**
+         * Traffic
+         * @enum {string}
+         */
+        Traffic: "green" | "yellow" | "red";
+        /** UnownedSubmissionList */
+        UnownedSubmissionList: {
+            /** Items */
+            items: components["schemas"]["UnownedSubmissionRead"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * UnownedSubmissionRead
+         * @description Zeile der Admin-Liste "Prozesse ohne Verantwortlichen" (mit Namen, damit die
+         *     Oberflaeche nicht pro Zeile nachladen muss).
+         */
+        UnownedSubmissionRead: {
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Candidate Name */
+            candidate_name: string;
+            /** Client Company Id */
+            client_company_id: string | null;
+            /** Client Name */
+            client_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            status: components["schemas"]["SubmissionStatus"];
+        };
+        /**
          * UserAdminRead
          * @description Fuer die Admin-Nutzerliste (GET /api/v1/users) - bewusst OHNE
          *     calendar_feed_token (Geheimnis, siehe models/user.py), anders als
@@ -6755,6 +11175,11 @@ export interface components {
             manager_id?: string | null;
             /** Manager Name */
             manager_name?: string | null;
+            /**
+             * Ms Bound
+             * @default false
+             */
+            ms_bound: boolean;
             /**
              * Role
              * @default member
@@ -6815,6 +11240,36 @@ export interface components {
              */
             role: string;
         };
+        /** UserViewsRead */
+        UserViewsRead: {
+            /**
+             * Default View
+             * @enum {string}
+             */
+            default_view: "direct" | "staffing" | "management";
+            /** Display Name */
+            display_name: string | null;
+            /** Email */
+            email: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Role */
+            role: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Views */
+            views: ("direct" | "staffing" | "management")[];
+        };
+        /** UserViewsUpdate */
+        UserViewsUpdate: {
+            /** Default View */
+            default_view?: ("direct" | "staffing" | "management") | null;
+            /** Views */
+            views: ("direct" | "staffing" | "management")[];
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -6837,6 +11292,16 @@ export interface components {
             challenge_id: string;
             /** Code */
             code: string;
+        };
+        /** ViewDefaultsRead */
+        ViewDefaultsRead: {
+            /** Views */
+            views: ("direct" | "staffing" | "management")[];
+        };
+        /** ViewDefaultsUpdate */
+        ViewDefaultsUpdate: {
+            /** Views */
+            views: ("direct" | "staffing" | "management")[];
         };
         /**
          * WarrantyStatus
@@ -7190,6 +11655,72 @@ export interface operations {
             };
         };
     };
+    get_engagement_settings_api_v1_admin_engagement_settings_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EngagementSettingsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_engagement_settings_api_v1_admin_engagement_settings_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EngagementSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EngagementSettingsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_kpi_point_rules_api_v1_admin_kpi_point_rules_get: {
         parameters: {
             query?: never;
@@ -7243,6 +11774,660 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KpiPointRuleRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_records_api_v1_admin_presentation_archive_get: {
+        parameters: {
+            query?: {
+                client_id?: string | null;
+                candidate_number?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationRecordPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    count_without_record_api_v1_admin_presentation_archive_count_without_record_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationCountResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_removal_requests_api_v1_admin_presentation_archive_removal_requests_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalRequestRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_removal_api_v1_admin_presentation_archive_removal_requests__request_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemovalDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalRequestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_removal_api_v1_admin_presentation_archive_removal_requests__request_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemovalDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalRequestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_record_api_v1_admin_presentation_archive__record_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationRecordDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_file_api_v1_admin_presentation_archive__record_id__files__file_index__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                record_id: string;
+                file_index: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_removal_api_v1_admin_presentation_archive__record_id__removal_requests_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemovalRequestCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovalRequestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_retention_api_v1_admin_presentation_archive__record_id__retention_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationRecordDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_record_api_v1_admin_presentation_archive__record_id__verify_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationVerifyResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_user_views_api_v1_admin_users__user_id__views_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserViewsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_user_views_api_v1_admin_users__user_id__views_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserViewsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserViewsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_view_access_api_v1_admin_view_access_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserViewsRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_view_defaults_api_v1_admin_view_access_defaults_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ViewDefaultsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_view_defaults_api_v1_admin_view_access_defaults_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ViewDefaultsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ViewDefaultsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_proposals_api_v1_ai_proposals_get: {
+        parameters: {
+            query?: {
+                status?: ("pending" | "approved" | "rejected") | null;
+                limit?: number;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProposalRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    proposal_summary_api_v1_ai_proposals_summary_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProposalSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_proposal_api_v1_ai_proposals__proposal_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiProposalApprove"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProposalRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_proposal_api_v1_ai_proposals__proposal_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiProposalReject"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProposalRead"];
                 };
             };
             /** @description Validation Error */
@@ -7423,6 +12608,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    demo_login_api_v1_auth_demo_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoLoginResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    demo_login_status_api_v1_auth_demo_login_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoLoginStatus"];
                 };
             };
         };
@@ -7861,6 +13099,8 @@ export interface operations {
                 created_to?: string | null;
                 rollen_unbestaetigt?: boolean | null;
                 custom_field?: string | null;
+                engagement?: ("free_direct" | "free_staffing" | "engaged") | null;
+                staffing?: ("workers" | "bench" | "critical" | "applicants" | "active") | null;
                 sort_by?: ("candidate_number" | "name" | "job_title" | "city" | "salary_expectation" | "status") | null;
                 sort_dir?: "asc" | "desc";
                 offset?: number;
@@ -8440,6 +13680,76 @@ export interface operations {
             };
         };
     };
+    get_candidate_engagement_api_v1_candidates__candidate_id__engagement_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateEngagementRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_engagement_prefs_api_v1_candidates__candidate_id__engagement_prefs_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EngagementPrefsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateEngagementRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_candidate_history_api_v1_candidates__candidate_id__history_get: {
         parameters: {
             query?: never;
@@ -8966,6 +14276,39 @@ export interface operations {
             };
         };
     };
+    get_client_business_api_v1_clients__client_id__business_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientBusinessRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_group_locations_api_v1_clients__client_id__group_locations_get: {
         parameters: {
             query?: never;
@@ -9020,6 +14363,174 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CockpitRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_config_api_v1_commission_config_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_config_api_v1_commission_config_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommissionConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_api_v1_commission_report_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+                quarter?: number | null;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionReportRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_user_ranks_api_v1_commission_users_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionUserRankRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_user_rank_api_v1_commission_users__user_id__rank_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommissionUserRankUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionUserRankRead"];
                 };
             };
             /** @description Validation Error */
@@ -9638,6 +15149,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmailTemplateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    engagement_summary_api_v1_engagement_summary_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EngagementSummaryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateEngagementRead"][];
                 };
             };
             /** @description Validation Error */
@@ -10518,11 +16064,45 @@ export interface operations {
             };
         };
     };
+    get_management_overview_api_v1_management_overview_get: {
+        parameters: {
+            query?: {
+                period?: "week" | "month" | "quarter";
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagementOverviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     mcp_endpoint_api_v1_mcp_post: {
         parameters: {
             query?: never;
             header?: {
                 "X-API-Key"?: string | null;
+                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -10540,6 +16120,314 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_mail_accounts_api_v1_me_mail_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyMailAccountRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_my_mail_account_api_v1_me_mail_accounts_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MyMailAccountCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyMailAccountRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_connection_before_saving_api_v1_me_mail_accounts_test_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailConnectionTestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailConnectionTestResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_my_mail_account_api_v1_me_mail_accounts__account_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_my_mail_account_api_v1_me_mail_accounts__account_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MyMailAccountUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyMailAccountRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_default_sender_api_v1_me_mail_accounts__account_id__default_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyMailAccountRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_mail_messages_api_v1_me_mail_accounts__account_id__messages_get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MailMatchStatus"][] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailMessageRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_my_mail_account_api_v1_me_mail_accounts__account_id__sync_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailSyncResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_my_mail_account_api_v1_me_mail_accounts__account_id__test_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailConnectionTestResult"];
                 };
             };
             /** @description Validation Error */
@@ -10601,6 +16489,171 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    select_my_view_api_v1_me_view_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SelectViewUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyViewsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_views_api_v1_me_views_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyViewsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_commission_api_v1_my_commission_get: {
+        parameters: {
+            query?: {
+                user_id?: string | null;
+                year?: number | null;
+                quarter?: number | null;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyCommissionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_people_api_v1_my_commission_people_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyCommissionPerson"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_timeline_api_v1_my_commission_timeline_get: {
+        parameters: {
+            query?: {
+                user_id?: string | null;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyCommissionTimeline"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -10786,6 +16839,268 @@ export interface operations {
             };
         };
     };
+    authorization_server_metadata_api_v1_oauth__well_known_oauth_authorization_server_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    openid_configuration_api_v1_oauth__well_known_openid_configuration_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_connections_api_v1_oauth_connections_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthConnection"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_connection_api_v1_oauth_connections__token_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                token_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_consent_api_v1_oauth_consent_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    consent_info_api_v1_oauth_consent__request_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    protected_resource_metadata_api_v1_oauth_protected_resource_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    register_client_api_v1_oauth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": unknown;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    token_api_v1_oauth_token_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["Body_token_api_v1_oauth_token_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_all_offers_api_v1_offers_get: {
         parameters: {
             query?: never;
@@ -10936,6 +17251,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FeeRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    view_timesheet_api_v1_public_timesheets__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicTimesheetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_timesheet_api_v1_public_timesheets__token__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicTimesheetApprove"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicTimesheetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_timesheet_api_v1_public_timesheets__token__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicTimesheetReject"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicTimesheetRead"];
                 };
             };
             /** @description Validation Error */
@@ -11544,6 +17960,1763 @@ export interface operations {
             };
         };
     };
+    list_assignments_api_v1_staffing_assignments_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["StaffingAssignmentStatus"] | null;
+                worker_id?: string | null;
+                client_company_id?: string | null;
+                overdue?: boolean;
+                offset?: number;
+                limit?: number;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_assignment_api_v1_staffing_assignments_post: {
+        parameters: {
+            query?: {
+                confirm_engagement?: boolean;
+                confirm_overlap?: boolean;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingAssignmentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_assignment_api_v1_staffing_assignments__assignment_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_assignment_api_v1_staffing_assignments__assignment_id__patch: {
+        parameters: {
+            query?: {
+                confirm_overlap?: boolean;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingAssignmentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_checklist_item_api_v1_staffing_assignments__assignment_id__checklist__item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingChecklistItemUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_equal_pay_api_v1_staffing_assignments__assignment_id__equal_pay_confirmation_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StaffingEqualPayConfirm"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unconfirm_equal_pay_api_v1_staffing_assignments__assignment_id__equal_pay_confirmation_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_assignment_status_api_v1_staffing_assignments__assignment_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingAssignmentStatusChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingAssignmentDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    take_over_assignment_api_v1_staffing_assignments__assignment_id__takeover_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingTakeoverInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTakeoverResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_takeover_api_v1_staffing_assignments__assignment_id__takeover_preview_get: {
+        parameters: {
+            query?: {
+                takeover_date?: string | null;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTakeoverPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_timesheets_api_v1_staffing_assignments__assignment_id__timesheets_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTimesheetRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_timesheet_api_v1_staffing_assignments__assignment_id__timesheets_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingTimesheetCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTimesheetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_billable_timesheets_api_v1_staffing_billable_timesheets_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingBillableTimesheetRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    staffing_candidate_summary_api_v1_staffing_candidate_summary_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingCandidateSummaryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingCandidateSummaryRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_contracts_api_v1_staffing_contracts_get: {
+        parameters: {
+            query?: {
+                client_company_id?: string | null;
+                offset?: number;
+                limit?: number;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingContractRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_contract_api_v1_staffing_contracts_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingContractCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingContractRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_contract_api_v1_staffing_contracts__contract_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingContractRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_contract_api_v1_staffing_contracts__contract_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingContractUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingContractRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_deadlines_api_v1_staffing_deadlines_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingPairDeadlineRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_disposition_api_v1_staffing_disposition_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingDispositionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_hours_csv_api_v1_staffing_export_hours_csv_get: {
+        parameters: {
+            query: {
+                period_start: string;
+                period_end: string;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_invoices_api_v1_staffing_invoices_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingInvoiceRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_invoice_draft_api_v1_staffing_invoices_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingInvoiceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingInvoiceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_invoice_api_v1_staffing_invoices__invoice_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingInvoiceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_invoice_status_api_v1_staffing_invoices__invoice_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceStatusChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingInvoiceStatusResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_licenses_api_v1_staffing_licenses_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingLicenseRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_license_api_v1_staffing_licenses_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingLicenseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingLicenseRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_license_api_v1_staffing_licenses__license_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                license_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingLicenseUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingLicenseRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    offer_candidate_as_assignment_api_v1_staffing_offer_from_candidate_post: {
+        parameters: {
+            query?: {
+                confirm_engagement?: boolean;
+                confirm_overlap?: boolean;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingOfferInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingOfferResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_overview_api_v1_staffing_overview_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingOverviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_prior_period_api_v1_staffing_prior_periods__prior_period_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                prior_period_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_prior_period_api_v1_staffing_prior_periods__prior_period_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                prior_period_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingPriorPeriodUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingPriorPeriodRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings_api_v1_staffing_settings_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingSettingsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_settings_api_v1_staffing_settings_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingSettingsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_takeover_fee_tiers_api_v1_staffing_takeover_fee_tiers_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeoverFeeTiersRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_takeover_fee_tiers_api_v1_staffing_takeover_fee_tiers_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TakeoverFeeTiersUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeoverFeeTiersRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_staffing_tasks_api_v1_staffing_tasks_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTasksRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_timesheet_api_v1_staffing_timesheets__timesheet_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                timesheet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTimesheetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_timesheet_entries_api_v1_staffing_timesheets__timesheet_id__entries_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                timesheet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingTimesheetEntriesUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTimesheetRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_timesheet_api_v1_staffing_timesheets__timesheet_id__submit_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                timesheet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingTimesheetSubmitResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_workers_api_v1_staffing_workers_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["StaffingWorkerStatus"] | null;
+                offset?: number;
+                limit?: number;
+            };
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingWorkerRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_worker_api_v1_staffing_workers_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingWorkerCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingWorkerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_worker_by_candidate_api_v1_staffing_workers_by_candidate__candidate_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingWorkerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_worker_api_v1_staffing_workers__worker_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingWorkerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_worker_api_v1_staffing_workers__worker_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingWorkerUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingWorkerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_prior_confirmations_api_v1_staffing_workers__worker_id__prior_period_confirmations_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingPriorPeriodConfirmationRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_no_prior_periods_api_v1_staffing_workers__worker_id__prior_period_confirmations_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingPriorPeriodConfirmationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingPriorPeriodConfirmationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_no_prior_periods_api_v1_staffing_workers__worker_id__prior_period_confirmations__client_company_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+                client_company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_prior_periods_api_v1_staffing_workers__worker_id__prior_periods_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingPriorPeriodRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_prior_period_api_v1_staffing_workers__worker_id__prior_periods_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffingPriorPeriodCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingPriorPeriodRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_worker_timesheet_summary_api_v1_staffing_workers__worker_id__timesheet_summary_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffingWorkerTimesheetSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_submissions_api_v1_submissions_get: {
         parameters: {
             query?: {
@@ -11587,7 +19760,9 @@ export interface operations {
     };
     create_submission_api_v1_submissions_post: {
         parameters: {
-            query?: never;
+            query?: {
+                confirm_engagement?: boolean;
+            };
             header?: {
                 "X-API-Key"?: string | null;
             };
@@ -11638,6 +19813,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CandidateSubmissionRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_submissions_without_owner_api_v1_submissions_without_owner_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnownedSubmissionList"];
                 };
             };
             /** @description Validation Error */
@@ -11764,6 +19970,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateSubmissionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_submission_owner_api_v1_submissions__submission_id__assign_owner_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                submission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmissionOwnerAssign"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -12943,6 +21186,39 @@ export interface operations {
                 "application/json": components["schemas"]["UserAdminUpdate"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserAdminRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_microsoft_binding_api_v1_users__user_id__reset_microsoft_binding_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

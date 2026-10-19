@@ -5,6 +5,7 @@ import { mutate } from "swr";
 import {
   getAdminUsers,
   getApprovalRequests,
+  getAiProposalSummary,
   getAppSettings,
   getAssignableUsers,
   getScopeUsers,
@@ -21,10 +22,12 @@ import {
   getMailingGroups,
   getReactivationCandidates,
   getTeamKpis,
+  getUnownedSubmissions,
   type CalendarEventQuery,
 } from "./queries";
 import type {
   AdminUser,
+  UnownedSubmissionList,
   AppSettings,
   AuditLogEntry,
   Candidate,
@@ -79,9 +82,9 @@ export function useReactivationCandidatesCache(enabled: boolean) {
   );
 }
 
-/** Client-seitiges SWR-Caching des kompletten Kanzlei-Bestands - genutzt fuer
+/** Client-seitiges SWR-Caching des kompletten Kunden-Bestands - genutzt fuer
  * kleinere Auswahl-Dropdowns (z.B. contact-create-modal.tsx), NICHT mehr fuer
- * die Kanzleien-Liste selbst (die nutzt seit der Server-Side-Suche
+ * die Kunden-Liste selbst (die nutzt seit der Server-Side-Suche
  * useServerSearchList, siehe lib/api/use-server-search.ts). */
 export function useClientsCache() {
   return useSWR<DataResult<ClientCompany[]>>("/clients", getClients, swrConfig);
@@ -146,6 +149,16 @@ export function usePendingApprovalCount(enabled: boolean): number {
   return data?.data.length ?? 0;
 }
 
+/** Claude-Vorschläge: ist die Schnittstelle an, wie viele warten (Seitenleiste). */
+export function useAiProposalSummary(): { enabled: boolean; pending: number } {
+  const { data } = useSWR<DataResult<{ enabled: boolean; pending: number }>>(
+    "/ai-proposals/summary",
+    getAiProposalSummary,
+    { ...swrConfig, refreshInterval: 60_000, revalidateOnFocus: true, revalidateIfStale: true },
+  );
+  return data?.data ?? { enabled: false, pending: 0 };
+}
+
 /** Kalender-Termine fuer einen Zeitraum (Monats-/Wochenansicht) - der
  * Cache-Key enthaelt den kompletten Query-Range, damit Monats-/Wochenwechsel
  * und Admin-Filter (owner_user_id) jeweils eigene Cache-Eintraege bekommen,
@@ -175,13 +188,26 @@ export function invalidateMailAccountsCache() {
   return mutate("/mail-accounts");
 }
 
+/** Nur Admin: Prozesse ohne Verantwortlichen. */
+export function useUnownedSubmissionsCache(enabled: boolean) {
+  return useSWR<DataResult<UnownedSubmissionList>>(
+    enabled ? "/submissions/without-owner" : null,
+    getUnownedSubmissions,
+    swrConfig,
+  );
+}
+
+export function invalidateUnownedSubmissionsCache() {
+  return mutate("/submissions/without-owner");
+}
+
 export function invalidateAdminUsersCache() {
   return mutate("/users");
 }
 
 /** Fuer JEDEN eingeloggten Nutzer zugaenglich (anders als useAdminUsersCache/
  * GET /users, admin-only) - kleine, selten wechselnde Liste fuer die
- * Owner-Auswahl (owner_user_id) beim Anlegen von Kandidat/Kanzlei/Prozess/
+ * Owner-Auswahl (owner_user_id) beim Anlegen von Kandidat/Kunde/Prozess/
  * Aufgabe (siehe candidate-/client-/submission-create-modal.tsx). */
 export function useAssignableUsersCache() {
   return useSWR<DataResult<UserBrief[]>>("/users/assignable", getAssignableUsers, swrConfig);

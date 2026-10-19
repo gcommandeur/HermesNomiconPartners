@@ -3,11 +3,13 @@ from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
-from sqlalchemy import update
+from sqlalchemy import func, select, update
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session
 
 from cc_crm.core.errors import BusinessRuleError, ConflictError, EntityNotFoundError
+from cc_crm.models.candidate import Candidate
+from cc_crm.models.client_company import ClientCompany
 from cc_crm.models.enums import SubmissionStatus, TaskPriority, TaskStatus
 from cc_crm.models.submission import CandidateSubmission
 from cc_crm.models.user import User
@@ -22,12 +24,15 @@ from cc_crm.schemas.submission import (
     CandidateSubmissionTransition,
     CandidateSubmissionUpdate,
     ClosingScoreInput,
+    UnownedSubmissionList,
+    UnownedSubmissionRead,
 )
 from cc_crm.services.audit_diff import changed_values
 from cc_crm.services.base import CrudService
 from cc_crm.services.candidates import CandidateService
 from cc_crm.services.clients import ClientCompanyService
 from cc_crm.services.closing_score import ClosingScoreService
+from cc_crm.services.engagement_status import require_channel_open  # NOMICON
 
 CLOSED_STATUSES = {
     SubmissionStatus.PLACEMENT,
@@ -195,10 +200,25 @@ class CandidateSubmissionService(
             limit=limit,
         )
 
-    def create(self, payload: CandidateSubmissionCreate) -> CandidateSubmission:
+    def create(
+        self,
+        payload: CandidateSubmissionCreate,
+        created_by_user_id: uuid.UUID | None = None,
+    ) -> CandidateSubmission:
+        """Legt den Prozess an. `created_by_user_id` ist der Nutzer, der ihn anlegt (nicht
+        zwingend der Verantwortliche); er wird als Autor der Aktivitaet "submission_created"
+        gespeichert, damit die Timeline den Urheber zeigt wie bei den uebrigen
+        Prozess-Ereignissen."""
+        # Ein Prozess ohne Verantwortlichen ist fuer Nicht-Admins unsichtbar und verschwindet
+        # aus Listen, Kennzahlen und Abrechnung - deshalb keine Neuanlage ohne Owner (nur
+        # anwendungsseitig, kein DB-NOT-NULL, weil Altdaten ohne Owner existieren). Die
+        # API-Routen setzen den anlegenden Nutzer, wenn nichts angegeben ist.
+        if payload.owner_user_id is None:
+            raise BusinessRuleError("Ein Prozess braucht einen Verantwortlichen (owner_user_id).")
         if payload.status != SubmissionStatus.QUALIFICATION_CALL:
             raise BusinessRuleError("New submissions must start in qualification_call status")
         self.candidates.get(payload.candidate_id)
+        require_channel_open(self.session, payload.candidate_id, "direct")  # NOMICON
         if payload.client_company_id is not None:
             self.clients.get(payload.client_company_id)
         self._validate_related_entities(
@@ -226,6 +246,7 @@ class CandidateSubmissionService(
                     "client_company_id": submission.client_company_id,
                     "candidate_submission_id": submission.id,
                     "activity_type": "submission_created",
+                    "sent_by_user_id": created_by_user_id,
                     "subject": "Candidate submission created",
                     "details": f"Initial status: {submission.status.value}",
                     "occurred_at": now,
@@ -236,6 +257,61 @@ class CandidateSubmissionService(
         except Exception:
             self.session.rollback()
             raise
+
+    def list_without_owner(self, limit: int = 200) -> UnownedSubmissionList:
+        """Alle Prozesse ohne `owner_user_id` (Admin-Sicht), neueste zuerst, mit Namen."""
+        base = select(CandidateSubmission).where(CandidateSubmission.owner_user_id.is_(None))
+        total = int(
+            self.session.scalar(select(func.count()).select_from(base.subquery())) or 0
+        )
+        rows = self.session.execute(
+            select(CandidateSubmission, Candidate, ClientCompany)
+            .join(Candidate, Candidate.id == CandidateSubmission.candidate_id)
+            .outerjoin(ClientCompany, ClientCompany.id == CandidateSubmission.client_company_id)
+            .where(CandidateSubmission.owner_user_id.is_(None))
+            .order_by(CandidateSubmission.created_at.desc())
+            .limit(limit)
+        ).all()
+        return UnownedSubmissionList(
+            total=total,
+            items=[
+                UnownedSubmissionRead(
+                    id=submission.id,
+                    candidate_id=submission.candidate_id,
+                    candidate_name=f"{candidate.first_name} {candidate.last_name}".strip(),
+                    client_company_id=submission.client_company_id,
+                    client_name=company.name if company is not None else None,
+                    status=submission.status,
+                    created_at=submission.created_at,
+                )
+                for submission, candidate, company in rows
+            ],
+        )
+
+    def assign_owner(
+        self, entity_id: uuid.UUID, owner_user_id: uuid.UUID, admin: User
+    ) -> CandidateSubmission:
+        """Admin weist einen aktiven Nutzer als Verantwortlichen zu (Audit `updated`, alt/neu)."""
+        submission = self.get(entity_id)
+        owner = self.session.get(User, owner_user_id)
+        if owner is None or not owner.is_active:
+            raise EntityNotFoundError("Nutzer nicht gefunden oder deaktiviert")
+        values = {"owner_user_id": owner_user_id}
+        old_values, new_values = changed_values(submission, values)
+        updated = self.submissions.update(submission, values)
+        if new_values:
+            self.audit_logs.create(
+                {
+                    "entity_type": "candidate_submission",
+                    "entity_id": updated.id,
+                    "action": "updated",
+                    "changed_by": admin.email,
+                    "old_values": old_values,
+                    "new_values": new_values,
+                }
+            )
+        self.session.commit()
+        return updated
 
     def update(
         self,
@@ -315,7 +391,7 @@ class CandidateSubmissionService(
             client_company_id = payload.client_company_id
         if payload.status in STATUSES_REQUIRING_CLIENT and client_company_id is None:
             raise BusinessRuleError(
-                "Ab Interview muss der Prozess mit einer Kanzlei verknuepft sein"
+                "Ab Interview muss der Prozess mit einem Kunden verknuepft sein"
             )
 
         now = datetime.now(UTC)

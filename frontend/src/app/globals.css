@@ -1,37 +1,18 @@
 @import "tailwindcss";
+@import "./brand-theme.css";
 
-:root {
-  --background: #08111f;
-  --surface: #12243a;
-  --surface-muted: #0d1b2e;
-  --surface-elevated: #172e49;
-  --surface-hover: #203a5a;
-  --foreground: #f8fafc;
-  --muted: #94a3b8;
-  --border: rgba(148, 163, 184, 0.18);
-  --platinum: #d8dadf;
-  --silver: #a7adb7;
-  --accent: #1f5fa8;
-  --accent-soft: #102a4c;
-  --sidebar: #071426;
-
-  /* Firmenschicht (Design): zusaetzliche Farben, die bisher fest als Hex im Code
-     standen. Fuer eine andere Firma reicht es, die Werte hier (oder in einer
-     Ueberschreibung) zu aendern. */
-  --text-soft: #cbd5e1;
-  --text-dim: #747c89;
-  --accent-light: #69a7ea;
-  --accent-strong: #153a66;
-  --warning: #f0b429;
-  --danger: #e5484d;
-  --danger-soft: #e4aeb4;
-  --success: #4f8a68;
-  --success-text: #a9d6b8;
-  --success-bg: #244d38;
-  --info-soft: #c5dcfa;
-  --text-gray: #8b9196;
-  --text-gray-dark: #5b6167;
+/* Schriftgroessen insgesamt 5 % kleiner als die Tailwind-Standardwerte (2026-10-04). */
+@theme {
+  --text-xs: 0.7125rem;
+  --text-sm: 0.83125rem;
+  --text-base: 0.95rem;
+  --text-lg: 1.06875rem;
+  --text-xl: 1.1875rem;
+  --text-2xl: 1.425rem;
+  --text-3xl: 1.78125rem;
+  --text-4xl: 2.1375rem;
 }
+
 
 /* Tailwind-Klassen fuer die Variablen: bg-brand-panel, text-brand-muted, ...
    NEUE Oberflaeche nutzt diese Klassen, keine festen Hex-Farben (siehe
@@ -69,27 +50,25 @@ html { background: var(--background); color-scheme: dark; }
 body {
   min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(circle at 80% -10%, rgba(31,95,168,.2), transparent 34rem),
-    linear-gradient(135deg, #08111f 0%, #0b1e36 52%, #071426 100%);
+  background: var(--page-gradient);
   color: var(--foreground);
   font-family: Inter, "Segoe UI", Arial, sans-serif;
-  font-size: 14px;
+  font-size: 13.3px;
   -webkit-font-smoothing: antialiased;
 }
 button,input,select,textarea { font: inherit; }
-::selection { background: #1f5fa8; color: #fff; }
-.scrollbar-subtle { scrollbar-color: #203a5a transparent; scrollbar-width: thin; }
+::selection { background: var(--accent); color: #fff; }
+.scrollbar-subtle { scrollbar-color: var(--surface-hover) transparent; scrollbar-width: thin; }
 main .bg-white { background-color: var(--surface) !important; }
 main .bg-\[\#fafaf9\], main .bg-\[\#fafaf8\], main .bg-\[\#f4f6f8\], main .bg-\[\#f2f3f2\], main .bg-\[\#eceeec\] { background-color: var(--surface-muted) !important; }
 main .border-\[\#d2d4d3\], main .border-\[\#e5e7eb\], main .border-slate-200, main .border-gray-200 { border-color: var(--border) !important; }
-main table tr:hover { background: rgba(31,95,168,.1) !important; }
+main table tr:hover { background: rgba(var(--accent-rgb), .1) !important; }
 main textarea, main input, main select {
   background-color: var(--surface-muted);
   color: var(--foreground);
   border-color: var(--border);
 }
 main textarea:focus, main input:focus, main select:focus {
-  outline: 2px solid rgba(31,95,168,.18);
+  outline: 2px solid rgba(var(--accent-rgb), .18);
   outline-offset: 0;
 }

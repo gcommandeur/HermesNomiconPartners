@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import {
+  Archive,
   Boxes,
   ClipboardList,
   KeyRound,
+  Layers, // NOMICON
   Mail,
   Send,
+  Sparkles,
   ShieldOff,
   SlidersHorizontal,
   Timer,
@@ -18,6 +21,7 @@ import {
 import { PageHeader } from "@/components/crm/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCurrentUser } from "@/lib/api/hooks";
+import { brand } from "@/lib/brand";
 
 type Tile = { href: string; label: string; description: string; icon: typeof Users };
 
@@ -32,6 +36,7 @@ const GROUPS: { title: string; icon: typeof Users; tiles: Tile[] }[] = [
       { href: "/einstellungen/nutzer", label: "Nutzerverwaltung", description: "Konten, Rollen und Teamleiter-Zuordnung.", icon: Users },
       { href: "/einstellungen/postfaecher", label: "E-Mails & Konten", description: "Gemeinsame Postfächer und Outlook-Verbindungen.", icon: Mail },
       { href: "/einstellungen/kpi-punkte", label: "KPI-Punkte", description: "Punkteregeln für das Ranking.", icon: Trophy },
+      { href: "/einstellungen/ansichten", label: "Ansichten", description: "Direct, Überlassung und Gesamt je Mitarbeiter freischalten.", icon: Layers }, // NOMICON
     ],
   },
   {
@@ -47,9 +52,11 @@ const GROUPS: { title: string; icon: typeof Users; tiles: Tile[] }[] = [
     title: "Daten und Compliance",
     icon: SlidersHorizontal,
     tiles: [
-      { href: "/einstellungen/felder", label: "Eigene Felder", description: "Zusatzfelder für Kandidaten, Kanzleien und Kontakte.", icon: SlidersHorizontal },
+      { href: "/einstellungen/felder", label: "Eigene Felder", description: "Zusatzfelder für Kandidaten, Kunden und Kontakte.", icon: SlidersHorizontal },
+      { href: "/claude-vorschlaege", label: "Claude-Vorschläge", description: "Vorschläge der Claude-Schnittstelle prüfen und freigeben.", icon: Sparkles },
       { href: "/einstellungen/audit-log", label: "Audit-Log", description: "Wer hat wann was geändert.", icon: ClipboardList },
       { href: "/einstellungen/loeschanfragen", label: "Löschanfragen", description: "Datenschutz: Löschungen prüfen und ausführen.", icon: Trash2 },
+      { href: "/einstellungen/vorstellungs-archiv", label: "Vorstellungs-Archiv", description: "Nachweis für Honorar-Streitfälle: was an der Kunde ging.", icon: Archive },
     ],
   },
 ];
@@ -77,7 +84,7 @@ export default function AdministrationPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="Administration" />
+      <PageHeader eyebrow={brand.appName} title="Administration" />
       <div className="space-y-8">
         {GROUPS.map((group) => (
           <section key={group.title}>

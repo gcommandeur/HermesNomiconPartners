@@ -15,7 +15,7 @@ const selectClass =
 
 const ENTITY_LABELS: Record<CustomFieldEntity, string> = {
   candidate: "Kandidaten",
-  client: "Kanzleien",
+  client: "Kunden",
   contact: "Kontakte",
 };
 
@@ -78,7 +78,7 @@ export default function EigeneFelderPage() {
     <>
       <PageHeader eyebrow="Einstellungen" title="Eigene Felder" />
       <p className="mb-5 max-w-3xl text-sm text-brand-muted">
-        Zusätzliche Felder für Kandidaten, Kanzleien und Kontakte – ohne Programmierung. Sie erscheinen auf der
+        Zusätzliche Felder für Kandidaten, Kunden und Kontakte – ohne Programmierung. Sie erscheinen auf der
         Detailseite im Block „Eigene Felder“ und lassen sich in der Kandidatenliste per Auswahl-/Ja-Nein-Wert
         filtern. Typ und Schlüssel sind nach dem Anlegen fest; ein Feld wird deaktiviert statt gelöscht, damit
         gespeicherte Werte erhalten bleiben.

@@ -102,6 +102,23 @@ class UserService:
             raise BusinessRuleError("Der Teamleiter ist deaktiviert.")
         user.manager_id = manager.id
 
+    def reset_microsoft_binding(self, user_id: uuid.UUID, admin: User) -> User:
+        """Hebt die Bindung an die Microsoft-Kennung auf (z. B. Kontowechsel); der
+        naechste Microsoft-Login bindet neu."""
+        user = self.get(user_id)
+        if user.ms_oid is not None:
+            user.ms_oid = None
+            self.audit_logs.create(
+                {
+                    "entity_type": "user",
+                    "entity_id": user.id,
+                    "action": "microsoft_oid_reset",
+                    "changed_by": admin.email,
+                }
+            )
+            self.session.commit()
+        return user
+
     def rotate_calendar_feed_token(self, user_id: uuid.UUID, current_user: User) -> User:
         user = self.get(user_id)
         if not current_user.is_admin and user.id != current_user.id:

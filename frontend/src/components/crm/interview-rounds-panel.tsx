@@ -89,7 +89,7 @@ export function InterviewRoundsPanel({
         <p className="rounded-lg border border-dashed border-white/10 p-4 text-center text-xs text-brand-muted">
           {canPlanNew
             ? "Noch keine Interview-Runde geplant."
-            : "Interviews koennen erst geplant werden, sobald der Prozess im Status „Interview“ ist."}
+            : "Interviews können erst geplant werden, sobald der Prozess im Status „Interview“ ist."}
         </p>
       ) : (
         <div className="space-y-2">
@@ -110,7 +110,7 @@ export function InterviewRoundsPanel({
                 )}
               </div>
               <span
-                className={`shrink-0 rounded-full border px-2 py-1 text-[10px] ${STATUS_TONE[interview.status]}`}
+                className={`shrink-0 rounded-full border px-2 py-1 text-[9.5px] ${STATUS_TONE[interview.status]}`}
               >
                 {STATUS_LABELS[interview.status]}
               </span>

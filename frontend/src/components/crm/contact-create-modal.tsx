@@ -39,7 +39,7 @@ export function ContactCreateModal({ onCreated }: { onCreated?: (contact: Contac
     setBusy(true);
     setError(null);
     try {
-      if (!form.client_company_id) throw new Error("Bitte eine Kanzlei auswählen.");
+      if (!form.client_company_id) throw new Error("Bitte einen Kunden auswählen.");
       const contact = await apiPost<Contact>("/contacts", {
         ...form,
         role_title: form.role_title || undefined,
@@ -62,17 +62,17 @@ export function ContactCreateModal({ onCreated }: { onCreated?: (contact: Contac
     <>
       <Button onClick={() => setOpen(true)}><UserPlus size={15} />Kontakt anlegen</Button>
       {open && (
-        <Modal title="Kontakt anlegen" eyebrow="Kanzlei-Beziehungsnetz" onClose={() => setOpen(false)}>
+        <Modal title="Kontakt anlegen" eyebrow="Kunden-Beziehungsnetz" onClose={() => setOpen(false)}>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <label className={labelClass}>Kanzlei *</label>
+              <label className={labelClass}>Kunde *</label>
               <select
                 required
                 className="h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent"
                 value={form.client_company_id}
                 onChange={(e) => set("client_company_id", e.target.value)}
               >
-                <option value="" disabled>Kanzlei wählen…</option>
+                <option value="" disabled>Kunde wählen…</option>
                 {clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
               </select>
             </div>
@@ -87,7 +87,7 @@ export function ContactCreateModal({ onCreated }: { onCreated?: (contact: Contac
             </div>
             <label className="flex items-center gap-2 text-xs text-brand-soft">
               <input type="checkbox" checked={form.is_primary} onChange={(e) => set("is_primary", e.target.checked)} />
-              Hauptkontakt dieser Kanzlei
+              Hauptkontakt diesem Kunden
             </label>
             <ErrorBanner message={error} />
             <div className="flex justify-end gap-2">

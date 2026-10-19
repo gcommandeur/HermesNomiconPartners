@@ -5,6 +5,10 @@ import {
   CalendarDays,
   ClipboardCheck,
   ContactRound,
+  CalendarRange, // NOMICON
+  HardHat, // NOMICON
+  Receipt, // NOMICON
+  Wallet, // NOMICON
   KanbanSquare,
   UserRoundSearch,
   LayoutDashboard,
@@ -12,9 +16,12 @@ import {
   Map,
   Settings,
   ShieldCheck,
+  Sparkles,
   Trophy,
   Users,
 } from "lucide-react";
+
+import type { ViewKey } from "@/lib/api/views"; // NOMICON
 
 export type NavigationItem = {
   label: string;
@@ -28,7 +35,13 @@ export type NavigationItem = {
   /** Pfade, bei denen der Eintrag trotz passendem Praefix NICHT aktiv ist. */
   notActiveFor?: string[];
   /** Zaehler-Badge (Daten holt die Seitenleiste). */
-  badge?: "approvals";
+  badge?: "approvals" | "aiProposals";
+  /** Nur zeigen, wenn die Claude-Schnittstelle eingeschaltet ist. */
+  requiresAi?: boolean;
+  /** NOMICON: Nur in diesen Ansichten zeigen (ohne Angabe: in jeder Ansicht). */
+  views?: ViewKey[];
+  /** NOMICON: Abweichendes Linkziel je Ansicht (z. B. vorausgewählter Filter); die Aktiv-Erkennung bleibt `href`. */
+  viewHrefs?: Partial<Record<ViewKey, string>>;
 };
 
 export type NavigationGroup = {
@@ -36,6 +49,8 @@ export type NavigationGroup = {
   label: string;
   /** Ganze Gruppe nur fuer Admins. */
   adminOnly?: boolean;
+  /** NOMICON: Abweichende Überschrift je Ansicht (Überlassung: "Überlassung" statt "Recruiting"). */
+  viewLabels?: Partial<Record<ViewKey, string>>;
   items: NavigationItem[];
 };
 
@@ -53,6 +68,8 @@ export const ADMINISTRATION_PATHS = [
   "/einstellungen/felder",
   "/einstellungen/audit-log",
   "/einstellungen/loeschanfragen",
+  "/einstellungen/vorstellungs-archiv",
+  "/einstellungen/ansichten", // NOMICON
 ];
 
 // Aufbau mit dem Nutzer abgestimmt (Arbeitsplan 2, Q2). Rechte (adminOnly /
@@ -65,27 +82,37 @@ export const navigationGroups: NavigationGroup[] = [
       { label: "Übersicht", href: "/", icon: LayoutDashboard },
       { label: "Kalender", href: "/kalender", icon: CalendarDays },
       { label: "Mailing", href: "/mailing", icon: Mail },
+      { label: "Meine Provision", href: "/provision", icon: Wallet }, // NOMICON
+      { label: "Claude-Vorschläge", href: "/claude-vorschlaege", icon: Sparkles, badge: "aiProposals", requiresAi: true },
     ],
   },
   {
     id: "recruiting",
     label: "Recruiting",
+    viewLabels: { staffing: "Überlassung" }, // NOMICON: in der Ansicht Überlassung stehen alle Punkte in einer Gruppe
     items: [
       // Eigener "Reaktivierung"-Menuepunkt entfernt (Phase L.2): der
       // "Erneut kontaktieren"-Filter auf /kandidaten deckt dieselbe Funktion ab.
-      { label: "Kandidaten", href: "/kandidaten", icon: Users },
-      { label: "Prozesse", href: "/prozesse", icon: KanbanSquare },
-      { label: "Vakanzen", href: "/vakanzen", icon: BriefcaseBusiness },
+      // In der Ansicht Überlassung führt "Kandidaten" auf die Liste mit vorausgewähltem Überlassungsfilter
+      // (Leiharbeitnehmer sind Kandidaten, es gibt keine eigene Personenliste mehr).
+      { label: "Kandidaten", href: "/kandidaten", icon: Users, viewHrefs: { staffing: "/kandidaten?ueberlassung=workers" } }, // NOMICON
+      { label: "Prozesse", href: "/prozesse", icon: KanbanSquare, views: ["direct"] }, // NOMICON
+      { label: "Vakanzen", href: "/vakanzen", icon: BriefcaseBusiness, views: ["direct"] }, // NOMICON
       // Review-Ebene des Sourcing-Agents: gefundene Personen werden hier
       // bestaetigt/verworfen, bevor sie Kandidaten werden.
-      { label: "Sourcing", href: "/sourcing", icon: UserRoundSearch },
+      { label: "Sourcing", href: "/sourcing", icon: UserRoundSearch, views: ["direct"] }, // NOMICON
+      // NOMICON: Arbeitnehmerüberlassung (nur Ansicht Überlassung), gleiche Gruppe wie die Kandidaten
+      { label: "Übersicht & Fristen", href: "/ueberlassung", icon: HardHat, views: ["staffing"], notActiveFor: ["/ueberlassung/einsaetze", "/ueberlassung/leiharbeitnehmer", "/ueberlassung/abrechnung", "/ueberlassung/compliance"] },
+      { label: "Einsätze", href: "/ueberlassung/einsaetze", icon: CalendarRange, views: ["staffing"] },
+      { label: "Abrechnung", href: "/ueberlassung/abrechnung", icon: Receipt, views: ["staffing"] },
+      { label: "Compliance", href: "/ueberlassung/compliance", icon: ShieldCheck, adminOnly: true, teamLeadToo: true, views: ["staffing"] }, // Vermittler: Meldungen statt Seite
     ],
   },
   {
     id: "kunden",
     label: "Kunden",
     items: [
-      { label: "Kanzleien", href: "/kanzleien", icon: Building2 },
+      { label: "Kunden", href: "/kunden", icon: Building2 },
       { label: "Kontakte", href: "/kontakte", icon: ContactRound },
       { label: "Geo Mapping", href: "/geo-mapping", icon: Map },
     ],
@@ -95,7 +122,7 @@ export const navigationGroups: NavigationGroup[] = [
     label: "Management",
     items: [
       { label: "Analytics", href: "/analytics", icon: BarChart3 },
-      { label: "Geschäftsführung", href: "/geschaeftsfuehrung", icon: Trophy, adminOnly: true, teamLeadToo: true },
+      { label: "Geschäftsführung", href: "/geschaeftsfuehrung", icon: Trophy, adminOnly: true, teamLeadToo: true, views: ["management", "direct"] }, // NOMICON: Gesamt (Admins); Teamleiter sehen die Team-Kennzahlen unter Direct
     ],
   },
   {
@@ -141,4 +168,10 @@ export function visibleItems(
   isTeamLead: boolean,
 ): NavigationItem[] {
   return items.filter((item) => !item.adminOnly || isAdmin || (item.teamLeadToo && isTeamLead));
+}
+
+/** NOMICON: Welche Einträge in der gewählten Ansicht erscheinen. Solange die Freigaben laden
+ * (`active === null`), nur Einträge ohne Ansichtsbindung. */
+export function inActiveView(items: NavigationItem[], active: ViewKey | null): NavigationItem[] {
+  return items.filter((item) => !item.views || (active !== null && item.views.includes(active)));
 }

@@ -35,6 +35,16 @@ from cc_crm.services.graph_token_service import get_valid_access_token
 logger = logging.getLogger("cc_crm.calendar_graph_sync")
 
 
+
+NO_TITLE = "(Ohne Titel)"
+_MAX_TITLE = 240
+
+
+def _title_from_graph(subject: str | None) -> str:
+    """Outlook-Termine duerfen ohne Betreff existieren oder laenger als unser Feld sein -
+    ein leerer Titel liess frueher die ganze Terminliste mit 500 abstuerzen."""
+    return (subject or "").strip()[:_MAX_TITLE] or NO_TITLE
+
 def push_delete_to_graph(session: Session, event: CalendarEvent) -> None:
     """Best effort, synchron beim Loeschen eines CalendarEvent aufgerufen -
     ein transienter Graph-Fehler blockiert die vom Nutzer gewuenschte
@@ -190,7 +200,7 @@ def _pull_graph_changes(session: Session, access_token: str, account: MailAccoun
             # Neues Event auf Graph-Seite, das hier noch nicht bekannt ist -
             # als neuer CRM-Termin fuer den verbindenden Nutzer anlegen.
             event = CalendarEvent(
-                title=graph_event.subject,
+                title=_title_from_graph(graph_event.subject),
                 start_at=graph_event.start_at,
                 end_at=graph_event.end_at,
                 notes=graph_event.body_text,
@@ -228,7 +238,7 @@ def _pull_graph_changes(session: Session, access_token: str, account: MailAccoun
                     graph_event.last_modified_at,
                     event.updated_at,
                 )
-            event.title = graph_event.subject
+            event.title = _title_from_graph(graph_event.subject)
             event.start_at = graph_event.start_at
             event.end_at = graph_event.end_at
             if not event.attendee_email:

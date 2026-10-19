@@ -6,6 +6,7 @@ import { ErrorState } from "@/components/crm/error-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuditLogsCache, useCurrentUser } from "@/lib/api/hooks";
 import { formatDateTime } from "@/lib/utils";
+import { brand } from "@/lib/brand";
 
 const ACTION_LABELS: Record<string, string> = {
   admin_fields_changed: "Admin-Recht/Status geändert",
@@ -18,7 +19,7 @@ const ACTION_LABELS: Record<string, string> = {
 const ENTITY_LABELS: Record<string, string> = {
   user: "Nutzer",
   candidate: "Kandidat",
-  client_company: "Kanzlei",
+  client_company: "Kunde",
   candidate_submission: "Prozess",
 };
 
@@ -47,7 +48,7 @@ export default function AuditLogPage() {
   if (!isAdmin) {
     return (
       <>
-        <PageHeader eyebrow="Hermes" title="Audit-Log" />
+        <PageHeader eyebrow={brand.appName} title="Audit-Log" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <ShieldOff size={28} className="text-brand-muted" />
@@ -68,7 +69,7 @@ export default function AuditLogPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="Audit-Log" />
+      <PageHeader eyebrow={brand.appName} title="Audit-Log" />
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 8 }).map((_, index) => (
@@ -101,7 +102,7 @@ export default function AuditLogPage() {
                 Von: {entry.changed_by ?? "unbekannt"}
               </p>
               {(describeValues(entry.old_values) || describeValues(entry.new_values)) && (
-                <p className="mt-1 text-[11px] text-brand-dim">
+                <p className="mt-1 text-[10.45px] text-brand-dim">
                   {describeValues(entry.old_values) && `vorher: ${describeValues(entry.old_values)}`}
                   {describeValues(entry.old_values) && describeValues(entry.new_values) && " · "}
                   {describeValues(entry.new_values) && `nachher: ${describeValues(entry.new_values)}`}

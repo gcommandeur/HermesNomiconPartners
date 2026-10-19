@@ -83,3 +83,23 @@ def test_duplicate_active_submission_is_rejected_and_status_is_audited(
         "submission_created",
         "submission_status_changed",
     }
+
+
+def test_submission_created_activity_has_author(client: TestClient) -> None:
+    """Die Aktivitaet 'Prozess angelegt' traegt den anlegenden Nutzer als Autor (Timeline)."""
+    me = client.get("/api/v1/auth/me")
+    assert me.status_code == 200, me.text
+    candidate = client.post(
+        "/api/v1/candidates", json={"first_name": "Aria", "last_name": "Autorin"}
+    ).json()
+    submission = client.post("/api/v1/submissions", json={"candidate_id": candidate["id"]})
+    assert submission.status_code == 201, submission.text
+
+    created = [
+        item
+        for item in client.get("/api/v1/activities").json()
+        if item["activity_type"] == "submission_created"
+        and item["candidate_submission_id"] == submission.json()["id"]
+    ]
+    assert len(created) == 1
+    assert created[0]["sent_by_user_id"] == me.json()["id"]

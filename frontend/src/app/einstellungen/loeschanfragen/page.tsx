@@ -12,6 +12,7 @@ import { useCurrentUser, useDeletionRequestsCache } from "@/lib/api/hooks";
 import { completeDeletionRequest, createDeletionRequest, getCandidates } from "@/lib/api/queries";
 import { formatDateTime } from "@/lib/utils";
 import type { Candidate } from "@/lib/api/types";
+import { brand } from "@/lib/brand";
 
 const selectClass =
   "h-9 w-full rounded-md border border-white/10 bg-brand-sidebar px-2 text-xs text-brand-text outline-none focus:border-brand-accent";
@@ -113,7 +114,7 @@ export default function DeletionRequestsPage() {
   if (!isAdmin) {
     return (
       <>
-        <PageHeader eyebrow="Hermes" title="Löschanfragen" />
+        <PageHeader eyebrow={brand.appName} title="Löschanfragen" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <ShieldOff size={28} className="text-brand-muted" />
@@ -130,7 +131,7 @@ export default function DeletionRequestsPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="Löschanfragen" />
+      <PageHeader eyebrow={brand.appName} title="Löschanfragen" />
 
       <div className="space-y-5">
         <Card>
@@ -202,7 +203,7 @@ export default function DeletionRequestsPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right text-xs">
-                        <p className="text-[10px] uppercase tracking-wider text-brand-muted">Deadline</p>
+                        <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Deadline</p>
                         <p className={overdue ? "font-semibold text-red-400" : "text-brand-text"}>
                           {formatDateTime(request.deadline)}
                         </p>

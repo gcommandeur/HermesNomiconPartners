@@ -34,7 +34,7 @@ export default async function WarrantyOverviewPage() {
     const candidate = id ? candidatesResult.data.find((item) => item.id === id) : undefined;
     return candidate ? `${candidate.first_name} ${candidate.last_name}` : "Kandidat";
   };
-  const clientName = (id: string | null) => clientsResult.data.find((item) => item.id === id)?.name ?? "Kanzlei offen";
+  const clientName = (id: string | null) => clientsResult.data.find((item) => item.id === id)?.name ?? "Kunde offen";
 
   return (
     <>
@@ -55,11 +55,11 @@ export default async function WarrantyOverviewPage() {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right text-xs text-brand-silver">
-                    <p className="text-[10px] uppercase tracking-wider text-brand-muted">Gewährleistung bis</p>
+                    <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Gewährleistung bis</p>
                     <p className="mt-1 text-sm text-brand-text">{formatDate(placement.warranty_end_date)}</p>
                   </div>
                   <div className="text-right text-xs text-brand-silver">
-                    <p className="text-[10px] uppercase tracking-wider text-brand-muted">Fee</p>
+                    <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Fee</p>
                     <p className="mt-1 text-sm text-brand-text">{formatCurrency(Number(placement.calculated_fee))}</p>
                   </div>
                   {submission && (

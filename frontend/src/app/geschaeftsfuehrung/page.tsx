@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { ShieldOff } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, ShieldOff } from "lucide-react";
 import { PageHeader } from "@/components/crm/page-header";
 import { ErrorState } from "@/components/crm/error-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useCurrentUser, useTeamKpisCache } from "@/lib/api/hooks";
+import { useCurrentUser, useTeamKpisCache, useUnownedSubmissionsCache } from "@/lib/api/hooks";
 import { PITCH_LABEL, STAGE_LABELS } from "@/lib/stage-labels";
+import { CommissionReport } from "@/components/crm/commission-report"; // NOMICON
+import { ManagementOverviewBlock } from "@/components/crm/management-overview"; // NOMICON
+import { brand } from "@/lib/brand";
 
 const STAGE_COLUMNS: { key: string; label: string }[] = [
   { key: "pitch", label: PITCH_LABEL },
@@ -32,6 +36,9 @@ export default function GeschaeftsfuehrungPage() {
   const [period, setPeriod] = useState<"week" | "month" | "quarter">("week");
   const { data, isLoading, error, mutate: retry } = useTeamKpisCache(period, isAdmin);
   const members = data?.data.members ?? [];
+  // Warnkarte nur fuer echte Admins (Teamleiter sehen die Seite, aber nicht die Owner-losen Prozesse).
+  const { data: unownedData } = useUnownedSubmissionsCache(meData?.data.is_admin ?? false);
+  const unownedCount = unownedData?.data.total ?? 0;
 
   if (meLoading) {
     return (
@@ -46,7 +53,7 @@ export default function GeschaeftsfuehrungPage() {
   if (!isAdmin) {
     return (
       <>
-        <PageHeader eyebrow="Hermes" title="Geschäftsführung" />
+        <PageHeader eyebrow={brand.appName} title="Geschäftsführung" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <ShieldOff size={28} className="text-brand-muted" />
@@ -68,7 +75,7 @@ export default function GeschaeftsfuehrungPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Hermes"
+        eyebrow={brand.appName}
         title="Geschäftsführung"
         action={
           <div className="flex gap-1.5">
@@ -85,6 +92,22 @@ export default function GeschaeftsfuehrungPage() {
           </div>
         }
       />
+
+      {/* NOMICON: Ansicht "Gesamt" - Rohertrag, Prognose, Alarme (nur echte Admins) */}
+      {meData?.data.is_admin && <ManagementOverviewBlock period={period} />}
+
+      {unownedCount > 0 && (
+        <Link
+          href="/prozesse/ohne-verantwortlichen"
+          className="mb-4 flex items-center gap-2 rounded-lg border border-brand-warning/40 bg-brand-warning/10 px-4 py-3 text-sm text-brand-text hover:bg-brand-warning/20"
+        >
+          <AlertTriangle size={16} className="text-brand-warning" />
+          <span>
+            Prozesse ohne Verantwortlichen: <strong>{unownedCount}</strong> – für Mitarbeiter unsichtbar, jetzt
+            zuweisen
+          </span>
+        </Link>
+      )}
 
       {isLoading ? (
         <div className="space-y-2">
@@ -103,7 +126,7 @@ export default function GeschaeftsfuehrungPage() {
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-brand-muted">
+                <tr className="border-b border-white/10 text-[9.5px] uppercase tracking-wider text-brand-muted">
                   <th className="px-4 py-3">Mitarbeiter:in</th>
                   {STAGE_COLUMNS.map((column) => (
                     <th key={column.key} className="px-3 py-3 text-right">{column.label}</th>
@@ -136,6 +159,8 @@ export default function GeschaeftsfuehrungPage() {
           </CardContent>
         </Card>
       )}
+      {/* NOMICON: Provisionsmodell - nur für echte Admins (Teamleiter sehen diese Seite, aber keine Gehälter) */}
+      {meData?.data.is_admin && <CommissionReport />}
     </>
   );
 }

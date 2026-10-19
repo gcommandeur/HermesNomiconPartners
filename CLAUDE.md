@@ -55,7 +55,7 @@ Hermes ist ein Recruiting-CRM fuer Steuer-/Rechts-Kanzleien: Kandidaten, Kanzlei
 - Wichtige Fachbereiche: `candidates`, `clients` (Kanzleien), `submissions` + `recruiting` (Prozesse mit Stufen qualification_call -> cv_in -> cv_out -> interview -> offer -> placement, dazu Feedback/Interview/Offer/Placement/Fee), `approvals` + `invoices` (Freigabe-Inbox, Rechnungsstatus), `notes`, `sourcing` (Verzeichnis-/Team-Seiten-Suche mit Umkreis), `geo` (PLZ-Koordinaten, Umkreissuche), `mail_*`, `kpi_scoring`, `operational` (Cockpit/Uebersicht).
 - Auth: Login mit Passwort + E-Mail-2FA-Code; `api/dependencies.py` hat `CurrentUser`, `AdminUser` und die Zugriffsgrenzen (siehe unten).
 - Tests: `backend/tests/` (pytest, SQLite im Speicher, Fixture `client` = angemeldeter Nicht-Admin). Pruefen mit `ruff check src tests`, `mypy src`, `pytest`.
-- Migrationen: `backend/alembic/versions/`, aktueller Head `a3e5c7b9d1f2` (api_keys.scope). Neue Migration immer auf einer KOPIE der lokalen DB per upgrade -> downgrade -> upgrade pruefen.
+- Migrationen: `backend/alembic/versions/`, aktueller Head `g3b5d7f9a1c2` (Vorstellungs-Archiv). Neue Migration immer auf einer KOPIE der lokalen DB per upgrade -> downgrade -> upgrade pruefen.
 
 **Frontend** (`frontend/`, Next.js 15 App Router, TypeScript, Tailwind, pnpm):
 - Seiten in `frontend/src/app/*` (z.B. `kandidaten`, `kanzleien`, `prozesse`, `sourcing`, `freigaben`, `geschaeftsfuehrung`, `einstellungen/*`), Komponenten in `src/components/crm/*`, API-Zugriff in `src/lib/api/` (`queries.ts`, `hooks.ts` mit SWR, `types.ts`). Browser-Aufrufe laufen ueber `/api/proxy/...`, das den Login-Cookie serverseitig anhaengt.
@@ -67,8 +67,9 @@ Hermes ist ein Recruiting-CRM fuer Steuer-/Rechts-Kanzleien: Kandidaten, Kanzlei
 ## Rechte-Modell (wichtig, nicht aufweichen)
 
 - Rollen in `User.role`: `member` (nur eigene Prozesse), `team_lead` (eigene + die der Mitarbeiter mit `manager_id` auf ihn), `admin` (alles). Nutzerverwaltung nur Admin.
-- **Prozesse und alles daran** (Interviews, Offers, Placements, Feedback, Fees, Rechnungen) sind owner-gescopt ueber `CandidateSubmission.owner_user_id`: `process_owner_scope(user, session)` in `api/dependencies.py` liefert `None` (Admin) oder eine Liste erlaubter Nutzer-IDs. Listen filtern damit; jede Route mit `submission_id`/`placement_id`/`fee_id` im Pfad haengt `SubmissionAccess`/`PlacementAccess`/`FeeAccess` an. Fremd UND nicht existent liefert dasselbe 404 (nicht 403). Neue Routen mit solchen IDs MUESSEN eine dieser Pruefungen bekommen.
+- **Prozesse und alles daran** (Interviews, Offers, Placements, Feedback, Fees, Rechnungen) sind owner-gescopt ueber `CandidateSubmission.owner_user_id`: `process_owner_scope(user, session)` in `api/dependencies.py` liefert `None` (Admin) oder eine Liste erlaubter Nutzer-IDs. Listen filtern damit; jede Route mit `submission_id`/`placement_id`/`fee_id` im Pfad haengt `SubmissionAccess`/`PlacementAccess`/`FeeAccess` an. Fremd UND nicht existent liefert dasselbe 404 (nicht 403). Neue Routen mit solchen IDs MUESSEN eine dieser Pruefungen bekommen - das erzwingt `tests/api/test_access_guard.py` (ruft alle Operationen mit den IDs eines fremden Prozesses auf und erwartet 404; Ausnahmen nur ueber die kommentierte Liste im Test).
 - **Kandidaten und Kanzleien** sind bewusst der gemeinsame Pool der ganzen Agentur, ohne Owner-Scoping. Auch **Kommentare** (Notizen, Feedback) sind fuer alle sichtbar (`GET /candidates/{id}/comments`).
+- **Vorstellungs-Archiv** (`presentation_records`, Routen `/admin/presentation-archive`): NUR Admins, fuer alle anderen 404; unveraenderlich (Postgres-Trigger), taucht in keiner Dokumentenliste, Suche, Export, Webhook oder MCP-Ausgabe auf; weder Anonymisierung noch Loeschwege noch `purge_job_blobs.py` duerfen es anfassen. Entfernen nur per Antrag + zweitem Admin nach Ablauf von `retention_until`.
 - Freigabe-Inbox (`approvals`): Nicht-Admins loesen fuer neue Kanzlei, Honorar-Aenderung und "Rechnung stellen" eine Anfrage aus, Admins entscheiden unter `/freigaben`.
 - Der Audit-Log (`audit_logs`, `services/audit_diff.py`) protokolliert normale Feld-Aenderungen als `updated` mit alt/neu; Ereignisse an Prozessen tragen `changed_by` (E-Mail).
 
@@ -90,8 +91,13 @@ Der Nutzer arbeitet auch rein vom Handy ueber Claude-Code-Cloud-Sitzungen. Dafue
 
 ## Gemeinsamer Projektstand (PFLICHT)
 
-Laptop- und Cloud-Sitzungen sehen die Gespraeche der jeweils anderen NICHT. Der gemeinsame Stand lebt in **`docs/PROJEKT_STAND.md`** (offene Punkte, Entscheidungen, Stolperfallen, Protokoll).
+Laptop- und Cloud-Sitzungen sehen die Gespraeche der jeweils anderen NICHT. Der gemeinsame Stand lebt in **`docs/PROJEKT_STAND.md`** (kurz: Regeln, offene Punkte, Entscheidungen, Stolperfallen). Die Historie steht in **`docs/PROTOKOLL.md`** (neueste zuerst), Entscheidungen im Detail in `docs/ENTSCHEIDUNGEN.md`, erledigte Plaene in `docs/ARCHIV_PLAENE.md`.
 
-- **Vor jeder Aufgabe:** `git fetch`, `git pull --rebase origin entwicklung`, dann `docs/PROJEKT_STAND.md` lesen.
-- **Nach jeder Aufgabe, im selben Commit:** Protokoll-Eintrag (Datum, Laptop/Cloud, was, Commits, was NICHT geprueft wurde, `Gemeldet:` = was dem Nutzer mitgeteilt wurde), offene Punkte und neue Entscheidungen/Stolperfallen pflegen. Ohne aktualisierte Datei ist eine Aufgabe nicht fertig.
+- **Vor jeder Aufgabe:** `git fetch`, `git pull --rebase origin entwicklung`, dann `docs/PROJEKT_STAND.md` lesen. `docs/PROTOKOLL.md` nur bei Bedarf und nur die ersten ca. 100 Zeilen (die Datei ist gross).
+- **Nach jeder Aufgabe, im selben Commit:** neuer Protokoll-Eintrag OBEN in `docs/PROTOKOLL.md` (Datum, Laptop/Cloud, was, Commits, was NICHT geprueft wurde, `Gemeldet:` = was dem Nutzer mitgeteilt wurde); in `docs/PROJEKT_STAND.md` nur offene Punkte und neue Entscheidungen/Stolperfallen pflegen (kurz halten, Ziel unter ca. 12 KB). Ohne aktualisierte Datei ist eine Aufgabe nicht fertig.
+- **Lokaler Branch `main` = `entwicklung` (Regel des Nutzers vom 2026-10-04, gilt ohne Rueckfrage):** Nach jeder Aufgabe, nach dem Push auf `entwicklung`, setzt die Sitzung den LOKALEN Branch `main` auf `entwicklung` (`git branch -f main entwicklung`, ohne den Branch auszuchecken). Das ist rein lokal und deployt nichts. **Ausdruecklich NICHT von der Regel gedeckt:** `origin/main` (GitHub, deployt nach DigitalOcean) - dorthin geht weiterhin nur mit dem gruenen Licht des Nutzers per Pull Request.
 - Nichts Geheimes eintragen.
+
+## Zwei Repos, gleichberechtigt (seit 2026-10-12)
+
+Dieses Repo (Nomicon Partners) und Hermes CRM (`gcommandeur/hermescrm`) sind getrennt und gleichberechtigt; kein Merge, eigene Migrationsketten. **Zu Sitzungsbeginn und vor jedem Push:** Hermes lesend klonen (falls noetig) und `python scripts/vergleich.py --hermes <Pfad>` ausfuehren, Abweichungen samt Grund in `docs/VERGLEICH.md` eintragen, Pruefstand fortschreiben. Fixes uebernehmen, Features nur nach Absprache. In Hermes wird nie geschrieben.

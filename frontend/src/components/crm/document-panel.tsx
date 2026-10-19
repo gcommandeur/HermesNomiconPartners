@@ -10,6 +10,7 @@ import { Modal } from "@/components/ui/modal";
 import { apiDownload, apiFetchBlob, apiPost, apiUpload } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { formatDate } from "@/lib/utils";
+import { brand } from "@/lib/brand";
 import type { CvExtractionSuggestion, DocumentMeta } from "@/lib/api/types";
 
 const CV_FIELD_LABELS: Record<keyof Omit<CvExtractionSuggestion, "source_is_agency_profile">, string> = {
@@ -48,8 +49,8 @@ function CvExtractionPanel({ suggestion, onDismiss }: {
           <Sparkles size={15} />Aus dem CV übernommen
         </div>
         {suggestion.source_is_agency_profile && (
-          <p className="mt-2 rounded bg-brand-warning/10 px-2 py-1.5 text-[11px] text-brand-warning">
-            Dieses Dokument enthält den Commandeur-Briefkopf (anonymisiertes Bewerberprofil) — Adresse/Telefon
+          <p className="mt-2 rounded bg-brand-warning/10 px-2 py-1.5 text-[10.45px] text-brand-warning">
+            Dieses Dokument enthält den {brand.companyName}-Briefkopf (anonymisiertes Bewerberprofil) — Adresse/Telefon
             wurden deshalb nicht übernommen, nur Rolle/Qualifikation.
           </p>
         )}

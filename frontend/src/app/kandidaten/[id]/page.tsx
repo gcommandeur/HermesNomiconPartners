@@ -1,3 +1,4 @@
+import { candidateTabs, resolveCandidateTab } from "@/lib/candidate-tabs"; // NOMICON
 import { notFound } from "next/navigation";
 import { ArrowLeft, Ghost, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
@@ -29,10 +30,16 @@ import { CandidateProcessLog } from "@/components/crm/candidate-process-log";
 import { CandidateTimeline } from "@/components/crm/candidate-timeline";
 import { CandidateRollenUnbestaetigtHint } from "@/components/crm/candidate-rollen-unbestaetigt-hint";
 import { NotesPanel } from "@/components/crm/notes-panel";
+import { StaffingCandidatePanel } from "@/components/crm/staffing-candidate-panel"; // NOMICON
+import { EngagementPanel } from "@/components/crm/engagement-panel"; // NOMICON
+import { OfferAsAssignmentButton } from "@/components/crm/staffing-offer-modal"; // NOMICON
+import { EngagementHeaderBadge } from "@/components/crm/engagement-header-badge"; // NOMICON
+import { hasView, noData } from "@/lib/api/views"; // NOMICON
 import { CustomFieldsPanel } from "@/components/crm/custom-fields-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { CandidateSubmission } from "@/lib/api/types"; // NOMICON
 import { abschlussartLabel, formatDate, rechtsgebietLabel, rolleLabel } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -58,13 +65,15 @@ export default async function CandidateDetailPage({
     : from === "prozesse"
       ? { href: "/prozesse", label: "Zurück zu Prozesse" }
       : { href: "/kandidaten", label: "Zur Kandidatenliste" };
+  // NOMICON: Prozesse nur mit Ansicht Direct abfragen (sonst 403), Überlassungs-Reiter nur mit Ansicht Überlassung.
+  const [canDirect, canStaffing] = await Promise.all([hasView("direct"), hasView("staffing")]);
   // Nur die Prozesse DIESES Kandidaten und danach nur die darin referenzierten
-  // Kanzleien laden - vorher wurden hier ALLE Prozesse und ALLE Kanzleien
+  // Kunden laden - vorher wurden hier ALLE Prozesse und ALLE Kunden
   // (mehrere tausend, seitenweise nacheinander) geladen, nur um ein paar
-  // Kanzleinamen anzuzeigen (~10s Ladezeit).
+  // Kundennamen anzuzeigen (~10s Ladezeit).
   const [result, submissionsResult, activitiesResult, tasksResult, documentsResult, notesResult, historyResult, commentsResult, usersResult] = await Promise.all([
     getCandidate(id),
-    getSubmissionsForCandidate(id),
+    canDirect ? getSubmissionsForCandidate(id) : Promise.resolve(noData<CandidateSubmission[]>([])), // NOMICON
     getActivitiesForCandidate(id),
     getTasksForCandidate(id),
     getDocumentsForOwner("candidate", id),
@@ -87,18 +96,18 @@ export default async function CandidateDetailPage({
   const history = historyResult.data;
   const comments = commentsResult.data;
   const users = usersResult.data;
-  const clientName = (clientId: string | null) => clientId ? (clients.find((client) => client.id === clientId)?.name ?? "Kanzlei") : "Kanzlei offen";
+  const clientName = (clientId: string | null) => clientId ? (clients.find((client) => client.id === clientId)?.name ?? "Kunde") : "Kunde offen";
   const anonymousProfile = candidate.short_profile ?? [
     `${candidate.job_title ?? "Kandidat/in"} mit Schwerpunkt ${candidate.summary ?? "Steuern / Beratung"}.`,
     `Region: ${candidate.city ?? candidate.postal_code ?? "offen"}.`,
     `Gehaltsrahmen: ${candidate.salary_expectation ?? "nach Absprache"}.`,
     `Verfügbarkeit: ${candidate.notice_period ?? "nach Absprache"}.`,
   ].join("\n");
-  const tabs = ["Übersicht", "Anonymes Profil", "Notizen", "Matching", "CV-Outs", "Timeline", "Aufgaben", "Dokumente"];
+  const tabs = candidateTabs(canStaffing); // NOMICON: "Überlassung" nur mit der Ansicht Überlassung
   // Erlaubt einen direkten Link auf einen bestimmten Tab (z.B. "?tab=Dokumente"
   // nach dem Anlegen eines Kandidaten, siehe candidate-create-modal.tsx) -
   // faellt auf "Übersicht" zurueck, wenn der Wert fehlt oder ungueltig ist.
-  const initialTab = tab && tabs.includes(tab) ? tab : "Übersicht";
+  const initialTab = resolveCandidateTab(tab, tabs); // auch "?tab=ueberlassung" aus den Weiterleitungen
 
   return (
     <>
@@ -112,6 +121,7 @@ export default async function CandidateDetailPage({
         <div>
           <div className="mb-3 flex items-center gap-3">
             <StatusPill status={candidate.status} />
+            <EngagementHeaderBadge candidateId={candidate.id} /> {/* NOMICON */}
             {candidate.has_ghosting_history && <Badge tone="red" className="gap-1"><Ghost size={12} />Ghosting-Historie</Badge>}
             <span className="text-xs text-brand-gray">Aktualisiert {formatDate(candidate.updated_at)}</span>
           </div>
@@ -160,9 +170,12 @@ export default async function CandidateDetailPage({
             candidateId={candidate.id}
             candidateName={`${candidate.first_name} ${candidate.last_name}`}
           />
+          <OfferAsAssignmentButton candidateId={candidate.id} /> {/* NOMICON */}
           <CandidateEditModal candidate={candidate} />
         </div>
       </div>
+
+      <EngagementPanel candidateId={candidate.id} /> {/* NOMICON */}
 
       <CandidateProcessLog candidateId={candidate.id} />
 
@@ -184,21 +197,21 @@ export default async function CandidateDetailPage({
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_.7fr]">
             <Card><CardContent><h2 className="font-semibold">Profil</h2><p className="mt-4 text-sm leading-7 text-brand-soft">{candidate.summary ?? "Noch keine Zusammenfassung hinterlegt."}</p>
               <div className="mt-6 grid grid-cols-1 gap-5 border-t border-white/10 pt-5 sm:grid-cols-2">
-                {[["Rolle", candidate.job_title], ["Gehaltswunsch", candidate.salary_expectation], ["Kündigungsfrist", candidate.notice_period], ["Region", `${candidate.postal_code ?? ""} ${candidate.city ?? ""}`.trim()], ["Anrede", candidate.anrede === "frau" ? "Frau" : candidate.anrede === "herr" ? "Herr" : candidate.anrede === "divers" ? "Divers" : null], ["Empfohlen von", candidate.referred_by]].map(([label, value]) => <div key={label}><p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
+                {[["Rolle", candidate.job_title], ["Gehaltswunsch", candidate.salary_expectation], ["Kündigungsfrist", candidate.notice_period], ["Region", `${candidate.postal_code ?? ""} ${candidate.city ?? ""}`.trim()], ["Anrede", candidate.anrede === "frau" ? "Frau" : candidate.anrede === "herr" ? "Herr" : candidate.anrede === "divers" ? "Divers" : null], ["Empfohlen von", candidate.referred_by]].map(([label, value]) => <div key={label}><p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
               </div>
               <div className="mt-6 grid grid-cols-1 gap-5 border-t border-white/10 pt-5 sm:grid-cols-2">
-                {[["Ausbildung / Weiterbildung", candidate.ausbildung_titel], ["Aktuelles Umfeld", [candidate.aktuelles_umfeld_kanzleityp, candidate.aktuelles_umfeld_kanzleigroesse].filter(Boolean).join(" · ")], ["Remote-/Teilzeit-Wünsche", candidate.remote_teilzeit_wuensche], ["Passender Kanzleityp", candidate.passender_kanzleityp]].map(([label, value]) => <div key={label}><p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
+                {[["Ausbildung / Weiterbildung", candidate.ausbildung_titel], ["Aktuelles Umfeld", [candidate.aktuelles_umfeld_kanzleityp, candidate.aktuelles_umfeld_kanzleigroesse].filter(Boolean).join(" · ")], ["Remote-/Teilzeit-Wünsche", candidate.remote_teilzeit_wuensche], ["Passender Kundentyp", candidate.passender_kanzleityp]].map(([label, value]) => <div key={label}><p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">{label}</p><p className="mt-1.5 text-sm">{value || "—"}</p></div>)}
                 {/* Nur bei rechtsanwalt relevant, siehe models/candidate.py::
                  * examensnoten - wird nur angezeigt, wenn tatsaechlich gesetzt. */}
                 {candidate.examensnoten && (
-                  <div><p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">Examensnote</p><p className="mt-1.5 text-sm">{candidate.examensnoten}</p></div>
+                  <div><p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">Examensnote</p><p className="mt-1.5 text-sm">{candidate.examensnoten}</p></div>
                 )}
               </div>
               {/* Nur bei rechtsanwalt/rechtsfachangestellte inhaltlich
                * relevant, siehe models/candidate.py::rechtsgebiete. */}
               {candidate.rechtsgebiete && candidate.rechtsgebiete.length > 0 && (
                 <div className="mt-6 border-t border-white/10 pt-5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">Rechtsgebiete</p>
+                  <p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">Rechtsgebiete</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {candidate.rechtsgebiete.map((rechtsgebiet) => (
                       <span key={rechtsgebiet} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-brand-platinum">{rechtsgebietLabel(rechtsgebiet)}</span>
@@ -208,7 +221,7 @@ export default async function CandidateDetailPage({
               )}
               {candidate.fachliche_schwerpunkte && candidate.fachliche_schwerpunkte.length > 0 && (
                 <div className="mt-6 border-t border-white/10 pt-5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">Fachliche Schwerpunkte</p>
+                  <p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">Fachliche Schwerpunkte</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {candidate.fachliche_schwerpunkte.map((item) => <span key={item} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-brand-platinum">{item}</span>)}
                   </div>
@@ -216,7 +229,7 @@ export default async function CandidateDetailPage({
               )}
               {candidate.edv_kenntnisse && candidate.edv_kenntnisse.length > 0 && (
                 <div className="mt-6 border-t border-white/10 pt-5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">EDV-Kenntnisse</p>
+                  <p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">EDV-Kenntnisse</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {candidate.edv_kenntnisse.map((item) => <span key={item} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-brand-platinum">{item}</span>)}
                   </div>
@@ -224,7 +237,7 @@ export default async function CandidateDetailPage({
               )}
               {candidate.berufliche_stationen && candidate.berufliche_stationen.length > 0 && (
                 <div className="mt-6 border-t border-white/10 pt-5">
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-brand-gray">Berufliche Stationen</p>
+                  <p className="mb-2 text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">Berufliche Stationen</p>
                   <div className="space-y-1.5">
                     {candidate.berufliche_stationen.map((station, index) => (
                       <p key={index} className="text-sm text-brand-soft">{station.kanzleityp} · {station.kanzleigroesse} · {station.dauer_jahre} Jahre</p>
@@ -234,17 +247,17 @@ export default async function CandidateDetailPage({
               )}
               {candidate.freitext_notizen && (
                 <div className="mt-6 border-t border-white/10 pt-5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">Freitextnotizen</p>
+                  <p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">Freitextnotizen</p>
                   <p className="mt-1.5 text-sm text-brand-soft">{candidate.freitext_notizen}</p>
                 </div>
               )}
               {(candidate.wechselgrund || (candidate.no_gos && candidate.no_gos.length > 0)) && (
                 <div className="mt-6 rounded-lg border border-brand-warning/25 bg-brand-warning/5 p-4">
-                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-brand-warning">Nur intern — nie in ausgehende Dokumente</p>
-                  {candidate.wechselgrund && <div className="mb-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">Wechselgrund</p><p className="mt-1.5 text-sm text-brand-soft">{candidate.wechselgrund}</p></div>}
+                  <p className="mb-3 text-[9.5px] font-semibold uppercase tracking-wider text-brand-warning">Nur intern — nie in ausgehende Dokumente</p>
+                  {candidate.wechselgrund && <div className="mb-3"><p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">Wechselgrund</p><p className="mt-1.5 text-sm text-brand-soft">{candidate.wechselgrund}</p></div>}
                   {candidate.no_gos && candidate.no_gos.length > 0 && (
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gray">No-Gos</p>
+                      <p className="text-[9.5px] font-semibold uppercase tracking-wider text-brand-gray">No-Gos</p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {candidate.no_gos.map((item) => <span key={item} className="rounded-full border border-brand-warning/25 bg-brand-warning/10 px-2.5 py-1 text-xs text-brand-warning">{item}</span>)}
                       </div>
@@ -271,7 +284,7 @@ export default async function CandidateDetailPage({
         </TabsContent>
         <TabsContent value="CV-Outs">
           <div className="space-y-3">
-            {submissions.map((item) => <Card key={item.id}><CardContent className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><p className="font-semibold">{clientName(item.client_company_id)}</p><p className="mt-1 text-xs text-brand-dim">Vorgestellt {formatDate(item.submitted_at)} · {item.next_step ?? "Nächster Schritt offen"}</p></div><div className="flex items-center gap-3"><StatusPill status={item.status} /><span className="text-xs text-brand-platinum">{item.expected_fee ? `${item.expected_fee.toLocaleString("de-DE")} €` : ""}</span></div></CardContent></Card>)}
+            {submissions.map((item) => <Card key={item.id}><CardContent className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><p className="font-semibold">{clientName(item.client_company_id)}</p><p className="mt-1 text-xs text-brand-dim">Vorgestellt {formatDate(item.submitted_at)} · {item.next_step ?? "Nächster Schritt offen"}</p></div><div className="flex items-center gap-3"><StatusPill status={item.status} /><span className="text-xs text-brand-platinum">{item.expected_fee ? `${Number(item.expected_fee).toLocaleString("de-DE")} €` : ""}</span></div></CardContent></Card>)}
             {submissions.length === 0 && <Card><CardContent className="py-12 text-center text-sm text-brand-gray">Noch keine CV-Outs.</CardContent></Card>}
           </div>
         </TabsContent>
@@ -303,6 +316,10 @@ export default async function CandidateDetailPage({
         </TabsContent>
         <TabsContent value="Dokumente">
           <DocumentPanel ownerType="candidate" ownerId={candidate.id} documentType="cv" documents={documents} />
+        </TabsContent>
+        {/* NOMICON: Arbeitnehmerüberlassung */}
+        <TabsContent value="Überlassung">
+          <StaffingCandidatePanel candidateId={candidate.id} />
         </TabsContent>
       </Tabs>
     </>

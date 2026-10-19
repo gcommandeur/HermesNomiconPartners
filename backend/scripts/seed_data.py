@@ -9,6 +9,7 @@ Usage (from backend/, with the venv active):
 
     python scripts/seed_data.py seed --clients 12 --candidates 40
     python scripts/seed_data.py seed --clients 100 --candidates 500  # larger volume
+    python scripts/seed_data.py seed --candidates 60 --staffing 8   # NOMICON: mit Ueberlassung
     python scripts/seed_data.py clear
     python scripts/seed_data.py stats
 """
@@ -468,8 +469,17 @@ def seed_submissions(session, clients: list, candidates: list, count: int) -> No
                             "Interview vereinbaren",
                         ]
                     ),
-                    follow_up_at=now + timedelta(days=random.randint(1, 10)),
+                    # NOMICON: meist zukünftige Termine, einzelne überfällig (realistisch)
+                    follow_up_at=now
+                    + timedelta(
+                        days=(
+                            random.randint(-3, -1)
+                            if random.random() < 0.12
+                            else random.randint(2, 21)
+                        )
+                    ),
                     owner=random.choice(["Team Recruiting", "M. Weber", "S. Klein"]),
+                    owner_user_id=seed_user.id,  # NOMICON: Seed-Prozesse mit Verantwortlichem
                 )
             )
         except Exception:
@@ -575,8 +585,27 @@ def cmd_seed(args: argparse.Namespace) -> None:
         clients = seed_clients(session, args.clients)
         candidates = seed_candidates(session, args.candidates)
         seed_submissions(session, clients, candidates, args.submissions)
+        if args.staffing:  # NOMICON: Dummy-Daten der Arbeitnehmerueberlassung
+            from seed_staffing import seed_staffing
+
+            staffing = seed_staffing(
+                session, args.staffing, random.Random(args.random_seed), edge_cases=True
+            )
+            print(
+                f"Ueberlassung: {staffing.workers} Leiharbeitnehmer, "
+                f"{staffing.contracts} Vertraege, {staffing.assignments} Einsaetze, "
+                f"{staffing.edge_cases} Sonderfaelle."
+            )
+        if args.demo:  # NOMICON: zwei Demo-Konten und ein Kandidatenstand mit allen Zustaenden
+            from seed_demo import seed_demo
+
+            demo = seed_demo(session)
+            print(
+                f"Demo: {demo.users} Konten, {demo.candidates} Kandidaten, "
+                f"{demo.processes} Prozesse, {demo.assignments} Einsaetze."
+            )
     print(
-        f"Seed abgeschlossen: {args.clients} Kanzleien, "
+        f"Seed abgeschlossen: {args.clients} Kunden, "
         f"{args.candidates} Kandidaten, {args.submissions} Prozesse."
     )
 
@@ -612,6 +641,10 @@ def main() -> None:
     seed_parser.add_argument("--candidates", type=int, default=40)
     seed_parser.add_argument("--submissions", type=int, default=25)
     seed_parser.add_argument("--random-seed", type=int, default=None)
+    # NOMICON: Anzahl Leiharbeitnehmer (Arbeitnehmerueberlassung), 0 = keine
+    seed_parser.add_argument("--staffing", type=int, default=0)
+    # NOMICON: Demo-Konten (Admin, Vermittler) und Kandidatenstand fuer die Ansichten
+    seed_parser.add_argument("--demo", action="store_true")
     seed_parser.set_defaults(func=cmd_seed)
 
     clear_parser = subparsers.add_parser("clear", help="Alle Geschaeftsdaten entfernen")

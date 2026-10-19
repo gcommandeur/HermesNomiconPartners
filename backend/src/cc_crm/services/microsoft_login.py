@@ -28,6 +28,7 @@ from cc_crm.integrations.microsoft_graph.auth import (
     exchange_code_for_login,
     exchange_code_for_login_tokens,
     fetch_own_profile,
+    require_single_tenant_for_login,
 )
 from cc_crm.integrations.microsoft_graph.oauth_state import (
     InvalidOAuthStateError,
@@ -37,6 +38,7 @@ from cc_crm.integrations.microsoft_graph.oauth_state import (
 from cc_crm.models.enums import MailAccountOAuthStatus
 from cc_crm.models.mail import MailAccount
 from cc_crm.models.user import User
+from cc_crm.repositories.recruiting import AuditLogRepository
 from cc_crm.services.auth import AuthService
 from cc_crm.services.mail_oauth import store_connection
 
@@ -50,6 +52,7 @@ NO_ACCOUNT_MESSAGE = (
 def start_login(*, redirect_uri: str) -> tuple[str, str]:
     """(Autorisierungs-URL, nonce). Die nonce muss der Aufrufer als httpOnly-
     Cookie im Browser ablegen; im Callback wird sie gegen den State geprueft."""
+    require_single_tenant_for_login()
     nonce = secrets.token_urlsafe(32)
     scopes = GRAPH_SCOPES if get_settings().ms_login_connects_mailbox else LOGIN_SCOPES
     url = build_login_authorization_url(
@@ -64,6 +67,7 @@ def complete_login(
     """Prueft State + Browser-Bindung, tauscht den Code, ermittelt die von
     Microsoft bestaetigte Adresse und stellt die Session aus. Liefert
     (Nutzer, Session-Token)."""
+    require_single_tenant_for_login()
     state_nonce = verify_login_state(state)
     if not cookie_nonce or not hmac.compare_digest(state_nonce, cookie_nonce):
         raise InvalidOAuthStateError(
@@ -77,6 +81,13 @@ def complete_login(
         tokens = None
         access_token = exchange_code_for_login(code=code, redirect_uri=redirect_uri)
     profile = fetch_own_profile(access_token)
+    # Gaeste (B2B-Einladung) im Firmen-Tenant duerfen sich nie anmelden: ihre `mail` ist die
+    # externe Adresse und koennte zufaellig zu einem Hermes-Konto passen.
+    if str(profile.get("userType") or "").strip().lower() == "guest":
+        raise AuthenticationError(NO_ACCOUNT_MESSAGE)
+    oid = str(profile.get("id") or "").strip().lower()
+    if not oid:
+        raise GraphAuthError("Microsoft hat keine Kennung (id) geliefert.")
     candidates = []
     for key in ("mail", "userPrincipalName"):
         value = (profile.get(key) or "").strip().lower()
@@ -92,9 +103,50 @@ def complete_login(
     )
     if user is None:
         raise AuthenticationError(NO_ACCOUNT_MESSAGE)
+    _check_or_bind_oid(session, user, oid)
     if tokens is not None:
         _connect_mailbox(session, user, tokens, profile)
     return user, AuthService(session).issue_session(user)
+
+
+def _audit(session: Session, user: User, action: str, values: dict[str, str]) -> None:
+    AuditLogRepository(session).create(
+        {
+            "entity_type": "user",
+            "entity_id": user.id,
+            "action": action,
+            "changed_by": user.email,
+            "new_values": values,
+        }
+    )
+
+
+def _check_or_bind_oid(session: Session, user: User, oid: str) -> None:
+    """Trust-on-first-use: beim ersten Login wird die Microsoft-Kennung gebunden
+    (Zuordnung dabei ueber die E-Mail), danach muss sie uebereinstimmen. Jede
+    Abweichung wird abgelehnt - mit derselben neutralen Meldung wie "kein Konto" -
+    und im Audit-Log festgehalten (nur die letzten Zeichen der Kennung)."""
+    if user.ms_oid is not None:
+        if not hmac.compare_digest(user.ms_oid, oid):
+            _audit(
+                session,
+                user,
+                "microsoft_login_oid_mismatch",
+                {"gebunden_endet_auf": user.ms_oid[-6:], "angemeldet_endet_auf": oid[-6:]},
+            )
+            session.commit()
+            logger.warning("Microsoft-Login abgelehnt: Kennung weicht ab (Nutzer %s)", user.id)
+            raise AuthenticationError(NO_ACCOUNT_MESSAGE)
+        return
+    taken = session.scalar(select(User.id).where(User.ms_oid == oid, User.id != user.id))
+    if taken is not None:
+        _audit(session, user, "microsoft_login_oid_conflict", {"angemeldet_endet_auf": oid[-6:]})
+        session.commit()
+        logger.warning("Microsoft-Login abgelehnt: Kennung gehoert zu einem anderen Nutzer")
+        raise AuthenticationError(NO_ACCOUNT_MESSAGE)
+    user.ms_oid = oid
+    _audit(session, user, "microsoft_oid_bound", {"endet_auf": oid[-6:]})
+    session.commit()
 
 
 def _connect_mailbox(

@@ -145,7 +145,8 @@ class CandidateMatchingService:
                 client_company_id=client_company_id,
                 owner=payload.owner,
                 owner_user_id=owner_user_id,
-            )
+            ),
+            created_by_user_id=owner_user_id,
         )
         for status in self._transition_path(payload.target_status):
             submission = self.submissions.transition(

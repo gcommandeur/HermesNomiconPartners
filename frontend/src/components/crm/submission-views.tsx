@@ -27,6 +27,10 @@ import { useInterviewMutations } from "@/lib/use-interview-mutations";
 import { formatTimeFromIso, toLocalIsoString } from "@/lib/calendar-utils";
 import { allowedTransitions } from "@/lib/submission-transitions";
 import { cn, contactName as formatContactName, formatDate } from "@/lib/utils";
+import { feeAmount, feeIsOpen, formatEuro, summarizeItems } from "@/lib/fee-forecast"; // NOMICON
+import { PipelineKpiStrip } from "@/components/crm/pipeline-kpi-strip"; // NOMICON
+import { OfferAsAssignmentButton } from "@/components/crm/staffing-offer-modal"; // NOMICON
+import { FOLLOW_UP_DUE_CARD_CLASS, isFollowUpDue as followUpDue } from "@/lib/follow-up"; // NOMICON
 import { CandidateQuickViewDrawer } from "./candidate-quickview-drawer";
 import { ClosingScoreForm } from "./closing-score-form";
 
@@ -49,7 +53,7 @@ const columns: { status: SubmissionStatus; title: string }[] = [
 
 const CANCELLATION_REASONS: { value: SubmissionCancellationReason; label: string }[] = [
   { value: "candidate_rejected", label: "Absage Kandidat" },
-  { value: "client_rejected", label: "Absage Kanzlei" },
+  { value: "client_rejected", label: "Absage Kunde" },
   { value: "candidate_ghosting", label: "Ghosting Kandidat" },
 ];
 
@@ -99,10 +103,7 @@ function interviewDotClass(interview: Interview): string {
  * eines konkreten Termins. follow_up_at ist ein echtes tz-aware ISO-Datetime
  * (anders als scheduled_at bei Interviews), new Date() ist hier also sicher. */
 function isFollowUpDue(item: CandidateSubmission): boolean {
-  if (!item.follow_up_at) return false;
-  const endOfToday = new Date();
-  endOfToday.setHours(23, 59, 59, 999);
-  return new Date(item.follow_up_at) <= endOfToday;
+  return followUpDue(item.follow_up_at); // NOMICON: Regel in lib/follow-up.ts (testbar)
 }
 
 export function SubmissionViews({ submissions, candidates, clients, contacts = [], interviews: initialInterviews = [], initialStage = null, initialMineOnly = false }: {
@@ -144,14 +145,14 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
   const currentUserId = currentUserData?.data.id;
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  // `target` gesetzt: Kanzlei-Auswahl ist Teil eines Statuswechsels (Drag&Drop
-  // nach Interview). `target` undefined: eigenstaendige "Kanzlei hinzufuegen/
+  // `target` gesetzt: Kunden-Auswahl ist Teil eines Statuswechsels (Drag&Drop
+  // nach Interview). `target` undefined: eigenstaendige "Kunde hinzufuegen/
   // aendern"-Aktion auf der Karte, unabhaengig vom Status (Phase M.1) - PATCHt
   // direkt nur client_company_id, ohne Statuswechsel.
   const [clientPrompt, setClientPrompt] = useState<{ submissionId: string; target?: SubmissionStatus } | null>(null);
   const [cancelPrompt, setCancelPrompt] = useState<string | null>(null);
   const [quickViewCandidateId, setQuickViewCandidateId] = useState<string | null>(null);
-  // Kanban-Karten sind auf eine Zeile (Name/Kanzlei/Datum) reduziert (Phase
+  // Kanban-Karten sind auf eine Zeile (Name/Kunde/Datum) reduziert (Phase
   // 5b) - Closing-Score, Naechster Schritt, Interview-Runden und Fee werden
   // erst bei Klick auf den Ausklapp-Pfeil sichtbar, statt permanent Platz zu
   // beanspruchen.
@@ -171,8 +172,16 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
     const item = candidateOf(id);
     return item ? `${item.first_name} ${item.last_name}` : "Kandidat";
   };
-  const clientName = (id: string | null) => clients.find((client) => client.id === id)?.name ?? "Kanzlei offen";
+  const clientName = (id: string | null) => clients.find((client) => client.id === id)?.name ?? "Kunde offen";
   const contactPersonName = (id: string | null) => formatContactName(contacts.find((contact) => contact.id === id));
+  // NOMICON: Anzeige der Fee ohne erfundenen Wert - ab Interview "Fee offen", davor die alte
+  // Schätzung aus dem Gehaltswunsch, ausdrücklich als Schätzung (~) gekennzeichnet.
+  const feeText = (item: CandidateSubmission) => {
+    const fee = feeAmount(item);
+    if (fee !== null) return formatEuro(fee);
+    if (feeIsOpen(item)) return "Fee offen";
+    return `~${formatEuro(Number(expectedFee(item)))}`;
+  };
   const expectedFee = (item: CandidateSubmission) => item.expected_fee ?? Math.round(Number(candidates.find((candidate) => candidate.id === item.candidate_id)?.salary_expectation?.replace(/\D/g, "") ?? 80000) * 0.27);
 
   // Nach submission_id gruppiert (aufsteigend nach scheduled_at sortiert,
@@ -224,7 +233,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
 
   const exportRows = filteredItems.map((item) => ({
     Kandidat: candidateName(item.candidate_id),
-    Kanzlei: clientName(item.client_company_id),
+    Kunde: clientName(item.client_company_id),
     Ansprechpartner: contactPersonName(item.contact_person_id),
     Status: item.status,
     FollowUp: formatDate(item.follow_up_at),
@@ -259,10 +268,10 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
     }
   }
 
-  /** Verknuepft/aendert die Kanzlei eines Prozesses unabhaengig vom Status
+  /** Verknuepft/aendert der Kunde eines Prozesses unabhaengig vom Status
    * (Phase M.1) - vorher ging das nur ueber den clientPrompt-Dialog beim
    * Drag&Drop nach Interview; ein Prozess, der schon in Interview (oder
-   * spaeter) ohne Kanzlei lag, hatte keine Moeglichkeit, das nachtraeglich zu
+   * spaeter) ohne Kunden lag, hatte keine Moeglichkeit, das nachtraeglich zu
    * tun, ausser die Karte aus der Spalte heraus- und wieder hineinzuziehen. */
   async function updateClient(submissionId: string, clientCompanyId: string) {
     const previous = items;
@@ -279,7 +288,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
       setItems((current) => current.map((item) => (item.id === submissionId ? updated : item)));
     } catch (error) {
       setItems(previous);
-      setMessage(error instanceof Error ? error.message : "Kanzlei konnte nicht zugeordnet werden.");
+      setMessage(error instanceof Error ? error.message : "Kunde konnte nicht zugeordnet werden.");
     }
   }
 
@@ -394,40 +403,41 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
           "cursor-pointer rounded-lg border p-2 shadow-[0_1px_1px_rgba(0,0,0,.03)]",
           !mobile && "active:cursor-grabbing",
           dueFollowUp
-            ? "border-red-400/50 bg-red-950/20 hover:border-red-400/70"
+            ? FOLLOW_UP_DUE_CARD_CLASS // NOMICON: Nachfassen fällig - Kantenstreifen statt dunkelroter Fläche (Lesbarkeit)
             : "border-white/10 bg-brand-panel hover:border-brand-accent/50",
         )}
       >
-        {/* Name und Kanzlei je auf eigener Zeile, in einer eigenen Kopfzeile
+        {/* Name und Kunde je auf eigener Zeile, in einer eigenen Kopfzeile
          * ohne Konkurrenz um Breite mit Datum/Icons (die stehen jetzt in
-         * einer eigenen Zeile darunter) - bei langen Kanzleinamen (z.B.
+         * einer eigenen Zeile darunter) - bei langen Kundennamen (z.B.
          * "GmbH & Co. KG Steuerberatungsgesellschaft") fielen beide vorher
          * in ein gemeinsames truncate, sodass selbst der Kandidatenname nur
          * noch als "Pascal-Arnold Sli…" sichtbar war. Volltitel via
-         * title-Attribut bei Kanzlei-Truncation weiterhin per Hover
+         * title-Attribut bei Kunden-Truncation weiterhin per Hover
          * einsehbar. */}
         <div className="min-w-0">
           <p className={cn("truncate font-semibold hover:underline", mobile ? "text-sm" : "text-xs")}>{candidateName(item.candidate_id)}</p>
           <p
-            className={cn("mt-0.5 truncate text-brand-muted", mobile ? "text-xs" : "text-[10px]")}
+            className={cn("mt-0.5 truncate text-brand-muted", mobile ? "text-xs" : "text-[9.5px]")}
             title={clientName(item.client_company_id)}
           >
             {clientName(item.client_company_id)}
           </p>
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-2">
-          <span className="shrink-0 text-[10px] text-brand-muted">{formatDate(item.follow_up_at)}</span>
+          <span className="shrink-0 text-[9.5px] text-brand-muted">{formatDate(item.follow_up_at)}</span>
           <div className={cn("flex shrink-0 items-center", mobile ? "gap-1" : "gap-0.5")}>
-            {isHot(item.status) && <span className="rounded-full bg-brand-accent/20 px-1.5 py-0.5 text-[9px] text-brand-accent-light">Hot</span>}
-            {item.archived_at && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] text-emerald-300">Abgeschlossen</span>}
+            {isHot(item.status) && <span className="rounded-full bg-brand-accent/20 px-1.5 py-0.5 text-[8.55px] text-brand-accent-light">Hot</span>}
+            {item.archived_at && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8.55px] text-emerald-300">Abgeschlossen</span>}
             <button
               type="button"
-              title="Kanzlei hinzufügen/ändern"
+              title="Kunde hinzufügen/ändern"
               onClick={(event) => { event.stopPropagation(); setClientPrompt({ submissionId: item.id }); }}
               className={cn(iconBtnClass, "hover:bg-white/10 hover:text-white")}
             >
               <Building2 size={iconSize} />
             </button>
+            <OfferAsAssignmentButton iconOnly candidateId={item.candidate_id} clientId={item.client_company_id} className={iconBtnClass} iconSize={iconSize} /> {/* NOMICON */}
             <button
               type="button"
               title="Kandidat seitlich anzeigen (Prozesse bleibt offen)"
@@ -506,12 +516,12 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
             {item.closing_status && <ClosingScoreBadge status={item.closing_status} probability={item.closing_probability} />}
             <ClosingScoreForm submissionId={item.id} />
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-brand-muted">Nächster Schritt</p>
+              <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Nächster Schritt</p>
               <p className="mt-1 text-xs">{item.next_step ?? item.summary ?? "Follow-up festlegen"}</p>
             </div>
             {(interviewsBySubmission.get(item.id)?.length ?? 0) > 0 && (
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-brand-muted">Interview-Runden</p>
+                <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Interview-Runden</p>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {(interviewsBySubmission.get(item.id) ?? []).map((interview, index) => (
                     <button
@@ -519,7 +529,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                       type="button"
                       title={`${interview.interview_type} — ${formatChipDateTime(interview.scheduled_at)}`}
                       onClick={() => setInterviewModal({ submissionId: item.id, interview })}
-                      className="flex items-center gap-1 rounded-full border border-white/10 bg-brand-surface px-2 py-1 text-[10px] text-brand-soft hover:border-brand-accent/50 hover:text-white"
+                      className="flex items-center gap-1 rounded-full border border-white/10 bg-brand-surface px-2 py-1 text-[9.5px] text-brand-soft hover:border-brand-accent/50 hover:text-white"
                     >
                       <span className={`size-1.5 rounded-full ${interviewDotClass(interview)}`} />
                       R{index + 1} · {formatChipDateTime(interview.scheduled_at)}
@@ -528,21 +538,21 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                 </div>
               </div>
             )}
-            <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[10px] text-brand-silver">
+            <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[9.5px] text-brand-silver">
               {nextUpcomingInterview(item.id) ? (
                 <span>Nächstes Interview: {formatChipDateTime(nextUpcomingInterview(item.id)!.scheduled_at)}</span>
               ) : (
                 <span>Follow-up {formatDate(item.follow_up_at)}</span>
               )}
-              <span>{expectedFee(item).toLocaleString("de-DE")} €</span>
+              <span className={feeIsOpen(item) ? "text-brand-warning" : undefined} title={feeIsOpen(item) ? "Erwartete Fee fehlt (Pflicht ab Interview)" : undefined}>{feeText(item)}</span>
             </div>
             {item.client_company_id ? null : (
               <button
                 type="button"
                 onClick={(event) => { event.stopPropagation(); setClientPrompt({ submissionId: item.id }); }}
-                className="flex w-full items-center justify-center gap-1.5 rounded bg-[#7F1D1D]/40 px-2 py-1.5 text-[10px] text-red-100 hover:bg-[#7F1D1D]/60"
+                className="flex w-full items-center justify-center gap-1.5 rounded bg-[#7F1D1D]/40 px-2 py-1.5 text-[9.5px] text-red-100 hover:bg-[#7F1D1D]/60"
               >
-                <Building2 size={11} />Ab Interview Kanzlei verknüpfen — jetzt hinzufügen
+                <Building2 size={11} />Ab Interview Kunde verknüpfen — jetzt hinzufügen
               </button>
             )}
           </div>
@@ -555,7 +565,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
     <>
       <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
         <div className="rounded-lg border border-white/10 bg-brand-surface/85 px-3 py-2 text-xs text-brand-soft">
-          <strong className="text-brand-platinum">Prozesslogik:</strong> Ein Prozess entspricht einer CandidateSubmission und kann je Kandidat mehrfach vorkommen. Ab Interview ist eine Kanzlei zwingend verknüpft.
+          <strong className="text-brand-platinum">Prozesslogik:</strong> Ein Prozess entspricht einer CandidateSubmission und kann je Kandidat mehrfach vorkommen. Ab Interview ist einen Kunden zwingend verknüpft.
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           <ExportActions filename="prozesse" rows={exportRows} />
@@ -566,7 +576,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
       <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center">
         <div className="flex-1">
           <FilterBar
-            placeholder="Nach Kandidat, Kanzlei, Ansprechpartner oder Status suchen"
+            placeholder="Nach Kandidat, Kunde, Ansprechpartner oder Status suchen"
             value={search}
             onChange={setSearch}
             // Mitarbeiter bekommen vom Server ohnehin nur eigene Prozesse - der
@@ -605,8 +615,8 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
         <div className="mb-4 rounded-lg border border-brand-accent/30 bg-brand-accent-soft/60 p-3 text-xs text-brand-soft">
           <p className="mb-2">
             {clientPrompt.target
-              ? "Ab Interview muss eine Kanzlei verknüpft sein. Bitte auswählen:"
-              : "Kanzlei für diesen Prozess auswählen:"}
+              ? "Ab Interview muss einen Kunden verknüpft sein. Bitte auswählen:"
+              : "Kunde für diesen Prozess auswählen:"}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <select
@@ -624,7 +634,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                 setClientPrompt(null);
               }}
             >
-              <option value="" disabled>Kanzlei wählen…</option>
+              <option value="" disabled>Kunde wählen…</option>
               {clients.filter((client) => client.status !== "blocked").map((client) => (
                 <option key={client.id} value={client.id}>{client.name}</option>
               ))}
@@ -666,11 +676,13 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setCancelPrompt(null)}>Zurück</Button>
           </div>
-          <p className="mt-2 text-[11px] text-red-200/70">
+          <p className="mt-2 text-[10.45px] text-red-200/70">
             „Fehler“ löscht den Prozess unwiderruflich (kein Eintrag in „Abgebrochen“) — die anderen Gründe archivieren ihn stattdessen.
           </p>
         </div>
       )}
+
+      <PipelineKpiStrip items={items} /> {/* NOMICON */}
 
       {view === "kanban" ? (
         <div className="pb-4">
@@ -698,7 +710,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                     {column.title}
                     <span
                       className={cn(
-                        "grid size-5 place-items-center rounded-full text-[10px]",
+                        "grid size-5 place-items-center rounded-full text-[9.5px]",
                         active ? "bg-brand-accent/40 text-white" : "bg-brand-panel text-brand-soft",
                       )}
                     >
@@ -730,11 +742,22 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                 >
                   <header className="flex items-center justify-between px-2 py-2">
                     <h2 className="truncate text-xs font-semibold text-brand-text">{column.title}</h2>
-                    <span className="grid size-5 shrink-0 place-items-center rounded-full border border-white/10 bg-brand-panel text-[10px] text-brand-soft">{columnItems.length}</span>
+                    <span className="grid size-5 shrink-0 place-items-center rounded-full border border-white/10 bg-brand-panel text-[9.5px] text-brand-soft">{columnItems.length}</span>
                   </header>
+                  {/* NOMICON: Summe der erwarteten Fees der Spalte (gewichtet, wo eine Abschlusswahrscheinlichkeit vorliegt) */}
+                  {(() => {
+                    const sums = summarizeItems(columnItems);
+                    if (sums.sum === 0 && sums.open === 0) return null;
+                    return (
+                      <p className="px-2 pb-1.5 text-[9.5px] text-brand-muted" title="Summe der erwarteten Fees; gewichtet = Fee × Abschlusswahrscheinlichkeit (nur wo vorhanden)">
+                        Σ {formatEuro(sums.sum)}{sums.weighted > 0 && ` · gew. ${formatEuro(sums.weighted)}`}
+                        {sums.open > 0 && <span className="text-brand-warning"> · {sums.open}× Fee offen</span>}
+                      </p>
+                    );
+                  })()}
                   <div className="scrollbar-subtle max-h-[calc(100vh-360px)] space-y-2 overflow-y-auto">
                     {columnItems.map((item) => renderCard(item, { mobile: false }))}
-                    {columnItems.length === 0 && <div className="rounded-lg border border-dashed border-white/10 p-5 text-center text-[11px] text-brand-muted">Keine Prozesse</div>}
+                    {columnItems.length === 0 && <div className="rounded-lg border border-dashed border-white/10 p-5 text-center text-[10.45px] text-brand-muted">Keine Prozesse</div>}
                   </div>
                 </section>
               );
@@ -760,15 +783,15 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                 <StatusPill status={item.status} />
               </div>
               <p className="mt-0.5 truncate text-xs text-brand-muted">{clientName(item.client_company_id)}</p>
-              <div className="mt-2 flex items-center justify-between text-[11px] text-brand-gray">
+              <div className="mt-2 flex items-center justify-between text-[10.45px] text-brand-gray">
                 <span>Follow-up {formatDate(item.follow_up_at)}</span>
-                <span>{expectedFee(item).toLocaleString("de-DE")} €</span>
+                <span className={feeIsOpen(item) ? "text-brand-warning" : undefined} title={feeIsOpen(item) ? "Erwartete Fee fehlt (Pflicht ab Interview)" : undefined}>{feeText(item)}</span>
               </div>
-              <p className="mt-1 truncate text-[11px] text-brand-gray">{item.next_step ?? "Nächster Schritt offen"}</p>
+              <p className="mt-1 truncate text-[10.45px] text-brand-gray">{item.next_step ?? "Nächster Schritt offen"}</p>
               <div className="mt-2 flex items-center gap-1" onClick={(event) => event.stopPropagation()}>
                 <button
                   type="button"
-                  title="Kanzlei hinzufügen/ändern"
+                  title="Kunde hinzufügen/ändern"
                   onClick={() => setClientPrompt({ submissionId: item.id })}
                   className="flex size-11 items-center justify-center rounded-lg text-brand-muted hover:bg-white/10 hover:text-white"
                 >
@@ -790,7 +813,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
           )}
         </div>
         <div className="hidden lg:block">
-        <DataTable headers={["Kandidat", "Kanzlei", "Ansprechpartner", "Status", "Closing", "Versendet", "Follow-up", "Nächster Schritt", "Erwartete Fee", "Export"]}>
+        <DataTable headers={["Kandidat", "Kunde", "Ansprechpartner", "Status", "Closing", "Versendet", "Follow-up", "Nächster Schritt", "Erwartete Fee", "Export"]}>
           {filteredItems.map((item) => (
             <tr key={item.id} className="cursor-pointer hover:bg-brand-hover/35" onClick={() => openCandidate(item.candidate_id)}>
               <td className="px-4 py-3.5 font-semibold hover:underline">{candidateName(item.candidate_id)}</td>
@@ -801,12 +824,12 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
               <td className="px-4 py-3.5">{formatDate(item.submitted_at)}</td>
               <td className="px-4 py-3.5">{formatDate(item.follow_up_at)}</td>
               <td className="px-4 py-3.5">{item.next_step ?? "—"}</td>
-              <td className="px-4 py-3.5">{expectedFee(item).toLocaleString("de-DE")} €</td>
+              <td className={cn("px-4 py-3.5", feeIsOpen(item) && "text-brand-warning")}>{feeText(item)}</td>
               <td className="px-4 py-3.5">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    title="Kanzlei hinzufügen/ändern"
+                    title="Kunde hinzufügen/ändern"
                     onClick={(event) => { event.stopPropagation(); setClientPrompt({ submissionId: item.id }); }}
                     className="rounded p-1 text-brand-muted hover:bg-white/10 hover:text-white"
                   >
@@ -828,7 +851,7 @@ export function SubmissionViews({ submissions, candidates, clients, contacts = [
                       downloadCsv(`prozess-${candidateName(item.candidate_id).replaceAll(" ", "_")}`, [
                         {
                           Kandidat: candidateName(item.candidate_id),
-                          Kanzlei: clientName(item.client_company_id),
+                          Kunde: clientName(item.client_company_id),
                           Ansprechpartner: contactPersonName(item.contact_person_id),
                           Status: item.status,
                           Versendet: formatDate(item.submitted_at),

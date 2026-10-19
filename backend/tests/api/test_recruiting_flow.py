@@ -139,7 +139,7 @@ def test_client_not_required_before_interview_but_required_from_interview_on(
         json={"status": "interview"},
     )
     assert blocked.status_code == 422
-    assert "Kanzlei" in blocked.json()["detail"]
+    assert "Kunden" in blocked.json()["detail"]
 
     company = client.post("/api/v1/clients", json={"name": "Nachtraeglich AG"}).json()
     with_client = client.patch(

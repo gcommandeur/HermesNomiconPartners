@@ -68,7 +68,13 @@ def _resolve_send_account(
 ) -> MailAccount:
     account_service = MailAccountService(session)
     if account_id is not None:
-        return account_service.get(account_id)
+        requested = account_service.get(account_id)
+        # Persoenliche Postfaecher (owner_user_id gesetzt) darf NUR ihr Besitzer
+        # zum Senden nutzen; fuer alle anderen "existiert" es nicht (404).
+        owner_id = requested.owner_user_id
+        if owner_id is not None and owner_id != getattr(current_user, "id", None):
+            raise EntityNotFoundError("Postfach nicht gefunden")
+        return requested
     account = account_service.resolve_send_account(current_user)  # type: ignore[arg-type]
     if account is None:
         raise BusinessRuleError(
@@ -142,11 +148,15 @@ def send_bulk_mail(
     if group is None:
         raise EntityNotFoundError(f"Mailing-Gruppe {payload.mailing_group_id} nicht gefunden")
 
+    # Gehoert die Gruppe zu einem Kandidaten (CV-Out-Kampagne), gilt der Versand an Kanzlei-
+    # Kontakte als Vorstellung dieses Kandidaten (Vorstellungs-Archiv, services/
+    # presentation_archive.py) und braucht dessen Einwilligung wie jeder Versand mit candidate_id.
+    context = {"candidate_id": group.context_candidate_id} if group.context_candidate_id else {}
     recipients = [
         BulkRecipient(
             to_address=item["email"],
             to_name=item.get("name"),
-            **{_KIND_TO_CONTEXT_FIELD[item["kind"]]: uuid.UUID(item["id"])},
+            **{**context, _KIND_TO_CONTEXT_FIELD[item["kind"]]: uuid.UUID(item["id"])},
         )
         for item in group.recipients
         if item.get("email")

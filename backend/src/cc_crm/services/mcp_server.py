@@ -11,7 +11,8 @@ dem Nutzer der Anfrage - es gelten also GENAU dessen Rechte
 Datenschutz: nur lesend, nur ueber API-Key eines Nutzers, ausgeschaltet solange
 `CC_CRM_AI_ENABLED` nicht gesetzt ist (siehe api/v1/mcp.py). Kandidaten werden
 OHNE Kontaktdaten (E-Mail, Telefon, LinkedIn) und ohne Gehaltsangaben
-ausgegeben. Jeder Aufruf steht im Audit-Log (Aktion `mcp_tool_call`, nur Name
+ausgegeben; der Profiltext `short_profile` nur mit `CC_CRM_AI_INCLUDE_PROFILE`
+(Standard aus). Jeder Aufruf steht im Audit-Log (Aktion `mcp_tool_call`, nur Name
 des Werkzeugs, keine Argumente/Ergebnisse) und zaehlt auf das Tageslimit.
 """
 
@@ -34,6 +35,7 @@ from cc_crm.models.task import Task
 from cc_crm.models.user import User
 from cc_crm.repositories.recruiting import AuditLogRepository
 from cc_crm.schemas.operational import CockpitRead
+from cc_crm.services.ai_proposals import AiProposalService
 from cc_crm.services.candidates import CandidateService
 from cc_crm.services.clients import ClientCompanyService
 from cc_crm.services.operational import CockpitService
@@ -118,7 +120,11 @@ def _search_candidates(session: Session, user: User, arguments: dict[str, Any]) 
 
 def _get_candidate(session: Session, user: User, arguments: dict[str, Any]) -> Any:
     candidate = CandidateService(session).get(_uuid(arguments, "candidate_id"))
-    return {**_candidate_brief(candidate), "short_profile": candidate.short_profile}
+    detail = _candidate_brief(candidate)
+    # Nur mit ausdruecklichem Schalter (CC_CRM_AI_INCLUDE_PROFILE, Standard aus).
+    if get_settings().ai_include_profile:
+        detail["short_profile"] = candidate.short_profile
+    return detail
 
 
 def _search_clients(session: Session, user: User, arguments: dict[str, Any]) -> Any:
@@ -145,7 +151,7 @@ def _get_client(session: Session, user: User, arguments: dict[str, Any]) -> Any:
     client_id = _uuid(arguments, "client_id")
     item = session.get(ClientCompany, client_id)
     if item is None:
-        raise CcCrmError("Kanzlei nicht gefunden")
+        raise CcCrmError("Kunde nicht gefunden")
     return {
         "id": str(item.id),
         "name": item.name,
@@ -168,7 +174,9 @@ def _my_processes(session: Session, user: User, arguments: dict[str, Any]) -> An
             {
                 "id": str(item.id),
                 "candidate_id": str(item.candidate_id),
-                "client_company_id": str(item.client_company_id),
+                "client_company_id": (
+                    str(item.client_company_id) if item.client_company_id else None
+                ),
                 "status": str(item.status),
                 "created_at": item.created_at.isoformat(),
             }
@@ -209,6 +217,95 @@ def _cockpit_summary(session: Session, user: User, arguments: dict[str, Any]) ->
     }
 
 
+def _proposal(
+    session: Session,
+    user: User,
+    kind: str,
+    arguments: dict[str, Any],
+    payload: dict[str, Any],
+    *,
+    target_key: str | None,
+    target_type: str | None,
+    required_target: bool,
+) -> Any:
+    """Legt NUR einen Vorschlag an (nichts landet in Notizen, Aufgaben oder Mails,
+    bevor ein Mensch in Hermes freigibt)."""
+    target_id = None
+    if target_key is not None and (required_target or arguments.get(target_key)):
+        target_id = _uuid(arguments, target_key)
+    proposal = AiProposalService(session).create(
+        creator=user,
+        kind=kind,
+        payload=payload,
+        target_type=target_type if target_id is not None else None,
+        target_id=target_id,
+    )
+    return {
+        "proposal_id": str(proposal.id),
+        "status": "pending",
+        "hinweis": (
+            "Vorschlag gespeichert. Er wird erst wirksam, wenn ein Mensch ihn in Hermes "
+            "unter 'Claude-Vorschlaege' freigibt. Es wurde nichts angelegt oder gesendet."
+        ),
+    }
+
+
+def _propose_note(session: Session, user: User, arguments: dict[str, Any]) -> Any:
+    on_client = bool(arguments.get("client_id")) and not arguments.get("candidate_id")
+    return _proposal(
+        session,
+        user,
+        "note",
+        arguments,
+        {"text": arguments.get("text")},
+        target_key="client_id" if on_client else "candidate_id",
+        target_type="client" if on_client else "candidate",
+        required_target=True,
+    )
+
+
+def _propose_task(session: Session, user: User, arguments: dict[str, Any]) -> Any:
+    payload: dict[str, Any] = {
+        "title": arguments.get("title"),
+        "description": arguments.get("description"),
+        "due_at": arguments.get("due_at"),
+    }
+    if arguments.get("client_id") and not arguments.get("candidate_id"):
+        key, kind = "client_id", "client"
+    else:
+        key, kind = "candidate_id", "candidate"
+    return _proposal(
+        session,
+        user,
+        "task",
+        arguments,
+        payload,
+        target_key=key,
+        target_type=kind,
+        required_target=False,
+    )
+
+
+def _propose_mail_draft(session: Session, user: User, arguments: dict[str, Any]) -> Any:
+    for key, kind in (
+        ("candidate_id", "candidate"),
+        ("contact_id", "contact"),
+        ("client_id", "client"),
+    ):
+        if arguments.get(key):
+            return _proposal(
+                session,
+                user,
+                "mail_draft",
+                arguments,
+                {"subject": arguments.get("subject"), "body": arguments.get("body")},
+                target_key=key,
+                target_type=kind,
+                required_target=True,
+            )
+    raise McpError(-32602, "candidate_id, contact_id oder client_id angeben")
+
+
 _LIMIT_SCHEMA = {"type": "integer", "minimum": 1, "maximum": MAX_LIMIT, "default": 10}
 
 TOOLS: tuple[Tool, ...] = (
@@ -237,13 +334,13 @@ TOOLS: tuple[Tool, ...] = (
     ),
     Tool(
         "search_clients",
-        "Kanzleien suchen (Name, Website, Ort).",
+        "Kunden suchen (Name, Website, Ort).",
         {"type": "object", "properties": {"query": {"type": "string"}, "limit": _LIMIT_SCHEMA}},
         _search_clients,
     ),
     Tool(
         "get_client",
-        "Eine Kanzlei per ID oeffnen.",
+        "Einen Kunden per ID oeffnen.",
         {
             "type": "object",
             "properties": {"client_id": {"type": "string"}},
@@ -262,6 +359,56 @@ TOOLS: tuple[Tool, ...] = (
         "Offene Aufgaben des Nutzers, faelligste zuerst.",
         {"type": "object", "properties": {"limit": _LIMIT_SCHEMA}},
         _open_tasks,
+    ),
+    Tool(
+        "propose_note",
+        "Schlaegt eine Notiz zu einem Kandidaten (candidate_id) oder einem Kunden (client_id) "
+        "vor. Es wird NICHTS angelegt: ein Mensch gibt den Vorschlag in Hermes frei.",
+        {
+            "type": "object",
+            "properties": {
+                "candidate_id": {"type": "string"},
+                "client_id": {"type": "string"},
+                "text": {"type": "string", "maxLength": 5000},
+            },
+            "required": ["text"],
+        },
+        _propose_note,
+    ),
+    Tool(
+        "propose_task",
+        "Schlaegt eine Aufgabe vor (optional mit candidate_id/client_id und due_at als "
+        "ISO-Datum). Es wird NICHTS angelegt: ein Mensch gibt den Vorschlag in Hermes frei.",
+        {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "maxLength": 240},
+                "description": {"type": "string", "maxLength": 5000},
+                "due_at": {"type": "string"},
+                "candidate_id": {"type": "string"},
+                "client_id": {"type": "string"},
+            },
+            "required": ["title"],
+        },
+        _propose_task,
+    ),
+    Tool(
+        "propose_mail_draft",
+        "Schlaegt einen Mail-ENTWURF an einen Kandidaten (candidate_id), Kontakt (contact_id) "
+        "oder einen Kunden (client_id) vor. Der Empfaenger stammt aus dem Datensatz. Es wird "
+        "NICHTS gesendet: ein Mensch prueft, bearbeitet und sendet selbst.",
+        {
+            "type": "object",
+            "properties": {
+                "candidate_id": {"type": "string"},
+                "contact_id": {"type": "string"},
+                "client_id": {"type": "string"},
+                "subject": {"type": "string", "maxLength": 240},
+                "body": {"type": "string", "maxLength": 10000},
+            },
+            "required": ["subject", "body"],
+        },
+        _propose_mail_draft,
     ),
     Tool(
         "cockpit_summary",
@@ -313,6 +460,7 @@ def _call_tool(session: Session, user: User, params: dict[str, Any]) -> dict[str
     try:
         return _tool_result(tool.handler(session, user, arguments))
     except CcCrmError as exc:
+        session.rollback()
         return _tool_result({"fehler": str(exc)}, error=True)
 
 

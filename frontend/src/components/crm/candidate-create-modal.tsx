@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiGet, apiPatch, apiPost, apiUpload } from "@/lib/api/client";
+import { updateEngagementPrefs } from "@/lib/api/engagement"; // NOMICON
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { invalidateCandidatesCache, useAssignableUsersCache, useCurrentUser } from "@/lib/api/hooks";
 import { NOTICE_PERIOD_OPTIONS, NOTICE_PERIOD_OTHER } from "@/lib/utils";
@@ -208,6 +209,9 @@ export function CandidateCreateForm({
   // `form`-State gehalten (dessen generischer set()-Setter nur strings
   // erwartet) - gleiches Muster wie cvFile/dragActive oben.
   const [consentReceived, setConsentReceived] = useState(candidate?.consent_received ?? false);
+  // NOMICON: Kanal beim Anlegen ankreuzen (Direct und/oder Überlassung), mindestens einer.
+  const [channelDirect, setChannelDirect] = useState(true);
+  const [channelStaffing, setChannelStaffing] = useState(false);
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -294,6 +298,11 @@ export function CandidateCreateForm({
     event.preventDefault();
     setBusy(true);
     setError(null);
+    if (!isEdit && !channelDirect && !channelStaffing) {
+      setError("Bitte ankreuzen, ob der Kandidat für Direct und/oder Überlassung infrage kommt.");
+      setBusy(false);
+      return;
+    }
     try {
       // Leere Felder werden zu null (gültig für optionale Enum-/E-Mail-Felder wie
       // anrede/email), statt als "" ans Backend geschickt zu werden - "" ist z.B.
@@ -319,6 +328,11 @@ export function CandidateCreateForm({
         ? await apiPatch<Candidate>(`/candidates/${candidate!.id}`, payload)
         : await apiPost<Candidate>("/candidates", payload);
       if (!isEdit) {
+        // NOMICON: gewählte Kanäle als Freigabe speichern (angekreuzt = ja, sonst nein)
+        await updateEngagementPrefs(result.id, {
+          open_for_direct: channelDirect ? "yes" : "no",
+          open_for_staffing: channelStaffing ? "yes" : "no",
+        });
         setForm(emptyForm);
         setStations([]);
       }
@@ -452,6 +466,24 @@ export function CandidateCreateForm({
           <option value="divers">Divers</option>
         </select>
       </div>
+      {!isEdit && (
+        <div> {/* NOMICON */}
+          <p className={labelClass}>Kanal *</p>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 text-sm text-brand-text">
+              <input type="checkbox" className="size-4 accent-brand-accent" checked={channelDirect} onChange={(e) => setChannelDirect(e.target.checked)} />
+              Direct (Vermittlung)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-brand-text">
+              <input type="checkbox" className="size-4 accent-brand-accent" checked={channelStaffing} onChange={(e) => setChannelStaffing(e.target.checked)} />
+              Überlassung (Einwilligung liegt vor)
+            </label>
+          </div>
+          <p className="mt-1 text-xs text-brand-muted">
+            Ohne Häkchen bei Überlassung kann der Kandidat nicht als Leiharbeitnehmer angelegt werden; ohne Häkchen bei Direct keinem Prozess zugeordnet werden. Später änderbar im Kandidatenstatus.
+          </p>
+        </div>
+      )}
       <div>
         <label className="flex items-center gap-2 text-sm text-brand-text">
           <input
@@ -463,7 +495,7 @@ export function CandidateCreateForm({
           Einwilligung für CV-Out-Kampagne erhalten
         </label>
         <p className="mt-1 text-xs text-brand-muted">
-          Einwilligung zur Weitergabe des Profils an Kanzleien liegt vor - ohne diese kann die
+          Einwilligung zur Weitergabe des Profils an Kunden liegt vor - ohne diese kann die
           CV-Out-Kampagne (Kandidaten-Detailseite) nicht ausgelöst werden.
         </p>
       </div>
@@ -498,12 +530,12 @@ export function CandidateCreateForm({
           <div><label className={labelClass}>Ausbildung / Weiterbildung</label><Input value={form.ausbildung_titel} onChange={(e) => set("ausbildung_titel", e.target.value)} /></div>
         </div>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div><label className={labelClass}>Aktuelles Umfeld: Kanzleityp</label><Input value={form.aktuelles_umfeld_kanzleityp} onChange={(e) => set("aktuelles_umfeld_kanzleityp", e.target.value)} /></div>
-          <div><label className={labelClass}>Aktuelles Umfeld: Kanzleigröße</label><Input placeholder="z.B. 20-50 Mitarbeitende" value={form.aktuelles_umfeld_kanzleigroesse} onChange={(e) => set("aktuelles_umfeld_kanzleigroesse", e.target.value)} /></div>
+          <div><label className={labelClass}>Aktuelles Umfeld: Kundentyp</label><Input value={form.aktuelles_umfeld_kanzleityp} onChange={(e) => set("aktuelles_umfeld_kanzleityp", e.target.value)} /></div>
+          <div><label className={labelClass}>Aktuelles Umfeld: Kundengröße</label><Input placeholder="z.B. 20-50 Mitarbeitende" value={form.aktuelles_umfeld_kanzleigroesse} onChange={(e) => set("aktuelles_umfeld_kanzleigroesse", e.target.value)} /></div>
         </div>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelClass}>Remote-/Teilzeit-Wünsche</label><Input value={form.remote_teilzeit_wuensche} onChange={(e) => set("remote_teilzeit_wuensche", e.target.value)} /></div>
-          <div><label className={labelClass}>Passender Kanzleityp</label><Input value={form.passender_kanzleityp} onChange={(e) => set("passender_kanzleityp", e.target.value)} /></div>
+          <div><label className={labelClass}>Passender Kundentyp</label><Input value={form.passender_kanzleityp} onChange={(e) => set("passender_kanzleityp", e.target.value)} /></div>
         </div>
 
         <div className="mt-4">
@@ -518,8 +550,8 @@ export function CandidateCreateForm({
            * das die Loeschen-Zeile pro Station unnoetig hoch machen wuerde. */}
           {stations.map((station, index) => (
             <div key={index} className="mb-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,.6fr)_auto] items-end gap-2">
-              <div><Input placeholder="Kanzleityp" value={station.kanzleityp} onChange={(e) => setStation(index, "kanzleityp", e.target.value)} /></div>
-              <div><Input placeholder="Kanzleigröße" value={station.kanzleigroesse} onChange={(e) => setStation(index, "kanzleigroesse", e.target.value)} /></div>
+              <div><Input placeholder="Kundentyp" value={station.kanzleityp} onChange={(e) => setStation(index, "kanzleityp", e.target.value)} /></div>
+              <div><Input placeholder="Kundengröße" value={station.kanzleigroesse} onChange={(e) => setStation(index, "kanzleigroesse", e.target.value)} /></div>
               <div><Input type="number" placeholder="Jahre" value={station.dauer_jahre || ""} onChange={(e) => setStation(index, "dauer_jahre", Number(e.target.value))} /></div>
               <Button type="button" size="sm" variant="outline" onClick={() => setStations((current) => current.filter((_, i) => i !== index))}><Trash2 size={13} /></Button>
             </div>

@@ -17,6 +17,7 @@ import { useCurrentUser } from "@/lib/api/hooks";
 import { useServerSearchList } from "@/lib/api/use-server-search";
 import { getClientsPage } from "@/lib/api/queries";
 import type { ClientCompany } from "@/lib/api/types";
+import { formatPercent } from "@/lib/format"; // NOMICON
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Aktiv (grün)" },
@@ -30,7 +31,7 @@ type ClientRow =
   | { kind: "single"; client: ClientCompany }
   | { kind: "group"; groupKey: string; locations: ClientCompany[] };
 
-/** Fasst Kanzleien mit identischem, nicht-leerem kanzleigruppe-Wert (z.B.
+/** Fasst Kunden mit identischem, nicht-leerem kanzleigruppe-Wert (z.B.
  * "ECOVIS") zu einer Zeile zusammen - reine Darstellungsaenderung, die
  * einzelnen ClientCompany-Datensaetze (eigene Adresse/Kontakte je Standort)
  * bleiben unveraendert eigenstaendig (siehe models/client_company.py).
@@ -56,7 +57,7 @@ function groupByKanzleigruppe(clients: ClientCompany[]): ClientRow[] {
 
 export function ClientsTable() {
   const [status, setStatus] = useState("");
-  // "Meine Kanzleien" - reiner Komfort-Filter nach owner_user_id, KEINE
+  // "Meine Kunden" - reiner Komfort-Filter nach owner_user_id, KEINE
   // Sichtbarkeitsgrenze (Default "Alle" bleibt unveraendert).
   const [mineOnly, setMineOnly] = useState(false);
   const { data: currentUserData } = useCurrentUser();
@@ -76,12 +77,9 @@ export function ClientsTable() {
   // Serverseitige Suche + Pagination + Sortierung (siehe
   // lib/api/use-server-search.ts) - laedt nur die aktuell sichtbare Seite +
   // Suchtreffer statt (wie vorher via fetchAllPages) immer den kompletten
-  // Kanzlei-Bestand. Sortierung laeuft ueber ORDER BY im Backend (siehe
+  // Kunden-Bestand. Sortierung laeuft ueber ORDER BY im Backend (siehe
   // repositories/clients.py::_order_by_clauses) und damit ueber den
-  // GESAMTEN Bestand, nicht mehr nur die aktuell geladene Seite. Fuer
-  // "active_mandates" gibt es kein Backend-Feld (siehe Kommentar in
-  // SORT_ACCESSORS unten) - der Server ignoriert diesen sortBy-Wert und
-  // faellt auf die Default-Sortierung nach Name zurueck.
+  // GESAMTEN Bestand, nicht mehr nur die aktuell geladene Seite.
   const {
     search,
     setSearch,
@@ -107,11 +105,10 @@ export function ClientsTable() {
   const rows = useMemo(() => groupByKanzleigruppe(sorted), [sorted]);
 
   const exportRows = useMemo(() => sorted.map((client) => ({
-    Kanzlei: client.name,
+    Kunde: client.name,
     Status: client.status,
     Region: client.region ?? client.city ?? client.postal_code,
     Fokus: client.focus,
-    Ansprechpartner: client.contact_name,
     AGB: termsStatusLabel(client.terms_status),
     Honorar: client.fee_percentage ?? 27,
   })), [sorted]);
@@ -129,10 +126,10 @@ export function ClientsTable() {
 
   return (
     <>
-      <div className="mb-4 flex justify-end"><ExportActions filename="kanzleien" rows={exportRows} /></div>
+      <div className="mb-4 flex justify-end"><ExportActions filename="kunden" rows={exportRows} /></div>
       <DemoNotice source={source ?? "api"} error={demoError} />
       <FilterBar
-        placeholder="Nach Kanzlei, Region oder Fokus suchen"
+        placeholder="Nach Kunde, Region oder Fokus suchen"
         value={search}
         onChange={setSearch}
         statusOptions={STATUS_OPTIONS}
@@ -151,7 +148,7 @@ export function ClientsTable() {
             return (
               <Link
                 key={client.id}
-                href={`/kanzleien/${client.id}`}
+                href={`/kunden/${client.id}`}
                 className="block rounded-lg border border-white/10 bg-brand-panel p-3 active:bg-brand-hover/35"
               >
                 <div className="flex items-start justify-between gap-2">
@@ -162,9 +159,9 @@ export function ClientsTable() {
                   {client.region ?? client.city ?? client.postal_code ?? "Region offen"}
                   {client.focus ? ` · ${client.focus}` : ""}
                 </p>
-                <div className="mt-2 flex items-center justify-between text-[11px] text-brand-gray">
-                  <span>Kontakt {formatDate(client.last_contact_at ?? client.last_contact ?? client.updated_at)}</span>
-                  <span>{client.fee_percentage ?? 27} % Honorar</span>
+                <div className="mt-2 flex items-center justify-between text-[10.45px] text-brand-gray">
+                  <span>Kontakt {formatDate(client.last_contact_at ?? client.updated_at)}</span>
+                  <span>{formatPercent(client.fee_percentage ?? 27)} Honorar</span>
                 </div>
               </Link>
             );
@@ -184,14 +181,14 @@ export function ClientsTable() {
                   {isExpanded ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
                   <span className="truncate">{groupKey}</span>
                 </span>
-                <span className="shrink-0 text-[11px] text-brand-muted">{locations.length} Standorte</span>
+                <span className="shrink-0 text-[10.45px] text-brand-muted">{locations.length} Standorte</span>
               </button>
               {isExpanded && (
                 <div className="space-y-2 border-t border-white/10 p-2">
                   {locations.map((client) => (
                     <Link
                       key={client.id}
-                      href={`/kanzleien/${client.id}`}
+                      href={`/kunden/${client.id}`}
                       className="block rounded-lg border border-white/10 bg-brand-surface/60 p-3 active:bg-brand-hover/35"
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -206,24 +203,22 @@ export function ClientsTable() {
                 </div>
               )}
               {!isExpanded && postalCodes.length > 0 && (
-                <p className="px-3 pb-3 text-[11px] text-brand-muted">PLZ: {postalCodes.join(", ")}</p>
+                <p className="px-3 pb-3 text-[10.45px] text-brand-muted">PLZ: {postalCodes.join(", ")}</p>
               )}
             </div>
           );
         })}
         {rows.length === 0 && (
-          <p className="py-8 text-center text-xs text-brand-muted">Keine Kanzleien gefunden.</p>
+          <p className="py-8 text-center text-xs text-brand-muted">Keine Kunden gefunden.</p>
         )}
       </div>
       <div className="hidden lg:block">
       <DataTable
         headers={[
-          { label: "Kanzlei", key: "name" },
+          { label: "Kunde", key: "name" },
           { label: "Region", key: "region" },
           { label: "Größe", key: "company_size" },
           { label: "Fokus", key: "focus" },
-          "Hauptkontakt",
-          { label: "Mandate", key: "active_mandates" },
           { label: "Letzter Kontakt", key: "last_contact_at" },
           "AGB",
           { label: "Honorar", key: "fee_percentage" },
@@ -237,15 +232,13 @@ export function ClientsTable() {
             const client = row.client;
             return (
               <tr key={client.id} className="hover:bg-brand-hover/35">
-                <td className="px-4 py-3.5"><Link href={`/kanzleien/${client.id}`} className="font-semibold text-brand-platinum hover:text-white hover:underline">{client.name}</Link><div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusPill status={client.status} />{client.approval_pending && <Badge tone="amber">Freigabe ausstehend</Badge>}</div></td>
+                <td className="px-4 py-3.5"><Link href={`/kunden/${client.id}`} className="font-semibold text-brand-platinum hover:text-white hover:underline">{client.name}</Link><div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusPill status={client.status} />{client.approval_pending && <Badge tone="amber">Freigabe ausstehend</Badge>}</div></td>
                 <td className="px-4 py-3.5">{client.region ?? client.city ?? client.postal_code ?? "—"}</td>
-                <td className="px-4 py-3.5 text-brand-soft">{client.company_size ?? client.size ?? "—"}</td>
+                <td className="px-4 py-3.5 text-brand-soft">{client.company_size ?? "—"}</td>
                 <td className="px-4 py-3.5">{client.focus ?? "—"}</td>
-                <td className="px-4 py-3.5">{client.contact_name ?? "—"}</td>
-                <td className="px-4 py-3.5 text-center">{client.active_mandates ?? 0}</td>
-                <td className="px-4 py-3.5 text-brand-soft">{formatDate(client.last_contact_at ?? client.last_contact ?? client.updated_at)}</td>
+                <td className="px-4 py-3.5 text-brand-soft">{formatDate(client.last_contact_at ?? client.updated_at)}</td>
                 <td className="px-4 py-3.5"><StatusPill status={client.terms_status === "accepted" || client.terms_status === "Unterzeichnet" ? "active" : "draft"} /></td>
-                <td className="px-4 py-3.5 font-medium">{client.fee_percentage ?? 27} %</td>
+                <td className="px-4 py-3.5 font-medium">{formatPercent(client.fee_percentage ?? 27)}</td>
               </tr>
             );
           }
@@ -253,9 +246,8 @@ export function ClientsTable() {
           const { groupKey, locations } = row;
           const isExpanded = expandedGroup === groupKey;
           const postalCodes = [...new Set(locations.map((loc) => loc.postal_code).filter(Boolean))];
-          const totalMandates = locations.reduce((sum, loc) => sum + (loc.active_mandates ?? 0), 0);
           const mostRecentContact = locations
-            .map((loc) => loc.last_contact_at ?? loc.last_contact ?? loc.updated_at)
+            .map((loc) => loc.last_contact_at ?? loc.updated_at)
             .filter(Boolean)
             .sort()
             .at(-1);
@@ -271,21 +263,19 @@ export function ClientsTable() {
                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     {groupKey}
                   </span>
-                  <p className="mt-1 text-[11px] text-brand-muted">{locations.length} Standorte</p>
+                  <p className="mt-1 text-[10.45px] text-brand-muted">{locations.length} Standorte</p>
                 </td>
                 <td className="px-4 py-3.5">
                   <div className="flex flex-wrap gap-1">
                     {postalCodes.length > 0
                       ? postalCodes.map((plz) => (
-                          <span key={plz} className="rounded-full border border-white/10 bg-brand-surface px-2 py-0.5 text-[11px] text-brand-soft">{plz}</span>
+                          <span key={plz} className="rounded-full border border-white/10 bg-brand-surface px-2 py-0.5 text-[10.45px] text-brand-soft">{plz}</span>
                         ))
                       : "—"}
                   </div>
                 </td>
                 <td className="px-4 py-3.5 text-brand-soft">—</td>
                 <td className="px-4 py-3.5">{locations[0]?.focus ?? "—"}</td>
-                <td className="px-4 py-3.5">—</td>
-                <td className="px-4 py-3.5 text-center">{totalMandates}</td>
                 <td className="px-4 py-3.5 text-brand-soft">{mostRecentContact ? formatDate(mostRecentContact) : "—"}</td>
                 <td className="px-4 py-3.5">—</td>
                 <td className="px-4 py-3.5 font-medium">—</td>
@@ -293,15 +283,13 @@ export function ClientsTable() {
               {isExpanded &&
                 locations.map((client) => (
                   <tr key={client.id} className="bg-brand-surface/40 hover:bg-brand-hover/35">
-                    <td className="px-4 py-3.5 pl-9"><Link href={`/kanzleien/${client.id}`} className="font-semibold text-brand-platinum hover:text-white hover:underline">{client.name}</Link><div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusPill status={client.status} />{client.approval_pending && <Badge tone="amber">Freigabe ausstehend</Badge>}</div></td>
+                    <td className="px-4 py-3.5 pl-9"><Link href={`/kunden/${client.id}`} className="font-semibold text-brand-platinum hover:text-white hover:underline">{client.name}</Link><div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusPill status={client.status} />{client.approval_pending && <Badge tone="amber">Freigabe ausstehend</Badge>}</div></td>
                     <td className="px-4 py-3.5">{client.region ?? client.city ?? client.postal_code ?? "—"}</td>
-                    <td className="px-4 py-3.5 text-brand-soft">{client.company_size ?? client.size ?? "—"}</td>
+                    <td className="px-4 py-3.5 text-brand-soft">{client.company_size ?? "—"}</td>
                     <td className="px-4 py-3.5">{client.focus ?? "—"}</td>
-                    <td className="px-4 py-3.5">{client.contact_name ?? "—"}</td>
-                    <td className="px-4 py-3.5 text-center">{client.active_mandates ?? 0}</td>
-                    <td className="px-4 py-3.5 text-brand-soft">{formatDate(client.last_contact_at ?? client.last_contact ?? client.updated_at)}</td>
+                    <td className="px-4 py-3.5 text-brand-soft">{formatDate(client.last_contact_at ?? client.updated_at)}</td>
                     <td className="px-4 py-3.5"><StatusPill status={client.terms_status === "accepted" || client.terms_status === "Unterzeichnet" ? "active" : "draft"} /></td>
-                    <td className="px-4 py-3.5 font-medium">{client.fee_percentage ?? 27} %</td>
+                    <td className="px-4 py-3.5 font-medium">{formatPercent(client.fee_percentage ?? 27)}</td>
                   </tr>
                 ))}
             </Fragment>
@@ -310,7 +298,7 @@ export function ClientsTable() {
       </DataTable>
       </div>
       <PaginationControls page={page} pageCount={pageCount} onChange={setPage} />
-      <p className="mt-3 text-xs text-brand-gray">{sorted.length} von {totalCount} Kanzleien</p>
+      <p className="mt-3 text-xs text-brand-gray">{sorted.length} von {totalCount} Kunden</p>
     </>
   );
 }

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { usePathname } from "next/navigation";
+import { OUTLOOK_SNOOZE_KEY, shouldShowOutlookBanner, snoozeUntil } from "@/lib/outlook-banner"; // NOMICON
 import { disconnectOutlook, getOutlookStatus } from "@/lib/api/queries";
 import type { OutlookStatus } from "@/lib/api/types";
 
@@ -26,18 +28,21 @@ function useOutlookStatus() {
 
 /** Schmaler Hinweis oben im Inhalt, solange Outlook nicht (mehr) verbunden ist.
  * Verbunden wird mit „Mit Microsoft anmelden“ – ein Klick, danach laufen Mail-Versand,
- * Kalender und Teams-Einladungen über das eigene Konto. Pro Sitzung ausblendbar. */
+ * Kalender und Teams-Einladungen über das eigene Konto. „Später“ blendet ihn für einige Tage aus. */
 export function OutlookBanner() {
   const { status } = useOutlookStatus();
-  const [hidden, setHidden] = useState(false);
+  const pathname = usePathname(); // NOMICON: nur auf Übersicht, Kalender, Mailing; "Später" gilt mehrere Tage
+  const [snoozedUntil, setSnoozedUntil] = useState<number | null>(null);
   useEffect(() => {
     try {
-      setHidden(window.sessionStorage.getItem("outlook-banner-hidden") === "1");
+      const raw = window.localStorage.getItem(OUTLOOK_SNOOZE_KEY);
+      setSnoozedUntil(raw ? Number(raw) : null);
     } catch {
       // Storage nicht verfügbar – Banner einfach anzeigen.
     }
   }, []);
-  if (!status || status.state === "connected" || hidden) return null;
+  if (!shouldShowOutlookBanner({ state: status?.state, pathname, snoozedUntil, now: Date.now(), demo: DEMO_MODE || process.env.NEXT_PUBLIC_CC_CRM_DEMO_LOGIN === "true" })) return null;
+  if (!status) return null;
   return (
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand-accent/40 bg-brand-surface px-4 py-3 text-sm">
       <span className="text-brand-soft">
@@ -53,9 +58,10 @@ export function OutlookBanner() {
           size="sm"
           variant="outline"
           onClick={() => {
-            setHidden(true);
+            const until = snoozeUntil(Date.now());
+            setSnoozedUntil(until);
             try {
-              window.sessionStorage.setItem("outlook-banner-hidden", "1");
+              window.localStorage.setItem(OUTLOOK_SNOOZE_KEY, String(until));
             } catch {
               // egal
             }

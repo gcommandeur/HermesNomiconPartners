@@ -88,6 +88,9 @@ class MailAccountRead(EntityRead):
     # (Nutzer-Vorgabe). Enthaelt nie das Passwort - siehe
     # services/mail_sync.py::_safe_error.
     sync_error: str | None
+    # None = gemeinsames Firmenpostfach, sonst persoenliches Konto dieses Nutzers.
+    owner_user_id: uuid.UUID | None = None
+    sync_enabled: bool = True
 
 
 class MailBulkSendRequest(BaseModel):
@@ -207,3 +210,65 @@ class MailSendResult(BaseModel):
     matched_client_company_id: uuid.UUID | None
     matched_contact_person_id: uuid.UUID | None
     created_activity_id: uuid.UUID | None
+
+
+class MyMailAccountCreate(BaseModel):
+    """Eigenes IMAP/SMTP-Postfach anlegen (Einstellungen -> Mein Postfach).
+    Anders als MailAccountCreate ohne Admin-Felder (kein CV-Out-Standard); das
+    Passwort ist auch hier nur schreibend (bei Gmail/Outlook/GMX: App-Passwort)."""
+
+    address: EmailStr
+    label: str = Field(min_length=1, max_length=80)
+    imap_host: str = Field(min_length=1, max_length=255)
+    imap_port: int = Field(default=993, ge=1, le=65535)
+    imap_use_ssl: bool = True
+    smtp_host: str = Field(min_length=1, max_length=255)
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_use_ssl: bool = True
+    username: str = Field(min_length=1, max_length=320)
+    password: str = Field(min_length=1)
+    send_throttle_seconds: int = Field(default=8, ge=0, le=3600)
+    daily_send_limit: int = Field(default=150, ge=1, le=10000)
+
+
+class MyMailAccountUpdate(BaseModel):
+    label: str | None = Field(default=None, min_length=1, max_length=80)
+    imap_host: str | None = Field(default=None, min_length=1, max_length=255)
+    imap_port: int | None = Field(default=None, ge=1, le=65535)
+    imap_use_ssl: bool | None = None
+    smtp_host: str | None = Field(default=None, min_length=1, max_length=255)
+    smtp_port: int | None = Field(default=None, ge=1, le=65535)
+    smtp_use_ssl: bool | None = None
+    username: str | None = Field(default=None, min_length=1, max_length=320)
+    password: str | None = Field(default=None, min_length=1)
+    is_active: bool | None = None
+    # Posteingang abrufen und mit Kandidaten/Kontakten abgleichen (Standard aus).
+    sync_enabled: bool | None = None
+    send_throttle_seconds: int | None = Field(default=None, ge=0, le=3600)
+    daily_send_limit: int | None = Field(default=None, ge=1, le=10000)
+
+
+class MyMailAccountRead(MailAccountRead):
+    """Wie MailAccountRead (ohne Passwort), dazu die Standard-Absender-Info."""
+
+    is_default_sender: bool = False
+
+
+class MailConnectionTestRequest(BaseModel):
+    """Verbindungstest VOR dem Speichern (Passwort wird nicht gespeichert)."""
+
+    imap_host: str = Field(min_length=1, max_length=255)
+    imap_port: int = Field(default=993, ge=1, le=65535)
+    imap_use_ssl: bool = True
+    smtp_host: str = Field(min_length=1, max_length=255)
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_use_ssl: bool = True
+    username: str = Field(min_length=1, max_length=320)
+    password: str = Field(min_length=1)
+
+
+class MailConnectionTestResult(BaseModel):
+    imap_ok: bool
+    imap_error: str | None = None
+    smtp_ok: bool
+    smtp_error: str | None = None

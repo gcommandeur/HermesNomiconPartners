@@ -1,10 +1,18 @@
 import os
+import tempfile
 from collections.abc import Generator
+from pathlib import Path
 
 # VOR dem Import der App: der TestClient fuehrt den Lifespan aus - ein mitlaufender
 # Worker-Thread wuerde parallel auf der geteilten Test-Verbindung arbeiten (Flackern).
 # Tests arbeiten Jobs gezielt per tests/jobs.py::drain_jobs ab.
 os.environ.setdefault("CC_CRM_EMBEDDED_WORKER", "false")
+# Unabhängig von backend/.env: ohne diese Zeile (und ohne .env) zeigt die App auf das
+# Standard-Postgres und jeder Test scheitert. Eine gesetzte Variable (Postgres-Lauf) gewinnt.
+os.environ.setdefault(
+    "CC_CRM_DATABASE_URL",
+    f"sqlite:///{Path(tempfile.gettempdir()).as_posix()}/cc_crm_pytest_{os.getpid()}.db",
+)
 
 import pytest
 from fastapi.testclient import TestClient

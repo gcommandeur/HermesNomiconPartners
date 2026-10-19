@@ -1,7 +1,7 @@
 import { demoCandidates, demoClients, demoCockpit, demoEmailTemplates, demoSubmissions } from "@/lib/demo-data";
 import { demoContacts, demoGeoResults, demoVacancies } from "@/lib/ia-data";
-import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
-import type { Activity, AdminUser, OutlookStatus, BackgroundJob, CustomFieldDefinition, CustomFieldEntity, CustomFieldValue, WebhookDelivery, WebhookEndpoint, WebhookEndpointWithSecret, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, OutreachSequence, SequenceEnrollment, SequenceStepInput, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
+import { apiDelete, apiDownload, apiGet, apiPatch, apiPost, apiPut } from "./client";
+import type { PresentationRecordDetail, PresentationRecordItem, PresentationRemovalRequest, PresentationVerifyResult, UnownedSubmissionList, Activity, AdminUser, ClaudeConnection, ClaudeConsentInfo, AiProposal, AiProposalStatus, AiProposalSummary, MailConnectionTestResult, MyMailAccount, MyMailAccountInput, OutlookStatus, BackgroundJob, CustomFieldDefinition, CustomFieldEntity, CustomFieldValue, WebhookDelivery, WebhookEndpoint, WebhookEndpointWithSecret, AppSettings, CandidateComment, ApprovalRequest, Fee, InvoiceStatus, InvoiceStatusChangeResult, AuditLogEntry, Candidate, CandidateMatch, CandidatePitchLogCreate, CandidatePitchLogRead, CandidateQuickLogCreate, CandidateQuickLogResult, CandidateStageSummary, CandidateSubmission, CalendarEvent, CalendarEventType, ClientCompany, ClientDuplicateCandidate, ClientMatch, Cockpit, Contact, CurrentUserInfo, CvOutTargetsResult, DeletionRequestEntry, DocumentMeta, EmailTemplate, EmailTemplateUpdate, Feedback, FeedbackCreate, FeedbackCreateResult, FeedbackUpdate, GeoMappingResult, Interview, InterviewCreate, InterviewUpdate, KpiPointRule, KpiRankingResult, MailAccount, MailMatchStatus, MailMessageListItem, MailOAuthStartResult, MailSendRequest, MailSendResult, MailingGroup, Note, Offer, OfferCreate, OfferUpdate, PageQuery, Paginated, Placement, PlacementCreate, PlacementUpdate, SourcingLead, OutreachSequence, SequenceEnrollment, SequenceStepInput, SourcingRunStatus, SubmissionShare, Task, TaskResolveOutcome, TeamKpiOverview, UserBrief, Vacancy } from "./types";
 
 // Die Listen-Endpunkte sind serverseitig paginiert (max. 500 Einträge pro
 // Seite). Ein einzelner Aufruf mit limit=100 hat bei >100 Datensätzen (z.B.
@@ -65,6 +65,8 @@ function pageQueryString(query: PageQuery): string {
   if (query.rollenUnbestaetigt !== undefined) {
     params.set("rollen_unbestaetigt", String(query.rollenUnbestaetigt));
   }
+  if (query.engagement) params.set("engagement", query.engagement); // NOMICON
+  if (query.staffing) params.set("staffing", query.staffing); // NOMICON
   if (query.ownerUserId) params.set("owner_user_id", query.ownerUserId);
   if (query.sortBy) params.set("sort_by", query.sortBy);
   if (query.sortDir) params.set("sort_dir", query.sortDir);
@@ -95,7 +97,7 @@ export async function getClients() {
   return fetchAllPages<ClientCompany>("/clients", demoClients);
 }
 
-/** Seitenweise Kanzlei-Suche, s. getCandidatesPage(). */
+/** Seitenweise Kunden-Suche, s. getCandidatesPage(). */
 export async function getClientsPage(query: PageQuery) {
   return apiGet<Paginated<ClientCompany>>(`/clients?${pageQueryString(query)}`, {
     items: [],
@@ -105,7 +107,7 @@ export async function getClientsPage(query: PageQuery) {
   });
 }
 
-/** Warnt vor wahrscheinlich schon vorhandenen Kanzleien mit ähnlichem Namen
+/** Warnt vor wahrscheinlich schon vorhandenen Kunden mit ähnlichem Namen
  * (Marke, nicht Rechtsform) - blockiert nichts, da mehrere Standorte
  * derselben Marke (Ecovis, Afileon, PWC, ...) ausdrücklich erwünscht sind. */
 export async function checkClientDuplicate(name: string, postalCode?: string, excludeId?: string) {
@@ -133,7 +135,7 @@ export async function getSubmissionsForCandidate(candidateId: string) {
   );
 }
 
-/** Laedt gezielt die angegebenen Kanzleien einzeln statt des kompletten
+/** Laedt gezielt die angegebenen Kunden einzeln statt des kompletten
  * Kanzleibestands (vorher mehrere tausend Datensaetze nur fuer ein paar
  * Namen auf der Kandidatendetailseite). */
 export async function getClientsByIds(clientIds: string[]): Promise<ClientCompany[]> {
@@ -271,7 +273,7 @@ export async function getContacts() {
 /** Seitenweise Kontakte-Suche, s. getCandidatesPage(). Der Endpoint gibt seit
  * der Server-Side-Suche eine Page (mit total_count) statt einer flachen
  * Liste zurueck und liefert client_company_name bereits denormalisiert mit -
- * das Frontend muss dafuer nicht mehr den kompletten Kanzlei-Bestand laden. */
+ * das Frontend muss dafuer nicht mehr den kompletten Kunden-Bestand laden. */
 export async function getContactsPage(query: PageQuery) {
   return apiGet<Paginated<Contact>>(`/contacts?${pageQueryString(query)}`, {
     items: [],
@@ -419,7 +421,7 @@ export interface CalendarEventQuery {
 
 /** Kalender-Termine im Zeitraum [startFrom, startTo] - kein Pagination noetig
  * (ein Monat/eine Woche an Terminen ist eine ueberschaubare Anzahl, anders
- * als der Kandidaten-/Kanzlei-Bestand). Serverseitige Sichtbarkeitsregeln
+ * als der Kandidaten-/Kunden-Bestand). Serverseitige Sichtbarkeitsregeln
  * (eigene vs. alle Termine) greifen unabhaengig von diesen Query-Parametern
  * (siehe Backend services/calendar_events.py::list_visible). */
 export async function getCalendarEvents(query: CalendarEventQuery = {}) {
@@ -497,9 +499,19 @@ export async function getAdminUsers() {
 
 /** Fuer JEDEN eingeloggten Nutzer zugaenglich (anders als getAdminUsers/
  * GET /users, admin-only) - Grundlage der Owner-Auswahl beim Anlegen von
- * Kandidat/Kanzlei/Prozess/Aufgabe. */
+ * Kandidat/Kunde/Prozess/Aufgabe. */
 export async function getAssignableUsers() {
   return apiGet<UserBrief[]>("/users/assignable", []);
+}
+
+/** Nur Admin: Prozesse ohne Verantwortlichen (fuer Nicht-Admins unsichtbar). */
+export async function getUnownedSubmissions() {
+  return apiGet<UnownedSubmissionList>("/submissions/without-owner", { total: 0, items: [] });
+}
+
+/** Nur Admin: Verantwortlichen eines Prozesses setzen (Audit im Backend). */
+export async function assignSubmissionOwner(submissionId: string, ownerUserId: string) {
+  return apiPost<unknown>(`/submissions/${submissionId}/assign-owner`, { owner_user_id: ownerUserId });
 }
 
 /** Nutzer im eigenen Sichtbereich (Admin: alle, Teamleiter: Team, sonst nur man selbst). */
@@ -755,4 +767,119 @@ export async function getOutlookStatus() {
 
 export async function disconnectOutlook() {
   return apiPost<void>("/me/outlook/disconnect", {});
+}
+
+/** Mein Postfach (persönliche IMAP/SMTP-Konten). */
+export async function getMyMailAccounts() {
+  return apiGet<MyMailAccount[]>("/me/mail-accounts", []);
+}
+
+export async function createMyMailAccount(payload: MyMailAccountInput) {
+  return apiPost<MyMailAccount>("/me/mail-accounts", payload);
+}
+
+export async function updateMyMailAccount(
+  accountId: string,
+  payload: Partial<Omit<MyMailAccountInput, "address">> & { is_active?: boolean; sync_enabled?: boolean },
+) {
+  return apiPatch<MyMailAccount>(`/me/mail-accounts/${accountId}`, payload);
+}
+
+export async function deleteMyMailAccount(accountId: string) {
+  return apiDelete(`/me/mail-accounts/${accountId}`);
+}
+
+export async function setMyDefaultSender(accountId: string) {
+  return apiPost<MyMailAccount>(`/me/mail-accounts/${accountId}/default`, {});
+}
+
+export async function testMyMailAccount(accountId: string) {
+  return apiPost<MailConnectionTestResult>(`/me/mail-accounts/${accountId}/test`, {}, 45_000);
+}
+
+export async function testMailConnection(payload: Omit<MyMailAccountInput, "address" | "label">) {
+  return apiPost<MailConnectionTestResult>("/me/mail-accounts/test", payload, 45_000);
+}
+
+/** Claude-Vorschläge: Inbox für Menschen (Freigabe/Ablehnung). */
+export async function getAiProposals(status?: AiProposalStatus) {
+  return apiGet<AiProposal[]>(`/ai-proposals${status ? `?status=${status}` : ""}`, []);
+}
+
+export async function getAiProposalSummary() {
+  return apiGet<AiProposalSummary>("/ai-proposals/summary", { enabled: false, pending: 0 });
+}
+
+export async function approveAiProposal(id: string, payload?: AiProposal["payload"]) {
+  return apiPost<AiProposal>(`/ai-proposals/${id}/approve`, payload ? { payload } : {});
+}
+
+export async function rejectAiProposal(id: string, decisionNote?: string) {
+  return apiPost<AiProposal>(`/ai-proposals/${id}/reject`, { decision_note: decisionNote ?? null });
+}
+
+/** Claude als verbundener Dienst (Hermes als OAuth-Anbieter, Zustimmung und Verwaltung). */
+export async function getClaudeConsentInfo(requestId: string) {
+  const result = await apiGet<ClaudeConsentInfo | null>(`/oauth/consent/${requestId}`, null);
+  if (!result.data) throw new Error("Die Anfrage ist abgelaufen.");
+  return { ...result, data: result.data };
+}
+
+export async function decideClaudeConsent(requestId: string, approve: boolean) {
+  return apiPost<{ redirect_url: string }>("/oauth/consent", { request_id: requestId, approve });
+}
+
+export async function getClaudeConnections() {
+  return apiGet<ClaudeConnection[]>("/oauth/connections", []);
+}
+
+export async function revokeClaudeConnection(connectionId: string) {
+  return apiDelete(`/oauth/connections/${connectionId}`);
+}
+
+/** Vorstellungs-Archiv (nur Admins; fuer andere antwortet das Backend mit 404). */
+const PRESENTATION_ARCHIVE = "/admin/presentation-archive";
+
+export async function getPresentationRecords(params: { candidateNumber?: string; offset?: number }) {
+  const query = new URLSearchParams({ limit: "50", offset: String(params.offset ?? 0) });
+  if (params.candidateNumber) query.set("candidate_number", params.candidateNumber);
+  return apiGet<{ total: number; items: PresentationRecordItem[] }>(
+    `${PRESENTATION_ARCHIVE}?${query.toString()}`,
+    { total: 0, items: [] },
+  );
+}
+
+export async function getPresentationRecord(recordId: string) {
+  return apiGet<PresentationRecordDetail | null>(`${PRESENTATION_ARCHIVE}/${recordId}`, null);
+}
+
+export async function verifyPresentationRecord(recordId: string) {
+  return apiGet<PresentationVerifyResult | null>(`${PRESENTATION_ARCHIVE}/${recordId}/verify`, null);
+}
+
+export async function downloadPresentationFile(recordId: string, index: number, fallbackName: string) {
+  return apiDownload(`${PRESENTATION_ARCHIVE}/${recordId}/files/${index}`, fallbackName);
+}
+
+export async function setPresentationRetention(recordId: string, retentionUntil: string | null) {
+  return apiPut<PresentationRecordDetail>(`${PRESENTATION_ARCHIVE}/${recordId}/retention`, {
+    retention_until: retentionUntil,
+  });
+}
+
+export async function requestPresentationRemoval(recordId: string, reason: string) {
+  return apiPost<PresentationRemovalRequest>(`${PRESENTATION_ARCHIVE}/${recordId}/removal-requests`, {
+    reason,
+  });
+}
+
+export async function getPresentationRemovalRequests() {
+  return apiGet<PresentationRemovalRequest[]>(`${PRESENTATION_ARCHIVE}/removal-requests`, []);
+}
+
+export async function decidePresentationRemoval(requestId: string, approve: boolean, note?: string) {
+  return apiPost<PresentationRemovalRequest>(
+    `${PRESENTATION_ARCHIVE}/removal-requests/${requestId}/${approve ? "approve" : "reject"}`,
+    { note: note ?? null },
+  );
 }

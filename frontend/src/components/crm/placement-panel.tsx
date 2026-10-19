@@ -63,7 +63,7 @@ function formFromPlacement(placement: Placement): FormState {
 
 /** Live-Vorschau der Fee waehrend der Eingabe - rein clientseitig, keine
  * Server-Rundtrip. `null` wenn die Eingaben (noch) keine Berechnung
- * zulassen (z.B. Honorarsatz leer im Berechnet-Modus, da der Kanzlei-
+ * zulassen (z.B. Honorarsatz leer im Berechnet-Modus, da der Kunden-
  * Standardsatz erst serverseitig aufgeloest wird). */
 function previewFee(form: FormState): number | null {
   if (form.fee_mode === "fix") {
@@ -88,7 +88,7 @@ function previewFee(form: FormState): number | null {
 /** Placement-Formular fuer die Stufe "placement" - singulaer (ein Placement
  * pro Prozess, siehe Backend: kein :id-Segment im Pfad). fee_percentage
  * bleibt leer/optional beim Anlegen -> Backend uebernimmt dann den
- * Kanzlei-Standardsatz (siehe services/recruiting.py::_resolve_fee_percentage). */
+ * Kunden-Standardsatz (siehe services/recruiting.py::_resolve_fee_percentage). */
 export function PlacementPanel({ submissionId }: { submissionId: string }) {
   const [placement, setPlacement] = useState<Placement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -144,7 +144,7 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
         const updated = await updatePlacement(submissionId, {
           start_date: form.start_date,
           final_salary: finalSalary,
-          // Leer gelassen = unveraendert (Kanzlei-/Submission-Standardsatz
+          // Leer gelassen = unveraendert (Kunden-/Submission-Standardsatz
           // bleibt bestehen) - anders als beim Anlegen wuerde `null` hier
           // serverseitig fee_percentage auf "kein Wert" zuruecksetzen und die
           // Fee-Neuberechnung zum Absturz bringen.
@@ -248,7 +248,7 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
         {form.fee_mode === "berechnet" ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className={labelClass}>Honorarsatz % (leer = Kanzlei-Standard)</label>
+              <label className={labelClass}>Honorarsatz % (leer = Kunden-Standard)</label>
               <Input
                 type="number"
                 min={0}
@@ -325,7 +325,7 @@ export function PlacementPanel({ submissionId }: { submissionId: string }) {
         </div>
         {placement && (
           <p className="text-xs text-brand-dim">
-            Gespeicherte Fee: {placement.calculated_fee.toLocaleString("de-DE")} € · Gewährleistung bis{" "}
+            Gespeicherte Fee: {Number(placement.calculated_fee).toLocaleString("de-DE")} € · Gewährleistung bis{" "}
             {placement.warranty_end_date}
           </p>
         )}

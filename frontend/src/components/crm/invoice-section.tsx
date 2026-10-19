@@ -83,7 +83,7 @@ function FeeRow({ fee, onChanged }: { fee: Fee; onChanged: () => void }) {
           )}
         </div>
       </div>
-      <p className="mt-1.5 text-[11px] text-brand-dim">
+      <p className="mt-1.5 text-[10.45px] text-brand-dim">
         {fee.invoice_date && <>Rechnungsdatum {formatDate(fee.invoice_date)} · </>}
         {fee.paid_at ? <>Bezahlt am {formatDate(fee.paid_at)}</> : <>Angelegt {formatDate(fee.created_at)}</>}
       </p>
@@ -108,7 +108,7 @@ export function InvoiceSection({ placement }: { placement: Placement }) {
     setBusy(true);
     setError(null);
     try {
-      await createDraftFee(placement.id, placement.calculated_fee);
+      await createDraftFee(placement.id, Number(placement.calculated_fee));
       await mutate();
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Rechnung konnte nicht angelegt werden.");
@@ -128,7 +128,7 @@ export function InvoiceSection({ placement }: { placement: Placement }) {
       </div>
       {!hasOpenInvoice && (
         <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void createDraft()} className="mt-2">
-          Rechnung als Entwurf anlegen ({placement.calculated_fee.toLocaleString("de-DE", { style: "currency", currency: "EUR" })} netto)
+          Rechnung als Entwurf anlegen ({Number(placement.calculated_fee).toLocaleString("de-DE", { style: "currency", currency: "EUR" })} netto)
         </Button>
       )}
       <ErrorBanner message={error} className="mt-2" />

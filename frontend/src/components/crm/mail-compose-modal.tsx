@@ -24,7 +24,7 @@ function renderTemplate(text: string, values: Record<string, string>): string {
  * Absender-Postfach + Vorlage (25 aus email_templates) + Betreff/Text
  * (editierbar) + Anhänge (CV-Dokumente ausgeblendet, siehe
  * project_submission_workflow_cv_attachment_guard) -> POST /mail/send.
- * Aufrufbar von Kandidaten-/Kanzlei-Detailseite, Kontakte-Tabelle,
+ * Aufrufbar von Kandidaten-/Kunden-Detailseite, Kontakte-Tabelle,
  * Mailing-Gruppen-Panel - jeweils mit dem dort verfügbaren Kontext
  * (Empfänger, Platzhalterwerte, Zuordnung) vorbefüllt. */
 export function MailComposeModal({
@@ -38,13 +38,15 @@ export function MailComposeModal({
   clientCompanyId,
   contactPersonId,
   placeholderValues = {},
+  initialSubject = "",
+  initialBody = "",
 }: {
   onClose: () => void;
   onSent?: () => void;
   toAddress: string;
   toName?: string;
   /** Fuer den Anhang-Picker - z.B. "candidate"/candidateId, damit nur die
-   * Dokumente dieser Person/Kanzlei zur Auswahl stehen. */
+   * Dokumente dieser Person/Kunde zur Auswahl stehen. */
   documentOwnerType?: "candidate" | "client";
   documentOwnerId?: string;
   candidateId?: string;
@@ -54,6 +56,9 @@ export function MailComposeModal({
    * {candidate: "Max Muster", role: "Steuerberater:in"} - je nachdem, von
    * welcher Seite aus der Dialog geöffnet wurde. */
   placeholderValues?: Record<string, string>;
+  /** Vorbefüllung, z. B. aus einem freigegebenen Claude-Vorschlag (Senden macht der Mensch). */
+  initialSubject?: string;
+  initialBody?: string;
 }) {
   const { data: accountsResult, isLoading: accountsLoading } = useMailAccountsCache(true);
   const { data: templatesResult, isLoading: templatesLoading } = useEmailTemplatesCache();
@@ -65,8 +70,8 @@ export function MailComposeModal({
 
   const [accountId, setAccountId] = useState("");
   const [templateKey, setTemplateKey] = useState("");
-  const [subject, setSubject] = useState("");
-  const [bodyText, setBodyText] = useState("");
+  const [subject, setSubject] = useState(initialSubject);
+  const [bodyText, setBodyText] = useState(initialBody);
   const [documents, setDocuments] = useState<DocumentMeta[]>([]);
   const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);

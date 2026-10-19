@@ -51,11 +51,11 @@ function distinctValues(results: GeoMappingResult[], pick: (item: GeoMappingResu
   return Array.from(values).sort((a, b) => a.localeCompare(b, "de"));
 }
 
-/** Geo Mapping ist eine reine Kanzleien-Umkreissuche (Auftrag "Geo Mapping
- * auf reine Kanzleien-Suche reduzieren") - die frueher kandidatenzentrierte
+/** Geo Mapping ist eine reine Kunden-Umkreissuche (Auftrag "Geo Mapping
+ * auf reine Kunden-Suche reduzieren") - die frueher kandidatenzentrierte
  * Umkreissuche (zweite Spalte, eigene Kandidaten-Filter) uebernimmt jetzt die
  * "CV Out"-Kampagne direkt am Kandidaten. `results` enthaelt deshalb nur noch
- * Kanzleien (siehe GeoMappingResult-Typ, kein `kind`-Feld mehr). */
+ * Kunden (siehe GeoMappingResult-Typ, kein `kind`-Feld mehr). */
 export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
@@ -196,7 +196,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
   }
 
   const selectClass = "h-9 w-full rounded-md border border-white/10 bg-brand-surface px-2.5 text-xs text-brand-text outline-none focus:border-brand-accent";
-  const labelClass = "mb-1 block text-[10px] uppercase tracking-wider text-brand-muted";
+  const labelClass = "mb-1 block text-[9.5px] uppercase tracking-wider text-brand-muted";
 
   const allVisibleSelected = clientPagination.pageItems.length > 0 && clientPagination.pageItems.every((item) => selectedIds.has(item.id));
 
@@ -261,7 +261,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
 
       <Card className="mb-3">
         <CardContent>
-          <div className="mb-3 flex items-center gap-2"><SlidersHorizontal size={15} className="text-brand-platinum" /><h2 className="text-sm font-semibold">Kanzleien-Filter</h2></div>
+          <div className="mb-3 flex items-center gap-2"><SlidersHorizontal size={15} className="text-brand-platinum" /><h2 className="text-sm font-semibold">Kunden-Filter</h2></div>
           <div className="space-y-3">
             <FilterBar placeholder="Name oder Tag suchen" value={clientSearch} onChange={setClientSearch} />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -290,7 +290,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
         </CardContent>
       </Card>
 
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-muted">Kanzleien ({clientResults.length})</h3>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-muted">Kunden ({clientResults.length})</h3>
       {/* Mobile (<lg): Karten statt der 7-spaltigen Tabelle, siehe
        * candidates-table.tsx fuer denselben Fix + Begruendung (Nutzer-
        * Feedback "mobile Version nicht passend") - Checkbox-Auswahl fuer
@@ -318,10 +318,10 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
               </p>
               {item.tags.length > 0 && (
                 <div className="mt-1.5 flex flex-wrap gap-1">
-                  {item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[10px] text-brand-soft">{tag}</span>)}
+                  {item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[9.5px] text-brand-soft">{tag}</span>)}
                 </div>
               )}
-              <p className="mt-1.5 text-[11px] text-brand-gray">{item.mailing_ready ? "übertragbar" : "gesperrt"}</p>
+              <p className="mt-1.5 text-[10.45px] text-brand-gray">{item.mailing_ready ? "übertragbar" : "gesperrt"}</p>
             </div>
           </label>
         ))}
@@ -345,7 +345,7 @@ export function GeoResultsTable({ results }: { results: GeoMappingResult[] }) {
               <td className="px-4 py-3.5">{item.location}</td>
               <td className="px-4 py-3.5">{item.postal_code ?? "—"}</td>
               <td className="px-4 py-3.5"><StatusPill status={item.status} /></td>
-              <td className="px-4 py-3.5"><div className="flex flex-wrap gap-1">{item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[10px] text-brand-soft">{tag}</span>)}</div></td>
+              <td className="px-4 py-3.5"><div className="flex flex-wrap gap-1">{item.tags.map((tag, index) => <span key={`${item.id}-tag-${index}-${tag}`} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[9.5px] text-brand-soft">{tag}</span>)}</div></td>
               <td className="px-4 py-3.5">{item.mailing_ready ? "übertragbar" : "gesperrt"}</td>
             </tr>
           ))}

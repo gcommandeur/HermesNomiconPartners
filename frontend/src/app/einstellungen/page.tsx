@@ -6,12 +6,15 @@ import { mutate } from "swr";
 import { CalendarDays, Check, Copy, RefreshCw, Users } from "lucide-react";
 import { PageHeader } from "@/components/crm/page-header";
 import { OutlookConnectionCard } from "@/components/crm/outlook-connection";
+import { MyMailAccountCard } from "@/components/crm/my-mail-account-card";
+import { ClaudeConnectionCard } from "@/components/crm/claude-connection-card";
 import { ErrorState } from "@/components/crm/error-state";
 import { ErrorBanner } from "@/components/crm/error-banner";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { Button } from "@/components/ui/button";
 import { apiBaseUrl, apiPost } from "@/lib/api/client";
 import { useCurrentUser } from "@/lib/api/hooks";
+import { brand } from "@/lib/brand";
 
 export default function EinstellungenPage() {
   const { data, isLoading, error, mutate: retry } = useCurrentUser();
@@ -64,13 +67,15 @@ export default function EinstellungenPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="Einstellungen" />
+      <PageHeader eyebrow={brand.appName} title="Einstellungen" />
       <OutlookConnectionCard />
+      <MyMailAccountCard />
+      <ClaudeConnectionCard />
 
       <div className="space-y-5">
         <CollapsibleSection
           title="Kalender mit Outlook synchronisieren"
-          description="Persönlicher, schreibgeschützter Kalender-Feed - zeigt nur deine eigenen Termine aus Hermes CRM (Interviews, Quali Calls, sonstige Termine)."
+          description="Persönlicher, schreibgeschützter Kalender-Feed - zeigt nur deine eigenen Termine aus dem CRM (Interviews, Quali Calls, sonstige Termine)."
           icon={<CalendarDays size={16} className="mt-0.5 text-brand-accent-light" />}
           defaultOpen
         >
@@ -89,7 +94,7 @@ export default function EinstellungenPage() {
                   {copied ? "Kopiert" : "Kopieren"}
                 </Button>
               </div>
-              <p className="mt-2 text-[11px] text-brand-dim">
+              <p className="mt-2 text-[10.45px] text-brand-dim">
                 Diese URL ist geheim (wie ein Passwort) - nicht weitergeben. Falls sie versehentlich
                 geteilt wurde, hier neu generieren:
               </p>
@@ -103,7 +108,7 @@ export default function EinstellungenPage() {
               <p className="mb-2 text-xs font-semibold text-brand-platinum">So abonnierst du diesen Kalender</p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-brand-accent-light">
+                  <p className="mb-1 text-[10.45px] font-semibold uppercase tracking-wider text-brand-accent-light">
                     Outlook (Desktop)
                   </p>
                   <ol className="list-decimal space-y-1 pl-4 text-xs text-brand-soft">
@@ -113,7 +118,7 @@ export default function EinstellungenPage() {
                   </ol>
                 </div>
                 <div>
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-brand-accent-light">
+                  <p className="mb-1 text-[10.45px] font-semibold uppercase tracking-wider text-brand-accent-light">
                     Outlook im Web
                   </p>
                   <ol className="list-decimal space-y-1 pl-4 text-xs text-brand-soft">

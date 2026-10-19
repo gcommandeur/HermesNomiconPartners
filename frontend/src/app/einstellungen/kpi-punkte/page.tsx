@@ -12,6 +12,7 @@ import { apiPut } from "@/lib/api/client";
 import { useAppSettingsCache, useCurrentUser, useKpiPointRulesCache } from "@/lib/api/hooks";
 import { PITCH_LABEL, STAGE_LABELS } from "@/lib/stage-labels";
 import type { AppSettings, KpiPointRule } from "@/lib/api/types";
+import { brand } from "@/lib/brand";
 
 // Deckungsgleich mit STAGE_KEYS in backend/src/cc_crm/services/
 // kpi_scoring.py - dort die eigentliche Quelle der Wahrheit fuer die
@@ -82,7 +83,7 @@ export default function KpiPunktePage() {
   if (!isAdmin) {
     return (
       <>
-        <PageHeader eyebrow="Hermes" title="KPI-Punkte" />
+        <PageHeader eyebrow={brand.appName} title="KPI-Punkte" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <ShieldOff size={28} className="text-brand-muted" />
@@ -139,7 +140,7 @@ export default function KpiPunktePage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="KPI-Punkte" />
+      <PageHeader eyebrow={brand.appName} title="KPI-Punkte" />
       <div className="space-y-5">
         <Card>
           <CardHeader>

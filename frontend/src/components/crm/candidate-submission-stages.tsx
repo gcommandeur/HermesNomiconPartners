@@ -30,7 +30,7 @@ export function CandidateSubmissionStages({
     : undefined;
 
   const clientName = (clientId: string | null) =>
-    clientId ? (clients.find((client) => client.id === clientId)?.name ?? "Kanzlei") : "Kanzlei offen";
+    clientId ? (clients.find((client) => client.id === clientId)?.name ?? "Kunde") : "Kunde offen";
 
   return (
     <>

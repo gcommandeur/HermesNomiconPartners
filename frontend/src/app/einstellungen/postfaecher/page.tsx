@@ -30,6 +30,7 @@ import {
   useMailAccountsCache,
 } from "@/lib/api/hooks";
 import type { MailAccount, MailMatchStatus, MailMessageListItem, MailSyncResult } from "@/lib/api/types";
+import { brand } from "@/lib/brand";
 
 const MESSAGES_PAGE_SIZE = 50;
 
@@ -62,7 +63,7 @@ function formatMessageDate(value: string): string {
 }
 
 /** Ziel-Link fuer eine zugeordnete Mail - Kontaktpersonen haben keine eigene
- * Detailseite, deshalb geht der Link dort zur Kanzlei (siehe
+ * Detailseite, deshalb geht der Link dort zum Kunden (siehe
  * MailMessageListItem-Docstring im Backend). */
 function messageLink(message: MailMessageListItem): { href: string; label: string } | null {
   if (message.matched_candidate_id) {
@@ -70,12 +71,12 @@ function messageLink(message: MailMessageListItem): { href: string; label: strin
   }
   if (message.matched_contact_person_id && message.matched_contact_person_client_company_id) {
     return {
-      href: `/kanzleien/${message.matched_contact_person_client_company_id}`,
+      href: `/kunden/${message.matched_contact_person_client_company_id}`,
       label: message.matched_contact_person_name ?? "Kontaktperson",
     };
   }
   if (message.matched_client_company_id) {
-    return { href: `/kanzleien/${message.matched_client_company_id}`, label: message.matched_client_company_name ?? "Kanzlei" };
+    return { href: `/kunden/${message.matched_client_company_id}`, label: message.matched_client_company_name ?? "Kunde" };
   }
   return null;
 }
@@ -144,7 +145,7 @@ function MessageList({ accountId }: { accountId: string }) {
             <select
               value={filter}
               onChange={(e) => changeFilter(e.target.value)}
-              className="h-8 rounded-md border border-white/10 bg-brand-surface px-2 text-[11px] text-brand-platinum outline-none focus:border-brand-accent"
+              className="h-8 rounded-md border border-white/10 bg-brand-surface px-2 text-[10.45px] text-brand-platinum outline-none focus:border-brand-accent"
             >
               {FILTER_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -441,7 +442,7 @@ export default function PostfaecherPage() {
   if (!isAdmin) {
     return (
       <>
-        <PageHeader eyebrow="Hermes" title="E-Mails & Konten" />
+        <PageHeader eyebrow={brand.appName} title="E-Mails & Konten" />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <ShieldOff size={28} className="text-brand-dim" />
@@ -458,7 +459,7 @@ export default function PostfaecherPage() {
   if (error) {
     return (
       <>
-        <PageHeader eyebrow="Hermes" title="E-Mails & Konten" />
+        <PageHeader eyebrow={brand.appName} title="E-Mails & Konten" />
         <ErrorState onRetry={() => void retry()} />
       </>
     );
@@ -466,7 +467,7 @@ export default function PostfaecherPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Hermes" title="E-Mails & Konten" />
+      <PageHeader eyebrow={brand.appName} title="E-Mails & Konten" />
 
       <div className="space-y-5">
         <Card>
@@ -475,7 +476,7 @@ export default function PostfaecherPage() {
               <div>
                 <h2 className="font-semibold">Verbundene Postfächer</h2>
                 <p className="mt-1 text-xs text-brand-muted">
-                  Eingehende Mails werden Kandidat:innen und Kanzlei-Kontakten zugeordnet und in
+                  Eingehende Mails werden Kandidat:innen und Kunden-Kontakten zugeordnet und in
                   der Timeline abgelegt. Passwörter werden verschlüsselt gespeichert und nie
                   wieder angezeigt.
                 </p>
@@ -515,7 +516,7 @@ export default function PostfaecherPage() {
                       type="email"
                       value={form.address}
                       onChange={(e) => set("address", e.target.value)}
-                      placeholder="info@commandeurconsulting.de"
+                      placeholder="postfach@beispiel.de"
                       className={inputClass}
                     />
                   </Field>
@@ -613,26 +614,26 @@ export default function PostfaecherPage() {
                     <div className="min-w-0">
                       <p className="flex flex-wrap items-center gap-2 font-medium text-brand-text">
                         {account.address}
-                        <span className="rounded bg-brand-panel px-2 py-0.5 text-[10px] uppercase tracking-wider text-brand-muted">
+                        <span className="rounded bg-brand-panel px-2 py-0.5 text-[9.5px] uppercase tracking-wider text-brand-muted">
                           {account.label}
                         </span>
                         {account.default_for_cv_out && (
-                          <span className="flex items-center gap-1 rounded bg-brand-accent/25 px-2 py-0.5 text-[10px] text-brand-accent-light">
+                          <span className="flex items-center gap-1 rounded bg-brand-accent/25 px-2 py-0.5 text-[9.5px] text-brand-accent-light">
                             <Star size={10} />CV-OUT-Standard
                           </span>
                         )}
                         {!account.is_active && (
-                          <span className="rounded bg-[#3A2416] px-2 py-0.5 text-[10px] text-brand-warning">
+                          <span className="rounded bg-[#3A2416] px-2 py-0.5 text-[9.5px] text-brand-warning">
                             inaktiv
                           </span>
                         )}
                         {account.provider === "microsoft_graph" && (
-                          <span className="rounded bg-brand-accent/25 px-2 py-0.5 text-[10px] text-brand-accent-light">
+                          <span className="rounded bg-brand-accent/25 px-2 py-0.5 text-[9.5px] text-brand-accent-light">
                             Microsoft 365
                           </span>
                         )}
                         {account.oauth_status === "needs_reconnect" && (
-                          <span className="flex items-center gap-1 rounded bg-[#3A2416] px-2 py-0.5 text-[10px] text-brand-warning">
+                          <span className="flex items-center gap-1 rounded bg-[#3A2416] px-2 py-0.5 text-[9.5px] text-brand-warning">
                             <Unplug size={10} />Verbindung abgelaufen
                           </span>
                         )}
@@ -712,7 +713,7 @@ export default function PostfaecherPage() {
                         <p className="text-xs font-semibold text-brand-warning">
                           Letzter Abruf fehlgeschlagen
                         </p>
-                        <p className="mt-1 break-words font-mono text-[11px] text-brand-platinum">
+                        <p className="mt-1 break-words font-mono text-[10.45px] text-brand-platinum">
                           {result?.error ?? account.sync_error}
                         </p>
                       </div>

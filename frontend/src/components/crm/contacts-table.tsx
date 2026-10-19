@@ -19,9 +19,9 @@ import type { Contact } from "@/lib/api/types";
 
 export function ContactsTable() {
   // Serverseitige Suche + Pagination (siehe lib/api/use-server-search.ts) -
-  // der Kanzleiname kommt bereits vom Backend denormalisiert mit
+  // der Kundenname kommt bereits vom Backend denormalisiert mit
   // (client_company_name, Join gegen client_companies) - das Frontend muss
-  // dafuer nicht mehr den kompletten Kanzlei-Bestand separat laden.
+  // dafuer nicht mehr den kompletten Kunden-Bestand separat laden.
   const {
     search,
     setSearch,
@@ -40,7 +40,7 @@ export function ContactsTable() {
 
   const exportRows = useMemo(() => contacts.map((contact) => ({
     Name: contactName(contact),
-    Kanzlei: contact.client_company_name ?? "Kanzlei",
+    Kunde: contact.client_company_name ?? "Kunde",
     Rolle: contact.role_title,
     Email: contact.email,
     Telefon: contact.phone,
@@ -63,7 +63,7 @@ export function ContactsTable() {
       <div className="mb-4 flex justify-end"><ExportActions filename="kontakte" rows={exportRows} /></div>
       <DemoNotice source={source ?? "api"} error={demoError} />
       <FilterBar
-        placeholder="Nach Name, Kanzlei oder Rolle suchen"
+        placeholder="Nach Name, Kunde oder Rolle suchen"
         value={search}
         onChange={setSearch}
         loading={isValidating}
@@ -77,15 +77,15 @@ export function ContactsTable() {
             <div className="flex items-start justify-between gap-2">
               <p className="min-w-0 truncate text-sm font-semibold text-brand-platinum">{contactName(contact)}</p>
               {contact.is_primary ? (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-brand-platinum/25 bg-brand-platinum/10 px-2 py-1 text-[10px] text-brand-text"><Star size={11} />Hauptkontakt</span>
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-brand-platinum/25 bg-brand-platinum/10 px-2 py-1 text-[9.5px] text-brand-text"><Star size={11} />Hauptkontakt</span>
               ) : (
                 <StatusPill status="draft" />
               )}
             </div>
             <p className="mt-0.5 truncate text-xs text-brand-muted">
-              {contact.client_company_name ?? "Kanzlei"}{contact.role_title ? ` · ${contact.role_title}` : ""}
+              {contact.client_company_name ?? "Kunde"}{contact.role_title ? ` · ${contact.role_title}` : ""}
             </p>
-            <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-brand-gray">
+            <div className="mt-2 flex items-center justify-between gap-2 text-[10.45px] text-brand-gray">
               <span className="min-w-0 truncate">{contact.email ?? "—"} {contact.phone ? `· ${contact.phone}` : ""}</span>
               {contact.email && (
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -108,15 +108,15 @@ export function ContactsTable() {
         )}
       </div>
       <div className="hidden lg:block">
-      <DataTable headers={["Kontakt", "Kanzlei", "Rolle", "E-Mail", "Telefon", "Hauptkontakt", "Mailing"]}>
+      <DataTable headers={["Kontakt", "Kunde", "Rolle", "E-Mail", "Telefon", "Hauptkontakt", "Mailing"]}>
         {contacts.map((contact) => (
           <tr key={contact.id} className="hover:bg-brand-hover/35">
             <td className="px-4 py-3.5 font-semibold text-brand-platinum">{contactName(contact)}</td>
-            <td className="px-4 py-3.5">{contact.client_company_name ?? "Kanzlei"}</td>
+            <td className="px-4 py-3.5">{contact.client_company_name ?? "Kunde"}</td>
             <td className="px-4 py-3.5">{contact.role_title ?? "—"}</td>
             <td className="px-4 py-3.5">{contact.email ?? "—"}</td>
             <td className="px-4 py-3.5">{contact.phone ?? "—"}</td>
-            <td className="px-4 py-3.5">{contact.is_primary ? <span className="inline-flex items-center gap-1 rounded-full border border-brand-platinum/25 bg-brand-platinum/10 px-2 py-1 text-[10px] text-brand-text"><Star size={11} />Hauptkontakt</span> : <StatusPill status="draft" />}</td>
+            <td className="px-4 py-3.5">{contact.is_primary ? <span className="inline-flex items-center gap-1 rounded-full border border-brand-platinum/25 bg-brand-platinum/10 px-2 py-1 text-[9.5px] text-brand-text"><Star size={11} />Hauptkontakt</span> : <StatusPill status="draft" />}</td>
             <td className="px-4 py-3.5">
               {contact.email && (
                 <div className="flex items-center gap-1.5">

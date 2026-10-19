@@ -93,7 +93,9 @@ def test_requires_api_key_not_browser_session(
         json={"jsonrpc": "2.0", "id": 1, "method": "ping"},
         headers=team.a.headers,
     )
-    assert response.status_code == 404
+    # Eine Browser-Sitzung ist kein MCP-Zugang: 401 mit Hinweis auf die OAuth-Anmeldung.
+    assert response.status_code == 401
+    assert "resource_metadata" in response.headers["www-authenticate"]
 
 
 def test_mcp_key_is_useless_outside_mcp(
@@ -132,7 +134,7 @@ def test_candidates_come_without_contact_data(
     opened = _call(client, headers, "get_candidate", candidate_id=created.json()["id"])
     text = found["result"]["content"][0]["text"] + opened["result"]["content"][0]["text"]
     assert "Geheimnis" in text  # Vorbedingung: der Kandidat wird gefunden
-    assert "DATEV" in text
+    assert "DATEV" not in text  # short_profile nur mit CC_CRM_AI_INCLUDE_PROFILE
     assert "privat.example" not in text
     assert "5551234" not in text
 

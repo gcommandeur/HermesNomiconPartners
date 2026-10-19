@@ -1,3 +1,4 @@
+import logging
 import threading
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -15,6 +16,18 @@ from cc_crm.core.observability import RequestLoggingMiddleware, configure_loggin
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
+    # NOMICON: Demo-Login in unsicherer Umgebung = App startet nicht
+    from cc_crm.services.demo_login import assert_demo_login_safe
+
+    assert_demo_login_safe(settings)
+    from cc_crm.integrations.microsoft_graph.auth import login_tenant_problem
+
+    tenant_problem = login_tenant_problem(settings)
+    if settings.ms_graph_client_id and tenant_problem is not None:
+        # Nur warnen, wenn der Login ueberhaupt eingerichtet wird (Client-ID gesetzt).
+        logging.getLogger("cc_crm.startup").warning(
+            "Microsoft-Login bleibt deaktiviert: %s", tenant_problem
+        )
     if settings.migrate_on_startup:
         ensure_database_at_head()
     stop = threading.Event()

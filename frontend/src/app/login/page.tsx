@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { apiBaseUrl } from "@/lib/api/client";
 import { resetClientSession } from "@/lib/reset-client-session";
 import { brand } from "@/lib/brand";
+import { rememberPostLoginTarget, takePostLoginTarget } from "@/lib/post-login";
+import { DemoLoginButtons } from "@/components/crm/demo-login-buttons"; // NOMICON
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -41,8 +43,10 @@ export default function LoginPage() {
   // zurueck, siehe api/v1/microsoft_login.py). window.location statt
   // useSearchParams, damit das statische Prerendering der Seite nicht bricht.
   useEffect(() => {
-    const message = new URLSearchParams(window.location.search).get("error");
+    const query = new URLSearchParams(window.location.search);
+    const message = query.get("error");
     if (message) setError(message);
+    rememberPostLoginTarget(query.get("next"));
   }, []);
 
   async function handlePasswordSubmit(event: React.FormEvent) {
@@ -62,7 +66,7 @@ export default function LoginPage() {
       if (data.status === "authenticated") {
         // Vertrautes Geraet - 2FA-Schritt entfaellt komplett.
         await resetClientSession();
-        router.replace("/");
+        router.replace(takePostLoginTarget());
         router.refresh();
         return;
       }
@@ -90,7 +94,7 @@ export default function LoginPage() {
         throw new Error(data.error ?? "Code ist ungültig.");
       }
       await resetClientSession();
-      router.replace("/");
+      router.replace(takePostLoginTarget());
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Code ist ungültig.");
@@ -184,6 +188,15 @@ export default function LoginPage() {
             >
               Mit Microsoft anmelden
             </a>
+            {/* NOMICON: nur lokal mit Schalter, sonst nichts */}
+            <DemoLoginButtons
+              onError={setError}
+              onLoggedIn={async () => {
+                await resetClientSession();
+                router.replace(takePostLoginTarget());
+                router.refresh();
+              }}
+            />
           </form>
         ) : (
           <form className="space-y-4" onSubmit={handleCodeSubmit}>

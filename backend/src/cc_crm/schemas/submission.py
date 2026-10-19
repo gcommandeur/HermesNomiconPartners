@@ -72,6 +72,30 @@ class CandidateSubmissionTransition(BaseModel):
     changed_by: str | None = None
 
 
+class SubmissionOwnerAssign(BaseModel):
+    """Admin weist einem Prozess ohne Verantwortlichen einen Nutzer zu."""
+
+    owner_user_id: uuid.UUID
+
+
+class UnownedSubmissionRead(BaseModel):
+    """Zeile der Admin-Liste "Prozesse ohne Verantwortlichen" (mit Namen, damit die
+    Oberflaeche nicht pro Zeile nachladen muss)."""
+
+    id: uuid.UUID
+    candidate_id: uuid.UUID
+    candidate_name: str
+    client_company_id: uuid.UUID | None
+    client_name: str | None
+    status: SubmissionStatus
+    created_at: datetime
+
+
+class UnownedSubmissionList(BaseModel):
+    total: int
+    items: list[UnownedSubmissionRead]
+
+
 class CandidateSubmissionRead(CandidateSubmissionBase, EntityRead):
     last_activity_at: datetime
     closed_at: datetime | None

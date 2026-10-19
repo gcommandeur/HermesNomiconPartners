@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session, sessionmaker
 from cc_crm.models.candidate import Candidate
 from cc_crm.models.enums import Anrede
 from cc_crm.services.profile_docx_export import (
-    _WATERMARK_TEXT,
     _ZEITRAUM_AUSBILDUNG,
     _ZEITRAUM_CV,
     _header_label,
@@ -177,7 +176,7 @@ def test_build_export_filename_never_contains_uuid_when_candidate_number_missing
         assert str(candidate.id) not in filename
 
 
-class TestDiagonalWatermark:
+class TestDocxPackage:
     """Punkt 1b des Wasserzeichen-Auftrags: echtes diagonales Word-
     Wasserzeichen (VML-Shape im Header-XML) statt der Fussnoten-Variante.
     Kann hier nicht in echtem Microsoft Word visuell geprueft werden (siehe
@@ -205,8 +204,8 @@ class TestDiagonalWatermark:
                 etree.fromstring(archive.read(name))  # raises on malformed XML
 
             default_header_xml = archive.read("word/header2.xml").decode("utf-8")
-            assert _WATERMARK_TEXT in default_header_xml
-            assert "v:shape" in default_header_xml
+            assert "VERTRAULICH" not in default_header_xml  # Wasserzeichen entfernt
+            assert "v:shape" not in default_header_xml
 
         # Muss sich klaglos ueber python-docx selbst wieder oeffnen lassen -
         # ein Fehler hier waere ein starkes Warnsignal fuer eine kaputte

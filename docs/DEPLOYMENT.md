@@ -394,6 +394,33 @@ Unter Einstellungen → "Outlook & Teams" sieht jede Person den Status und kann 
 abgelaufener Zugang zeigt oben einen Hinweis zum Neuverbinden. Eingeladen wird nur, wenn der Haken
 gesetzt ist; jede gesendete Einladung steht im Audit-Log (`calendar_event.invite_sent`).
 
+## Claude mit Hermes verbinden (Team-Konto, OAuth)
+
+Standardmäßig AUS (`CC_CRM_AI_ENABLED` nicht gesetzt: alle Claude-Adressen antworten 404). Zum Einschalten
+`CC_CRM_AI_ENABLED=true` am Backend setzen – erst nachdem der Auftragsverarbeitungsvertrag mit Anthropic
+geklärt ist (Kandidatendaten verlassen sonst nicht Hermes, mit Schalter an gehen die Treffer von Claude-Abfragen
+an Anthropic; Kontaktdaten und Gehälter werden nie ausgegeben).
+
+**Profiltext (`short_profile`):** wird in der Ausgabe eines einzelnen Kandidaten standardmäßig NICHT mitgegeben (der Text ist nicht technisch auf Anonymität geprüft). Nur mit `CC_CRM_AI_INCLUDE_PROFILE=true` am Backend (Standard aus) geht er zusätzlich an Claude; die Suchtreffer enthalten ihn nie.
+
+**Einrichtung (einmal, Owner des Claude-Team-Kontos):** in Claude unter Einstellungen → Connectors einen eigenen
+Connector hinzufügen mit der Adresse `https://hermescrm-v9sle.ondigitalocean.app/api/v1/mcp`. Mehr ist nicht
+einzutragen: Claude findet die Anmeldung selbst (Registrierung per Dynamic Client Registration, PKCE).
+
+**Pro Mitarbeiter:** im Connector auf "Verbinden" klicken → Hermes-Anmeldung (Passwort + Code oder Microsoft) →
+Seite "Claude verbinden" mit "Verbinden". Das Token gehört genau diesem Hermes-Nutzer (seine Rechte, sein
+Audit-Log), gilt nur für `/api/v1/mcp`, läuft nach 1 Stunde ab (Refresh bis 30 Tage, wird bei jeder Nutzung
+erneuert) und wird bei Deaktivierung des Nutzers sofort abgelehnt. Trennen: Einstellungen → Claude-Verbindung.
+
+**Wichtig:** Claude ruft die Adressen `/api/v1/oauth/…` und `/api/v1/mcp` von Anthropics IP-Bereich
+(160.79.104.0/21) auf. Eine Firewall/WAF vor der App darf sie nicht blockieren; die Weiterleitung `/api/v1` →
+Backend (App-Platform-Routing) muss bestehen. Die Metadaten liegen bewusst unter `/api/v1/oauth/…`
+(nicht unter `/.well-known/` an der Wurzel, die zum Frontend geht).
+
+**Was Claude darf:** lesen (Kandidaten/Kanzleien ohne Kontaktdaten, eigene Prozesse, Aufgaben, Cockpit) und
+VORSCHLAGEN (Notiz, Aufgabe, Mail-Entwurf). Angelegt wird erst nach Freigabe unter "Claude-Vorschläge"; eine Mail
+sendet immer ein Mensch. Die Sende-Services werden aus dem Claude-Code-Pfad nie importiert (Test).
+
 ## Umgebungsvariablen (Frontend-Komponente `hermescrm-frontend`)
 
 - `NEXT_PUBLIC_CC_CRM_API_URL=https://hermescrm-v9sle.ondigitalocean.app/api/v1`

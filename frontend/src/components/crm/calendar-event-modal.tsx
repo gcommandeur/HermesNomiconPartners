@@ -11,6 +11,7 @@ import { ErrorBanner } from "@/components/crm/error-banner";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api/client";
 import { searchCandidates, searchClients } from "@/lib/api/search-select-helpers";
 import { getSubmissions } from "@/lib/api/queries";
+import type { CandidateSubmission } from "@/lib/api/types"; // NOMICON
 import { formatDate } from "@/lib/utils";
 import type { AdminUser, CalendarEvent, CalendarEventType } from "@/lib/api/types";
 
@@ -152,8 +153,8 @@ export function CalendarEventModal({
   }
 
   // Prozess-Auswahl: nur Prozesse des gewaehlten Kandidaten (optional
-  // zusaetzlich auf die gewaehlte Kanzlei eingegrenzt) - eine serverseitige
-  // Suche wie bei Kandidat/Kanzlei lohnt sich hier nicht (Prozesse sind ein
+  // zusaetzlich auf die gewaehlte Kunde eingegrenzt) - eine serverseitige
+  // Suche wie bei Kandidat/Kunde lohnt sich hier nicht (Prozesse sind ein
   // kleiner, bereits komplett geladener Bestand, siehe fetchAllPages-Hinweis
   // in lib/api/queries.ts), daher client-seitige Filterung der vollen Liste.
   useEffect(() => {
@@ -162,7 +163,7 @@ export function CalendarEventModal({
       return;
     }
     let cancelled = false;
-    getSubmissions().then((result) => {
+    getSubmissions().catch(() => ({ data: [] as CandidateSubmission[] })).then((result) => { // NOMICON: ohne Ansicht Direct (403) keine Prozessauswahl
       if (cancelled) return;
       const matches = result.data.filter(
         (submission) =>
@@ -360,7 +361,7 @@ export function CalendarEventModal({
             />
           </div>
           <div>
-            <label className={labelClass}>Kanzlei (optional)</label>
+            <label className={labelClass}>Kunde (optional)</label>
             <SearchSelect
               onSearch={searchClients}
               value={form.client_company_id}
@@ -368,9 +369,9 @@ export function CalendarEventModal({
                 set("client_company_id", value);
                 set("candidate_submission_id", "");
               }}
-              placeholder="Kanzlei suchen…"
-              emptyLabel="Keine Kanzlei gefunden"
-              clearLabel="Keine Kanzlei"
+              placeholder="Kunde suchen…"
+              emptyLabel="Keinen Kunden gefunden"
+              clearLabel="Keinen Kunden"
             />
           </div>
         </div>
@@ -444,7 +445,7 @@ export function CalendarEventModal({
               {event.online_meeting_url && (
                 <>
                   {" · "}
-                  <a href={event.online_meeting_url} target="_blank" rel="noreferrer" className="text-[#7FB2E5] underline">
+                  <a href={event.online_meeting_url} target="_blank" rel="noreferrer" className="text-brand-accent-light underline">
                     Teams-Link öffnen
                   </a>
                 </>

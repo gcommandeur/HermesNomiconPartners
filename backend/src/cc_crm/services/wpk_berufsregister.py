@@ -23,10 +23,11 @@ from typing import Any
 
 import httpx
 
+from cc_crm.core.http_identity import sourcing_user_agent
+
 REGISTER_URL = "https://www.wpk.de/berufsregister/"
 SEARCH_URL = "https://www.wpk.de/berufsregister/backend/search"
 
-USER_AGENT = "HermesCRM-Sourcing/1.0 (Commandeur Consulting; Recruiting-Research)"
 REQUEST_TIMEOUT_SECONDS = 30.0
 
 # Berufsbezeichnung je Register-Klassifizierung natuerlicher Personen.
@@ -70,7 +71,7 @@ def fetch_search_results(plz_or_ort: str) -> list[dict[str, Any]]:
             # "1" == Gruppe "alle" - Pflichtfeld, sonst leere Antwort (s.o.).
             "type": "1",
         },
-        headers={"User-Agent": USER_AGENT},
+        headers={"User-Agent": sourcing_user_agent()},
         timeout=REQUEST_TIMEOUT_SECONDS,
         follow_redirects=True,
     )

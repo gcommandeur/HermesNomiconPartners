@@ -127,7 +127,7 @@ class ApprovalService:
         if approval.entity_type == "client_company":
             client = self.session.get(ClientCompany, approval.entity_id)
             return client.name if client else None
-        if approval.entity_type == "fee":
+        if approval.entity_type in ("fee", "staffing_invoice"):  # NOMICON: staffing_invoice
             return str((approval.proposed_values or {}).get("label") or "Rechnung")
         return None
 
@@ -141,6 +141,11 @@ class ApprovalService:
             for key, value in (approval.proposed_values or {}).items():
                 if key in HONORAR_FIELDS:
                     setattr(client, key, _from_json(client, key, value))
+        elif approval.kind == "invoice_issue" and approval.entity_type == "staffing_invoice":
+            # NOMICON: Rechnung der Arbeitnehmerueberlassung (services/staffing_invoices.py)
+            from cc_crm.services.staffing_invoices import apply_staffing_invoice_issue
+
+            apply_staffing_invoice_issue(self.session, approval)
         elif approval.kind == "invoice_issue":
             from cc_crm.services.invoices import apply_invoice_status
 
@@ -177,7 +182,7 @@ class ApprovalService:
     def _client(self, approval: ApprovalRequest) -> ClientCompany:
         client = self.session.get(ClientCompany, approval.entity_id)
         if client is None:
-            raise EntityNotFoundError("Kanzlei nicht gefunden")
+            raise EntityNotFoundError("Kunde nicht gefunden")
         return client
 
     def _decide(

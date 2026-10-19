@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Building2, KanbanSquare, LayoutDashboard, MoreHorizontal, Users } from "lucide-react";
-import { useCurrentUser, usePendingApprovalCount } from "@/lib/api/hooks";
+import { useAiProposalSummary, useCurrentUser, usePendingApprovalCount } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
+import { useActiveView } from "@/lib/api/views-hooks"; // NOMICON
+import { HardHat } from "lucide-react"; // NOMICON
 
 /** Mobile-only Bottom-Tab-Bar (analog zum bestehenden lg:hidden-Muster von
  * Sidebar/Topbar) - ersetzt auf schmalen Viewports das reine Hamburger-Menue
@@ -15,20 +17,27 @@ const items: { href: string; label: string; icon: typeof LayoutDashboard }[] = [
   { href: "/", label: "Übersicht", icon: LayoutDashboard },
   { href: "/prozesse", label: "Prozesse", icon: KanbanSquare },
   { href: "/kandidaten", label: "Kandidaten", icon: Users },
-  { href: "/kanzleien", label: "Kanzleien", icon: Building2 },
+  { href: "/kunden", label: "Kunden", icon: Building2 },
 ];
 
 export function BottomNav({ onMenu }: { onMenu: () => void }) {
   const pathname = usePathname();
   const { data: meData } = useCurrentUser();
-  const pendingApprovals = usePendingApprovalCount(meData?.data.is_admin ?? false);
+  // NOMICON: Ohne Ansicht Direct statt "Prozesse" die Überlassung zeigen.
+  const { views } = useActiveView();
+  const visible = items.filter((item) => item.href !== "/prozesse" || views.length === 0 || views.includes("direct"));
+  const tabs = views.length > 0 && !views.includes("direct") && views.includes("staffing")
+    ? [...visible.slice(0, 1), { href: "/ueberlassung", label: "Überlassung", icon: HardHat }, ...visible.slice(1)]
+    : visible;
+  const pendingApprovals =
+    usePendingApprovalCount(meData?.data.is_admin ?? false) + useAiProposalSummary().pending;
 
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 flex border-t border-white/10 bg-brand-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden"
       aria-label="Hauptnavigation"
     >
-      {items.map((item) => {
+      {tabs.map((item) => {
         const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         const Icon = item.icon;
         return (
@@ -36,8 +45,8 @@ export function BottomNav({ onMenu }: { onMenu: () => void }) {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-1 flex-col items-center gap-1 py-2 text-[9px]",
-              active ? "text-brand-accent-light" : "text-[#5F6B7A]",
+              "flex flex-1 flex-col items-center gap-1 py-2 text-[8.55px]",
+              active ? "text-brand-accent-light" : "text-brand-dim",
             )}
           >
             <Icon size={20} strokeWidth={active ? 2 : 1.7} />
@@ -48,7 +57,7 @@ export function BottomNav({ onMenu }: { onMenu: () => void }) {
       <button
         type="button"
         onClick={onMenu}
-        className="flex flex-1 flex-col items-center gap-1 py-2 text-[9px] text-[#5F6B7A]"
+        className="flex flex-1 flex-col items-center gap-1 py-2 text-[8.55px] text-brand-dim"
       >
         <span className="relative">
           <MoreHorizontal size={20} strokeWidth={1.7} />
@@ -58,7 +67,7 @@ export function BottomNav({ onMenu }: { onMenu: () => void }) {
         </span>
         {/* Eigenes span: globals.css setzt `font: inherit` auf Buttons ausserhalb der
             Tailwind-Layer, die Groesse am Button selbst wuerde ueberschrieben. */}
-        <span className="text-[9px]">Mehr</span>
+        <span className="text-[8.55px]">Mehr</span>
       </button>
     </nav>
   );

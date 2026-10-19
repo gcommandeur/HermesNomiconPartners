@@ -73,12 +73,12 @@ export function CandidateMatchingPanel({ candidateId }: { candidateId: string })
     }
   }
 
-  if (loading) return <Card><CardContent className="py-12 text-center text-sm text-brand-gray">Passende Kanzleien werden geladen…</CardContent></Card>;
+  if (loading) return <Card><CardContent className="py-12 text-center text-sm text-brand-gray">Passende Kunden werden geladen…</CardContent></Card>;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-brand-soft"><Sparkles size={15} />Kanzleien nach Fachgebiet, Ort und PLZ sortiert.</div>
+        <div className="flex items-center gap-2 text-sm text-brand-soft"><Sparkles size={15} />Kunden nach Fachgebiet, Ort und PLZ sortiert.</div>
         <div className="flex items-center gap-2">
           <select className="h-9 rounded-md border border-white/10 bg-brand-surface px-2 text-xs text-brand-text outline-none focus:border-brand-accent" value={targetStatus} onChange={(e) => setTargetStatus(e.target.value)}>
             {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -125,7 +125,7 @@ export function CandidateMatchingPanel({ candidateId }: { candidateId: string })
                   <p className="mt-1 text-xs text-brand-muted">{match.client.city ?? match.client.postal_code ?? "Region offen"} · {match.client.focus ?? "Fokus offen"}</p>
                   {match.reasons.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {match.reasons.map((reason) => <span key={reason} className="rounded bg-brand-panel px-2 py-0.5 text-[10px] text-brand-muted">{reason}</span>)}
+                      {match.reasons.map((reason) => <span key={reason} className="rounded bg-brand-panel px-2 py-0.5 text-[9.5px] text-brand-muted">{reason}</span>)}
                     </div>
                   )}
                 </div>
@@ -137,7 +137,7 @@ export function CandidateMatchingPanel({ candidateId }: { candidateId: string })
             </CardContent>
           </Card>
         ))}
-        {matches?.length === 0 && <Card><CardContent className="py-12 text-center text-sm text-brand-gray">Keine passenden Kanzleien gefunden.</CardContent></Card>}
+        {matches?.length === 0 && <Card><CardContent className="py-12 text-center text-sm text-brand-gray">Keine passenden Kunden gefunden.</CardContent></Card>}
       </div>
     </div>
   );

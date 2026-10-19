@@ -23,7 +23,7 @@ export default async function PriorityViewPage() {
     const candidate = candidatesResult.data.find((item) => item.id === id);
     return candidate ? `${candidate.first_name} ${candidate.last_name}` : "Kandidat";
   };
-  const clientName = (id: string | null) => clientsResult.data.find((item) => item.id === id)?.name ?? "Kanzlei offen";
+  const clientName = (id: string | null) => clientsResult.data.find((item) => item.id === id)?.name ?? "Kunde offen";
 
   return (
     <>
@@ -46,7 +46,7 @@ export default async function PriorityViewPage() {
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right text-xs text-brand-silver">
-                  <p className="text-[10px] uppercase tracking-wider text-brand-muted">Erwartetes Honorar</p>
+                  <p className="text-[9.5px] uppercase tracking-wider text-brand-muted">Erwartetes Honorar</p>
                   <p className="mt-1 text-sm text-brand-text">{submission.expected_fee ? formatCurrency(Number(submission.expected_fee)) : "—"}</p>
                 </div>
                 <Link

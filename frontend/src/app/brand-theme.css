@@ -1,0 +1,237 @@
+/*
+ * FIRMENSCHICHT - Nomicon Partners (nur in dieser Kopie, per .gitattributes
+ * merge=ours vor Ueberschreiben durch Hermes geschuetzt).
+ *
+ * Markenfarben (Farbcodes Nomicon Partners):
+ *   Navy       #001C4A   Hintergrund / Schrift
+ *   Off-White  #FAF9F6   Hintergrund / Schrift
+ *   Linie auf Navy       #5A6C8A
+ *   Linie auf Off-White  #9AA3B5
+ * Schrift: Poppins (lokal ausgeliefert, kein Google-Abruf). size-adjust 87,5 %: Poppins ist
+ * bei gleicher Groesse ca. 14 % breiter als die Hermes-Schrift (Segoe UI); so bleiben Abstaende
+ * und Textbreiten wie in Hermes.
+ *
+ * Grundfarbe der Anwendung ist Off-White; Seitenleiste und Anmeldeseite sind Navy.
+ * Neue Variablen aus Hermes bekommen hier bei Bedarf eine eigene Fassung.
+ */
+
+@font-face { font-family: "Poppins"; font-weight: 400; font-style: normal; font-display: swap; size-adjust: 87.5%;
+  src: url("/brand/fonts/poppins-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Poppins"; font-weight: 400; font-style: normal; font-display: swap; size-adjust: 87.5%;
+  src: url("/brand/fonts/poppins-latin-ext-400-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Poppins"; font-weight: 500; font-style: normal; font-display: swap; size-adjust: 87.5%;
+  src: url("/brand/fonts/poppins-latin-500-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Poppins"; font-weight: 500; font-style: normal; font-display: swap; size-adjust: 87.5%;
+  src: url("/brand/fonts/poppins-latin-ext-500-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Poppins"; font-weight: 600; font-style: normal; font-display: swap; size-adjust: 87.5%;
+  src: url("/brand/fonts/poppins-latin-600-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Poppins"; font-weight: 600; font-style: normal; font-display: swap; size-adjust: 87.5%;
+  src: url("/brand/fonts/poppins-latin-ext-600-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+:root {
+  /* Flaechen (hell) */
+  --background: #faf9f6;
+  --surface: #ffffff;
+  --surface-muted: #eef1f6; /* Navy-Schattierung statt Creme */
+  --surface-elevated: #ffffff;
+  --surface-hover: #e3e8f0;
+  --sidebar: #eef1f6; /* in Hermes auch als vertiefter Eingabe-Grund genutzt */
+
+  /* Schrift */
+  --foreground: #001c4a;
+  --text-soft: #2f4468;
+  --muted: #5a6c8a;
+  --text-dim: #6b7a97;
+  --text-gray: #7a869d;
+  --text-gray-dark: #5a6c8a;
+  --platinum: #0b2455;
+  --silver: #5a6c8a;
+
+  /* Linien und Akzent */
+  --border: rgba(0, 28, 74, 0.14);
+  --accent: #001c4a;
+  --accent-soft: #e1e7f1;
+  --accent-light: #34507f;
+  --accent-strong: #1b3a73;
+
+  /* Status */
+  --warning: #9a6700;
+  --danger: #b3261e;
+  --danger-soft: #9b2c2c;
+  --success: #2f7d57;
+  --success-text: #1e6b45;
+  --success-bg: #ddefe5;
+  --info-soft: #2b4f8a;
+
+  /* Akzent als RGB-Tripel (halbtransparente Flaechen) und Seitenhintergrund */
+  --accent-rgb: 0, 28, 74;
+  --page-gradient: var(--background);
+
+  /* Linien/Flaechen, die in Hermes als weisse Transparenz geschrieben sind */
+  --line-5: rgba(0, 28, 74, 0.07);
+  --line-10: rgba(0, 28, 74, 0.13);
+  --line-15: rgba(0, 28, 74, 0.19);
+  --line-20: rgba(0, 28, 74, 0.26);
+  --wash-5: rgba(0, 28, 74, 0.035);
+  --wash-6: rgba(0, 28, 74, 0.045);
+  --wash-8: rgba(0, 28, 74, 0.06);
+  --wash-10: rgba(0, 28, 74, 0.08);
+  --on-accent: #faf9f6;
+}
+
+html { color-scheme: light; }
+html body { font-family: "Poppins", Inter, "Segoe UI", Arial, sans-serif; }
+
+/* ---- Hermes schreibt viele Linien/Flaechen als weisse Transparenz (fuer dunklen
+   Grund). Hier fuer den hellen Grund neu belegt. Unlayered, schlaegt deshalb
+   die Tailwind-Utilities. ---- */
+.border-white\/5 { border-color: var(--line-5); }
+.border-white\/10 { border-color: var(--line-10); }
+.border-white\/15 { border-color: var(--line-15); }
+.border-white\/20 { border-color: var(--line-20); }
+.divide-white\/5 > :not(:last-child) { border-color: var(--line-5); }
+.divide-white\/10 > :not(:last-child) { border-color: var(--line-10); }
+.bg-white\/5 { background-color: var(--wash-5); }
+.bg-white\/6 { background-color: var(--wash-6); }
+.bg-white\/8 { background-color: var(--wash-8); }
+.bg-white\/10 { background-color: var(--wash-10); }
+.text-white\/55, .text-white\/60 { color: var(--muted); }
+.text-white { color: var(--foreground); }
+/* Weisse Schrift bleibt auf farbigen Flaechen (Buttons, Badges) hell. */
+.bg-brand-accent.text-white, .bg-brand-danger.text-white, .bg-brand-success.text-white,
+.bg-brand-accent-strong.text-white, .bg-brand-accent-strong\/80.text-white,
+[class*="from-brand-accent"][class*="text-white"], .bg-gradient-to-r.text-white,
+.bg-gradient-to-b.text-white { color: var(--on-accent); }
+/* Heller Rahmen beim Keyboard-Fokus */
+::selection { background: var(--accent); color: var(--on-accent); }
+
+/* ---- Dunkle Bereiche: Seitenleiste und Anmeldeseite (Navy mit Off-White-Schrift) ----
+   Die Variablen werden fuer den Bereich neu gesetzt; alle brand-* Klassen darin
+   folgen automatisch. */
+aside, nav.fixed, .bg-\[\#050B14\] {
+  --sidebar: #001c4a;
+  --background: #001c4a;
+  --surface: #0a2556;
+  --surface-muted: #0a2556;
+  --surface-elevated: #12306a;
+  --surface-hover: #12306a;
+  --foreground: #faf9f6;
+  --text-soft: #dfe3ec;
+  --muted: #9aa3b5;
+  --text-dim: #9aa3b5;
+  --text-gray: #9aa3b5;
+  --text-gray-dark: #7886a3;
+  --platinum: #faf9f6;
+  --silver: #c9cfdb;
+  --border: rgba(250, 249, 246, 0.16);
+  --accent: #faf9f6;
+  --accent-soft: #12306a;
+  --accent-light: #c9cfdb;
+  --accent-strong: #1a3d7c;
+  --accent-rgb: 250, 249, 246;
+  --warning: #f0b429;
+  --danger: #ff8a80;
+  --danger-soft: #ffb4ab;
+  --success-text: #a9d6b8;
+  --success-bg: #244d38;
+  --info-soft: #c5dcfa;
+  --line-5: rgba(250, 249, 246, 0.08);
+  --line-10: rgba(250, 249, 246, 0.16);
+  --line-15: rgba(250, 249, 246, 0.22);
+  --line-20: rgba(250, 249, 246, 0.3);
+  --wash-5: rgba(250, 249, 246, 0.05);
+  --wash-6: rgba(250, 249, 246, 0.07);
+  --wash-8: rgba(250, 249, 246, 0.09);
+  --wash-10: rgba(250, 249, 246, 0.12);
+  --on-accent: #001c4a;
+  color-scheme: dark;
+  color: var(--foreground);
+}
+aside .text-white, .bg-\[\#050B14\] .text-white { color: #faf9f6; }
+aside .border-white\/10, .bg-\[\#050B14\] .border-white\/10 { border-color: var(--line-10); }
+aside .border-white\/5, .bg-\[\#050B14\] .border-white\/5 { border-color: var(--line-5); }
+aside .bg-white\/5, .bg-\[\#050B14\] .bg-white\/5 { background-color: var(--wash-5); }
+aside .bg-white\/10, .bg-\[\#050B14\] .bg-white\/10 { background-color: var(--wash-10); }
+/* Primaere Schaltflaeche auf Navy (Anmelden): Off-White mit Navy-Schrift */
+.bg-\[\#050B14\] .bg-brand-accent { background-color: #faf9f6; color: #001c4a; }
+.bg-\[\#050B14\] .bg-brand-accent.text-white { color: #001c4a; }
+/* Logo in der Seitenleiste: Zeichen und Schriftzug sind Teile EINES Logos (gleiche Hoehe,
+   nahtlos zugeschnitten, der Abstand mit senkrechtem Strich steckt im Schriftzug-Bild,
+   gemessen am Original). Kein Zusatzabstand; Gesamtbreite ca. 180px passt in die 236px-Leiste. */
+aside > div:first-child a[href="/"] { gap: 0 !important; margin-left: 8px; }
+aside > div:first-child a[href="/"] img { width: auto !important; max-width: none !important; flex-shrink: 0; }
+aside > div:first-child a[href="/"] img[src*="nomicon-mark"],
+aside > div:first-child a[href="/"] img[src*="nomicon-wordmark"] { height: 46.8px !important; }
+/* Menuepunkte: der aktive hat einen 2px-Rand links, die uebrigen nicht - Icons und Texte
+   sprangen deshalb um 2px. Unsichtbarer Rand gleicher Breite haelt alle in einer Linie. */
+aside a.h-\[38px\]:not(.border-l-2) { border-left: 2px solid transparent; }
+/* eingeklappt (72px): nur das NP-Zeichen, kleiner */
+aside.w-\[72px\] > div:first-child a[href="/"] { margin-left: 0; }
+aside.w-\[72px\] > div:first-child a[href="/"] img[src*="nomicon-mark"] { height: 36px !important; }
+/* Anmeldeseite: Navy statt des festen Fremd-Blaus, Standard-Button einfarbig hell */
+.bg-\[\#050B14\] { background-color: #001c4a; }
+.bg-\[\#050B14\] .bg-gradient-to-b[class*="from-brand-accent"] {
+  background-image: none;
+  background-color: #faf9f6;
+  color: #001c4a;
+}
+.bg-\[\#050B14\] .bg-gradient-to-b[class*="from-brand-accent"]:hover { background-color: #ffffff; }
+
+/* ---- Untere Leiste (Handy) wie die Seitenleiste ---- */
+nav.fixed { color: var(--foreground); }
+.text-\[\#5F6B7A\] { color: var(--muted); }
+aside .text-\[\#5F6B7A\], nav.fixed .text-\[\#5F6B7A\] { color: #9aa3b5; }
+/* Dunkle Schaltflaeche (Variante dark) und Avatar: Navy mit Off-White-Schrift */
+.bg-brand-sidebar.text-white, .bg-\[\#202327\] { background-color: #001c4a; color: #faf9f6; }
+.text-\[\#90969b\] { color: var(--muted); }
+.bg-\[\#202327\] .text-\[\#90969b\], .text-\[\#90969b\].bg-\[\#202327\] { color: #faf9f6; }
+
+/* ---- Karten und Tabellen: Hermes hat hier einen festen dunklen Verlauf ---- */
+[class*="linear-gradient(145deg"] {
+  background-image: none !important;
+  background-color: var(--surface) !important;
+}
+[class*="shadow-[0_18px_50px"], [class*="shadow-[0_12px_30px"], [class*="shadow-[0_10px_35px"],
+[class*="shadow-[0_20px_60px"] {
+  box-shadow: 0 1px 2px rgba(0, 28, 74, 0.05), 0 10px 28px rgba(0, 28, 74, 0.07) !important;
+}
+[class*="shadow-[-12px_0_30px"] { box-shadow: -12px 0 30px rgba(0, 28, 74, 0.12) !important; }
+.bg-\[\#050B14\] [class*="shadow-[0_20px_60px"] { box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35) !important; }
+
+/* ---- Badges und Hinweise: dunkle Chips -> helle Toene ---- */
+.bg-brand-accent-strong\/45 { background-color: rgba(0, 28, 74, 0.08); }
+.border-brand-accent\/40 { border-color: rgba(0, 28, 74, 0.22); }
+.bg-brand-success-bg\/45 { background-color: rgba(47, 125, 87, 0.14); }
+.bg-\[\#5b4726\]\/40 { background-color: rgba(154, 103, 0, 0.13); }
+.text-\[\#e0c991\] { color: #7a5200; }
+.bg-\[\#5a2f35\]\/40 { background-color: rgba(179, 38, 30, 0.11); }
+.border-\[\#9b5757\]\/35 { border-color: rgba(179, 38, 30, 0.3); }
+.bg-\[\#1c2024\] { background-color: #001c4a; }
+.border-\[\#2e3338\] { border-color: #001c4a; }
+.bg-\[\#3A2416\], .bg-\[\#3A2416\]\/40 { background-color: rgba(154, 103, 0, 0.13); }
+.bg-\[\#7F1D1D\]\/40 { background-color: rgba(179, 38, 30, 0.1); }
+.hover\:bg-\[\#7F1D1D\]\/60:hover { background-color: rgba(179, 38, 30, 0.18); }
+.text-red-100 { color: #8e1b14; }
+.bg-\[\#334155\] { background-color: #c5cbd8; }
+.bg-\[\#e8e9e8\] { background-color: #e3e8f0; }
+.bg-\[\#020711\]\/80 { background-color: rgba(0, 28, 74, 0.55); }
+.text-\[\#F5D68A\] { color: #7a5200; }
+.text-\[\#8FB4E3\], .text-\[\#7FB2E5\] { color: var(--accent-light); }
+.bg-\[\#8FB4E3\] { background-color: var(--accent-light); }
+.text-\[\#64748B\], .text-\[\#556072\], .text-\[\#747a80\], .text-\[\#959b9f\] { color: var(--muted); }
+.text-\[\#173f77\] { color: var(--accent); }
+/* Primaerer Button: Hover in dunklerem Navy statt des Hermes-Blaus */
+.hover\:from-\[\#2b6db5\]:hover { --tw-gradient-from: #14336e; }
+.hover\:to-\[\#1b477b\]:hover { --tw-gradient-to: #14336e; }
+
+/* Aktiver Menuepunkt in der Seitenleiste: Off-White-Schrift (schlaegt die helle Gradient-Regel) */
+aside .bg-gradient-to-r.text-white, aside a.text-white { color: #faf9f6; }
+/* Hinweis-Chips mit Alpha-Hintergrund (accent-strong/NN): auf hellem Grund ein zarter Navy-Ton */
+[class*="bg-brand-accent-strong/"] { background-color: rgba(0, 28, 74, 0.07); }
+aside [class*="bg-brand-accent-strong/"] { background-color: rgba(250, 249, 246, 0.1); }

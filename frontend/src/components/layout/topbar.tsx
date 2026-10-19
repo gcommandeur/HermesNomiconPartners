@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, LogOut, Menu, Search, X } from "lucide-react";
+import { Bell, LogOut, Menu, Search, User, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QuickActionMenu } from "@/components/crm/quick-action-menu";
+import { ViewSwitcher } from "@/components/crm/view-switcher"; // NOMICON
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { getCandidatesPage, getClientsPage, getContactsPage } from "@/lib/api/queries";
 import { useCurrentUser } from "@/lib/api/hooks";
+import { useNotifications } from "@/lib/api/notifications-hooks";
 import { cn } from "@/lib/utils";
 import { resetClientSession } from "@/lib/reset-client-session";
 import type { Candidate, ClientCompany, Contact } from "@/lib/api/types";
@@ -24,7 +26,7 @@ const emptyResults: GlobalSearchResults = { candidates: [], clients: [], contact
 
 function initialsOf(label: string): string {
   const words = label.split(/[\s@._-]+/).filter(Boolean);
-  if (words.length === 0) return "?";
+  if (words.length === 0) return ""; // NOMICON: kein Fragezeichen - das Profilfeld zeigt dann ein Personen-Symbol
   return words
     .slice(0, 2)
     .map((word) => word[0].toUpperCase())
@@ -40,6 +42,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
   const [open, setOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notifications = useNotifications(); // NOMICON: Meldungen aus den Aufgaben des Tagesjobs
   const [accountOpen, setAccountOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
@@ -58,7 +61,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
     router.refresh();
   }
 
-  // Globale Live-Suche ueber Kandidaten/Kanzleien/Kontakte (Prozesse/Vakanzen
+  // Globale Live-Suche ueber Kandidaten/Kunden/Kontakte (Prozesse/Vakanzen
   // bewusst ausgeschlossen - CandidateSubmission hat serverseitig keinen
   // Namens-Suchparameter). Request-ID verwirft veraltete Antworten, falls der
   // Suchtext sich aendert, waehrend ein aelterer Request noch laeuft.
@@ -195,7 +198,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             "h-9 w-full rounded-md border border-white/10 bg-brand-bg/70 pr-3 text-sm text-white outline-none placeholder:text-brand-dim focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20",
             mobileSearchOpen ? "pl-12 sm:pl-9" : "pl-9",
           )}
-          placeholder="Kandidaten, Kanzleien oder Kontakte suchen"
+          placeholder="Kandidaten, Kunden oder Kontakte suchen"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => {
@@ -210,7 +213,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             )}
             {!loading && results.candidates.length > 0 && (
               <div className="py-1">
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-dim">Kandidaten</p>
+                <p className="px-3 py-1 text-[9.5px] font-semibold uppercase tracking-wider text-brand-dim">Kandidaten</p>
                 {results.candidates.map((candidate) => (
                   <button
                     key={candidate.id}
@@ -228,13 +231,13 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             )}
             {!loading && results.clients.length > 0 && (
               <div className="py-1">
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-dim">Kanzleien</p>
+                <p className="px-3 py-1 text-[9.5px] font-semibold uppercase tracking-wider text-brand-dim">Kunden</p>
                 {results.clients.map((client) => (
                   <button
                     key={client.id}
                     type="button"
                     className="block w-full px-3 py-2 text-left text-sm text-brand-text hover:bg-brand-accent/15"
-                    onClick={() => goTo(`/kanzleien/${client.id}`)}
+                    onClick={() => goTo(`/kunden/${client.id}`)}
                   >
                     {client.name}
                   </button>
@@ -243,13 +246,13 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             )}
             {!loading && results.contacts.length > 0 && (
               <div className="py-1">
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-dim">Kontakte</p>
+                <p className="px-3 py-1 text-[9.5px] font-semibold uppercase tracking-wider text-brand-dim">Kontakte</p>
                 {results.contacts.map((contact) => (
                   <button
                     key={contact.id}
                     type="button"
                     className="block w-full px-3 py-2 text-left text-sm text-brand-text hover:bg-brand-accent/15"
-                    onClick={() => goTo(`/kanzleien/${contact.client_company_id}`)}
+                    onClick={() => goTo(`/kunden/${contact.client_company_id}`)}
                   >
                     {contact.first_name} {contact.last_name}
                     {contact.client_company_name && (
@@ -263,6 +266,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
         )}
       </div>
       <div className="ml-auto flex items-center gap-2">
+        <ViewSwitcher className="mr-3 hidden sm:inline-flex" /> {/* NOMICON */}
         <QuickActionMenu />
         <div ref={notificationsRef} className="relative">
           <Button
@@ -272,10 +276,37 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             onClick={() => setNotificationsOpen((current) => !current)}
           >
             <Bell size={17} />
+            {notifications.length > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-danger px-1 text-[9.5px] font-semibold text-white" aria-label={`${notifications.length} Meldungen`}>
+                {notifications.length}
+              </span>
+            )}
           </Button>
           {notificationsOpen && (
-            <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-white/10 bg-brand-surface p-3 text-xs text-brand-muted shadow-xl">
-              Keine neuen Benachrichtigungen.
+            <div className="absolute right-0 z-20 mt-1 w-80 max-w-[90vw] rounded-md border border-white/10 bg-brand-surface p-2 text-xs text-brand-muted shadow-xl" role="region" aria-label="Meldungen">
+              {notifications.length === 0 ? (
+                <p className="p-1">Keine neuen Benachrichtigungen.</p>
+              ) : (
+                <ul className="max-h-96 space-y-1 overflow-y-auto">
+                  {notifications.map((item) => (
+                    <li key={item.id}>
+                      <a
+                        href={item.href ?? "#"}
+                        onClick={(event) => {
+                          if (!item.href) return event.preventDefault();
+                          event.preventDefault();
+                          setNotificationsOpen(false);
+                          router.push(item.href);
+                        }}
+                        className="block rounded-md p-2 hover:bg-white/6"
+                      >
+                        <span className="block font-medium text-brand-text">{item.title}</span>
+                        {item.detail && <span className="mt-0.5 block text-brand-muted">{item.detail}</span>}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </div>
@@ -284,7 +315,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             className="ml-1 flex items-center gap-2 rounded-md p-1.5 hover:bg-white/6"
             onClick={() => setAccountOpen((current) => !current)}
           >
-            <span className="grid size-8 place-items-center rounded-full bg-[#202327] text-[11px] font-semibold text-white">{userInitials}</span>
+            <span className="grid size-8 place-items-center rounded-full bg-[#202327] text-[10.45px] font-semibold text-white">{userInitials || <User size={15} aria-label="Profil" />}</span>
             <span className="hidden max-w-40 truncate text-left text-xs font-medium text-white md:block">
               {userLabel}
             </span>
@@ -293,7 +324,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
             <div className="absolute right-0 z-20 mt-1 w-56 rounded-md border border-white/10 bg-brand-surface p-1.5 text-xs shadow-xl">
               <div className="px-2.5 py-2 text-brand-soft">
                 <p className="font-medium text-white">{currentUserData?.data.display_name ?? "Angemeldet"}</p>
-                <p className="mt-0.5 text-[11px] text-brand-gray">{currentUserData?.data.email ?? ""}</p>
+                <p className="mt-0.5 text-[10.45px] text-brand-gray">{currentUserData?.data.email ?? ""}</p>
               </div>
               <button
                 className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-brand-platinum hover:bg-white/8"

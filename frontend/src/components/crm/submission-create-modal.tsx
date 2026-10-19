@@ -11,6 +11,8 @@ import { ErrorBanner } from "@/components/crm/error-banner";
 import { searchCandidates, searchClients } from "@/lib/api/search-select-helpers";
 import { useAssignableUsersCache, useCurrentUser } from "@/lib/api/hooks";
 import type { CandidateSubmission } from "@/lib/api/types";
+import { EngagementConflictNotice } from "@/components/crm/engagement-conflict-notice"; // NOMICON
+import { isEngagementConflict } from "@/lib/api/engagement"; // NOMICON
 
 const labelClass = "mb-1 block text-xs text-brand-muted";
 const selectClass = "h-10 w-full rounded-md border border-white/10 bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent";
@@ -23,6 +25,7 @@ export function SubmissionCreateForm({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<string | null>(null); // NOMICON
   const [candidateId, setCandidateId] = useState("");
   const [clientId, setClientId] = useState("");
   const [ownerUserIdSelection, setOwnerUserIdSelection] = useState("");
@@ -34,11 +37,16 @@ export function SubmissionCreateForm({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    await send(false);
+  }
+
+  async function send(confirmEngagement: boolean) {
     setBusy(true);
     setError(null);
+    setConflict(null);
     try {
       if (!candidateId) throw new Error("Bitte einen Kandidaten auswählen.");
-      const submission = await apiPost<CandidateSubmission>("/submissions", {
+      const submission = await apiPost<CandidateSubmission>(`/submissions${confirmEngagement ? "?confirm_engagement=true" : ""}`, {
         candidate_id: candidateId,
         client_company_id: clientId || undefined,
         owner_user_id: ownerUserId || undefined,
@@ -49,7 +57,10 @@ export function SubmissionCreateForm({
       router.refresh();
       onDone(submission);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Prozess konnte nicht angelegt werden.");
+      const message = exception instanceof Error ? exception.message : "Prozess konnte nicht angelegt werden.";
+      // NOMICON: Kandidat ist bereits im Austausch -> Hinweis mit Bestätigung statt Fehler
+      if (isEngagementConflict(message) && !message.includes("gesperrt")) setConflict(message);
+      else setError(message);
     } finally {
       setBusy(false);
     }
@@ -69,13 +80,13 @@ export function SubmissionCreateForm({
         />
       </div>
       <div>
-        <label className={labelClass}>Kanzlei (optional)</label>
+        <label className={labelClass}>Kunde (optional)</label>
         <SearchSelect
           onSearch={searchClients}
           value={clientId}
           onChange={setClientId}
-          placeholder="Kanzlei suchen…"
-          emptyLabel="Keine Kanzlei gefunden"
+          placeholder="Kunde suchen…"
+          emptyLabel="Keinen Kunden gefunden"
           clearLabel="Noch offen"
         />
       </div>
@@ -89,6 +100,7 @@ export function SubmissionCreateForm({
         </select>
       </div>
       <ErrorBanner message={error} />
+      {conflict && <EngagementConflictNotice message={conflict} busy={busy} onConfirm={() => void send(true)} onCancel={() => setConflict(null)} />} {/* NOMICON */}
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={busy}>{busy ? "Speichern…" : "Prozess erstellen"}</Button>
       </div>
@@ -109,7 +121,7 @@ export function SubmissionCreateModal({
         <Modal
           title="Prozess erstellen"
           eyebrow="Recruiting-Prozesse"
-          description="Ein Prozess beginnt beim Quali Call. Die Kanzlei kann optional sofort verknüpft oder erst ab Interview ergänzt werden."
+          description="Ein Prozess beginnt beim Quali Call. Der Kunde kann optional sofort verknüpft oder erst ab Interview ergänzt werden."
           onClose={() => setOpen(false)}
         >
           <SubmissionCreateForm onDone={(submission) => { setOpen(false); onCreated?.(submission); }} />

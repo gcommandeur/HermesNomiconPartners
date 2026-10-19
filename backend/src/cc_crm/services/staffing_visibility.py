@@ -1,0 +1,49 @@
+# NOMICON: Arbeitnehmerüberlassung - nur in der Nomicon-Kopie.
+"""Lohn- und Margendaten sehen und setzen nur Admins (Nutzervorgabe).
+
+Lesen: die Read-Schemas behalten die Felder, der Wert wird für Nicht-Admins auf `None` gesetzt.
+Schreiben: ein Nicht-Admin, der Lohn oder Verrechnungssatz mitschickt, bekommt 403 - auch bei
+`null` (das wäre ein Löschen)."""
+
+from typing import cast
+
+from pydantic import BaseModel
+
+from cc_crm.core.errors import PermissionDeniedError
+from cc_crm.models.user import User
+from cc_crm.schemas.staffing import (
+    StaffingAssignmentRead,
+    StaffingInvoiceRead,
+    StaffingWorkerRead,
+)
+
+MONEY_FIELDS = ("hourly_wage", "billing_rate")
+
+
+def redact[ReadT: StaffingWorkerRead | StaffingAssignmentRead](model: ReadT, user: User) -> ReadT:
+    if user.is_admin:
+        return model
+    update = {field: None for field in MONEY_FIELDS if hasattr(model, field)}
+    return cast("ReadT", model.model_copy(update=update))
+
+
+def forbid_money_for_non_admin(payload: BaseModel, user: User) -> None:
+    if user.is_admin:
+        return
+    if any(field in payload.model_fields_set for field in MONEY_FIELDS):
+        raise PermissionDeniedError("Lohn und Verrechnungssatz dürfen nur Admins setzen.")
+
+
+def redact_invoice(invoice: StaffingInvoiceRead, user: User) -> StaffingInvoiceRead:
+    """Beträge einer Überlassungsrechnung (Verrechnungssatz mal Stunden) sind Margendaten."""
+    if user.is_admin:
+        return invoice
+    return invoice.model_copy(
+        update={
+            "amount_net": None,
+            "amount_gross": None,
+            "lines": [
+                line.model_copy(update={"rate": None, "amount_net": None}) for line in invoice.lines
+            ],
+        }
+    )

@@ -178,6 +178,16 @@ verify_account_rate_limiter = LoginRateLimiter(
 )
 
 
+# Dynamische Client-Registrierung (POST /oauth/register) ist oeffentlich und schreibt in
+# die Datenbank: pro Client-IP hoechstens 10 Registrierungen pro Stunde. Jede Anfrage zaehlt
+# (nicht nur Fehlversuche) - Claude registriert sich pro neuer Verbindung einmal.
+OAUTH_REGISTER_MAX = 10
+OAUTH_REGISTER_WINDOW = timedelta(hours=1)
+oauth_register_rate_limiter = LoginRateLimiter(
+    "oauth_register", max_attempts=OAUTH_REGISTER_MAX, window=OAUTH_REGISTER_WINDOW
+)
+
+
 def client_ip(
     cf_connecting_ip: str | None, forwarded_for: str | None, direct_host: str | None
 ) -> str:

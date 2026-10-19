@@ -17,7 +17,9 @@ from fastapi.responses import RedirectResponse
 
 from cc_crm.api.dependencies import AdminUser, DatabaseSession
 from cc_crm.core.config import get_settings
+from cc_crm.core.errors import EntityNotFoundError
 from cc_crm.models.enums import MailMatchStatus
+from cc_crm.models.mail import MailAccount
 from cc_crm.schemas.mail import (
     MailAccountCreate,
     MailAccountRead,
@@ -44,6 +46,13 @@ router = APIRouter(prefix="/mail-accounts")
 # scheiterte deshalb prod-seitig mit 401 "Missing bearer token", bevor sie
 # ueberhaupt state/code auswerten konnte.
 public_router = APIRouter(prefix="/mail-accounts")
+
+
+def _reject_personal(account: MailAccount) -> None:
+    """Der Posteingang eines persoenlichen Kontos ist nur fuer dessen Besitzer
+    lesbar (unter /me/mail-accounts) - auch Admins sehen ihn hier nicht."""
+    if account.owner_user_id is not None:
+        raise EntityNotFoundError("Postfach nicht gefunden")
 
 
 def _oauth_redirect_uri() -> str:
@@ -111,6 +120,7 @@ def sync_mail_account(
     Error-Handlers.
     """
     account = MailAccountService(session).get(account_id)
+    _reject_personal(account)
     return MailSyncService(session).sync_account(account)
 
 
@@ -133,7 +143,8 @@ def list_mail_messages(
     # get() wirft EntityNotFoundError bei unbekannter ID, damit ein
     # falscher/geloeschter Account nicht stillschweigend eine leere Liste
     # liefert.
-    MailAccountService(session).get(account_id)
+    account = MailAccountService(session).get(account_id)
+    _reject_personal(account)
     return MailAccountService(session).list_messages(
         account_id, match_status=match_status, offset=offset, limit=limit
     )

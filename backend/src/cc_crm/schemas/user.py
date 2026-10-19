@@ -23,6 +23,8 @@ class UserAdminRead(BaseModel):
     manager_id: uuid.UUID | None = None
     # Anzeigename (Fallback E-Mail) des zugeordneten Teamleiters.
     manager_name: str | None = None
+    # Ob bereits eine Microsoft-Kennung gebunden ist (die Kennung selbst wird nicht ausgeliefert).
+    ms_bound: bool = False
 
 
 class UserBriefRead(BaseModel):

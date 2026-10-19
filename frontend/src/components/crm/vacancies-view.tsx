@@ -37,7 +37,7 @@ export function VacanciesView({ vacancies, clients }: {
   const [status, setStatus] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const clientName = (id: string | null) => id ? clients.find((client) => client.id === id)?.name ?? "Kanzlei" : "Optional / offen";
+  const clientName = (id: string | null) => id ? clients.find((client) => client.id === id)?.name ?? "Kunde" : "Optional / offen";
 
   async function handleDelete(vacancy: Vacancy) {
     if (!window.confirm(`Vakanz "${vacancy.title}" wirklich löschen?`)) return;
@@ -67,7 +67,7 @@ export function VacanciesView({ vacancies, clients }: {
   return (
     <>
       <FilterBar
-        placeholder="Nach Rolle, Kanzlei, Standort, Gehalt oder Arbeitsmodell suchen"
+        placeholder="Nach Rolle, Kunde, Standort, Gehalt oder Arbeitsmodell suchen"
         value={search}
         onChange={setSearch}
         statusOptions={STATUS_OPTIONS}
@@ -86,7 +86,7 @@ export function VacanciesView({ vacancies, clients }: {
             </CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-brand-soft">{vacancy.description}</p>
-              <div className="mt-4 flex flex-wrap gap-1.5">{[...vacancy.must_have, ...vacancy.nice_to_have.slice(0, 2)].map((tag) => <span key={tag} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[10px] text-brand-soft">{tag}</span>)}</div>
+              <div className="mt-4 flex flex-wrap gap-1.5">{[...vacancy.must_have, ...vacancy.nice_to_have.slice(0, 2)].map((tag) => <span key={tag} className="rounded bg-brand-accent-soft/70 px-2 py-1 text-[9.5px] text-brand-soft">{tag}</span>)}</div>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <Button size="sm" variant="outline" onClick={() => setExpandedId((current) => (current === vacancy.id ? null : vacancy.id))}>
                   {expandedId === vacancy.id ? "Matching ausblenden" : "Passende Kandidaten anzeigen"}
@@ -112,7 +112,7 @@ export function VacanciesView({ vacancies, clients }: {
        * einem Telefon nur horizontal scrollbar erreichbar (Nutzer-Feedback
        * "mobile Version nicht passend"). */}
       <div className="hidden lg:block">
-      <DataTable headers={["Vakanz", "Kanzlei", "Standort", "Umkreis", "Qualifikation", "Gehalt", "Arbeitsmodell", "Status", "Priorität"]}>
+      <DataTable headers={["Vakanz", "Kunde", "Standort", "Umkreis", "Qualifikation", "Gehalt", "Arbeitsmodell", "Status", "Priorität"]}>
         {filtered.map((vacancy) => (
           <tr key={vacancy.id} className="hover:bg-brand-hover/35">
             <td className="px-4 py-3.5 font-semibold text-brand-platinum">{vacancy.title}</td>

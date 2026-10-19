@@ -264,12 +264,13 @@ class CandidateRepository(SQLAlchemyRepository[Candidate]):
         created_to: datetime | None = None,
         rollen_unbestaetigt: bool | None = None,
         custom_field_filter: tuple[str, str, str] | None = None,
+        extra_filters: Sequence[ColumnElement[bool]] | None = None,  # NOMICON
         sort_by: str | None = None,
         sort_dir: str = "asc",
         offset: int = 0,
         limit: int = 100,
     ) -> tuple[Sequence[Candidate], int]:
-        filters = []
+        filters = list(extra_filters or [])  # NOMICON
         if custom_field_filter is not None:
             # (Schluessel, Feldtyp, Wert) - JSON-Pfad statt Spalte, portabel fuer
             # SQLite und Postgres.

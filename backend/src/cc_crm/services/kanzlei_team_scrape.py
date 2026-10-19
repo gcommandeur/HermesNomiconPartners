@@ -19,9 +19,9 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 
+from cc_crm.core.http_identity import sourcing_user_agent
 from cc_crm.integrations.ai.anthropic_client import generate_text
 
-USER_AGENT = "HermesCRM-Sourcing/1.0 (Commandeur Consulting; Recruiting-Research)"
 REQUEST_TIMEOUT_SECONDS = 20.0
 
 # Maximal so viele Team-Unterseiten pro Kanzlei an das LLM geben - mehr
@@ -126,7 +126,7 @@ def _parse_members_json(raw: str) -> list[dict[str, object]]:
 def fetch_page(url: str) -> str:
     response = httpx.get(
         url,
-        headers={"User-Agent": USER_AGENT},
+        headers={"User-Agent": sourcing_user_agent()},
         timeout=REQUEST_TIMEOUT_SECONDS,
         follow_redirects=True,
     )

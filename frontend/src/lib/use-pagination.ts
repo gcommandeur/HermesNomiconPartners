@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 /** Begrenzt, wie viele Zeilen einer bereits geladenen/gefilterten Liste
  * tatsächlich ins DOM gerendert werden - bei Listen mit hunderten bis
- * tausenden Einträgen (Kandidaten, Kanzleien, Geo-Mapping) fror der Tab beim
+ * tausenden Einträgen (Kandidaten, Kunden, Geo-Mapping) fror der Tab beim
  * ersten Laden 10-20s ein, weil jede einzelne Zeile als eigenes <tr> mit
  * mehreren Kind-Elementen gerendert wurde (siehe Nutzer-Feedback zum
  * Generaltest vor Go-Live). Rein clientseitig (kein neuer Netzwerk-Request

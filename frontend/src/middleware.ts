@@ -8,6 +8,9 @@ export function middleware(request: NextRequest) {
 
   if (!hasToken && pathname !== "/login") {
     const loginUrl = new URL("/login", request.url);
+    // Ziel merken (z. B. die Claude-Zustimmung), damit der Login dorthin zurückführt.
+    const target = `${pathname}${request.nextUrl.search}`;
+    if (target !== "/") loginUrl.searchParams.set("next", target);
     return NextResponse.redirect(loginUrl);
   }
   if (hasToken && pathname === "/login") {
@@ -27,6 +30,7 @@ export const config = {
   // einen 307-Redirect auf /login statt des Bildes - der Tab zeigte dann nie
   // das Icon, bevor man sich einloggt.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|brand/|api/login|api/logout|api/proxy).*)",
+    // NOMICON: stundenzettel/ und api/stundenzettel (Kundenfreigabe per Link, ohne Login)
+    "/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|brand/|api/login|api/logout|api/proxy|api/stundenzettel|stundenzettel/).*)",
   ],
 };

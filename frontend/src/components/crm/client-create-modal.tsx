@@ -45,8 +45,8 @@ function formFromClient(client: ClientCompany): typeof emptyForm {
 }
 
 const honorarStufeOptions: { value: string; label: string }[] = [
-  { value: "standard", label: "Standard (27 %) — größere/etablierte Kanzleien" },
-  { value: "nachlass_1", label: "Nachlass 1 (25 %) — kleinere Kanzlei, begrenztes Budget" },
+  { value: "standard", label: "Standard (27 %) — größere/etablierte Kunden" },
+  { value: "nachlass_1", label: "Nachlass 1 (25 %) — kleinere Kunde, begrenztes Budget" },
   { value: "nachlass_2", label: "Nachlass 2 (23 %) — sehr kleine/Einzelkanzlei" },
   { value: "individuell", label: "Individuell" },
 ];
@@ -73,8 +73,8 @@ export function ClientCreateForm({
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  // Warnt (nicht blockierend) vor bestehenden Kanzleien mit ähnlichem Namen -
-  // z.B. eine versehentlich doppelt erfasste Kanzlei. Mehrere Standorte
+  // Warnt (nicht blockierend) vor bestehenden Kunden mit ähnlichem Namen -
+  // z.B. eine versehentlich doppelt erfasste Kunde. Mehrere Standorte
   // derselben Marke (andere PLZ) sind ausdrücklich erwünscht und werden hier
   // nur informativ mit angezeigt, nicht verhindert.
   useEffect(() => {
@@ -99,7 +99,7 @@ export function ClientCreateForm({
       // Leere Felder werden zu null (gültig für optionale Felder wie email),
       // statt als "" ans Backend geschickt zu werden - "" ist z.B. keine gültige
       // E-Mail und wurde vom Backend mit 422 abgelehnt, sobald im
-      // Bearbeiten-Modus gespeichert wurde (betraf jede Kanzlei ohne E-Mail).
+      // Bearbeiten-Modus gespeichert wurde (betraf jeden Kunden ohne E-Mail).
       const payload = Object.fromEntries(
         Object.entries(form)
           .filter(([, value]) => (isEdit ? true : value.trim() !== ""))
@@ -119,7 +119,7 @@ export function ClientCreateForm({
           ? exception.message
           : isEdit
             ? "Änderungen konnten nicht gespeichert werden."
-            : "Kanzlei konnte nicht angelegt werden.",
+            : "Kunde konnte nicht angelegt werden.",
       );
     } finally {
       setBusy(false);
@@ -131,13 +131,13 @@ export function ClientCreateForm({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label className={labelClass}>Name *</label><Input required value={form.name} onChange={(e) => set("name", e.target.value)} /></div>
         <div>
-          <label className={labelClass}>Kanzleigruppe / Marke</label>
+          <label className={labelClass}>Kundengruppe / Marke</label>
           <Input placeholder="z.B. ECOVIS, Afileon" value={form.kanzleigruppe} onChange={(e) => set("kanzleigruppe", e.target.value)} />
         </div>
       </div>
       {duplicates.length > 0 && (
         <div className="rounded-lg border border-brand-warning/25 bg-brand-warning/5 p-3 text-xs text-brand-warning">
-          <div className="mb-1.5 flex items-center gap-1.5 font-semibold"><TriangleAlert size={13} />Ähnliche Kanzlei(en) bereits vorhanden</div>
+          <div className="mb-1.5 flex items-center gap-1.5 font-semibold"><TriangleAlert size={13} />Ähnliche Kunde(en) bereits vorhanden</div>
           <ul className="space-y-0.5 text-[#F5D68A]">
             {duplicates.map((dup) => (
               <li key={dup.id}>
@@ -150,10 +150,10 @@ export function ClientCreateForm({
           {!form.kanzleigruppe.trim() && duplicates.some((dup) => dup.kanzleigruppe) && (
             <button
               type="button"
-              className="mt-2 rounded-md border border-brand-accent/40 bg-brand-accent-strong/45 px-2.5 py-1 text-[11px] text-brand-info hover:bg-brand-accent-strong/70"
+              className="mt-2 rounded-md border border-brand-accent/40 bg-brand-accent-strong/45 px-2.5 py-1 text-[10.45px] text-brand-info hover:bg-brand-accent-strong/70"
               onClick={() => set("kanzleigruppe", duplicates.find((dup) => dup.kanzleigruppe)?.kanzleigruppe ?? "")}
             >
-              Kanzleigruppe &quot;{duplicates.find((dup) => dup.kanzleigruppe)?.kanzleigruppe}&quot; übernehmen
+              Kundengruppe &quot;{duplicates.find((dup) => dup.kanzleigruppe)?.kanzleigruppe}&quot; übernehmen
             </button>
           )}
         </div>
@@ -183,7 +183,7 @@ export function ClientCreateForm({
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label className={labelClass}>Region</label><Input value={form.region} onChange={(e) => set("region", e.target.value)} /></div>
-        <div><label className={labelClass}>Kanzleigröße</label><Input value={form.company_size} onChange={(e) => set("company_size", e.target.value)} /></div>
+        <div><label className={labelClass}>Kundengröße</label><Input value={form.company_size} onChange={(e) => set("company_size", e.target.value)} /></div>
       </div>
       <div className="border-t border-white/10 pt-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-gray">Honorar</p>
@@ -197,7 +197,7 @@ export function ClientCreateForm({
           </div>
         </div>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div><label className={labelClass}>Nachlass-Begründung</label><Input placeholder="z.B. kleine Kanzlei, begrenztes Budget" value={form.nachlass_begruendung} onChange={(e) => set("nachlass_begruendung", e.target.value)} /></div>
+          <div><label className={labelClass}>Nachlass-Begründung</label><Input placeholder="z.B. kleiner Kunde, begrenztes Budget" value={form.nachlass_begruendung} onChange={(e) => set("nachlass_begruendung", e.target.value)} /></div>
           <div><label className={labelClass}>AGB-Version</label><Input value={form.agb_version} onChange={(e) => set("agb_version", e.target.value)} /></div>
         </div>
       </div>
@@ -213,7 +213,7 @@ export function ClientCreateForm({
       <ErrorBanner message={error} />
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={busy}>
-          {busy ? "Speichern…" : isEdit ? "Änderungen speichern" : "Kanzlei anlegen"}
+          {busy ? "Speichern…" : isEdit ? "Änderungen speichern" : "Kunde anlegen"}
         </Button>
       </div>
     </form>
@@ -224,9 +224,9 @@ export function ClientCreateModal({ onCreated }: { onCreated?: (client: ClientCo
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button onClick={() => setOpen(true)}><Plus size={15} />Kanzlei anlegen</Button>
+      <Button onClick={() => setOpen(true)}><Plus size={15} />Kunde anlegen</Button>
       {open && (
-        <Modal title="Kanzlei anlegen" eyebrow="Client Intelligence" onClose={() => setOpen(false)}>
+        <Modal title="Kunde anlegen" eyebrow="Client Intelligence" onClose={() => setOpen(false)}>
           <ClientCreateForm onDone={(client) => { setOpen(false); onCreated?.(client); }} />
         </Modal>
       )}
@@ -246,7 +246,7 @@ export function ClientEditModal({
     <>
       <Button size="sm" variant="outline" onClick={() => setOpen(true)}><Pencil size={13} />Bearbeiten</Button>
       {open && (
-        <Modal title="Kanzlei bearbeiten" eyebrow="Client Intelligence" onClose={() => setOpen(false)}>
+        <Modal title="Kunde bearbeiten" eyebrow="Client Intelligence" onClose={() => setOpen(false)}>
           <ClientCreateForm client={client} onDone={(updated) => { setOpen(false); onUpdated?.(updated); }} />
         </Modal>
       )}

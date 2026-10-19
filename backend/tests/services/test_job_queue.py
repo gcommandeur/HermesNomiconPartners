@@ -139,3 +139,111 @@ def test_retry_only_for_failed_jobs(session_factory: sessionmaker[Session]) -> N
         assert job.status == job_queue.QUEUED
         assert job.attempts == 0
         assert job.last_error is None
+
+
+# --- DSGVO: Lebenslauf-Bytes nicht in fehlgeschlagenen/verwaisten Jobs liegen lassen ---------
+
+
+def test_final_failure_drops_blob_and_filename(session_factory: sessionmaker[Session]) -> None:
+    with session_factory() as session:
+        job_id = enqueue(
+            session,
+            "test.boom",
+            {"filename": "lebenslauf-erika-musterfrau.pdf", "job_id": "x"},
+            blob=b"%PDF geheim",
+            max_attempts=2,
+        ).id
+    process_one(session_factory)
+    # Solange eine Wiederholung ansteht, bleibt der Lebenslauf fuer den naechsten Versuch.
+    retrying = _reload(session_factory, job_id)
+    assert retrying.status == "queued"
+    assert retrying.payload_blob == b"%PDF geheim"
+    with session_factory() as session:
+        session.get(BackgroundJob, job_id).run_after = datetime.now(UTC) - timedelta(seconds=1)  # type: ignore[union-attr]
+        session.commit()
+    process_one(session_factory)
+    failed = _reload(session_factory, job_id)
+    assert failed.status == "failed"
+    assert failed.payload_blob is None
+    assert failed.payload["filename"] == "[entfernt]"
+    assert failed.payload["job_id"] == "x"  # technische Parameter bleiben
+
+
+def test_worker_crash_in_last_attempt_drops_blob(session_factory: sessionmaker[Session]) -> None:
+    with session_factory() as session:
+        job_id = enqueue(
+            session, "test.ok", {"filename": "cv-max.pdf"}, blob=b"%PDF", max_attempts=1
+        ).id
+        job = session.get(BackgroundJob, job_id)
+        assert job is not None
+        job.status = "running"
+        job.attempts = 1
+        job.locked_until = datetime.now(UTC) - timedelta(minutes=1)
+        session.commit()
+    process_one(session_factory)
+    job = _reload(session_factory, job_id)
+    assert job.status == "failed"
+    assert job.payload_blob is None
+    assert job.payload["filename"] == "[entfernt]"
+
+
+def _aged_job(
+    factory: sessionmaker[Session], *, status: str, days: int, kind: str = "test.ok"
+) -> object:
+    with factory() as session:
+        job = enqueue(session, kind, {"filename": "cv.pdf"}, blob=b"%PDF geheim")
+        job.status = status
+        old = datetime.now(UTC) - timedelta(days=days)
+        job.run_after = old
+        job.locked_until = old if status == "running" else None
+        session.commit()
+        job_id = job.id
+        # updated_at laesst sich ueber ORM-onupdate nicht zurueckdatieren -> direkt setzen
+        session.execute(
+            BackgroundJob.__table__.update()
+            .where(BackgroundJob.id == job_id)
+            .values(updated_at=old)
+            .execution_options(synchronize_session=False)
+        )
+        session.commit()
+        return job_id
+
+
+def test_purge_removes_blobs_of_old_failed_and_orphaned_jobs(
+    session_factory: sessionmaker[Session],
+) -> None:
+    old_failed = _aged_job(session_factory, status="failed", days=10)
+    old_running = _aged_job(session_factory, status="running", days=10)
+    old_queued = _aged_job(session_factory, status="queued", days=10)
+    fresh_failed = _aged_job(session_factory, status="failed", days=1)
+    fresh_queued = _aged_job(session_factory, status="queued", days=0)
+
+    with session_factory() as session:
+        assert job_queue.purge_stale_job_blobs(session, older_than_days=3, dry_run=True) == 3
+    assert _reload(session_factory, old_failed).payload_blob is not None  # Probelauf aendert nichts
+
+    with session_factory() as session:
+        assert job_queue.purge_stale_job_blobs(session, older_than_days=3) == 3
+
+    for job_id in (old_failed, old_running, old_queued):
+        job = _reload(session_factory, job_id)
+        assert job.payload_blob is None
+        assert job.payload["filename"] == "[entfernt]"
+        assert job.status == "failed"
+    assert "verwaist" in (_reload(session_factory, old_running).last_error or "")
+    # Frisches bleibt unberuehrt (wird noch gebraucht bzw. ist gerade erst fehlgeschlagen).
+    assert _reload(session_factory, fresh_failed).payload_blob is not None
+    assert _reload(session_factory, fresh_queued).payload_blob is not None
+    assert _reload(session_factory, fresh_queued).status == "queued"
+
+    with session_factory() as session:
+        assert job_queue.purge_stale_job_blobs(session, older_than_days=3) == 0  # idempotent
+
+
+def test_retry_of_scan_job_without_cv_is_refused(session_factory: sessionmaker[Session]) -> None:
+    with session_factory() as session:
+        job = enqueue(session, "cv.scan", {"filename": "x.pdf"}, blob=None, max_attempts=1)
+        job.status = job_queue.FAILED
+        session.commit()
+        with pytest.raises(BusinessRuleError, match="erneut hochladen"):
+            retry_job(session, job.id)

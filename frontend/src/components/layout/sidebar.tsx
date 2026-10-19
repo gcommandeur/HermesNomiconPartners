@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, X } from "lucide-react";
 import {
+  inActiveView, // NOMICON
   isNavigationItemActive,
   navigationGroups,
   utilityNavigation,
@@ -18,9 +19,11 @@ import {
   subscribeRecentCandidates,
   type RecentCandidate,
 } from "@/lib/recent-candidates";
-import { useCurrentUser, usePendingApprovalCount } from "@/lib/api/hooks";
+import { useAiProposalSummary, useCurrentUser, usePendingApprovalCount } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
 import { brand } from "@/lib/brand";
+import { useActiveView } from "@/lib/api/views-hooks"; // NOMICON
+import { ViewSwitcher } from "@/components/crm/view-switcher"; // NOMICON
 
 export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
   collapsed: boolean;
@@ -49,9 +52,17 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
   const isAdmin = meData?.data.is_admin ?? false;
   const isTeamLead = meData?.data.role === "team_lead";
   const pendingApprovals = usePendingApprovalCount(isAdmin);
+  const ai = useAiProposalSummary();
+  const { active: activeView } = useActiveView(); // NOMICON
   const visibleGroups = navigationGroups
     .filter((group) => !group.adminOnly || isAdmin)
-    .map((group) => ({ ...group, items: visibleItems(group.items, isAdmin, isTeamLead) }))
+    .map((group) => ({
+      ...group,
+      label: (activeView && group.viewLabels?.[activeView]) || group.label, // NOMICON
+      items: inActiveView(visibleItems(group.items, isAdmin, isTeamLead), activeView).filter( // NOMICON
+        (item) => !item.requiresAi || ai.enabled,
+      ),
+    }))
     .filter((group) => group.items.length > 0);
 
   // Eingeklappte Gruppen, gemerkt pro Nutzer (localStorage). Erst nach dem Mount
@@ -82,27 +93,28 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
   const renderItem = (item: NavigationItem) => {
     const active = isNavigationItemActive(item, pathname);
     const Icon = item.icon;
-    const badgeCount = item.badge === "approvals" ? pendingApprovals : 0;
+    const badgeCount =
+      item.badge === "approvals" ? pendingApprovals : item.badge === "aiProposals" ? ai.pending : 0;
 
     return (
       <Link
         key={item.href}
-        href={item.href}
+        href={(activeView && item.viewHrefs?.[activeView]) || item.href} // NOMICON
         title={collapsed ? item.label : undefined}
         onClick={onMobileClose}
         className={cn(
-          "relative flex h-10 items-center gap-3 rounded-md px-3 text-[13px] transition-all duration-200",
+          "relative flex h-[38px] items-center gap-[11.4px] rounded-md px-[11.4px] text-[12.35px] transition-all duration-200",
           active ? "border-l-2 border-brand-platinum bg-gradient-to-r from-brand-accent-strong/80 to-brand-accent-soft/55 text-white shadow-[inset_0_1px_0_rgba(255,255,255,.04)]" : "text-brand-silver hover:bg-brand-hover/45 hover:text-white hover:translate-x-[1px]",
           collapsed && "justify-center px-0",
         )}
       >
-        <Icon size={17} strokeWidth={1.7} />
+        <Icon size={16} strokeWidth={1.7} />
         {!collapsed && <span className="flex-1">{item.label}</span>}
         {badgeCount > 0 && (
           collapsed ? (
             <span className="absolute right-2 top-2 size-2 rounded-full bg-brand-danger" aria-label={`${badgeCount} offen`} />
           ) : (
-            <span className="min-w-5 rounded-full bg-brand-danger px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white">
+            <span className="min-w-5 rounded-full bg-brand-danger px-1.5 py-0.5 text-center text-[9.5px] font-semibold leading-none text-white">
               {badgeCount}
             </span>
           )
@@ -116,10 +128,10 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
       {mobileOpen && <button aria-label="Navigation schließen" className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={onMobileClose} />}
       <aside className={cn(
         "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/10 bg-brand-sidebar text-white shadow-[12px_0_40px_rgba(0,0,0,.22)] transition-all duration-200",
-        collapsed ? "w-[76px]" : "w-[248px]",
+        collapsed ? "w-[72px]" : "w-[236px]",
         mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
       )}>
-        <div className="flex h-24 items-center border-b border-white/10 px-4">
+        <div className="flex h-[91px] items-center border-b border-white/10 px-[15px]">
           <Link href="/" className={cn("flex min-w-0 items-center", collapsed ? "mx-auto" : "gap-3")} onClick={onMobileClose}>
             {/* Commandeur-Consulting-Logo (Nutzer-Vorgabe "zurueck zu unserem
                 Commandeur Consulting Logo"): das CC-Monogramm bleibt
@@ -133,14 +145,14 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
                 Schriftzug bei 1418:232 Bildseitenverhaeltnis ueber den
                 verfuegbaren Platz neben dem Icon hinaus (Nutzer-Feedback
                 "Schrift ... nicht ueber Grenze"). */}
-            <Image src={brand.markSrc} alt={brand.companyName} width={44} height={44} className="h-11 w-11 shrink-0 object-contain" priority />
+            <Image src={brand.markSrc} alt={brand.companyName} width={42} height={42} className="h-[42px] w-[42px] shrink-0 object-contain" priority />
             {!collapsed && (
               <Image
                 src={brand.wordmarkSrc}
                 alt={brand.companyName}
                 width={1418}
                 height={232}
-                className="h-6 w-auto max-w-full object-contain"
+                className="h-[23px] w-auto max-w-full object-contain"
                 priority
               />
             )}
@@ -148,26 +160,28 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
           <button className="ml-auto shrink-0 text-white/60 hover:text-white lg:hidden" onClick={onMobileClose}><X size={18} /></button>
         </div>
 
-        <nav className="scrollbar-subtle flex-1 space-y-1 overflow-y-auto px-3 py-5">
+        {/* NOMICON: Umschalter für Handy (im Kopf nur ab sm sichtbar) */}
+        <div className="px-[11.4px] pt-3 sm:hidden"><ViewSwitcher className="flex w-full [&>button]:flex-1" /></div>
+        <nav className="scrollbar-subtle flex-1 space-y-[3.8px] overflow-y-auto px-[11.4px] py-[19px]">
           {visibleGroups.map((group, groupIndex) => {
             const hasActiveItem = group.items.some((item) => isNavigationItemActive(item, pathname));
             // Die Gruppe der aktuellen Seite bleibt offen, auch wenn sie eingeklappt wurde.
             const open = !closedGroups.includes(group.id) || hasActiveItem;
             return (
-              <div key={group.id} className={cn(groupIndex > 0 && (collapsed ? "mt-3 border-t border-white/10 pt-3" : "mt-4"))}>
+              <div key={group.id} className={cn(groupIndex > 0 && (collapsed ? "mt-[11px] border-t border-white/10 pt-[11px]" : "mt-[15px]"))}>
                 {!collapsed && (
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.id)}
                     aria-expanded={open}
-                    className="mb-1 flex h-7 w-full items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-wider text-[#5F6B7A] hover:text-brand-silver"
+                    className="mb-[3.8px] flex h-[27px] w-full items-center justify-between px-[11.4px] text-[12.35px]! font-normal! text-brand-dim hover:text-brand-silver"
                   >
                     {group.label}
-                    <ChevronDown size={12} className={cn("transition-transform", !open && "-rotate-90")} />
+                    <ChevronDown size={11} className={cn("transition-transform", !open && "-rotate-90")} />
                   </button>
                 )}
                 {(collapsed || open) && (
-                  <div className="space-y-1">
+                  <div className="space-y-[3.8px]">
                     {group.items.map((item) => (
                       <div key={item.href}>
                         {renderItem(item)}
@@ -175,7 +189,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
                             bleiben als eigene Eintraege unter "Kandidaten" erreichbar,
                             damit mehrere Profile parallel offen bleiben koennen. */}
                         {item.href === "/kandidaten" && !collapsed && recentCandidates.length > 0 && (
-                          <div className="ml-[26px] mt-1 space-y-0.5 border-l border-white/10 pl-3">
+                          <div className="ml-[25px] mt-1 space-y-0.5 border-l border-white/10 pl-[11.4px]">
                             {recentCandidates.map((recent) => {
                               const href = `/kandidaten/${recent.id}`;
                               const active = pathname === href;
@@ -183,7 +197,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
                                 <div
                                   key={recent.id}
                                   className={cn(
-                                    "group flex h-8 items-center gap-1.5 rounded-md pr-1.5 text-[12px] transition-colors",
+                                    "group flex h-[30px] items-center gap-1.5 rounded-md pr-1.5 text-[11.4px] transition-colors",
                                     active ? "text-white" : "text-brand-gray hover:text-white",
                                   )}
                                 >
@@ -205,7 +219,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose }: {
                                     }}
                                     className="shrink-0 rounded p-1 text-brand-gray-dark opacity-0 hover:text-white group-hover:opacity-100"
                                   >
-                                    <X size={11} />
+                                    <X size={10} />
                                   </button>
                                 </div>
                               );

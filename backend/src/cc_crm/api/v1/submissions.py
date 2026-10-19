@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Response, status
 
 from cc_crm.api.dependencies import (
+    AdminUser,
     CurrentUser,
     DatabaseSession,
     SubmissionAccess,
@@ -37,10 +38,13 @@ from cc_crm.schemas.submission import (
     ClosingScoreInput,
     ClosingScoreRead,
     FeedbackCreateResult,
+    SubmissionOwnerAssign,
     SubmissionShareCreate,
     SubmissionShareRead,
+    UnownedSubmissionList,
 )
 from cc_crm.services.closing_score import ACTION_RECOMMENDATIONS
+from cc_crm.services.engagement_status import ensure_no_conflict  # NOMICON
 from cc_crm.services.recruiting import RecruitingProcessService
 from cc_crm.services.submission_shares import SubmissionShareService
 from cc_crm.services.submissions import CandidateSubmissionService
@@ -93,6 +97,16 @@ def list_submissions(
     return Page(items=items, total_count=total, limit=limit, offset=offset)
 
 
+# Muss VOR "/{submission_id}" stehen, sonst wird "without-owner" als (ungueltige) ID gelesen.
+@router.get("/without-owner", response_model=UnownedSubmissionList)
+def list_submissions_without_owner(
+    session: DatabaseSession, _admin: AdminUser
+) -> UnownedSubmissionList:
+    """Nur Admin: Prozesse ohne Verantwortlichen (aus der Zeit vor dem Feld). Fuer
+    Nicht-Admins sind sie unsichtbar - hier tauchen sie sichtbar auf, bis sie zugewiesen sind."""
+    return CandidateSubmissionService(session).list_without_owner()
+
+
 @router.post(
     "",
     response_model=CandidateSubmissionRead,
@@ -102,11 +116,14 @@ def create_submission(
     payload: CandidateSubmissionCreate,
     session: DatabaseSession,
     current_user: CurrentUser,
+    confirm_engagement: bool = False,  # NOMICON
 ) -> CandidateSubmissionRead:
+    # NOMICON: Kandidat schon im Austausch? (409 mit Hinweis, Bestaetigung oder Sperre)
+    ensure_no_conflict(session, current_user, payload.candidate_id, "direct", confirm_engagement)
     if payload.owner_user_id is None:
         payload = payload.model_copy(update={"owner_user_id": current_user.id})
     return CandidateSubmissionRead.model_validate(
-        CandidateSubmissionService(session).create(payload)
+        CandidateSubmissionService(session).create(payload, created_by_user_id=current_user.id)
     )
 
 
@@ -148,6 +165,25 @@ def update_submission(
 ) -> CandidateSubmissionRead:
     return CandidateSubmissionRead.model_validate(
         CandidateSubmissionService(session).update(submission_id, payload, current_user)
+    )
+
+
+@router.post(
+    "/{submission_id}/assign-owner",
+    dependencies=[SubmissionAccess],
+    response_model=CandidateSubmissionRead,
+)
+def assign_submission_owner(
+    submission_id: uuid.UUID,
+    payload: SubmissionOwnerAssign,
+    session: DatabaseSession,
+    admin: AdminUser,
+) -> CandidateSubmissionRead:
+    """Nur Admin: Verantwortlichen setzen (Audit-Eintrag `updated` mit alt/neu)."""
+    return CandidateSubmissionRead.model_validate(
+        CandidateSubmissionService(session).assign_owner(
+            submission_id, payload.owner_user_id, admin
+        )
     )
 
 

@@ -73,10 +73,18 @@ def store_connection(
 
     account = session.scalar(select(MailAccount).where(MailAccount.address == address))
     if account is None:
+        user = session.get(User, user_id)
+        # Das EIGENE Postfach des Nutzers (Adresse = CRM-Adresse) ist persoenlich:
+        # nur er kann daraus senden, sein Posteingang wird nicht ins CRM gelesen.
+        # Ein anderes Postfach (z.B. ein Firmenpostfach, das ein Admin verbindet)
+        # bleibt gemeinsam.
+        personal = user is not None and user.email.strip().lower() == address
         account = MailAccount(
             address=address,
             label=display_name[:80],
             provider=MailAccountProvider.MICROSOFT_GRAPH,
+            owner_user_id=user_id if personal else None,
+            sync_enabled=not personal,
         )
         session.add(account)
     else:

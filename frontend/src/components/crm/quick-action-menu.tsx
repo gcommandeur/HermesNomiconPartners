@@ -36,7 +36,7 @@ export function QuickActionMenu() {
             <Users size={15} />Kandidat anlegen
           </button>
           <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-platinum hover:bg-white/8" onClick={() => { setActive("client"); setMenuOpen(false); }}>
-            <Building2 size={15} />Kanzlei anlegen
+            <Building2 size={15} />Kunde anlegen
           </button>
           <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-platinum hover:bg-white/8" onClick={() => { setActive("submission"); setMenuOpen(false); }}>
             <Briefcase size={15} />Prozess erstellen
@@ -50,7 +50,7 @@ export function QuickActionMenu() {
         </Modal>
       )}
       {active === "client" && (
-        <Modal title="Kanzlei anlegen" eyebrow="Client Intelligence" onClose={() => setActive(null)}>
+        <Modal title="Kunde anlegen" eyebrow="Client Intelligence" onClose={() => setActive(null)}>
           <ClientCreateForm onDone={() => { setActive(null); router.refresh(); }} />
         </Modal>
       )}
@@ -58,7 +58,7 @@ export function QuickActionMenu() {
         <Modal
           title="Prozess erstellen"
           eyebrow="Recruiting-Prozesse"
-          description="Ein Prozess beginnt bei Quali Call. Die Kanzlei kann optional sofort verknüpft oder erst ab Interview ergänzt werden."
+          description="Ein Prozess beginnt bei Quali Call. Der Kunde kann optional sofort verknüpft oder erst ab Interview ergänzt werden."
           onClose={() => setActive(null)}
         >
           <SubmissionCreateForm onDone={() => { setActive(null); router.refresh(); }} />

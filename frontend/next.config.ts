@@ -5,6 +5,19 @@ const nextConfig: NextConfig = {
   // Produziert einen minimalen, in sich geschlossenen Output-Ordner
   // (.next/standalone) - kleineres, schnelleres Docker-Image ohne node_modules.
   output: "standalone",
+  // NOMICON: Demo-Login-Schalter als feste Zeichenkette "true"/"false" in den Build einsetzen, damit
+  // der Code der Demo-Anmeldung (components/crm/demo-login-inner.tsx) ohne Schalter gar nicht mitgebaut wird.
+  env: {
+    NEXT_PUBLIC_CC_CRM_DEMO_LOGIN: process.env.NEXT_PUBLIC_CC_CRM_DEMO_LOGIN === "true" ? "true" : "false",
+  },
+
+  // NOMICON: Umbenennung Kanzleien -> Kunden: alte Lesezeichen weiterleiten.
+  async redirects() {
+    return [
+      { source: "/kanzleien", destination: "/kunden", permanent: true },
+      { source: "/kanzleien/:path*", destination: "/kunden/:path*", permanent: true },
+    ];
+  },
 
   async headers() {
     return [

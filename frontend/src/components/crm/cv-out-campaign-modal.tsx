@@ -13,9 +13,9 @@ import { getCvOutTargets } from "@/lib/api/queries";
 import type { CvOutTargetClient, MailingGroup, MailingRecipient } from "@/lib/api/types";
 
 const DEFAULT_RADIUS_KM = 50;
-// Bestehende Vorlage "CV-Blindversand an Kanzlei" (siehe email_templates) -
+// Bestehende Vorlage "CV-Blindversand an Kunde" (siehe email_templates) -
 // passt inhaltlich exakt zur CV-Out-Kampagne (anonymes Kurzprofil per
-// Kandidat-Nr. an mehrere Kanzleien-Kontakte), daher keine neue Vorlage
+// Kandidat-Nr. an mehrere Kunden-Kontakte), daher keine neue Vorlage
 // angelegt (Auftrag: "bestehende Vorlage pruefen, sonst neue anlegen").
 const CV_OUT_TEMPLATE_KEY = "cv_blind_submission";
 
@@ -28,9 +28,9 @@ function dedupeKey(item: MailingRecipient): string {
  * Matching-Tab (candidate-matching-panel.tsx): jenes ist eine reine
  * Pipeline-Statusmarkierung (legt eine CandidateSubmission an, kein
  * Mailversand), diese Kampagne hier verschickt tatsaechlich eine Mail an
- * mehrere Kanzlei-Kontakte im Umkreis. Radius um den Wohnort des Kandidaten
+ * mehrere Kunden-Kontakte im Umkreis. Radius um den Wohnort des Kandidaten
  * ist die einzige Eingabe (kein freier Ort-Text, siehe GET .../cv-out-targets
- * - Zentrum kommt serverseitig aus candidate.city/postal_code), Kanzleien mit
+ * - Zentrum kommt serverseitig aus candidate.city/postal_code), Kunden mit
  * Status "Gesperrt" und Kontakte ohne E-Mail sind bereits serverseitig
  * ausgefiltert. Legt bei Bestaetigung eine MailingGroup (kind: "contact")
  * an und leitet dann in die bestehende Vorschau/Versand-Ansicht auf der
@@ -135,6 +135,8 @@ export function CvOutCampaignModal({
         name: groupName,
         recipients,
         template_key: CV_OUT_TEMPLATE_KEY,
+        // Der vorgestellte Kandidat: damit gilt der Versand als Vorstellung (Vorstellungs-Archiv).
+        context_candidate_id: candidateId,
       });
       router.push(`/mailing?group=${group.id}`);
     } catch (exception) {
@@ -149,7 +151,7 @@ export function CvOutCampaignModal({
     <Modal
       title="CV-Out-Kampagne"
       eyebrow={candidateName}
-      description="Kanzleien im Umkreis des Wohnorts, außer Status „Gesperrt“ - versendet das anonyme Kurzprofil an die ausgewählten Kanzlei-Kontakte."
+      description="Kunden im Umkreis des Wohnorts, außer Status „Gesperrt“ - versendet das anonyme Kurzprofil an die ausgewählten Kunden-Kontakte."
       maxWidth="max-w-2xl"
       onClose={onClose}
     >
@@ -167,7 +169,7 @@ export function CvOutCampaignModal({
           </div>
           <Button disabled={searching} onClick={handleSearch}>
             <Search size={14} />
-            {searching ? "Suche…" : "Kanzleien suchen"}
+            {searching ? "Suche…" : "Kunden suchen"}
           </Button>
         </div>
 
@@ -177,7 +179,7 @@ export function CvOutCampaignModal({
           <>
             <p className="flex items-center gap-1.5 text-xs text-brand-muted">
               <MapPinned size={13} />
-              {targets.length} Kanzlei(en) im Umkreis von {radiusKm} km mit mailingfähigem Kontakt · {selectedCount} Kontakt(e) ausgewählt
+              {targets.length} Kunde(en) im Umkreis von {radiusKm} km mit mailingfähigem Kontakt · {selectedCount} Kontakt(e) ausgewählt
             </p>
             <div className="max-h-80 space-y-2 overflow-y-auto">
               {targets.map((client) => {
@@ -199,7 +201,7 @@ export function CvOutCampaignModal({
                             <p className="mt-0.5 text-xs text-brand-muted">{client.location}</p>
                           </div>
                         </div>
-                        <span className="shrink-0 rounded-full bg-brand-accent-soft px-2.5 py-1 text-[10px] text-brand-platinum">
+                        <span className="shrink-0 rounded-full bg-brand-accent-soft px-2.5 py-1 text-[9.5px] text-brand-platinum">
                           {client.distance_km} km
                         </span>
                       </div>
@@ -224,7 +226,7 @@ export function CvOutCampaignModal({
               })}
               {targets.length === 0 && (
                 <Card><CardContent className="py-8 text-center text-sm text-brand-gray">
-                  Keine passenden Kanzleien im Umkreis gefunden.
+                  Keine passenden Kunden im Umkreis gefunden.
                 </CardContent></Card>
               )}
             </div>

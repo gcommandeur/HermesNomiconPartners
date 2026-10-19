@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement  # NOMICON
 
 from cc_crm.core.config import get_settings
 from cc_crm.core.errors import BusinessRuleError, ConsentNotGrantedError
@@ -89,7 +90,18 @@ _ANONYMIZE_TEXT_FIELDS = [
     "freitext_notizen",
     "wechselgrund",
     "next_step",
+    # Zweite Stufe (Nutzerentscheidung 2026-10-05): strukturierte, stark identifizierende
+    # Felder und das komplette KI-Rohergebnis aus dem Lebenslauf.
+    "cv_extraction_raw",
+    "current_employer_internal",
+    "examensnoten",
+    "salary_expectation",
+    "notice_period",
 ]
+# Nicht-Null-Spalten bzw. Listen: werden auf einen leeren Wert statt NULL gesetzt.
+_ANONYMIZE_EMPTY_LIST_FIELDS = ["berufliche_stationen"]
+# Quelle des Einwilligungsnachweises, wenn das Flag ueber die API/Oberflaeche gesetzt wird.
+CONSENT_SOURCE_MANUAL = "hermes_manuell"
 
 # Letzte reale Kandidatennummer aus der bisherigen (nicht-CRM-) Nummerierung.
 # Neue, automatisch vergebene Nummern schließen daran an (ab 4053), damit CRM-
@@ -290,6 +302,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         bleibt dann None wie bei anderen automatischen Eintraegen)."""
         before = self.get(entity_id)
         was_cv_available = before.cv_available
+        was_consent_received = before.consent_received
         was_rollen_unbestaetigt = before.rollen_unbestaetigt
         old_rollen = list(before.rollen)
         old_values, new_values = changed_values(before, payload.model_dump(exclude_unset=True))
@@ -310,6 +323,8 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         if updated.cv_available and not was_cv_available and updated.cv_in_recorded_at is None:
             updated.cv_in_recorded_at = datetime.now(UTC)
             self.session.commit()
+        if updated.consent_received and not was_consent_received:
+            self._stamp_consent(updated)
         if was_rollen_unbestaetigt and list(updated.rollen) != old_rollen:
             updated.rollen_unbestaetigt = False
             self.audit_logs.create(
@@ -369,12 +384,21 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         candidate.first_name = "Anonymisiert"
         candidate.last_name = "Anonymisiert"
         candidate.anrede = None
+        # Einwilligung: das Flag faellt auf False (an einen anonymisierten Datensatz darf
+        # nichts mehr gehen), der NACHWEIS bleibt aber ohne Personenbezug stehen:
+        # consent_recorded_at und consent_source, dazu candidate_number als Pseudonym und
+        # der Zeitpunkt der Anonymisierung. War die Einwilligung gesetzt, ohne dass ein
+        # Datum erfasst wurde (Altbestand), bleibt das Datum NULL - es wird nicht geraten.
+        consent_was_given = candidate.consent_received
         candidate.consent_received = False
+        candidate.anonymized_at = datetime.now(UTC)
         candidate.cv_available = False
         candidate.no_gos = []
         candidate.custom_fields = {}  # Zusatzfelder koennen Personenbezug haben
         for field in _ANONYMIZE_TEXT_FIELDS:
             setattr(candidate, field, None)
+        for field in _ANONYMIZE_EMPTY_LIST_FIELDS:
+            setattr(candidate, field, [])
 
         self._redact_audit_history(candidate.id)
 
@@ -388,7 +412,20 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
                 "action": "anonymized",
                 "changed_by": admin_user.email,
                 "new_values": {
-                    "fields_cleared": [*_ANONYMIZE_TEXT_FIELDS, "no_gos", "custom_fields"]
+                    "fields_cleared": [
+                        *_ANONYMIZE_TEXT_FIELDS,
+                        *_ANONYMIZE_EMPTY_LIST_FIELDS,
+                        "no_gos",
+                        "custom_fields",
+                    ],
+                    # Nachweis ohne Personenbezug (Pseudonym = candidate_number am Datensatz).
+                    "consent_was_given": consent_was_given,
+                    "consent_recorded_at": (
+                        candidate.consent_recorded_at.isoformat()
+                        if candidate.consent_recorded_at
+                        else None
+                    ),
+                    "consent_source": candidate.consent_source,
                 },
             }
         )
@@ -600,6 +637,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         created_to: datetime | None = None,
         rollen_unbestaetigt: bool | None = None,
         custom_field: str | None = None,
+        extra_filters: Sequence[ColumnElement[bool]] | None = None,  # NOMICON
         sort_by: str | None = None,
         sort_dir: str = "asc",
         offset: int = 0,
@@ -624,6 +662,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
                 created_to=created_to,
                 rollen_unbestaetigt=rollen_unbestaetigt,
                 custom_field_filter=custom_field_filter,
+                extra_filters=extra_filters,  # NOMICON
                 sort_by=sort_by,
                 sort_dir=sort_dir,
                 offset=offset,
@@ -642,6 +681,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             created_to=created_to,
             rollen_unbestaetigt=rollen_unbestaetigt,
             custom_field_filter=custom_field_filter,
+            extra_filters=extra_filters,  # NOMICON
             sort_by=sort_by,
             sort_dir=sort_dir,
             offset=offset,
@@ -666,6 +706,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         created_to: datetime | None,
         rollen_unbestaetigt: bool | None = None,
         custom_field_filter: tuple[str, str, str] | None = None,
+        extra_filters: Sequence[ColumnElement[bool]] | None = None,  # NOMICON
         sort_by: str | None,
         sort_dir: str,
         offset: int,
@@ -701,6 +742,7 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
             created_to=created_to,
             rollen_unbestaetigt=rollen_unbestaetigt,
             custom_field_filter=custom_field_filter,
+            extra_filters=extra_filters,  # NOMICON
             sort_by=sort_by,
             sort_dir=sort_dir,
             offset=0,
@@ -870,7 +912,17 @@ class CandidateService(CrudService[Candidate, CandidateCreate, CandidateUpdate])
         if entity.cv_available and entity.cv_in_recorded_at is None:
             entity.cv_in_recorded_at = datetime.now(UTC)
             self.session.commit()
+        if entity.consent_received:
+            self._stamp_consent(entity)
         return entity
+
+    def _stamp_consent(self, candidate: Candidate) -> None:
+        """Haelt fest, WANN die Einwilligung in Hermes erfasst wurde (nur einmal, nie
+        ueberschrieben). Das ist der Nachweis, der die Anonymisierung ueberlebt."""
+        if candidate.consent_recorded_at is None:
+            candidate.consent_recorded_at = datetime.now(UTC)
+            candidate.consent_source = candidate.consent_source or CONSENT_SOURCE_MANUAL
+            self.session.commit()
 
 
 def _months_ago(months: int) -> date:

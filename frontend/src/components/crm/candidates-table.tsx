@@ -24,6 +24,14 @@ import { useCurrentUser, useReactivationCandidatesCache } from "@/lib/api/hooks"
 import { useServerSearchList } from "@/lib/api/use-server-search";
 import { getCandidatesPage } from "@/lib/api/queries";
 import type { Abschlussart, Candidate, Rolle } from "@/lib/api/types";
+import { EngagementBadge } from "@/components/crm/engagement-badge"; // NOMICON
+import { ENGAGEMENT_FILTER_LABELS, type EngagementFilter } from "@/lib/api/engagement"; // NOMICON
+import { useEngagementSummaries } from "@/lib/api/engagement-hooks"; // NOMICON
+import { useStaffingCandidateSummaries } from "@/lib/api/staffing-hooks"; // NOMICON
+import { STAFFING_FILTER_LABELS, type StaffingListFilter } from "@/lib/api/staffing"; // NOMICON
+import { useMyViews } from "@/lib/api/views-hooks"; // NOMICON
+import { StaffingCandidateCell, staffingCandidateText } from "@/components/crm/staffing-candidate-cell"; // NOMICON
+import { canSeeStaffing, parseStaffingFilter } from "@/lib/staffing-candidate"; // NOMICON
 
 interface NlSearchResponse {
   items: Candidate[];
@@ -202,6 +210,18 @@ export function CandidatesTable() {
   const [rollenUnbestaetigtOnly, setRollenUnbestaetigtOnly] = useState(
     () => searchParams.get("rollen_unbestaetigt") === "1",
   );
+  // NOMICON: Kandidatenstatus-Filter (frei für Direct/AÜ, im Austausch)
+  const [engagement, setEngagement] = useState<EngagementFilter | "">(() => {
+    const raw = searchParams.get("engagement");
+    return raw === "free_direct" || raw === "free_staffing" || raw === "engaged" ? raw : "";
+  });
+  // NOMICON: Überlassungs-Filter und -Spalte nur mit Ansicht Überlassung
+  const { data: myViews } = useMyViews();
+  const canStaffing = canSeeStaffing(myViews?.data.views);
+  const [staffingFilter, setStaffingFilter] = useState<StaffingListFilter | "">(() => {
+    return parseStaffingFilter(searchParams.get("ueberlassung")); // z. B. von "Kandidaten" in der Ansicht Überlassung
+  });
+  const activeStaffingFilter = canStaffing && staffingFilter ? staffingFilter : undefined;
   const { data: currentUserData } = useCurrentUser();
   const currentUserId = currentUserData?.data.id;
   const [sortKey, setSortKey] = useState<string | null>(
@@ -259,6 +279,8 @@ export function CandidatesTable() {
     plzOrt,
     radiusKm: radiusKm ? Number(radiusKm) : undefined,
     rollenUnbestaetigt: rollenUnbestaetigtOnly ? true : undefined,
+    engagement: engagement || undefined, // NOMICON
+    staffing: activeStaffingFilter, // NOMICON
     ownerUserId: mineOnly ? currentUserId : undefined,
     sortBy: sortKey ?? undefined,
     sortDir,
@@ -292,6 +314,8 @@ export function CandidatesTable() {
     if (mineOnly) params.set("mine", "1");
     if (reactivationOnly) params.set("reaktivierung", "1");
     if (rollenUnbestaetigtOnly) params.set("rollen_unbestaetigt", "1");
+    if (engagement) params.set("engagement", engagement); // NOMICON
+    if (staffingFilter) params.set("ueberlassung", staffingFilter); // NOMICON
     if (sortKey) params.set("sort", sortKey);
     if (sortDir) params.set("dir", sortDir);
     if (page > 0) params.set("page", String(page));
@@ -307,6 +331,8 @@ export function CandidatesTable() {
     mineOnly,
     reactivationOnly,
     rollenUnbestaetigtOnly,
+    engagement, // NOMICON
+    staffingFilter, // NOMICON
     sortKey,
     sortDir,
     page,
@@ -412,6 +438,9 @@ export function CandidatesTable() {
   }, [serverCandidates, aiResults, sortKey, sortDir]);
 
   const displayedCandidates = reactivationOnly ? reactivationPageItems : sortedServerCandidates;
+  // NOMICON: Austausch-Status der angezeigten Seite per Sammelabfrage
+  const { data: engagementByCandidate } = useEngagementSummaries(displayedCandidates.map((candidate) => candidate.id));
+  const { data: staffingByCandidate } = useStaffingCandidateSummaries(displayedCandidates.map((candidate) => candidate.id), canStaffing);
   const displayedTotal = reactivationOnly ? reactivationFiltered.length : (aiResults?.length ?? totalCount);
   const displayedPage = reactivationOnly ? reactivationPage : page;
   const displayedPageCount = reactivationOnly ? reactivationPageCount : (aiResults ? 1 : pageCount);
@@ -429,7 +458,9 @@ export function CandidatesTable() {
     Gehalt: candidate.salary_expectation,
     Status: candidate.status,
     Kurzprofil: candidate.short_profile ? "Ja" : "Nein",
-  })), [displayedCandidates]);
+    // NOMICON: Spalte nur mit Ansicht Überlassung (kein Lohn, keine Marge)
+    ...(canStaffing ? { Ueberlassung: staffingCandidateText(staffingByCandidate?.[candidate.id]) } : {}),
+  })), [displayedCandidates, canStaffing, staffingByCandidate]);
 
   if ((!reactivationOnly && error) || (reactivationOnly && reactivationError)) {
     return <ErrorState onRetry={() => { void retryCandidates(); void retryReactivation(); }} />;
@@ -528,6 +559,32 @@ export function CandidatesTable() {
             <option value="100">100 km</option>
             <option value="200">200 km</option>
           </select>
+          {/* NOMICON: Kandidatenstatus-Filter */}
+          <select
+            value={engagement}
+            onChange={(e) => setEngagement(e.target.value as EngagementFilter | "")}
+            aria-label="Austausch-Status"
+            className="h-10 rounded-md border border-white/10 bg-brand-surface px-2 text-xs text-brand-platinum outline-none focus:border-brand-accent"
+          >
+            <option value="">Austausch</option>
+            {(Object.keys(ENGAGEMENT_FILTER_LABELS) as EngagementFilter[]).map((value) => (
+              <option key={value} value={value}>{ENGAGEMENT_FILTER_LABELS[value]}</option>
+            ))}
+          </select>
+          {/* NOMICON: Überlassungs-Filter (nur mit Ansicht Überlassung) */}
+          {canStaffing && (
+            <select
+              value={staffingFilter}
+              onChange={(e) => setStaffingFilter(e.target.value as StaffingListFilter | "")}
+              aria-label="Überlassung"
+              className="h-10 rounded-md border border-white/10 bg-brand-surface px-2 text-xs text-brand-platinum outline-none focus:border-brand-accent"
+            >
+              <option value="">Überlassung</option>
+              {(Object.keys(STAFFING_FILTER_LABELS) as StaffingListFilter[]).map((value) => (
+                <option key={value} value={value}>{STAFFING_FILTER_LABELS[value]}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
       {(selectedRollen.length > 0 || selectedAbschluesse.length > 0 || (plzOrt.trim() && radiusKm)) && (
@@ -611,6 +668,8 @@ export function CandidatesTable() {
               </div>
               <StatusPill status={candidate.status} />
             </div>
+            <EngagementBadge summary={engagementByCandidate?.[candidate.id]} className="mt-2" /> {/* NOMICON */}
+            {canStaffing && <StaffingCandidateCell summary={staffingByCandidate?.[candidate.id]} compact />} {/* NOMICON */}
             {candidate.rollen && candidate.rollen.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-1">
                 {candidate.rollen.map((rolle) => <Badge key={rolle} tone="blue">{rolleLabel(rolle)}</Badge>)}
@@ -621,12 +680,12 @@ export function CandidatesTable() {
                 )}
               </div>
             )}
-            <div className="mt-2 flex items-center justify-between text-[11px] text-brand-gray">
-              <span>Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</span>
+            <div className="mt-2 flex items-center justify-between text-[10.45px] text-brand-gray">
+              <span>Kontakt {formatDate(candidate.last_contact_at ?? candidate.updated_at)}</span>
               {candidate.salary_expectation && <span>{candidate.salary_expectation}</span>}
             </div>
             {candidate.search_match_fields && candidate.search_match_fields.length > 0 && (
-              <p className="mt-1.5 text-[11px] text-brand-warning">
+              <p className="mt-1.5 text-[10.45px] text-brand-warning">
                 Treffer in: {candidate.search_match_fields.map(searchFieldLabel).join(", ")}
                 {candidate.search_matched_values && candidate.search_matched_values.length > 0 && (
                   <> ({candidate.search_matched_values.join(", ")})</>
@@ -651,6 +710,8 @@ export function CandidatesTable() {
           "Verfügbarkeit",
           "Unterlagen",
           { label: "Status", key: "status" },
+          "Austausch", // NOMICON
+          ...(canStaffing ? ["Überlassung"] : []), // NOMICON
           "Nächster Schritt",
         ]}
         sortKey={sortKey}
@@ -660,12 +721,12 @@ export function CandidatesTable() {
         {displayedCandidates.map((candidate) => (
           <tr key={candidate.id} className="hover:bg-brand-hover/35">
             <td className="px-4 py-3.5 text-xs text-brand-muted">{candidate.candidate_number ?? "—"}</td>
-            <td className="px-4 py-3.5"><button type="button" onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-brand-platinum hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</button>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-brand-danger-soft" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[11px] text-brand-muted">Kontakt {formatDate(candidate.last_contact_at ?? candidate.last_contact ?? candidate.updated_at)}</p>
+            <td className="px-4 py-3.5"><button type="button" onClick={() => setQuickViewCandidateId(candidate.id)} className="font-semibold text-brand-platinum hover:text-white hover:underline">{candidate.first_name} {candidate.last_name}</button>{candidate.has_ghosting_history && <Ghost size={12} className="ml-1.5 inline text-brand-danger-soft" aria-label="Ghosting-Historie" />}<p className="mt-1 text-[10.45px] text-brand-muted">Kontakt {formatDate(candidate.last_contact_at ?? candidate.updated_at)}</p>
               {/* Nachvollziehbarkeit der Freitextsuche (Punkt 5) - nur
                * gesetzt, wenn `search` aktiv ist (siehe Backend
                * repositories/candidates.py::compute_search_match_fields). */}
               {candidate.search_match_fields && candidate.search_match_fields.length > 0 && (
-                <p className="mt-1 text-[11px] text-brand-warning">
+                <p className="mt-1 text-[10.45px] text-brand-warning">
                   Treffer in: {candidate.search_match_fields.map(searchFieldLabel).join(", ")}
                   {candidate.search_matched_values && candidate.search_matched_values.length > 0 && (
                     <> ({candidate.search_matched_values.join(", ")})</>
@@ -673,7 +734,7 @@ export function CandidatesTable() {
                 </p>
               )}
             </td>
-            <td className="px-4 py-3.5"><p>{candidate.job_title ?? "—"}</p><p className="mt-1 text-[11px] text-brand-muted">{candidate.qualification ?? "Qualifikation offen"}</p></td>
+            <td className="px-4 py-3.5"><p>{candidate.job_title ?? "—"}</p><p className="mt-1 text-[10.45px] text-brand-muted">{candidate.qualification ?? "Qualifikation offen"}</p></td>
             <td className="px-4 py-3.5">
               {candidate.rollen && candidate.rollen.length > 0 ? (
                 <div className="flex flex-wrap items-center gap-1">
@@ -694,9 +755,11 @@ export function CandidatesTable() {
             </td>
             <td className="px-4 py-3.5 text-brand-soft">{candidate.city ?? candidate.postal_code ?? "—"}</td>
             <td className="px-4 py-3.5">{candidate.salary_expectation ?? "—"}</td>
-            <td className="px-4 py-3.5"><p>{candidate.notice_period ?? "—"}</p><p className="mt-1 text-[11px] text-brand-muted">{candidate.available_from ? formatDate(candidate.available_from) : "nach Absprache"}</p></td>
+            <td className="px-4 py-3.5"><p>{candidate.notice_period ?? "—"}</p><p className="mt-1 text-[10.45px] text-brand-muted">{candidate.available_from ? formatDate(candidate.available_from) : "nach Absprache"}</p></td>
             <td className="px-4 py-3.5"><div className="flex gap-1.5"><span className={`size-2 rounded-full ${candidate.cv_available ? "bg-brand-silver" : "bg-[#334155]"}`} title="CV" /><span className={`size-2 rounded-full ${candidate.short_profile ? "bg-brand-accent" : "bg-[#334155]"}`} title="Kurzprofil" /></div></td>
             <td className="px-4 py-3.5"><StatusPill status={candidate.status} /></td>
+            <td className="px-4 py-3.5"><EngagementBadge summary={engagementByCandidate?.[candidate.id]} /></td>{/* NOMICON */}
+            {canStaffing && <td className="px-4 py-3.5"><StaffingCandidateCell summary={staffingByCandidate?.[candidate.id]} /></td>}{/* NOMICON */}
             <td className="px-4 py-3.5 text-brand-soft">{candidate.next_step ?? "Kontakt aufnehmen"}</td>
           </tr>
         ))}

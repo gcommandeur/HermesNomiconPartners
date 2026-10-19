@@ -25,11 +25,18 @@ class Settings(BaseSettings):
     )
 
     environment: str = "local"
+    # NOMICON: Demo-Login ohne Passwort/2FA, NUR lokal (siehe services/demo_login.py). Standard aus.
+    demo_login: bool = False
     # Firmenschicht (siehe docs/PROJEKT_STAND.md > Zweite Firma): alles
     # Firmenspezifische liegt in Konfiguration, nicht im Code - dann lassen sich
     # Aenderungen aus Hermes ohne Konflikte in eine Kopie fuer eine andere Firma
     # uebernehmen. Standard = Commandeur Consulting (nichts aendert sich).
     company_name: str = "Commandeur Consulting"
+    # Text im Briefkopf der von der Agentur selbst erzeugten anonymen Profile
+    # (services/cv_extraction.py::is_agency_letterhead): daran erkennt Hermes ein
+    # eigenes Profil und uebernimmt die Agenturadresse nicht als Kandidatendaten.
+    # In der Kopie auf den Namen im eigenen Briefkopf setzen.
+    agency_letterhead_marker: str = "Commandeur Consulting GmbH"
     # Word-Vorlage mit dem Briefkopf des anonymen Profils (docx). Leer = die
     # mitgelieferte backend/templates/anonymes_profil_master.docx.
     profile_template_path: str | None = None
@@ -62,6 +69,10 @@ class Settings(BaseSettings):
     # einschalten, wenn die Auftragsverarbeitung mit Anthropic geklaert ist - ohne
     # den Schalter liefert der Endpunkt 404 und es verlassen keine Daten das System.
     ai_enabled: bool = False
+    # Darf der anonymisierte Profiltext (`short_profile`) in der MCP-Ausgabe eines einzelnen
+    # Kandidaten an Claude gehen? STANDARDMAESSIG AUS: der Text ist KI-erzeugt und vom Berater
+    # geprueft, aber technisch nicht auf Anonymitaet geprueft (kann Arbeitgeber/Stationen nennen).
+    ai_include_profile: bool = False
     # Maximale MCP-Werkzeugaufrufe pro Nutzer und Tag (UTC).
     mcp_daily_limit: int = 500
     anthropic_api_key: str | None = None

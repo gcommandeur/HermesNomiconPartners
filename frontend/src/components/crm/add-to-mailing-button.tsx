@@ -11,7 +11,7 @@ import { invalidateMailingGroupsCache, useMailingGroupsCache } from "@/lib/api/h
 import type { MailingGroup, MailingRecipient } from "@/lib/api/types";
 
 /** Konsistente kleine UI-Komponente, ueberall dort einsetzbar, wo eine
- * E-Mail-Adresse angezeigt wird (Kandidaten-/Kanzlei-/Kontaktprofil, Geo-
+ * E-Mail-Adresse angezeigt wird (Kandidaten-/Kunden-/Kontaktprofil, Geo-
  * Mapping-Auswahl) - schreibt immer auf dasselbe Backend-Modell (MailingGroup,
  * siehe Punkt 6/7). Empfaenger koennen zu einer bestehenden Gruppe
  * hinzugefuegt oder als neue Gruppe angelegt werden. */
